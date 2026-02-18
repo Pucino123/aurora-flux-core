@@ -68,11 +68,11 @@ const ClockEditor = ({ onClose }: ClockEditorProps) => {
 
   const [tab, setTab] = useState<EditorTab>("font");
 
-  const tabs: { key: EditorTab; label: string; icon: React.ElementType }[] = [
-    { key: "font", label: "Font", icon: Type },
-    { key: "color", label: "Color", icon: Palette },
-    { key: "style", label: "Style", icon: SlidersHorizontal },
-    { key: "layout", label: "Layout", icon: Layout },
+  const tabs = [
+    { key: "font" as EditorTab, label: "Font", icon: Type },
+    { key: "color" as EditorTab, label: "Color", icon: Palette },
+    { key: "style" as EditorTab, label: "Style", icon: SlidersHorizontal },
+    { key: "layout" as EditorTab, label: "Layout", icon: Layout },
   ];
 
   return (
@@ -87,15 +87,15 @@ const ClockEditor = ({ onClose }: ClockEditorProps) => {
         {/* Tab bar */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="flex gap-1">
-            {tabs.map(({ key, label, icon: Icon }) => (
+                {tabs.map(({ key, label, icon: Icon }: any) => (
               <button
                 key={key}
-                onClick={() => setTab(key)}
+                onClick={() => setTab(key as EditorTab)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                   tab === key ? "bg-white/15 text-white" : "text-white/35 hover:text-white/60"
                 }`}
               >
-                <Icon size={13} />
+                <Icon size={13 as any} />
                 {label}
               </button>
             ))}

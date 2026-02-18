@@ -121,7 +121,7 @@ const FolderTemplateSelector = ({ open, onClose, onCreateDocument }: Props) => {
                         className="flex items-start gap-2.5 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/60 border border-transparent hover:border-border/30 transition-all duration-150 text-left group/t hover:scale-[1.02]"
                       >
                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover/t:bg-primary/15 transition-colors">
-                          <Icon size={16} className="text-primary" />
+                          {React.createElement(t.icon, { size: 16, className: "text-primary" })}
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-foreground truncate">{t.name}</p>
