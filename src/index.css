@@ -1,0 +1,696 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --foreground: 220 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    --primary: 225 75% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 96%;
+    --secondary-foreground: 220 20% 20%;
+
+    --muted: 220 15% 96%;
+    --muted-foreground: 220 10% 50%;
+
+    --accent: 280 60% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 92%;
+    --input: 220 15% 92%;
+    --ring: 225 75% 55%;
+
+    --radius: 0.75rem;
+
+    /* Flux Aurora tokens */
+    --aurora-blue: 217 90% 70%;
+    --aurora-pink: 330 80% 75%;
+    --aurora-violet: 270 70% 65%;
+    --aurora-indigo: 240 70% 55%;
+
+    /* Priority tokens */
+    --priority-critical: 0 84% 60%;
+    --priority-high: 30 90% 55%;
+    --priority-medium: 45 90% 55%;
+    --priority-low: 150 60% 45%;
+    --priority-none: 220 10% 70%;
+
+    /* Spacing tokens */
+    --space-card: 1.25rem;
+    --space-section: 1.5rem;
+
+    /* Radius tokens */
+    --radius-card: 0.75rem;
+    --radius-pill: 9999px;
+
+    /* Glass tokens */
+    --glass-bg: 0 0% 100% / 0.6;
+    --glass-border: 0 0% 100% / 0.5;
+    --glass-hover: 0 0% 100% / 0.8;
+
+    /* Surface tokens */
+    --surface: 0 0% 100% / 0.8;
+    --surface-elevated: 0 0% 100% / 0.9;
+
+    /* Scheduler color tokens */
+    --schedule-meeting: 217 90% 95%;
+    --schedule-meeting-border: 217 80% 85%;
+    --schedule-meeting-text: 217 70% 35%;
+    --schedule-deep: 270 70% 95%;
+    --schedule-deep-border: 270 60% 85%;
+    --schedule-deep-text: 270 50% 35%;
+    --schedule-break: 150 60% 95%;
+    --schedule-break-border: 150 50% 80%;
+    --schedule-break-text: 150 40% 30%;
+    --schedule-workout: 150 60% 94%;
+    --schedule-workout-border: 150 55% 55%;
+    --schedule-workout-text: 150 50% 25%;
+    --schedule-reading: 225 70% 95%;
+    --schedule-reading-border: 225 60% 70%;
+    --schedule-reading-text: 225 50% 30%;
+    --schedule-custom: 220 10% 95%;
+    --schedule-custom-border: 220 10% 80%;
+    --schedule-custom-text: 220 10% 30%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217 91% 60%;
+  }
+
+  .dark {
+    --background: 225 20% 6%;
+    --foreground: 210 20% 92%;
+
+    --card: 225 18% 9%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 225 18% 9%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 225 75% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 225 12% 13%;
+    --secondary-foreground: 210 15% 85%;
+
+    --muted: 225 12% 13%;
+    --muted-foreground: 220 10% 50%;
+
+    --accent: 280 60% 65%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 225 12% 16%;
+    --input: 225 12% 16%;
+    --ring: 225 75% 65%;
+
+    --glass-bg: 225 15% 8% / 0.6;
+    --glass-border: 225 20% 30% / 0.2;
+    --glass-hover: 225 15% 15% / 0.5;
+
+    --surface: 225 15% 8% / 0.7;
+    --surface-elevated: 225 15% 10% / 0.8;
+
+    --sidebar-background: 225 18% 7%;
+    --sidebar-foreground: 210 15% 85%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 225 18% 7%;
+    --sidebar-accent: 225 12% 13%;
+    --sidebar-accent-foreground: 210 15% 85%;
+    --sidebar-border: 225 12% 16%;
+    --sidebar-ring: 225 75% 65%;
+  }
+}
+
+/* Force light-mode variables locally, even when html has .dark */
+.force-light {
+  --background: 0 0% 99%;
+  --foreground: 220 20% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 20% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 20% 10%;
+  --primary: 225 75% 55%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 15% 96%;
+  --secondary-foreground: 220 20% 20%;
+  --muted: 220 15% 96%;
+  --muted-foreground: 220 10% 50%;
+  --accent: 280 60% 60%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 15% 92%;
+  --input: 220 15% 92%;
+  --ring: 225 75% 55%;
+  --glass-bg: 0 0% 100% / 0.6;
+  --glass-border: 0 0% 100% / 0.5;
+  --glass-hover: 0 0% 100% / 0.8;
+  --surface: 0 0% 100% / 0.8;
+  --surface-elevated: 0 0% 100% / 0.9;
+  color: hsl(220 20% 10%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+  }
+
+  .glass-panel-hover {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+    @apply transition-all duration-300;
+  }
+
+  .glass-panel-hover:hover {
+    background: hsl(var(--glass-hover));
+  }
+
+  .glass-pill {
+    @apply bg-white/50 backdrop-blur-md border border-white/60 rounded-full px-4 py-1.5;
+  }
+
+  .glass-input {
+    @apply bg-[#FDFDFD]/95 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] rounded-[32px] border border-black/5;
+  }
+
+  /* Council hero gradient — TryHolo-inspired */
+  .council-hero-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(25 75% 90%) 0%,
+      hsl(280 40% 90%) 25%,
+      hsl(217 50% 92%) 50%,
+      hsl(330 40% 92%) 75%,
+      hsl(200 50% 90%) 100%
+    );
+    background-size: 300% 300%;
+    animation: council-gradient-shift 30s ease-in-out infinite;
+  }
+
+  @keyframes council-gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* Council glass card */
+  .council-glass-card {
+    background: hsl(0 0% 100% / 0.55);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid hsl(0 0% 100% / 0.6);
+    border-radius: 24px;
+    box-shadow:
+      0 12px 48px -12px hsl(0 0% 0% / 0.08),
+      0 4px 16px -4px hsl(0 0% 0% / 0.04),
+      inset 0 1px 0 hsl(0 0% 100% / 0.7);
+    transition: box-shadow 0.5s ease, border-color 0.5s ease, transform 0.3s ease;
+  }
+
+  .council-glass-card--focused {
+    border-color: hsl(var(--aurora-violet) / 0.3);
+    box-shadow:
+      0 16px 56px -12px hsl(var(--aurora-violet) / 0.12),
+      0 6px 24px -4px hsl(var(--aurora-blue) / 0.06),
+      inset 0 1px 0 hsl(0 0% 100% / 0.8);
+  }
+
+  /* Council submit button gradient */
+  .council-submit-btn {
+    background: linear-gradient(
+      90deg,
+      hsl(240 60% 50%) 0%,
+      hsl(280 60% 55%) 40%,
+      hsl(330 70% 60%) 70%,
+      hsl(15 80% 60%) 100%
+    );
+  }
+
+  .council-submit-btn:hover {
+    background: linear-gradient(
+      90deg,
+      hsl(240 60% 45%) 0%,
+      hsl(280 60% 50%) 40%,
+      hsl(330 70% 55%) 70%,
+      hsl(15 80% 55%) 100%
+    );
+  }
+
+  /* Hidden scrollbar for council panels */
+  .council-hidden-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .council-hidden-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .flux-card {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border));
+    @apply rounded-xl p-[var(--space-card)] shadow-sm hover:-translate-y-0.5 transition-all duration-300;
+  }
+
+  /* Widget drag glow effect */
+  .widget-dragging {
+    box-shadow:
+      0 0 20px 4px hsl(var(--aurora-violet) / 0.2),
+      0 0 40px 8px hsl(var(--aurora-blue) / 0.1);
+    border-color: hsl(var(--aurora-violet) / 0.3) !important;
+    z-index: 50;
+  }
+
+  /* Drop zone highlight */
+  .widget-drop-zone {
+    border: 2px dashed hsl(var(--aurora-blue) / 0.3);
+    background: hsl(var(--aurora-blue) / 0.05);
+    border-radius: var(--radius-card);
+  }
+
+  .flux-card-urgent {
+    @apply flux-card border-l-[3px];
+    border-left-color: hsl(var(--priority-high));
+  }
+
+  .flux-card-new {
+    animation: card-highlight 1.5s ease-out;
+  }
+
+  .flux-tag {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-secondary text-secondary-foreground;
+  }
+
+  .priority-dot {
+    @apply w-1.5 h-1.5 rounded-full shrink-0;
+  }
+
+  .schedule-meeting {
+    @apply bg-[hsl(var(--schedule-meeting))] border border-[hsl(var(--schedule-meeting-border))] text-[hsl(var(--schedule-meeting-text))];
+  }
+
+  .schedule-deep {
+    @apply bg-[hsl(var(--schedule-deep))] border border-[hsl(var(--schedule-deep-border))] text-[hsl(var(--schedule-deep-text))];
+  }
+
+  .schedule-break {
+    @apply bg-[hsl(var(--schedule-break))] border border-[hsl(var(--schedule-break-border))] text-[hsl(var(--schedule-break-text))];
+  }
+
+  .schedule-workout {
+    @apply bg-[hsl(var(--schedule-workout))] border border-[hsl(var(--schedule-workout-border))] text-[hsl(var(--schedule-workout-text))];
+  }
+
+  .schedule-reading {
+    @apply bg-[hsl(var(--schedule-reading))] border border-[hsl(var(--schedule-reading-border))] text-[hsl(var(--schedule-reading-text))];
+  }
+
+  .schedule-custom {
+    @apply bg-[hsl(var(--schedule-custom))] border border-[hsl(var(--schedule-custom-border))] text-[hsl(var(--schedule-custom-text))];
+  }
+
+  .aurora-gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[hsl(var(--aurora-blue))] via-[hsl(var(--aurora-violet))] to-[hsl(var(--aurora-pink))];
+  }
+}
+
+@layer utilities {
+  @keyframes aurora-drift-1 {
+    0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    20% { transform: translate(8%, 6%) scale(1.08) rotate(2deg); }
+    40% { transform: translate(-4%, 10%) scale(0.95) rotate(-1deg); }
+    60% { transform: translate(10%, -5%) scale(1.05) rotate(3deg); }
+    80% { transform: translate(-6%, 3%) scale(0.98) rotate(-2deg); }
+  }
+
+  @keyframes aurora-drift-2 {
+    0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    15% { transform: translate(-10%, -8%) scale(1.06) rotate(-3deg); }
+    35% { transform: translate(8%, -12%) scale(1.1) rotate(2deg); }
+    55% { transform: translate(-5%, 8%) scale(0.94) rotate(-1deg); }
+    75% { transform: translate(6%, -3%) scale(1.03) rotate(4deg); }
+  }
+
+  @keyframes aurora-drift-3 {
+    0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    25% { transform: translate(10%, -6%) scale(1.07) rotate(3deg); }
+    50% { transform: translate(-8%, 10%) scale(0.96) rotate(-2deg); }
+    75% { transform: translate(5%, -8%) scale(1.04) rotate(1deg); }
+  }
+
+  @keyframes float-up {
+    0% { transform: translateY(8px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes sound-wave {
+    0%, 100% { height: 8px; }
+    50% { height: 28px; }
+  }
+
+  @keyframes confetti-burst {
+    0% { transform: scale(0) rotate(0deg); opacity: 1; }
+    50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
+    100% { transform: scale(0) rotate(360deg); opacity: 0; }
+  }
+
+  .animate-aurora-1 {
+    animation: aurora-drift-1 7s ease-in-out infinite;
+  }
+
+  .animate-aurora-2 {
+    animation: aurora-drift-2 11s ease-in-out infinite;
+  }
+
+  .animate-aurora-3 {
+    animation: aurora-drift-3 13s ease-in-out infinite;
+  }
+
+  /* Slowed-down aurora for Council page */
+  .animate-aurora-slow-1 {
+    animation: aurora-drift-1 20s ease-in-out infinite;
+  }
+
+  .animate-aurora-slow-2 {
+    animation: aurora-drift-2 28s ease-in-out infinite;
+  }
+
+  .animate-aurora-slow-3 {
+    animation: aurora-drift-3 32s ease-in-out infinite;
+  }
+
+  .animate-float-up {
+    animation: float-up 0.6s ease-out forwards;
+  }
+
+  @keyframes card-highlight {
+    0% { box-shadow: 0 0 0 3px hsl(var(--aurora-blue) / 0.4); }
+    100% { box-shadow: none; }
+  }
+
+  .animate-sound-wave {
+    animation: sound-wave 0.6s ease-in-out infinite;
+  }
+
+  @keyframes council-glow-pulse {
+    0%, 100% { box-shadow: 0 0 8px 2px currentColor; opacity: 0.4; }
+    50% { box-shadow: 0 0 20px 6px currentColor; opacity: 0.7; }
+  }
+
+  .animate-council-glow {
+    animation: council-glow-pulse 2s ease-in-out infinite;
+  }
+}
+
+/* Focus Planner dark-mode overrides for Scheduler inside Focus Dashboard */
+.focus-planner-dark {
+  --foreground: 0 0% 90%;
+  --muted-foreground: 0 0% 60%;
+  --border: 0 0% 100% / 0.15;
+  --primary: 225 75% 70%;
+  --secondary: 0 0% 100% / 0.08;
+  --destructive: 0 84% 65%;
+  --background: transparent;
+  color: hsl(0 0% 90%);
+}
+.focus-planner-dark .bg-white\/80,
+.focus-planner-dark .bg-white\/40 {
+  background: hsl(0 0% 100% / 0.08) !important;
+}
+.focus-planner-dark .schedule-meeting,
+.focus-planner-dark .schedule-deep,
+.focus-planner-dark .schedule-break,
+.focus-planner-dark .schedule-workout,
+.focus-planner-dark .schedule-reading,
+.focus-planner-dark .schedule-custom {
+  background: hsl(0 0% 100% / 0.12) !important;
+  border-color: hsl(0 0% 100% / 0.2) !important;
+  color: hsl(0 0% 95%) !important;
+}
+.focus-planner-dark .schedule-meeting p,
+.focus-planner-dark .schedule-deep p,
+.focus-planner-dark .schedule-break p,
+.focus-planner-dark .schedule-workout p,
+.focus-planner-dark .schedule-reading p,
+.focus-planner-dark .schedule-custom p {
+  color: hsl(0 0% 92%) !important;
+}
+.focus-planner-dark input,
+.focus-planner-dark select {
+  color: hsl(0 0% 85%);
+}
+.focus-planner-dark .glass-pill {
+  background: hsl(0 0% 0% / 0.5);
+  border-color: hsl(0 0% 100% / 0.15);
+}
+.focus-planner-dark .bg-border {
+  background: hsl(0 0% 100% / 0.2) !important;
+}
+.focus-planner-dark .bg-primary {
+  background: hsl(225 75% 70%) !important;
+}
+
+/* Light-mode text overrides when widget opacity is high */
+.focus-widget-light .text-white\/80,
+.focus-widget-light .text-white\/60,
+.focus-widget-light .text-white\/70 {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+.focus-widget-light .text-white\/40,
+.focus-widget-light .text-white\/50,
+.focus-widget-light .text-white\/30,
+.focus-widget-light .text-white\/25 {
+  color: rgba(0, 0, 0, 0.4) !important;
+}
+.focus-widget-light .text-white {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+.focus-widget-light .placeholder\:text-white\/25::placeholder {
+  color: rgba(0, 0, 0, 0.3) !important;
+}
+.focus-widget-light .bg-white\/5 {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+.focus-widget-light .bg-white\/15,
+.focus-widget-light .bg-white\/10 {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+.focus-widget-light .border-white\/10,
+.focus-widget-light .border-white\/15 {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+.focus-widget-light .focus-planner-dark {
+  --foreground: 0 0% 15%;
+  --muted-foreground: 0 0% 40%;
+  --border: 0 0% 0% / 0.12;
+  --primary: 225 75% 50%;
+  --secondary: 0 0% 0% / 0.05;
+  color: hsl(0 0% 15%);
+}
+.focus-widget-light .focus-planner-dark .bg-white\/80,
+.focus-widget-light .focus-planner-dark .bg-white\/40 {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+.focus-widget-light .focus-planner-dark input,
+.focus-widget-light .focus-planner-dark select {
+  color: hsl(0 0% 20%);
+}
+
+/* Focus background animations */
+@keyframes bg-shift-slow {
+  0%, 100% { background-position: 50% 0%; }
+  50% { background-position: 50% 100%; }
+}
+@keyframes bg-shift-wave {
+  0% { background-position: 50% 0%; }
+  25% { background-position: 60% 50%; }
+  50% { background-position: 50% 100%; }
+  75% { background-position: 40% 50%; }
+  100% { background-position: 50% 0%; }
+}
+@keyframes bg-shift-warm {
+  0%, 100% { background-position: 30% 30%; }
+  50% { background-position: 70% 70%; }
+}
+@keyframes bg-shift-cosmic {
+  0% { background-position: 0% 0%; }
+  33% { background-position: 100% 50%; }
+  66% { background-position: 50% 100%; }
+  100% { background-position: 0% 0%; }
+}
+@keyframes rain-fall {
+  0% { transform: translateY(-10vh); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(110vh); opacity: 0; }
+}
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.3); }
+}
+@keyframes shooting-star {
+  0% { transform: translateX(0) translateY(0) rotate(-25deg) scaleX(0); opacity: 0; }
+  5% { opacity: 1; transform: translateX(0) translateY(0) rotate(-25deg) scaleX(1); }
+  15% { transform: translateX(300px) translateY(120px) rotate(-25deg) scaleX(1); opacity: 0.6; }
+  20% { transform: translateX(400px) translateY(160px) rotate(-25deg) scaleX(0); opacity: 0; }
+  100% { transform: translateX(400px) translateY(160px) rotate(-25deg) scaleX(0); opacity: 0; }
+}
+@keyframes bokeh-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(15px, -20px) scale(1.1); }
+  50% { transform: translate(-10px, 10px) scale(0.95); }
+  75% { transform: translate(20px, 15px) scale(1.05); }
+}
+@keyframes mist-drift {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(25%); }
+  100% { transform: translateX(0); }
+}
+@keyframes firefly-pulse {
+  0%, 100% { opacity: 0; transform: translate(0, 0) scale(0.5); }
+  20% { opacity: 0.9; transform: translate(5px, -8px) scale(1); }
+  40% { opacity: 0.3; transform: translate(12px, -3px) scale(0.8); }
+  60% { opacity: 0.8; transform: translate(8px, -12px) scale(1.1); }
+  80% { opacity: 0.2; transform: translate(3px, -5px) scale(0.7); }
+}
+@keyframes light-leak {
+  0%, 100% { opacity: 0; transform: translateX(-30%) rotate(0deg); }
+  30% { opacity: 1; }
+  50% { opacity: 0.8; transform: translateX(30%) rotate(2deg); }
+  70% { opacity: 1; }
+}
+.bg-shift-slow { animation: bg-shift-slow 20s ease-in-out infinite; }
+.bg-shift-wave { animation: bg-shift-wave 15s ease-in-out infinite; }
+.bg-shift-warm { animation: bg-shift-warm 25s ease-in-out infinite; }
+.bg-shift-cosmic { animation: bg-shift-cosmic 30s ease-in-out infinite; }
+
+@keyframes ken-burns {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.animate-ken-burns {
+  animation: ken-burns 30s ease-in-out infinite;
+}
+
+/* ── Apple macOS-style Sidebar ── */
+.sidebar-apple {
+  background: rgba(246, 246, 246, 0.78);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+.dark .sidebar-apple {
+  background: rgba(30, 30, 30, 0.72);
+  border-right-color: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: hsl(var(--muted-foreground));
+  transition: background-color 150ms ease, color 150ms ease;
+  cursor: pointer;
+  user-select: none;
+}
+.sidebar-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: hsl(var(--foreground));
+}
+.dark .sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-item-active {
+  background: hsl(var(--primary) / 0.10);
+  color: hsl(var(--foreground));
+  font-weight: 500;
+  box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.04);
+}
+.dark .sidebar-item-active {
+  background: hsl(var(--primary) / 0.12);
+  box-shadow: 0 0.5px 2px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  padding: 12px 10px 4px;
+}
+
+.sidebar-separator {
+  height: 1px;
+  background: hsl(var(--border) / 0.5);
+  margin: 6px 8px;
+}
+
+/* Desktop folder on Home canvas */
+.desktop-folder {
+  background: hsl(var(--glass-bg));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--glass-border));
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
+}
+.desktop-folder:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-color: hsl(var(--primary) / 0.2);
+}
+.desktop-folder.selected {
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.15), 0 4px 16px rgba(0, 0, 0, 0.12);
+}
