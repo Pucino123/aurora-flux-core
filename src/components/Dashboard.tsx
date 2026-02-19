@@ -21,6 +21,9 @@ import { format } from "date-fns";
 import { t } from "@/lib/i18n";
 
 interface DashboardProps {
+  initialPrompt?: string;
+  pendingPlan?: any;
+  onPlanConsumed?: () => void;
   sidebarVisible: boolean;
   onToggleSidebar: () => void;
   focusMode: boolean;
@@ -38,10 +41,19 @@ function deriveFolderName(text: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-const Dashboard = ({ sidebarVisible, onToggleSidebar, focusMode }: DashboardProps) => {
+const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible, onToggleSidebar, focusMode }: DashboardProps) => {
   const { activeView, createTask, createFolder, createBlock, setActiveFolder, setActiveView } = useFlux();
   const [lastSubmitted, setLastSubmitted] = useState<string | undefined>(undefined);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const planProcessed = useRef(false);
+
+  // Process pending plan from pre-login flow
+  useEffect(() => {
+    if (pendingPlan && !planProcessed.current) {
+      planProcessed.current = true;
+      handlePlanSubmit(pendingPlan).then(() => onPlanConsumed?.());
+    }
+  }, [pendingPlan]);
 
   const handlePlanSubmit = useCallback(async (plan: any) => {
     if (!plan.steps?.length) return;

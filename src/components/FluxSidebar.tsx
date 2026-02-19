@@ -1,4 +1,4 @@
-import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, Calendar, BarChart3, Briefcase, FileText, Settings } from "lucide-react";
+import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,13 +39,7 @@ const UserSection = () => {
   );
 };
 
-const NAV_SECTIONS = [
-  { key: "calendar" as const, icon: Calendar, label: "Calendar" },
-  { key: "analytics" as const, icon: BarChart3, label: "Analytics" },
-  { key: "projects" as const, icon: Briefcase, label: "Projects" },
-  { key: "documents" as const, icon: FileText, label: "Documents" },
-  { key: "settings" as const, icon: Settings, label: "Settings" },
-];
+const NAV_SECTIONS: { key: any; icon: any; label: string }[] = [];
 
 const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarProps) => {
   const { activeView, activeFolder, setActiveView, setActiveFolder, filterPersona, setFilterPersona } = useFlux();
