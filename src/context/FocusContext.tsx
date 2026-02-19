@@ -46,7 +46,6 @@ interface FocusState {
   quoteFontSize: number;
   widgetMinimalMode: boolean;
   clockFontSize: number;
-  // Clock customization
   clockFont: string;
   clockColor: string;
   clockWeight: number;
@@ -58,6 +57,18 @@ interface FocusState {
   systemMode: SystemMode;
   desktopFolderPositions: Record<string, { x: number; y: number }>;
   desktopFolderOpacities: Record<string, number>;
+  desktopFolderTitleSizes: Record<string, number>;
+  desktopFolderIconFillOpacities: Record<string, number>;
+  desktopFolderIconStrokeOpacities: Record<string, number>;
+  desktopFolderCustomIcons: Record<string, string>;
+  desktopFolderBgColors: Record<string, string>;
+  // Document customization (mirrors folder pattern)
+  desktopDocPositions: Record<string, { x: number; y: number }>;
+  desktopDocOpacities: Record<string, number>;
+  desktopDocTitleSizes: Record<string, number>;
+  desktopDocBgColors: Record<string, string>;
+  desktopDocCustomIcons: Record<string, string>;
+  desktopDocIconColors: Record<string, string>;
 }
 
 const DEFAULT_STATE: FocusState = {
@@ -89,6 +100,17 @@ const DEFAULT_STATE: FocusState = {
   systemMode: "focus",
   desktopFolderPositions: {},
   desktopFolderOpacities: {},
+  desktopFolderTitleSizes: {},
+  desktopFolderIconFillOpacities: {},
+  desktopFolderIconStrokeOpacities: {},
+  desktopFolderCustomIcons: {},
+  desktopFolderBgColors: {},
+  desktopDocPositions: {},
+  desktopDocOpacities: {},
+  desktopDocTitleSizes: {},
+  desktopDocBgColors: {},
+  desktopDocCustomIcons: {},
+  desktopDocIconColors: {},
 };
 
 const STORAGE_KEY = "flux-focus-prefs";
@@ -168,6 +190,29 @@ interface FocusContextValue extends FocusState {
   updateDesktopFolderPosition: (folderId: string, pos: { x: number; y: number }) => void;
   desktopFolderOpacities: Record<string, number>;
   updateDesktopFolderOpacity: (folderId: string, opacity: number) => void;
+  desktopFolderTitleSizes: Record<string, number>;
+  updateDesktopFolderTitleSize: (folderId: string, size: number) => void;
+  desktopFolderIconFillOpacities: Record<string, number>;
+  updateDesktopFolderIconFillOpacity: (folderId: string, v: number) => void;
+  desktopFolderIconStrokeOpacities: Record<string, number>;
+  updateDesktopFolderIconStrokeOpacity: (folderId: string, v: number) => void;
+  desktopFolderCustomIcons: Record<string, string>;
+  updateDesktopFolderCustomIcon: (folderId: string, url: string) => void;
+  desktopFolderBgColors: Record<string, string>;
+  updateDesktopFolderBgColor: (folderId: string, color: string) => void;
+  // Document customization
+  desktopDocPositions: Record<string, { x: number; y: number }>;
+  updateDesktopDocPosition: (docId: string, pos: { x: number; y: number }) => void;
+  desktopDocOpacities: Record<string, number>;
+  updateDesktopDocOpacity: (docId: string, opacity: number) => void;
+  desktopDocTitleSizes: Record<string, number>;
+  updateDesktopDocTitleSize: (docId: string, size: number) => void;
+  desktopDocBgColors: Record<string, string>;
+  updateDesktopDocBgColor: (docId: string, color: string) => void;
+  desktopDocCustomIcons: Record<string, string>;
+  updateDesktopDocCustomIcon: (docId: string, url: string) => void;
+  desktopDocIconColors: Record<string, string>;
+  updateDesktopDocIconColor: (docId: string, color: string) => void;
   resetDashboard: () => void;
 }
 
@@ -252,6 +297,55 @@ export function FocusProvider({ children }: { children: ReactNode }) {
         ...prev,
         desktopFolderOpacities: { ...prev.desktopFolderOpacities, [folderId]: opacity },
       })),
+    desktopFolderTitleSizes: state.desktopFolderTitleSizes ?? {},
+    updateDesktopFolderTitleSize: (folderId, size) =>
+      setState((prev) => ({
+        ...prev,
+        desktopFolderTitleSizes: { ...(prev.desktopFolderTitleSizes ?? {}), [folderId]: size },
+      })),
+    desktopFolderIconFillOpacities: state.desktopFolderIconFillOpacities ?? {},
+    updateDesktopFolderIconFillOpacity: (folderId, v) =>
+      setState((prev) => ({
+        ...prev,
+        desktopFolderIconFillOpacities: { ...(prev.desktopFolderIconFillOpacities ?? {}), [folderId]: v },
+      })),
+    desktopFolderIconStrokeOpacities: state.desktopFolderIconStrokeOpacities ?? {},
+    updateDesktopFolderIconStrokeOpacity: (folderId, v) =>
+      setState((prev) => ({
+        ...prev,
+        desktopFolderIconStrokeOpacities: { ...(prev.desktopFolderIconStrokeOpacities ?? {}), [folderId]: v },
+      })),
+    desktopFolderCustomIcons: state.desktopFolderCustomIcons ?? {},
+    updateDesktopFolderCustomIcon: (folderId, url) =>
+      setState((prev) => ({
+        ...prev,
+        desktopFolderCustomIcons: { ...(prev.desktopFolderCustomIcons ?? {}), [folderId]: url },
+      })),
+    desktopFolderBgColors: state.desktopFolderBgColors ?? {},
+    updateDesktopFolderBgColor: (folderId, color) =>
+      setState((prev) => ({
+        ...prev,
+        desktopFolderBgColors: { ...(prev.desktopFolderBgColors ?? {}), [folderId]: color },
+      })),
+    // Document customization
+    desktopDocPositions: state.desktopDocPositions ?? {},
+    updateDesktopDocPosition: (docId, pos) =>
+      setState((prev) => ({ ...prev, desktopDocPositions: { ...(prev.desktopDocPositions ?? {}), [docId]: pos } })),
+    desktopDocOpacities: state.desktopDocOpacities ?? {},
+    updateDesktopDocOpacity: (docId, opacity) =>
+      setState((prev) => ({ ...prev, desktopDocOpacities: { ...(prev.desktopDocOpacities ?? {}), [docId]: opacity } })),
+    desktopDocTitleSizes: state.desktopDocTitleSizes ?? {},
+    updateDesktopDocTitleSize: (docId, size) =>
+      setState((prev) => ({ ...prev, desktopDocTitleSizes: { ...(prev.desktopDocTitleSizes ?? {}), [docId]: size } })),
+    desktopDocBgColors: state.desktopDocBgColors ?? {},
+    updateDesktopDocBgColor: (docId, color) =>
+      setState((prev) => ({ ...prev, desktopDocBgColors: { ...(prev.desktopDocBgColors ?? {}), [docId]: color } })),
+    desktopDocCustomIcons: state.desktopDocCustomIcons ?? {},
+    updateDesktopDocCustomIcon: (docId, url) =>
+      setState((prev) => ({ ...prev, desktopDocCustomIcons: { ...(prev.desktopDocCustomIcons ?? {}), [docId]: url } })),
+    desktopDocIconColors: state.desktopDocIconColors ?? {},
+    updateDesktopDocIconColor: (docId, color) =>
+      setState((prev) => ({ ...prev, desktopDocIconColors: { ...(prev.desktopDocIconColors ?? {}), [docId]: color } })),
     resetDashboard: () => setState({
       ...DEFAULT_STATE,
       currentBackground: state.currentBackground,
