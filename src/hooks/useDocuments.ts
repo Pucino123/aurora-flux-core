@@ -19,28 +19,30 @@ export function useDocuments(folderId?: string | null) {
   const [loading, setLoading] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  const fetchDocuments = useCallback(async () => {
     if (!user) return;
-    (async () => {
-      let query = (supabase as any)
-        .from("documents")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false });
+    let query = (supabase as any)
+      .from("documents")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
 
-      if (folderId !== undefined) {
-        if (folderId === null) {
-          query = query.is("folder_id", null);
-        } else {
-          query = query.eq("folder_id", folderId);
-        }
+    if (folderId !== undefined) {
+      if (folderId === null) {
+        query = query.is("folder_id", null);
+      } else {
+        query = query.eq("folder_id", folderId);
       }
+    }
 
-      const { data } = await query;
-      setDocuments((data || []) as DbDocument[]);
-      setLoading(false);
-    })();
+    const { data } = await query;
+    setDocuments((data || []) as DbDocument[]);
+    setLoading(false);
   }, [user, folderId]);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
 
   const createDocument = useCallback(
     async (title: string, type: "text" | "spreadsheet", folder_id?: string | null) => {
@@ -103,5 +105,5 @@ export function useDocuments(folderId?: string | null) {
     [user]
   );
 
-  return { documents, loading, createDocument, updateDocument, removeDocument };
+  return { documents, loading, createDocument, updateDocument, removeDocument, refetch: fetchDocuments };
 }

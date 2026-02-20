@@ -1,11 +1,16 @@
 import React, { useState, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { FocusProvider, useFocusStore } from "@/context/FocusContext";
 import { useFlux } from "@/context/FluxContext";
 import { suggestIcon } from "@/components/CreateFolderModal";
+import { useDocuments } from "@/hooks/useDocuments";
+import { useAuth } from "@/hooks/useAuth";
 import BackgroundEngine from "./BackgroundEngine";
 import FocusTimer from "./FocusTimer";
 import DesktopFolder from "./DesktopFolder";
+import DesktopDocument from "./DesktopDocument";
 import FolderModal from "./FolderModal";
+import DesktopDocumentViewer from "./DesktopDocumentViewer";
 import MusicWidget from "./MusicWidget";
 import TodaysPlanWidget from "./TodaysPlanWidget";
 import FocusStickyNotes from "./FocusStickyNotes";
@@ -16,6 +21,7 @@ import QuoteOfDay from "./QuoteOfDay";
 import ToolDrawer from "./ToolDrawer";
 import BreathingWidget from "./BreathingWidget";
 import FocusCouncilWidget from "./FocusCouncilWidget";
+import RoutineBuilderWidget from "./RoutineBuilderWidget";
 import ClockEditor from "./ClockEditor";
 import CreateFolderModal from "@/components/CreateFolderModal";
 import {
@@ -29,7 +35,7 @@ import {
   FocusChatWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table } from "lucide-react";
 import { toast } from "sonner";
 
 const BuildModeGrid = () => (
@@ -50,15 +56,30 @@ const BuildModeGrid = () => (
 const FocusContent = () => {
   const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes } = useFocusStore();
   const { folderTree, createFolder, moveFolder } = useFlux();
+  const { user } = useAuth();
+  const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
+  const [openDesktopDoc, setOpenDesktopDoc] = useState<import("@/hooks/useDocuments").DbDocument | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [showDocPicker, setShowDocPicker] = useState(false);
   const [dragState, setDragState] = useState<{ id: string; x: number; y: number } | null>(null);
   const dragStateRef = useRef<{ id: string; x: number; y: number } | null>(null);
 
+  const handleCreateDocument = useCallback(async (type: "text" | "spreadsheet") => {
+    setShowDocPicker(false);
+    setContextMenu(null);
+    if (!user) return;
+    const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
+    const doc = await createDocument(title, type, null);
+    if (doc) {
+      toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
+      setOpenDesktopDoc(doc);
+    }
+  }, [user, createDocument]);
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    // Only show on canvas background, not on widgets/folders
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY });
@@ -80,16 +101,13 @@ const FocusContent = () => {
       ...focusStickyNotes,
       { id: `fn-${Date.now()}`, text: "", color: color.key, x: baseX, y: baseY, rotation, opacity: 1 },
     ]);
-    // Ensure notes widget is active
     if (!activeWidgets.includes("notes")) {
       // Toggle it on via the store if possible
     }
   }, [focusStickyNotes, setFocusStickyNotes, activeWidgets]);
 
-  // Handle drag state changes and nesting on pointer up
   const handleDragStateChange = useCallback((state: { id: string; x: number; y: number } | null) => {
     if (state === null && dragStateRef.current) {
-      // Pointer up — check if the dragged folder's center is within another folder's bounding box
       const prev = dragStateRef.current;
       const draggedId = prev.id;
       const allFolderEls = document.querySelectorAll('.desktop-folder[data-folder-id]');
@@ -115,20 +133,31 @@ const FocusContent = () => {
     setDragState(state);
   }, [moveFolder]);
 
-  // Handle drag-out from modal
   const handleCanvasDragOver = useCallback((e: React.DragEvent) => {
-    if (e.dataTransfer.types.includes("modal-folder-id")) {
+    if (e.dataTransfer.types.includes("modal-folder-id") || e.dataTransfer.types.includes("modal-doc-id")) {
       e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
     }
   }, []);
 
-  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
+  const handleCanvasDrop = useCallback(async (e: React.DragEvent) => {
     const modalFolderId = e.dataTransfer.getData("modal-folder-id");
     if (modalFolderId) {
       e.preventDefault();
       moveFolder(modalFolderId, null as any);
+      toast.success("Moved to desktop");
     }
-  }, [moveFolder]);
+    const modalDocId = e.dataTransfer.getData("modal-doc-id");
+    if (modalDocId) {
+      e.preventDefault();
+      await (supabase as any)
+        .from("documents")
+        .update({ folder_id: null })
+        .eq("id", modalDocId);
+      toast.success("Document moved to desktop");
+      refetchDesktopDocs();
+    }
+  }, [moveFolder, refetchDesktopDocs]);
 
   return (
     <div
@@ -172,6 +201,7 @@ const FocusContent = () => {
             {activeWidgets.includes("quote") && <QuoteOfDay key="quote" />}
             {activeWidgets.includes("breathing") && <BreathingWidget key="breathing" />}
             {activeWidgets.includes("council") && <FocusCouncilWidget key="council" />}
+            {activeWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
             {activeWidgets.includes("budget-preview") && <FocusBudgetWidget key="budget-preview" />}
             {activeWidgets.includes("savings-ring") && <FocusSavingsWidget key="savings-ring" />}
             {activeWidgets.includes("weekly-workout") && <FocusWorkoutWidget key="weekly-workout" />}
@@ -193,9 +223,32 @@ const FocusContent = () => {
             />
           ))}
 
-          {/* Folder Modal */}
+          {/* Desktop Documents (unfiled) */}
+          {desktopDocs.map((doc) => (
+            <DesktopDocument
+              key={doc.id}
+              doc={doc}
+              onOpen={(d) => setOpenDesktopDoc(d)}
+              onDelete={(id) => { removeDesktopDoc(id); }}
+              onRefetch={refetchDesktopDocs}
+            />
+          ))}
           {openFolderId && (
-            <FolderModal folderId={openFolderId} onClose={() => setOpenFolderId(null)} />
+            <FolderModal folderId={openFolderId} onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }} />
+          )}
+          {openDesktopDoc && (
+            <DesktopDocumentViewer
+              document={openDesktopDoc}
+              onClose={() => { setOpenDesktopDoc(null); refetchDesktopDocs(); }}
+              onUpdate={(id, updates) => {
+                updateDesktopDoc(id, updates);
+                setOpenDesktopDoc(prev => prev ? { ...prev, ...updates } : null);
+              }}
+              onDelete={(id) => {
+                removeDesktopDoc(id);
+                setOpenDesktopDoc(null);
+              }}
+            />
           )}
         </div>
       </div>
@@ -203,23 +256,45 @@ const FocusContent = () => {
       {/* Canvas right-click context menu */}
       {contextMenu && (
         <>
-          <div className="fixed inset-0 z-[90]" onClick={() => setContextMenu(null)} />
+          <div className="fixed inset-0 z-[90]" onClick={() => { setContextMenu(null); setShowDocPicker(false); }} />
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.12 }}
-            className="fixed z-[91] bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-xl py-1.5 min-w-[160px]"
+            className="fixed z-[91] bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-xl py-1.5 min-w-[180px]"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button
               onClick={() => { setContextMenu(null); setShowCreateFolder(true); }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg mx-0"
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"
             >
               <FolderPlus size={14} className="text-muted-foreground" /> New Folder
             </button>
             <button
+              onClick={() => setShowDocPicker(!showDocPicker)}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"
+            >
+              <FileText size={14} className="text-muted-foreground" /> New Document
+            </button>
+            {showDocPicker && (
+              <div className="mx-2 mb-1.5 rounded-lg border border-border/40 overflow-hidden">
+                <button
+                  onClick={() => handleCreateDocument("text")}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors"
+                >
+                  <FileText size={13} className="text-primary" /> Text Document
+                </button>
+                <button
+                  onClick={() => handleCreateDocument("spreadsheet")}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors"
+                >
+                  <Table size={13} className="text-accent-foreground" /> Spreadsheet
+                </button>
+              </div>
+            )}
+            <button
               onClick={handleAddStickyNote}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg mx-0"
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"
             >
               <StickyNote size={14} className="text-muted-foreground" /> New Sticky Note
             </button>
