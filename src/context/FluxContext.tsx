@@ -177,21 +177,79 @@ interface FluxContextValue {
 
 const FluxContext = createContext<FluxContextValue | null>(null);
 
+// ── localStorage helpers for offline/anonymous mode ──
+const LS_PREFIX = "flux_local_";
+function lsGet<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch { return fallback; }
+}
+function lsSet<T>(key: string, value: T) {
+  try { localStorage.setItem(LS_PREFIX + key, JSON.stringify(value)); } catch {}
+}
+
 export function FluxProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [folders, setFolders] = useState<DbFolder[]>([]);
-  const [tasks, setTasks] = useState<DbTask[]>([]);
-  const [goals, setGoals] = useState<DbGoal[]>([]);
-  const [workouts, setWorkouts] = useState<DbWorkout[]>([]);
-  const [scheduleBlocks, setScheduleBlocks] = useState<DbScheduleBlock[]>([]);
+  const [folders, setFoldersRaw] = useState<DbFolder[]>([]);
+  const [tasks, setTasksRaw] = useState<DbTask[]>([]);
+  const [goals, setGoalsRaw] = useState<DbGoal[]>([]);
+  const [workouts, setWorkoutsRaw] = useState<DbWorkout[]>([]);
+  const [scheduleBlocks, setScheduleBlocksRaw] = useState<DbScheduleBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings">("stream");
   const [filterPersona, setFilterPersona] = useState<string | null>(null);
 
+  // Wrap setters to persist to localStorage when no user
+  const setFolders: React.Dispatch<React.SetStateAction<DbFolder[]>> = useCallback((val) => {
+    setFoldersRaw((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (!user) lsSet("folders", next);
+      return next;
+    });
+  }, [user]);
+  const setTasks: React.Dispatch<React.SetStateAction<DbTask[]>> = useCallback((val) => {
+    setTasksRaw((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (!user) lsSet("tasks", next);
+      return next;
+    });
+  }, [user]);
+  const setGoals: React.Dispatch<React.SetStateAction<DbGoal[]>> = useCallback((val) => {
+    setGoalsRaw((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (!user) lsSet("goals", next);
+      return next;
+    });
+  }, [user]);
+  const setWorkouts: React.Dispatch<React.SetStateAction<DbWorkout[]>> = useCallback((val) => {
+    setWorkoutsRaw((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (!user) lsSet("workouts", next);
+      return next;
+    });
+  }, [user]);
+  const setScheduleBlocks: React.Dispatch<React.SetStateAction<DbScheduleBlock[]>> = useCallback((val) => {
+    setScheduleBlocksRaw((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (!user) lsSet("schedule_blocks", next);
+      return next;
+    });
+  }, [user]);
+
   // ── Fetch all data ──
   const refreshAll = useCallback(async () => {
-    if (!user) { setLoading(false); return; }
+    if (!user) {
+      // Load from localStorage for anonymous mode
+      setFoldersRaw(lsGet<DbFolder[]>("folders", []));
+      setTasksRaw(lsGet<DbTask[]>("tasks", []));
+      setGoalsRaw(lsGet<DbGoal[]>("goals", []));
+      setWorkoutsRaw(lsGet<DbWorkout[]>("workouts", []));
+      setScheduleBlocksRaw(lsGet<DbScheduleBlock[]>("schedule_blocks", []));
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const [fRes, tRes, gRes, wRes, sRes] = await Promise.all([
       supabase.from("folders").select("*").eq("user_id", user.id).order("sort_order"),
@@ -200,11 +258,11 @@ export function FluxProvider({ children }: { children: ReactNode }) {
       supabase.from("workouts").select("*").eq("user_id", user.id).order("date", { ascending: false }),
       supabase.from("schedule_blocks").select("*").eq("user_id", user.id).order("time"),
     ]);
-    setFolders((fRes.data || []) as unknown as DbFolder[]);
-    setTasks((tRes.data || []) as unknown as DbTask[]);
-    setGoals((gRes.data || []) as unknown as DbGoal[]);
-    setWorkouts((wRes.data || []) as unknown as DbWorkout[]);
-    setScheduleBlocks((sRes.data || []) as unknown as DbScheduleBlock[]);
+    setFoldersRaw((fRes.data || []) as unknown as DbFolder[]);
+    setTasksRaw((tRes.data || []) as unknown as DbTask[]);
+    setGoalsRaw((gRes.data || []) as unknown as DbGoal[]);
+    setWorkoutsRaw((wRes.data || []) as unknown as DbWorkout[]);
+    setScheduleBlocksRaw((sRes.data || []) as unknown as DbScheduleBlock[]);
     setLoading(false);
   }, [user]);
 
@@ -272,40 +330,42 @@ export function FluxProvider({ children }: { children: ReactNode }) {
 
   // ── Folder CRUD ──
   const createFolder = useCallback(async (data: { parent_id?: string | null; title: string; type: string; color?: string; icon?: string }) => {
-    if (!user) return null;
-    const tempId = crypto.randomUUID();
+    const localId = crypto.randomUUID();
+    const localUserId = user?.id || "local";
     const optimistic: DbFolder = {
-      id: tempId, user_id: user.id, parent_id: data.parent_id || null,
+      id: localId, user_id: localUserId, parent_id: data.parent_id || null,
       title: data.title, type: data.type, color: data.color || null, icon: data.icon || null,
       sort_order: folders.length, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
+    if (!user) {
+      setFolders((prev) => [...prev, optimistic]);
+      return optimistic;
+    }
     setFolders((prev) => [...prev, optimistic]);
     const { data: row, error } = await supabase.from("folders").insert({
       user_id: user.id, parent_id: data.parent_id || null,
       title: data.title, type: data.type, color: data.color || null, icon: data.icon || null,
     } as any).select().single();
-    if (error) { console.error(error); setFolders((prev) => prev.filter((f) => f.id !== tempId)); return null; }
-    setFolders((prev) => prev.map((f) => f.id === tempId ? (row as unknown as DbFolder) : f));
+    if (error) { console.error(error); setFolders((prev) => prev.filter((f) => f.id !== localId)); return null; }
+    setFolders((prev) => prev.map((f) => f.id === localId ? (row as unknown as DbFolder) : f));
     return row as unknown as DbFolder;
   }, [user, folders.length]);
 
   const updateFolder = useCallback(async (id: string, data: Partial<Pick<DbFolder, "title" | "color" | "icon" | "parent_id" | "sort_order" | "type">>) => {
-    if (!user) return;
     setFolders((prev) => prev.map((f) => f.id === id ? { ...f, ...data } : f));
+    if (!user) return;
     const { error } = await supabase.from("folders").update(data as any).eq("id", id).eq("user_id", user.id);
     if (error) { console.error(error); refreshAll(); }
   }, [user, refreshAll]);
 
   const removeFolder = useCallback(async (id: string) => {
-    if (!user) return;
-    const prev = folders;
     setFolders((f) => f.filter((x) => x.id !== id));
+    if (!user) return;
     const { error } = await supabase.from("folders").delete().eq("id", id).eq("user_id", user.id);
-    if (error) { console.error(error); setFolders(prev); }
-  }, [user, folders]);
+    if (error) { console.error(error); refreshAll(); }
+  }, [user, folders, refreshAll]);
 
   const moveFolder = useCallback(async (folderId: string, newParentId: string | null) => {
-    if (!user) return;
     if (newParentId) {
       let current = newParentId;
       const visited = new Set<string>();
@@ -320,6 +380,7 @@ export function FluxProvider({ children }: { children: ReactNode }) {
     setFolders((prev) =>
       prev.map((f) => (f.id === folderId ? { ...f, parent_id: newParentId } : f))
     );
+    if (!user) return;
     const { error } = await supabase.from("folders").update({ parent_id: newParentId } as any).eq("id", folderId).eq("user_id", user.id);
     if (error) {
       console.error("moveFolder error:", error);
@@ -329,143 +390,158 @@ export function FluxProvider({ children }: { children: ReactNode }) {
 
   // ── Task CRUD ──
   const createTask = useCallback(async (data: Partial<DbTask> & { title: string }) => {
-    if (!user) return null;
-    const tempId = crypto.randomUUID();
+    const localId = crypto.randomUUID();
+    const localUserId = user?.id || "local";
     const optimistic: DbTask = {
-      id: tempId, user_id: user.id, folder_id: data.folder_id || null,
+      id: localId, user_id: localUserId, folder_id: data.folder_id || null,
       title: data.title, content: data.content || "", type: data.type || "task",
       status: "todo", done: false, pinned: false, due_date: null,
       energy_level: null, priority: data.priority || "medium",
-      scheduled_date: null, tags: null, sort_order: tasks.length,
+      scheduled_date: data.scheduled_date || null, tags: null, sort_order: tasks.length,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
+    if (!user) {
+      setTasks((prev) => [...prev, optimistic]);
+      return optimistic;
+    }
     setTasks((prev) => [...prev, optimistic]);
     const { data: row, error } = await supabase.from("tasks").insert({
       user_id: user.id, ...data,
     } as any).select().single();
-    if (error) { console.error(error); setTasks((prev) => prev.filter((t) => t.id !== tempId)); return null; }
-    setTasks((prev) => prev.map((t) => t.id === tempId ? (row as unknown as DbTask) : t));
+    if (error) { console.error(error); setTasks((prev) => prev.filter((t) => t.id !== localId)); return null; }
+    setTasks((prev) => prev.map((t) => t.id === localId ? (row as unknown as DbTask) : t));
     return row as unknown as DbTask;
   }, [user, tasks.length]);
 
   const updateTask = useCallback(async (id: string, data: Partial<DbTask>) => {
-    if (!user) return;
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...data } : t));
+    if (!user) return;
     const { error } = await supabase.from("tasks").update(data as any).eq("id", id).eq("user_id", user.id);
     if (error) { console.error(error); refreshAll(); }
   }, [user, refreshAll]);
 
   const removeTask = useCallback(async (id: string) => {
-    if (!user) return;
-    const prev = tasks;
     setTasks((t) => t.filter((x) => x.id !== id));
-    setScheduleBlocks((blocks) => {
-      const linked = blocks.filter((b) => b.task_id === id);
-      if (linked.length > 0) {
-        linked.forEach((b) => supabase.from("schedule_blocks").delete().eq("id", b.id).eq("user_id", user.id));
-      }
-      return blocks.filter((b) => b.task_id !== id);
-    });
+    setScheduleBlocks((blocks) => blocks.filter((b) => b.task_id !== id));
+    if (!user) return;
+    const linkedBlocks = scheduleBlocks.filter((b) => b.task_id === id);
+    linkedBlocks.forEach((b) => supabase.from("schedule_blocks").delete().eq("id", b.id).eq("user_id", user.id));
     const { error } = await supabase.from("tasks").delete().eq("id", id).eq("user_id", user.id);
-    if (error) { console.error(error); setTasks(prev); }
-  }, [user, tasks]);
+    if (error) { console.error(error); refreshAll(); }
+  }, [user, tasks, scheduleBlocks, refreshAll]);
 
   // ── Goal CRUD ──
   const createGoal = useCallback(async (data: Partial<DbGoal> & { title: string }) => {
-    if (!user) return null;
-    const tempId = crypto.randomUUID();
+    const localId = crypto.randomUUID();
+    const localUserId = user?.id || "local";
     const optimistic: DbGoal = {
-      id: tempId, user_id: user.id, folder_id: data.folder_id || null,
+      id: localId, user_id: localUserId, folder_id: data.folder_id || null,
       title: data.title, target_amount: data.target_amount || 0,
       current_amount: data.current_amount || 0, deadline: data.deadline || null,
       pinned: data.pinned ?? false,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
+    if (!user) {
+      setGoals((prev) => [optimistic, ...prev]);
+      return optimistic;
+    }
     setGoals((prev) => [optimistic, ...prev]);
     const { data: row, error } = await supabase.from("goals").insert({
       user_id: user.id, ...data,
     } as any).select().single();
-    if (error) { console.error(error); setGoals((prev) => prev.filter((g) => g.id !== tempId)); return null; }
-    setGoals((prev) => prev.map((g) => g.id === tempId ? (row as unknown as DbGoal) : g));
+    if (error) { console.error(error); setGoals((prev) => prev.filter((g) => g.id !== localId)); return null; }
+    setGoals((prev) => prev.map((g) => g.id === localId ? (row as unknown as DbGoal) : g));
     return row as unknown as DbGoal;
   }, [user]);
 
   const updateGoal = useCallback(async (id: string, data: Partial<DbGoal>) => {
-    if (!user) return;
     setGoals((prev) => prev.map((g) => g.id === id ? { ...g, ...data } : g));
+    if (!user) return;
     const { error } = await supabase.from("goals").update(data as any).eq("id", id).eq("user_id", user.id);
     if (error) { console.error(error); refreshAll(); }
   }, [user, refreshAll]);
 
   const removeGoal = useCallback(async (id: string) => {
-    if (!user) return;
-    const prev = goals;
     setGoals((g) => g.filter((x) => x.id !== id));
+    if (!user) return;
     const { error } = await supabase.from("goals").delete().eq("id", id).eq("user_id", user.id);
-    if (error) { console.error(error); setGoals(prev); }
-  }, [user, goals]);
+    if (error) { console.error(error); refreshAll(); }
+  }, [user, goals, refreshAll]);
 
   // ── Workout CRUD ──
   const logWorkout = useCallback(async (data: { date: string; activity: string; energy: number; mood: string }) => {
-    if (!user) return;
-    const tempId = crypto.randomUUID();
-    const optimistic: DbWorkout = { id: tempId, user_id: user.id, ...data, created_at: new Date().toISOString() };
+    const localId = crypto.randomUUID();
+    const localUserId = user?.id || "local";
+    const optimistic: DbWorkout = { id: localId, user_id: localUserId, ...data, created_at: new Date().toISOString() };
     setWorkouts((prev) => [optimistic, ...prev]);
+    if (!user) return;
     const { error } = await supabase.from("workouts").insert({ ...data, user_id: user.id } as any);
-    if (error) { console.error(error); setWorkouts((prev) => prev.filter((w) => w.id !== tempId)); }
+    if (error) { console.error(error); setWorkouts((prev) => prev.filter((w) => w.id !== localId)); }
   }, [user]);
 
   const editWorkout = useCallback(async (id: string, data: Partial<DbWorkout>) => {
-    if (!user) return;
     setWorkouts((prev) => prev.map((w) => w.id === id ? { ...w, ...data } : w));
+    if (!user) return;
     const { error } = await supabase.from("workouts").update(data as any).eq("id", id).eq("user_id", user.id);
     if (error) { console.error(error); refreshAll(); }
   }, [user, refreshAll]);
 
   const removeWorkout = useCallback(async (id: string) => {
-    if (!user) return;
-    const prev = workouts;
     setWorkouts((w) => w.filter((x) => x.id !== id));
+    if (!user) return;
     const { error } = await supabase.from("workouts").delete().eq("id", id).eq("user_id", user.id);
-    if (error) { console.error(error); setWorkouts(prev); }
-  }, [user, workouts]);
+    if (error) { console.error(error); refreshAll(); }
+  }, [user, workouts, refreshAll]);
 
   // ── Schedule CRUD ──
   const createBlock = useCallback(async (data: Partial<DbScheduleBlock> & { title: string; time: string }) => {
-    if (!user) return null;
-    const tempId = crypto.randomUUID();
+    const localId = crypto.randomUUID();
+    const localUserId = user?.id || "local";
     const optimistic: DbScheduleBlock = {
-      id: tempId, user_id: user.id, title: data.title, time: data.time,
+      id: localId, user_id: localUserId, title: data.title, time: data.time,
       duration: data.duration || "30m", type: data.type || "custom",
       scheduled_date: data.scheduled_date || new Date().toISOString().split("T")[0],
       task_id: data.task_id || null, created_at: new Date().toISOString(),
     };
+    if (!user) {
+      setScheduleBlocks((prev) => [...prev, optimistic]);
+      return optimistic;
+    }
     setScheduleBlocks((prev) => [...prev, optimistic]);
     const { data: row, error } = await supabase.from("schedule_blocks").insert({
       user_id: user.id, ...data,
     } as any).select().single();
-    if (error) { console.error(error); setScheduleBlocks((prev) => prev.filter((b) => b.id !== tempId)); return null; }
-    setScheduleBlocks((prev) => prev.map((b) => b.id === tempId ? (row as unknown as DbScheduleBlock) : b));
+    if (error) { console.error(error); setScheduleBlocks((prev) => prev.filter((b) => b.id !== localId)); return null; }
+    setScheduleBlocks((prev) => prev.map((b) => b.id === localId ? (row as unknown as DbScheduleBlock) : b));
     return row as unknown as DbScheduleBlock;
   }, [user]);
 
   const updateBlock = useCallback(async (id: string, data: Partial<DbScheduleBlock>) => {
-    if (!user) return;
     setScheduleBlocks((prev) => prev.map((b) => b.id === id ? { ...b, ...data } : b));
+    if (!user) return;
     const { error } = await supabase.from("schedule_blocks").update(data as any).eq("id", id).eq("user_id", user.id);
     if (error) { console.error(error); refreshAll(); }
   }, [user, refreshAll]);
 
   const removeBlock = useCallback(async (id: string) => {
-    if (!user) return;
-    const prev = scheduleBlocks;
     setScheduleBlocks((b) => b.filter((x) => x.id !== id));
+    if (!user) return;
     const { error } = await supabase.from("schedule_blocks").delete().eq("id", id).eq("user_id", user.id);
-    if (error) { console.error(error); setScheduleBlocks(prev); }
-  }, [user, scheduleBlocks]);
+    if (error) { console.error(error); refreshAll(); }
+  }, [user, scheduleBlocks, refreshAll]);
 
   const replaceBlocksForDate = useCallback(async (date: string, blocks: Omit<DbScheduleBlock, "id" | "user_id" | "created_at">[]) => {
-    if (!user) return;
+    const localUserId = user?.id || "local";
+    if (!user) {
+      setScheduleBlocks((prev) => {
+        const filtered = prev.filter((b) => b.scheduled_date !== date);
+        const newBlocks = blocks.map((b) => ({
+          ...b, id: crypto.randomUUID(), user_id: localUserId, created_at: new Date().toISOString(),
+        })) as DbScheduleBlock[];
+        return [...filtered, ...newBlocks];
+      });
+      return;
+    }
     await supabase.from("schedule_blocks").delete().eq("user_id", user.id).eq("scheduled_date", date);
     if (blocks.length > 0) {
       await supabase.from("schedule_blocks").insert(
