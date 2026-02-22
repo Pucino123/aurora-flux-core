@@ -219,6 +219,7 @@ const FocusContent = () => {
               onOpenModal={setOpenFolderId}
               dragState={dragState}
               onDragStateChange={handleDragStateChange}
+              onDocDropped={refetchDesktopDocs}
             />
           ))}
 
