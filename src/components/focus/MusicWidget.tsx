@@ -62,7 +62,7 @@ const MusicWidget = () => {
             <span className="text-xs text-white/70 font-semibold">🔊 Video Audio</span>
             <span className="text-[10px] text-white/30 tabular-nums">{Math.round(masterVolume * 100)}%</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" onPointerDown={e => e.stopPropagation()} style={{ cursor: "pointer" }}>
             <button
               onClick={() => handleMasterVolume(masterVolume > 0 ? 0 : 0.5)}
               className="text-white/40 hover:text-white/70 transition-colors"
@@ -74,7 +74,7 @@ const MusicWidget = () => {
               onValueChange={([v]) => handleMasterVolume(v)}
               max={1}
               step={0.01}
-              className="[&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3.5 [&_[data-radix-slider-thumb]]:h-3.5"
+              className="cursor-pointer [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3.5 [&_[data-radix-slider-thumb]]:h-3.5 [&_[data-radix-slider-thumb]]:cursor-pointer [&_[data-radix-slider-track]]:cursor-pointer"
             />
           </div>
           <p className="text-[10px] text-white/25 leading-relaxed">
