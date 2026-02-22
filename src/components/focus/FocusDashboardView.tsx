@@ -70,14 +70,13 @@ const FocusContent = () => {
   const handleCreateDocument = useCallback(async (type: "text" | "spreadsheet") => {
     setShowDocPicker(false);
     setContextMenu(null);
-    if (!user) return;
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
     const doc = await createDocument(title, type, null);
     if (doc) {
       toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
       setOpenDesktopDoc(doc);
     }
-  }, [user, createDocument]);
+  }, [createDocument]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
