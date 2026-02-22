@@ -14,6 +14,7 @@ interface DesktopFolderProps {
   onOpenModal?: (folderId: string) => void;
   dragState?: { id: string; x: number; y: number } | null;
   onDragStateChange?: (state: { id: string; x: number; y: number } | null) => void;
+  onDocDropped?: () => void;
 }
 
 const FOLDER_COLORS = [
@@ -27,7 +28,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, onDragStateChange }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, dragState, onDragStateChange, onDocDropped }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
@@ -242,6 +243,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, onDragStateChange }: De
             await (supabase as any).from("documents").update({ folder_id: folder.id }).eq("id", docId);
             triggerAbsorb();
             toast.success(`Moved to ${folder.title}`);
+            onDocDropped?.();
           }
         }}
       >
