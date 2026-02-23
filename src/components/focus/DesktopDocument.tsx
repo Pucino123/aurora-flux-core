@@ -17,6 +17,8 @@ interface DesktopDocumentProps {
   onDelete?: (id: string) => void;
   onDuplicate?: (doc: DbDocument) => void;
   onRefetch?: () => void;
+  dragState?: { id: string; x: number; y: number } | null;
+  onDragStateChange?: (state: { id: string; x: number; y: number } | null) => void;
 }
 
 const ICON_COLORS = [
@@ -41,7 +43,7 @@ const BG_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch }: DesktopDocumentProps) => {
+const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange }: DesktopDocumentProps) => {
   const { user } = useAuth();
   const store = useFocusStore();
   const { folders, createBlock } = useFlux();
@@ -90,8 +92,13 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch }: Desk
       const nx = Math.max(0, e.clientX - offset.current.x);
       const ny = Math.max(0, e.clientY - offset.current.y);
       store.updateDesktopDocPosition(doc.id, { x: nx, y: ny });
+      onDragStateChange?.({ id: doc.id, x: e.clientX, y: e.clientY });
     };
-    const onUp = () => { dragging.current = false; };
+    const onUp = () => {
+      if (!dragging.current) return;
+      dragging.current = false;
+      if (didDrag.current && onDragStateChange) { onDragStateChange(null); }
+    };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
@@ -148,11 +155,6 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch }: Desk
       <div
         className="desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group"
         style={{ left: pos.x, top: pos.y, width: 90, minHeight: 90, zIndex: 45, background: "transparent", backdropFilter: docOpacity <= 0.06 ? "none" : undefined, WebkitBackdropFilter: docOpacity <= 0.06 ? "none" : undefined, boxShadow: docOpacity <= 0.06 ? "none" : undefined, border: docOpacity <= 0.06 ? "none" : undefined }}
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData("desktop-doc-id", doc.id);
-          e.dataTransfer.effectAllowed = "move";
-        }}
         onPointerDown={handlePointerDown}
         onClick={(e) => { e.stopPropagation(); if (!didDrag.current) onOpen(doc); }}
         onContextMenu={handleContextMenu}

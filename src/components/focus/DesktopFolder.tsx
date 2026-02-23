@@ -13,6 +13,7 @@ interface DesktopFolderProps {
   folder: FolderNode;
   onOpenModal?: (folderId: string) => void;
   dragState?: { id: string; x: number; y: number } | null;
+  docDragState?: { id: string; x: number; y: number } | null;
   onDragStateChange?: (state: { id: string; x: number; y: number } | null) => void;
   onDocDropped?: () => void;
 }
@@ -28,7 +29,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, onDragStateChange, onDocDropped }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
@@ -81,12 +82,21 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, onDragStateChange, onDo
   const displayedIcons = showAllIcons ? filteredIcons : filteredIcons.slice(0, 12);
 
   useEffect(() => {
-    if (!dragState || dragState.id === folder.id) { setIsDropTarget(false); return; }
+    // Highlight as drop target for folder drag
+    if (!dragState || dragState.id === folder.id) {
+      // Also check docDragState
+      if (!docDragState) { setIsDropTarget(false); return; }
+      const rect = folderRef.current?.getBoundingClientRect();
+      if (!rect) { setIsDropTarget(false); return; }
+      const over = docDragState.x > rect.left && docDragState.x < rect.right && docDragState.y > rect.top && docDragState.y < rect.bottom;
+      setIsDropTarget(over);
+      return;
+    }
     const rect = folderRef.current?.getBoundingClientRect();
     if (!rect) { setIsDropTarget(false); return; }
     const over = dragState.x > rect.left && dragState.x < rect.right && dragState.y > rect.top && dragState.y < rect.bottom;
     setIsDropTarget(over);
-  }, [dragState, folder.id]);
+  }, [dragState, docDragState, folder.id]);
 
   const triggerAbsorb = useCallback(() => {
     setJustAbsorbed(true);
@@ -226,26 +236,6 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, onDragStateChange, onDo
         onDoubleClick={handleDoubleClick}
         onClick={(e) => { e.stopPropagation(); if (!didDrag.current) setSelected(true); }}
         onContextMenu={handleContextMenu}
-        onDragOver={(e) => {
-          if (e.dataTransfer.types.includes("desktop-doc-id")) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = "move";
-            setIsDropTarget(true);
-          }
-        }}
-        onDragLeave={() => setIsDropTarget(false)}
-        onDrop={async (e) => {
-          const docId = e.dataTransfer.getData("desktop-doc-id");
-          if (docId) {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsDropTarget(false);
-            await (supabase as any).from("documents").update({ folder_id: folder.id }).eq("id", docId);
-            triggerAbsorb();
-            toast.success(`Moved to ${folder.title}`);
-            onDocDropped?.();
-          }
-        }}
       >
         {/* Background layer */}
         {folderOpacity > 0.06 ? (
