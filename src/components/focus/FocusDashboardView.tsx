@@ -65,17 +65,16 @@ const FocusContent = () => {
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showDocPicker, setShowDocPicker] = useState(false);
   const [dragState, setDragState] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [docDragState, setDocDragState] = useState<{ id: string; x: number; y: number } | null>(null);
   const dragStateRef = useRef<{ id: string; x: number; y: number } | null>(null);
+  const docDragStateRef = useRef<{ id: string; x: number; y: number } | null>(null);
 
   const handleCreateDocument = useCallback(async (type: "text" | "spreadsheet") => {
     setShowDocPicker(false);
     setContextMenu(null);
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
-    const doc = await createDocument(title, type, null);
-    if (doc) {
-      toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-      setOpenDesktopDoc(doc);
-    }
+    await createDocument(title, type, null);
+    toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
   }, [createDocument]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -131,6 +130,48 @@ const FocusContent = () => {
     dragStateRef.current = state;
     setDragState(state);
   }, [moveFolder]);
+
+  const handleDocDragStateChange = useCallback((state: { id: string; x: number; y: number } | null) => {
+    if (state === null && docDragStateRef.current) {
+      const prev = docDragStateRef.current;
+      const docId = prev.id;
+      const allFolderEls = document.querySelectorAll('.desktop-folder[data-folder-id]');
+      for (const el of allFolderEls) {
+        const targetId = (el as HTMLElement).dataset.folderId;
+        if (!targetId) continue;
+        const rect = el.getBoundingClientRect();
+        if (
+          prev.x > rect.left &&
+          prev.x < rect.right &&
+          prev.y > rect.top &&
+          prev.y < rect.bottom
+        ) {
+          const triggerAbsorb = (el as any).__triggerAbsorb;
+          if (triggerAbsorb) triggerAbsorb();
+          // Move document into folder
+          const folder = folderTree.find(f => f.id === targetId);
+          if (user) {
+            (supabase as any).from("documents").update({ folder_id: targetId }).eq("id", docId).then(() => {
+              refetchDesktopDocs();
+            });
+          } else {
+            // Local storage update
+            const LS_KEY = "flux_local_documents";
+            try {
+              const raw = localStorage.getItem(LS_KEY);
+              const docs = raw ? JSON.parse(raw) : [];
+              localStorage.setItem(LS_KEY, JSON.stringify(docs.map((d: any) => d.id === docId ? { ...d, folder_id: targetId } : d)));
+              refetchDesktopDocs();
+            } catch {}
+          }
+          toast.success(`Moved to ${folder?.title || "folder"}`);
+          break;
+        }
+      }
+    }
+    docDragStateRef.current = state;
+    setDocDragState(state);
+  }, [folderTree, user, refetchDesktopDocs]);
 
   const handleCanvasDragOver = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.includes("modal-folder-id") || e.dataTransfer.types.includes("modal-doc-id")) {
@@ -218,6 +259,7 @@ const FocusContent = () => {
               folder={folder}
               onOpenModal={setOpenFolderId}
               dragState={dragState}
+              docDragState={docDragState}
               onDragStateChange={handleDragStateChange}
               onDocDropped={refetchDesktopDocs}
             />
@@ -231,6 +273,8 @@ const FocusContent = () => {
               onOpen={(d) => setOpenDesktopDoc(d)}
               onDelete={(id) => { removeDesktopDoc(id); }}
               onRefetch={refetchDesktopDocs}
+              dragState={docDragState}
+              onDragStateChange={handleDocDragStateChange}
             />
           ))}
           {openFolderId && (
