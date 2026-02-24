@@ -151,7 +151,7 @@ const FocusContent = () => {
           // Move document into folder
           const folder = folderTree.find(f => f.id === targetId);
           if (user) {
-            (supabase as any).from("documents").update({ folder_id: targetId }).eq("id", docId).then(() => {
+            (supabase as any).from("documents").update({ folder_id: targetId, updated_at: new Date().toISOString() }).eq("id", docId).then(() => {
               refetchDesktopDocs();
             });
           } else {
@@ -160,7 +160,7 @@ const FocusContent = () => {
             try {
               const raw = localStorage.getItem(LS_KEY);
               const docs = raw ? JSON.parse(raw) : [];
-              localStorage.setItem(LS_KEY, JSON.stringify(docs.map((d: any) => d.id === docId ? { ...d, folder_id: targetId } : d)));
+              localStorage.setItem(LS_KEY, JSON.stringify(docs.map((d: any) => d.id === docId ? { ...d, folder_id: targetId, updated_at: new Date().toISOString() } : d)));
               refetchDesktopDocs();
             } catch {}
           }

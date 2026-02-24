@@ -74,7 +74,7 @@ interface FocusState {
 const DEFAULT_STATE: FocusState = {
   isZenMode: false,
   currentBackground: "cozy-fireplace",
-  activeWidgets: ["timer", "music", "planner"],
+  activeWidgets: ["clock", "notes", "planner"],
   widgetPositions: {},
   audioVolumes: {},
   timerMode: "pomodoro",
@@ -83,7 +83,11 @@ const DEFAULT_STATE: FocusState = {
   brainDumpTasks: [],
   timeSlots: {},
   widgetOpacities: {},
-  focusStickyNotes: [],
+  focusStickyNotes: [
+    { id: "default-1", text: "im a note", color: "yellow", x: 280, y: 80, rotation: 3, opacity: 1 },
+    { id: "default-2", text: "im a note", color: "purple", x: 250, y: 210, rotation: -2, opacity: 1 },
+    { id: "default-3", text: "im a note", color: "green", x: 270, y: 320, rotation: 1, opacity: 1 },
+  ],
   activeTaskId: null,
   taskTimeLog: {},
   quoteFontSize: 14,
@@ -224,6 +228,54 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  // Responsive proportional scaling on window resize
+  useEffect(() => {
+    let prevW = window.innerWidth;
+    let prevH = window.innerHeight;
+    const onResize = () => {
+      const newW = window.innerWidth;
+      const newH = window.innerHeight;
+      if (Math.abs(newW - prevW) < 20 && Math.abs(newH - prevH) < 20) return;
+      const scaleX = newW / prevW;
+      const scaleY = newH / prevH;
+      setState(prev => {
+        const scaledWidgetPositions: Record<string, WidgetPosition> = {};
+        for (const [k, v] of Object.entries(prev.widgetPositions)) {
+          scaledWidgetPositions[k] = {
+            x: Math.round(v.x * scaleX),
+            y: Math.round(v.y * scaleY),
+            w: v.w,
+            h: v.h,
+          };
+        }
+        const scaledFolderPositions: Record<string, { x: number; y: number }> = {};
+        for (const [k, v] of Object.entries(prev.desktopFolderPositions)) {
+          scaledFolderPositions[k] = { x: Math.round(v.x * scaleX), y: Math.round(v.y * scaleY) };
+        }
+        const scaledDocPositions: Record<string, { x: number; y: number }> = {};
+        for (const [k, v] of Object.entries(prev.desktopDocPositions)) {
+          scaledDocPositions[k] = { x: Math.round(v.x * scaleX), y: Math.round(v.y * scaleY) };
+        }
+        const scaledStickyNotes = prev.focusStickyNotes.map(n => ({
+          ...n,
+          x: Math.round(n.x * scaleX),
+          y: Math.round(n.y * scaleY),
+        }));
+        return {
+          ...prev,
+          widgetPositions: scaledWidgetPositions,
+          desktopFolderPositions: scaledFolderPositions,
+          desktopDocPositions: scaledDocPositions,
+          focusStickyNotes: scaledStickyNotes,
+        };
+      });
+      prevW = newW;
+      prevH = newH;
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const update = useCallback((partial: Partial<FocusState>) => {
     setState((prev) => ({ ...prev, ...partial }));
