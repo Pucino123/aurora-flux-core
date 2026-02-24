@@ -30,6 +30,7 @@ interface WordsToolbarProps {
   zoom: number;
   onZoomChange: (z: number) => void;
   lightMode?: boolean;
+  onToggleLightMode?: () => void;
 }
 
 const DEFAULT_ORDER = ["file", "typography", "structure", "insert", "emoji", "ai", "view"];
@@ -37,7 +38,7 @@ const DEFAULT_ORDER = ["file", "typography", "structure", "insert", "emoji", "ai
 const WordsToolbar = ({
   editorRef, onContentChange, exec, renaming, setRenaming, renameValue, setRenameValue,
   commitRename, documentTitle, confirmDelete, setConfirmDelete, onDelete,
-  studioMode, onToggleStudio, zoom, onZoomChange, lightMode = false,
+  studioMode, onToggleStudio, zoom, onZoomChange, lightMode = false, onToggleLightMode,
 }: WordsToolbarProps) => {
   const lm = lightMode;
   const { order, handleReorder } = useToolbarOrder("flux-words-toolbar-order", DEFAULT_ORDER);
@@ -82,6 +83,7 @@ const WordsToolbar = ({
         <ViewModeToggle
           studioMode={studioMode} onToggleStudio={onToggleStudio}
           zoom={zoom} onZoomChange={onZoomChange} lightMode={lm}
+          onToggleLightMode={onToggleLightMode}
         />
       </ToolbarSegment>
     ),

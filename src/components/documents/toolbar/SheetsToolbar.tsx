@@ -36,6 +36,7 @@ interface SheetsToolbarProps {
   onExportCsv?: () => void;
   onInsertText?: (text: string) => void;
   lightMode?: boolean;
+  onToggleLightMode?: () => void;
 }
 
 const DEFAULT_ORDER = ["file", "cell-format", "emoji", "data-tools", "view"];
@@ -46,7 +47,7 @@ const SheetsToolbar = ({
   renaming, setRenaming, renameValue, setRenameValue, commitRename,
   documentTitle, confirmDelete, setConfirmDelete, onDelete,
   studioMode, onToggleStudio, onExportCsv, onInsertText,
-  lightMode = false,
+  lightMode = false, onToggleLightMode,
 }: SheetsToolbarProps) => {
   const lm = lightMode;
   const [fs, setFs] = useState("12");
@@ -102,7 +103,7 @@ const SheetsToolbar = ({
     ),
     view: (
       <ToolbarSegment key="view" id="view" sortable>
-        <ViewModeToggle studioMode={studioMode} onToggleStudio={onToggleStudio} zoom={100} onZoomChange={() => {}} lightMode={lm} />
+        <ViewModeToggle studioMode={studioMode} onToggleStudio={onToggleStudio} zoom={100} onZoomChange={() => {}} lightMode={lm} onToggleLightMode={onToggleLightMode} />
         {onExportCsv && (<ToolbarButton icon={<Download size={14} />} label="Export CSV" onClick={onExportCsv} lightMode={lm} />)}
       </ToolbarSegment>
     ),

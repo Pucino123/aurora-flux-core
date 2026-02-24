@@ -11,9 +11,10 @@ interface DocumentViewProps {
   onUpdate: (id: string, updates: Partial<DbDocument>) => void;
   onDelete: (id: string) => void;
   lightMode?: boolean;
+  onToggleLightMode?: () => void;
 }
 
-const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false }: DocumentViewProps) => {
+const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false, onToggleLightMode }: DocumentViewProps) => {
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(document.title);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -31,6 +32,7 @@ const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false 
         document={document} onUpdate={onUpdate} onDelete={onDelete}
         renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
         commitRename={commitRename} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete} lightMode={lightMode}
+        onToggleLightMode={onToggleLightMode}
       />
     );
   }
@@ -40,6 +42,7 @@ const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false 
       document={document} onUpdate={onUpdate} onDelete={onDelete}
       renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
       commitRename={commitRename} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete} lightMode={lightMode}
+      onToggleLightMode={onToggleLightMode}
     />
   );
 };
@@ -57,10 +60,11 @@ interface EditorProps {
   confirmDelete: boolean;
   setConfirmDelete: (v: boolean) => void;
   lightMode?: boolean;
+  onToggleLightMode?: () => void;
 }
 
 /* ─── Text Editor ─── */
-const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false }: EditorProps) => {
+const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode }: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const [studioMode, setStudioMode] = useState(false);
@@ -151,6 +155,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
         studioMode={studioMode} onToggleStudio={() => setStudioMode(!studioMode)}
         zoom={zoom} onZoomChange={setZoom}
         lightMode={lm}
+        onToggleLightMode={onToggleLightMode}
       />
       <div
         ref={editorRef}
@@ -212,7 +217,7 @@ function bindCheckboxes(el: HTMLElement) {
 }
 
 /* ─── Spreadsheet Editor ─── */
-const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false }: EditorProps) => {
+const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode }: EditorProps) => {
   const lm = lightMode;
   const [studioMode, setStudioMode] = useState(false);
 
@@ -365,6 +370,7 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
           }
         }}
         lightMode={lm}
+        onToggleLightMode={onToggleLightMode}
       />
       <div className={`flex-1 overflow-auto rounded-xl border ${cellBorder} ${studioMode ? (lm ? "bg-white shadow-xl" : "bg-card/80 shadow-xl") : ""}`}>
         <table className="border-collapse text-xs" style={{ tableLayout: "fixed" }}>
