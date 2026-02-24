@@ -35,6 +35,10 @@ interface ClockWidgetProps {
 }
 
 const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
+  const defaultClockPos = React.useMemo(() => ({
+    x: typeof window !== 'undefined' ? Math.round((window.innerWidth - 400) / 2) : 500,
+    y: 30,
+  }), []);
   const [now, setNow] = useState(new Date());
   const {
     clockFontSize, setClockFontSize,
@@ -126,7 +130,7 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
     <DraggableWidget
       id="clock"
       title="Clock"
-      defaultPosition={{ x: 80, y: 60 }}
+      defaultPosition={defaultClockPos}
       defaultSize={{ w: 400, h: 260 }}
       fontSizeControl={{ value: clockFontSize, set: setClockFontSize, min: 30, max: 120, step: 10 }}
       onEditAction={onOpenEditor}
