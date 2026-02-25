@@ -6,13 +6,14 @@ import {
   ChevronRight, LayoutGrid, List, Folder, ArrowLeft, Search, SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
+
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { useDocuments, DbDocument } from "@/hooks/useDocuments";
 import { FOLDER_ICONS } from "@/components/CreateFolderModal";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import FolderContents from "./FolderContents";
 import FolderTemplateSelector from "./FolderTemplateSelector";
-import DocumentView from "@/components/documents/DocumentView";
+import DesktopDocumentViewer from "./DesktopDocumentViewer";
 import { toast } from "sonner";
 
 const FOLDER_COLORS = [
@@ -51,6 +52,8 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const [sortMode, setSortMode] = useState<SortMode>("name");
   const [showSort, setShowSort] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const currentFolderId = navStack[navStack.length - 1];
   const currentFolder = findFolderNode(currentFolderId);
@@ -99,8 +102,6 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
       if (e.key === "Escape") {
         if (searchQuery) {
           setSearchQuery("");
-        } else if (openDocument) {
-          setOpenDocument(null);
         } else {
           onClose();
         }
@@ -108,7 +109,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, openDocument, searchQuery]);
+  }, [onClose, searchQuery]);
 
   // Clear search when navigating
   const drillIn = useCallback((childId: string) => {
@@ -183,8 +184,6 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const IconComp = customIcon ? customIcon.icon : Folder;
   const iconColor = currentFolder.color || "hsl(var(--muted-foreground))";
 
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
-
   return createPortal(
     <AnimatePresence>
       <motion.div
@@ -210,140 +209,115 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-5 pt-5 pb-3">
-            {/* Back button for subfolder navigation or document */}
-            {(navStack.length > 1 || openDocument) && !renaming && (
+            {navStack.length > 1 && !renaming && (
               <button
-                onClick={() => {
-                  if (openDocument) {
-                    setOpenDocument(null);
-                  } else {
-                    navigateTo(navStack.length - 2);
-                  }
-                }}
+                onClick={() => navigateTo(navStack.length - 2)}
                 className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft size={16} />
               </button>
             )}
-
-            {openDocument ? (
-              <>
-
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {openDocument.type === "text" ? (
-                    <FileText size={18} className="text-blue-400 shrink-0" />
-                  ) : (
-                    <Table size={18} className="text-emerald-500 shrink-0" />
-                  )}
-                  <span className="text-lg font-semibold text-foreground truncate">{openDocument.title}</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${iconColor}15` }}
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: `${iconColor}15` }}
+            >
+              <IconComp size={20} style={{ color: iconColor }} strokeWidth={1.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              {renaming ? (
+                <input
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") setRenaming(false);
+                  }}
+                  className="w-full text-lg font-semibold bg-transparent border-b-2 border-primary/40 outline-none text-foreground"
+                  autoFocus
+                />
+              ) : (
+                <h2
+                  className="text-lg font-semibold text-foreground truncate cursor-pointer hover:text-primary transition-colors"
+                  onClick={startRename}
+                  title="Click to rename"
                 >
-                  <IconComp size={20} style={{ color: iconColor }} strokeWidth={1.5} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  {renaming ? (
-                    <input
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") commitRename();
-                        if (e.key === "Escape") setRenaming(false);
-                      }}
-                      className="w-full text-lg font-semibold bg-transparent border-b-2 border-primary/40 outline-none text-foreground"
-                      autoFocus
-                    />
-                  ) : (
-                    <h2
-                      className="text-lg font-semibold text-foreground truncate cursor-pointer hover:text-primary transition-colors"
-                      onClick={startRename}
-                      title="Click to rename"
-                    >
-                      {currentFolder.title}
-                    </h2>
-                  )}
-                </div>
-                <button
-                  onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                  className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
-                  title={viewMode === "grid" ? "List view" : "Grid view"}
-                >
-                  {viewMode === "grid" ? <List size={16} /> : <LayoutGrid size={16} />}
+                  {currentFolder.title}
+                </h2>
+              )}
+            </div>
+            <button
+              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+              className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
+              title={viewMode === "grid" ? "List view" : "Grid view"}
+            >
+              {viewMode === "grid" ? <List size={16} /> : <LayoutGrid size={16} />}
+            </button>
+            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+              <PopoverTrigger asChild>
+                <button className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground">
+                  <MoreHorizontal size={16} />
                 </button>
-                <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-                  <PopoverTrigger asChild>
-                    <button className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground">
-                      <MoreHorizontal size={16} />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-52 p-1.5 z-[200]" sideOffset={4}>
-                    <button
-                      onClick={() => { setMenuOpen(false); startRename(); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-secondary transition-colors"
-                    >
-                      <Pencil size={14} className="text-muted-foreground" /> Rename
-                    </button>
-                    <div className="px-3 py-2">
-                      <p className="text-[11px] font-medium text-muted-foreground mb-2 uppercase tracking-wider">Color</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {FOLDER_COLORS.map((c) => (
-                          <button
-                            key={c.name}
-                            onClick={() => updateFolder(currentFolderId, { color: c.value })}
-                            className={`w-5 h-5 rounded-full border-2 transition-all duration-150 hover:scale-125 ${
-                              currentFolder.color === c.value ? "border-foreground/40 scale-110" : "border-transparent"
-                            }`}
-                            style={{ backgroundColor: c.value }}
-                            title={c.name}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="px-3 py-2">
-                      <p className="text-[11px] font-medium text-muted-foreground mb-2 uppercase tracking-wider">Icon</p>
-                      <div className="grid grid-cols-8 gap-1">
-                        {FOLDER_ICONS.slice(0, 24).map((item) => {
-                          const IC = item.icon;
-                          const isActive = currentFolder.icon === item.name;
-                          return (
-                            <button
-                              key={item.name}
-                              onClick={() => updateFolder(currentFolderId, { icon: item.name })}
-                              className={`p-1 rounded-md transition-all hover:scale-110 ${
-                                isActive ? "bg-primary/15" : "hover:bg-secondary/60"
-                              }`}
-                              title={item.name}
-                            >
-                              <IC size={14} className={isActive ? "text-primary" : "text-muted-foreground"} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="h-px bg-border mx-2 my-1" />
-                    <button
-                      onClick={handleDuplicate}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-secondary transition-colors"
-                    >
-                      <Copy size={14} className="text-muted-foreground" /> Duplicate
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
-                    >
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  </PopoverContent>
-                </Popover>
-              </>
-            )}
-
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-52 p-1.5 z-[200]" sideOffset={4}>
+                <button
+                  onClick={() => { setMenuOpen(false); startRename(); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-secondary transition-colors"
+                >
+                  <Pencil size={14} className="text-muted-foreground" /> Rename
+                </button>
+                <div className="px-3 py-2">
+                  <p className="text-[11px] font-medium text-muted-foreground mb-2 uppercase tracking-wider">Color</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {FOLDER_COLORS.map((c) => (
+                      <button
+                        key={c.name}
+                        onClick={() => updateFolder(currentFolderId, { color: c.value })}
+                        className={`w-5 h-5 rounded-full border-2 transition-all duration-150 hover:scale-125 ${
+                          currentFolder.color === c.value ? "border-foreground/40 scale-110" : "border-transparent"
+                        }`}
+                        style={{ backgroundColor: c.value }}
+                        title={c.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="px-3 py-2">
+                  <p className="text-[11px] font-medium text-muted-foreground mb-2 uppercase tracking-wider">Icon</p>
+                  <div className="grid grid-cols-8 gap-1">
+                    {FOLDER_ICONS.slice(0, 24).map((item) => {
+                      const IC = item.icon;
+                      const isActive = currentFolder.icon === item.name;
+                      return (
+                        <button
+                          key={item.name}
+                          onClick={() => updateFolder(currentFolderId, { icon: item.name })}
+                          className={`p-1 rounded-md transition-all hover:scale-110 ${
+                            isActive ? "bg-primary/15" : "hover:bg-secondary/60"
+                          }`}
+                          title={item.name}
+                        >
+                          <IC size={14} className={isActive ? "text-primary" : "text-muted-foreground"} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="h-px bg-border mx-2 my-1" />
+                <button
+                  onClick={handleDuplicate}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-secondary transition-colors"
+                >
+                  <Copy size={14} className="text-muted-foreground" /> Duplicate
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <Trash2 size={14} /> Delete
+                </button>
+              </PopoverContent>
+            </Popover>
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
@@ -353,7 +327,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
           </div>
 
           {/* Breadcrumb */}
-          {!openDocument && breadcrumbs.length > 1 && (
+          {breadcrumbs.length > 1 && (
             <div className="flex items-center gap-1 px-5 pb-2 text-xs text-muted-foreground overflow-x-auto">
               {breadcrumbs.map((crumb, i) => (
                 <React.Fragment key={crumb.id}>
@@ -371,8 +345,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
           )}
 
           {/* Search bar + filter chips + create actions */}
-          {!openDocument && (
-            <div className="px-5 pb-3 space-y-2.5">
+          <div className="px-5 pb-3 space-y-2.5">
               {/* Search */}
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
@@ -459,48 +432,44 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
                 </button>
               </div>
             </div>
-          )}
 
           {/* Content area */}
           <div className="flex-1 overflow-y-auto px-5 pb-5 min-h-0 relative">
-            {openDocument ? (
-              <div className="h-full min-h-[400px]">
-                <DocumentView
-                  document={openDocument}
-                  onBack={() => setOpenDocument(null)}
-                  onUpdate={(id, updates) => {
-                    updateDocument(id, updates);
-                    setOpenDocument((prev) => prev ? { ...prev, ...updates } : null);
-                  }}
-                  onDelete={(id) => {
-                    removeDocument(id);
-                    setOpenDocument(null);
-                  }}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={currentFolderId}
+                initial={{ opacity: 0, x: direction * 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: direction * -40 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <FolderContents
+                  subfolders={filteredData.subfolders}
+                  documents={filteredData.documents}
+                  loading={docsLoading}
+                  viewMode={viewMode}
+                  searchQuery={searchQuery}
+                  onOpenSubfolder={drillIn}
+                  onOpenDocument={handleOpenDocument}
+                  onCreateFolder={handleCreateSubfolder}
+                  onCreateDocument={handleCreateDocument}
+                  onMoveFolder={handleMoveFolder}
                 />
-              </div>
-            ) : (
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={currentFolderId}
-                  initial={{ opacity: 0, x: direction * 40 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: direction * -40 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                >
-                  <FolderContents
-                    subfolders={filteredData.subfolders}
-                    documents={filteredData.documents}
-                    loading={docsLoading}
-                    viewMode={viewMode}
-                    searchQuery={searchQuery}
-                    onOpenSubfolder={drillIn}
-                    onOpenDocument={handleOpenDocument}
-                    onCreateFolder={handleCreateSubfolder}
-                    onCreateDocument={handleCreateDocument}
-                    onMoveFolder={handleMoveFolder}
-                  />
-                </motion.div>
-              </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
+            {openDocument && (
+              <DesktopDocumentViewer
+                document={openDocument}
+                onClose={() => setOpenDocument(null)}
+                onUpdate={(id, updates) => {
+                  updateDocument(id, updates);
+                  setOpenDocument((prev) => prev ? { ...prev, ...updates } : null);
+                }}
+                onDelete={(id) => {
+                  removeDocument(id);
+                  setOpenDocument(null);
+                }}
+              />
             )}
           </div>
 
