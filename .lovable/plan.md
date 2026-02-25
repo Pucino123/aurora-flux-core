@@ -1,88 +1,67 @@
 
+# Plan: Studio Mode Fix, Reset-knap og Dokument AI-chat
 
-# Editor Parity and iOS-Style Toolbar Physics
+## 1. Fix Studio Mode drag-clipping
 
-## Current State Analysis
+**Problem:** Studio Mode-toolbaren er `fixed` positioneret med `z-[200]`, men det overordnede dokument-container har ikke `overflow: visible` hele vejen op. Elementer bliver klippet af parent-containere.
 
-After thorough code review, both editors are already **functional** (not placeholders):
+**Losning:**
+- I `DocumentView.tsx`: Nar `studioMode` er aktiv, tilfojes `overflow-visible` pa ALLE parent-containere (den ydre `div` wrapper).
+- Undersog og tilret eventuelle parent-elementer i `FluxSidebar` eller layout-containere der kan klippe.
+- Saet `dragConstraints={{ top: -9999, left: -9999, right: 9999, bottom: 9999 }}` i stedet for `dragConstraints={false}` pa bade `WordsToolbar` og `SheetsToolbar` studio-mode containeren for at sikre framer-motion ikke begrenser drag.
 
-- **Word Editor**: Uses `contentEditable` + `document.execCommand()` -- Bold, Italic, Headers, Lists, Links, Tables, Checklists all work when clicked
-- **Sheet Editor**: Custom grid with real cell input, formatting (bold/italic/color/alignment), Tab/Enter navigation, column/row resize, context menus, CSV export
-- **Toolbar DnD**: Already uses `@dnd-kit/sortable` with localStorage persistence via `useToolbarOrder` hook
+**Filer:** `DocumentView.tsx`, `WordsToolbar.tsx`, `SheetsToolbar.tsx`
 
-## What Needs Improvement
+## 2. Reset-knap til standard toolbar-position
 
-### 1. Word Editor -- Formula Bar and Missing Features
-- Add a **formula/address bar** showing current block type (like Word's style dropdown)
-- Add **Undo/Redo** buttons to the toolbar (currently only keyboard shortcuts)
-- Add **Print/Export** capability
-- Fix: `execCommand` is deprecated but still functional in all browsers -- adding a comment noting this
+**Losning:**
+- Tilfojes i `ToolboxPopover.tsx` som en ekstra knap: "Reset to default" / "Nulstil" der kalder `showAll()` (allerede eksisterende) og ogsa rydder eventuelle gemte positioner.
+- Knappen vises altid i toolbox-popoveren (ogsa nar ingen segmenter er skjulte), sa brugeren altid kan nulstille.
+- Opdater `useToolbarVisibility.ts` sa `showAll` ogsa fjerner gemt position-data fra localStorage.
 
-### 2. Sheet Editor -- Formula Support
-- Add basic formula evaluation (`=SUM`, `=AVG`, `=COUNT`, `=MIN`, `=MAX`) for cell values
-- Display formula in an **address bar** above the grid when cell is focused
-- Add arrow key navigation between cells
+**Filer:** `ToolboxPopover.tsx`, `useToolbarVisibility.ts`
 
-### 3. iOS-Style Toolbar Physics (Enhanced DnD)
+## 3. AI Document Chat i bunden af hvert dokument
 
-Currently DnD uses `@dnd-kit` with basic CSS transitions. Upgrade to **spring-based physics**:
+En chatbar i bunden af dokumentet der kan laese dokumentindholdet og give feedback, forslag og fremhaevninger.
 
-- Replace `ToolbarSegment`'s static CSS transition with framer-motion `layout` animations using `type: "spring"` (stiffness: 400, damping: 30)
-- Add **scale bounce** on drag start (1.05x) and **drop settle** animation
-- Add subtle **rotation** during drag (like iOS wiggle)
-- Make the toolbar container width animate smoothly when segments reorder
-- Individual **tool buttons** within segments become sortable (not just segment groups)
+**Backend:**
+- Tilfojes en ny `type: "document-chat"` handler i `supabase/functions/flux-ai/index.ts`
+- System-prompten instruerer AI'en til at analysere dokumentet og komme med feedback, ideer, fremhaevninger og forslag til aendringer
+- Bruger streaming (SSE) for real-time svar
+- Modtager `documentContent` (HTML/text) sammen med brugerens besked
 
-## Implementation Plan
+**Frontend:**
+- Ny komponent `src/components/documents/DocumentAiChat.tsx`
+  - Fast chatbar i bunden af dokumentet med input-felt og send-knap
+  - Kan kollapses/ekspanderes
+  - Viser AI-svar med markdown-rendering (react-markdown allerede installeret)
+  - Streamer tokens live mens AI svarer
+  - Sender dokumentets indhold med hver besked sa AI'en har kontekst
+- Integreres i `DocumentView.tsx` - tilfojes under editoren og over `StatusBar` i bade TextEditor og SpreadsheetEditor
 
-### File Changes
+**Filer:**
+- `supabase/functions/flux-ai/index.ts` (tilfoej document-chat handler)
+- `supabase/config.toml` (verificer function config)
+- `src/components/documents/DocumentAiChat.tsx` (ny)
+- `src/components/documents/DocumentView.tsx` (integrer chat)
 
-**`src/components/documents/toolbar/ToolbarSegment.tsx`**
-- Enhance `SortableSegment` with improved spring physics
-- Add drag scale, rotation tilt, and bounce-settle animations
-- Add haptic-like visual feedback (brief color pulse on drop)
-
-**`src/components/documents/toolbar/WordsToolbar.tsx`**
-- Add Undo/Redo buttons to the file segment
-- Add individual tool-level reordering within segments (optional, phase 2)
-- Wrap toolbar container in `motion.div` with `layout` for smooth width transitions
-
-**`src/components/documents/toolbar/SheetsToolbar.tsx`**
-- Same spring physics upgrade as WordsToolbar
-- Add formula bar component above grid
-
-**`src/components/documents/DocumentView.tsx`**
-- **Sheet**: Add formula evaluation engine (basic arithmetic + SUM/AVG/COUNT/MIN/MAX)
-- **Sheet**: Add formula bar showing active cell address + content
-- **Sheet**: Add arrow key navigation between cells
-- **Word**: Add undo/redo toolbar buttons
-
-**`src/hooks/useToolbarOrder.ts`**
-- No changes needed (already handles persistence correctly)
-
-### Formula Engine (Sheet)
+## Teknisk oversigt
 
 ```text
-User types "=SUM(A1:A3)" in cell B1
-  --> Parse formula, extract range A1:A3
-  --> Resolve cell references to values
-  --> Compute result (display value, store formula)
-  --> Re-evaluate dependent cells on change
+DocumentView
++-- WordsToolbar (studio: fixed, overflow-visible, unconstrained drag)
++-- Editor (contentEditable)
++-- DocumentAiChat (kollapserbar chatbar)
+    +-- Input + Send
+    +-- Streaming AI svar (react-markdown)
++-- StatusBar
 ```
 
-Supported functions: `SUM`, `AVG`, `COUNT`, `MIN`, `MAX`, basic arithmetic (`+`, `-`, `*`, `/`)
-
-### Spring Physics Parameters
-
+**Edge function flow:**
 ```text
-Drag start:  scale 1.05, rotate +/-2deg, shadow elevation increase
-During drag: spring { stiffness: 400, damping: 28 }
-Swap:        neighbors slide with spring { stiffness: 500, damping: 35 }
-Drop settle: spring { stiffness: 300, damping: 22, bounce: 0.15 }
+Client -> flux-ai (type: "document-chat")
+       -> System prompt + document content + user message
+       -> Streaming SSE response
+       -> Client renders tokens live
 ```
-
-### Estimated Scope
-- 5 files modified
-- No new dependencies needed (framer-motion + @dnd-kit already installed)
-- All changes are additive -- no breaking changes to existing functionality
-
