@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Plus, Users, Loader2 } from "lucide-react";
+import { X, Plus, Users, Loader2, StickyNote } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
@@ -167,7 +167,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
       animate={{ scale: 1, opacity: 1, rotate: note.rotation }}
       exit={{ scale: 0.5, opacity: 0 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className={`absolute group ${isDragging ? "cursor-grabbing z-[60]" : "cursor-grab z-50"}`}
+      className={`absolute group ${isDragging ? "cursor-grabbing z-[60]" : "cursor-grab z-50"} ${showStyleEditor ? "z-[65]" : ""}`}
       ref={containerRef}
       style={{
         left: note.x,
@@ -236,6 +236,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
         {/* Style Editor popup — portaled to body */}
         {showStyleEditor && createPortal(
           <>
+            {/* Overlay — no blur so the note stays crisp */}
             <motion.div
               key="sticky-overlay"
               initial={{ opacity: 0 }}
@@ -243,9 +244,10 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0"
-              style={{ zIndex: 60, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+              style={{ zIndex: 60, background: "rgba(0,0,0,0.5)" }}
               onClick={() => setShowStyleEditor(false)}
             />
+            {/* Editor popup */}
             <motion.div
               id={`sticky-editor-${note.id}`}
               key="sticky-editor-popup"
@@ -266,6 +268,53 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
                 onUpdate={updateWidgetStyle}
                 onReset={resetWidgetStyle}
                 onClose={() => setShowStyleEditor(false)}
+                extraTab={{
+                  id: "note",
+                  label: "Note",
+                  icon: <StickyNote size={14} />,
+                  content: (
+                    <div className="space-y-3">
+                      {/* Note Color */}
+                      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Note Color</span>
+                      <div className="flex flex-wrap gap-2">
+                        {COLORS.map((col) => (
+                          <button
+                            key={col.key}
+                            onClick={() => onUpdateNote(note.id, { color: col.key })}
+                            className={`w-7 h-7 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                              note.color === col.key ? "border-white/80 scale-110 shadow-[0_0_8px_rgba(255,255,255,0.2)]" : "border-transparent"
+                            }`}
+                            style={{ backgroundColor: col.border }}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Rotation */}
+                      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Rotation</span>
+                      <div className="flex items-center gap-3 px-1">
+                        <Slider
+                          value={[note.rotation]}
+                          onValueChange={([v]) => onUpdateNote(note.id, { rotation: v })}
+                          min={-15} max={15} step={1}
+                          className="flex-1 [&_[data-radix-slider-track]]:h-[6px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-[#0a84ff] [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-[18px] [&_[data-radix-slider-thumb]]:h-[18px] [&_[data-radix-slider-thumb]]:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                        />
+                        <span className="text-[11px] tabular-nums text-white/40 font-medium w-10 text-right">{note.rotation}°</span>
+                      </div>
+
+                      {/* Opacity */}
+                      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Note Opacity</span>
+                      <div className="flex items-center gap-3 px-1">
+                        <Slider
+                          value={[Math.round(note.opacity * 100)]}
+                          onValueChange={([v]) => onUpdateNote(note.id, { opacity: v / 100 })}
+                          min={0} max={100} step={5}
+                          className="flex-1 [&_[data-radix-slider-track]]:h-[6px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-[#0a84ff] [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-[18px] [&_[data-radix-slider-thumb]]:h-[18px] [&_[data-radix-slider-thumb]]:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                        />
+                        <span className="text-[11px] tabular-nums text-white/40 font-medium w-10 text-right">{Math.round(note.opacity * 100)}%</span>
+                      </div>
+                    </div>
+                  ),
+                }}
               />
             </motion.div>
           </>,
