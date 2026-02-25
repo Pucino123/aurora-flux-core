@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, Palette, PaintBucket, ArrowDownAZ, ArrowUpAZ, Filter, Download } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, DragEndEvent, DragOverlay, DragStartEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { useToolbarOrder } from "@/hooks/useToolbarOrder";
 import ToolbarSegment from "./ToolbarSegment";
@@ -51,7 +51,13 @@ const SheetsToolbar = ({
 }: SheetsToolbarProps) => {
   const lm = lightMode;
   const [fs, setFs] = useState("12");
+  const [activeId, setActiveId] = useState<string | null>(null);
   const { order, handleReorder } = useToolbarOrder("flux-sheets-toolbar-order", DEFAULT_ORDER);
+
+  const SEGMENT_LABELS: Record<string, string> = {
+    file: "File", "cell-format": "Format", emoji: "Emoji",
+    "data-tools": "Data", view: "View",
+  };
 
   const sep = <div className={`w-px h-5 mx-0.5 ${lm ? "bg-gray-200" : "bg-white/[0.1]"}`} />;
   const selectCls = `text-[11px] h-7 px-1.5 rounded-lg border outline-none transition-colors ${
@@ -109,7 +115,9 @@ const SheetsToolbar = ({
     ),
   };
 
+  const onDragStart = (event: DragStartEvent) => setActiveId(event.active.id as string);
   const onDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
     if (over && active.id !== over.id) {
       handleReorder(active.id as string, over.id as string);
@@ -125,12 +133,29 @@ const SheetsToolbar = ({
           ? "fixed top-4 left-1/2 -translate-x-1/2 z-[200] rounded-2xl bg-popover/95 backdrop-blur-xl border-border/30 shadow-2xl max-w-[95vw]"
           : lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
       }`}>
-      <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={horizontalListSortingStrategy}>
           <AnimatePresence mode="sync">
             {order.map(id => segmentMap[id])}
           </AnimatePresence>
         </SortableContext>
+        <DragOverlay dropAnimation={{ duration: 200, easing: "cubic-bezier(0.25, 1, 0.5, 1)" }}>
+          {activeId ? (
+            <motion.div
+              initial={{ scale: 1.05, rotate: 2 }}
+              animate={{ scale: 1.08, rotate: -1 }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-xl border shadow-2xl pointer-events-none ${
+                lm
+                  ? "bg-white/90 border-primary/30 shadow-primary/10"
+                  : "bg-popover/90 border-primary/40 shadow-primary/20"
+              }`}
+            >
+              <span className={`text-[10px] font-semibold text-primary`}>
+                {SEGMENT_LABELS[activeId] || activeId}
+              </span>
+            </motion.div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </motion.div>
   );

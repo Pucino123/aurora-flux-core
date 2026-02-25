@@ -1,47 +1,203 @@
-import React from "react";
-import { Image, Link2, Code, Table2, Smile } from "lucide-react";
-import ToolbarSegment from "./ToolbarSegment";
+import React, { useState } from "react";
+import { Image, Link2, Code, Table2, ListChecks } from "lucide-react";
 import ToolbarButton from "./ToolbarButton";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 interface InsertMenuProps {
   exec: (cmd: string, value?: string) => void;
   lightMode?: boolean;
 }
 
+/* Shared popup button style */
+const popBtnCls = (lm: boolean) =>
+  `w-full text-left px-3 py-2 text-[11px] rounded-lg transition-all duration-150 ${
+    lm
+      ? "hover:bg-gray-100 text-gray-700 active:bg-gray-200"
+      : "hover:bg-white/[0.08] text-foreground/80 active:bg-white/[0.12]"
+  }`;
+
+const popInputCls = (lm: boolean) =>
+  `w-full text-[11px] px-2.5 py-1.5 rounded-lg border outline-none transition-all duration-150 ${
+    lm
+      ? "border-gray-200 bg-white text-gray-800 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 placeholder:text-gray-400"
+      : "border-white/[0.12] bg-white/[0.06] text-foreground/90 focus:border-primary/40 focus:ring-1 focus:ring-primary/20 placeholder:text-foreground/30"
+  }`;
+
 const InsertMenu = ({ exec, lightMode = false }: InsertMenuProps) => {
   const lm = lightMode;
 
   return (
-    <ToolbarSegment>
-      <ToolbarButton icon={<Link2 size={14} />} label="Insert link (⌘K)" onClick={() => { const url = prompt("Enter URL:"); if (url) exec("createLink", url); }} lightMode={lm} />
-      <ToolbarButton icon={<Image size={14} />} label="Insert image" onClick={() => { const url = prompt("Enter image URL:"); if (url) exec("insertImage", url); }} lightMode={lm} />
-      <ToolbarButton
-        icon={<Table2 size={14} />}
-        label="Insert table"
-        onClick={() => {
-          const cols = parseInt(prompt("Columns (2-10):", "3") || "0");
-          const rws = parseInt(prompt("Rows (2-20):", "3") || "0");
-          if (cols > 0 && rws > 0) {
-            const thead = `<tr>${Array.from({ length: cols }, (_, i) => `<th>Header ${i + 1}</th>`).join("")}</tr>`;
-            const tbody = Array.from({ length: rws - 1 }, () => `<tr>${Array.from({ length: cols }, () => "<td></td>").join("")}</tr>`).join("");
-            exec("insertHTML", `<table>${thead}${tbody}</table>`);
-          }
-        }}
-        lightMode={lm}
-      />
+    <>
+      <LinkInsert exec={exec} lm={lm} />
+      <ImageInsert exec={exec} lm={lm} />
+      <TableInsert exec={exec} lm={lm} />
       <ToolbarButton icon={<Code size={14} />} label="Code block" onClick={() => exec("formatBlock", "pre")} lightMode={lm} />
-      <ToolbarButton
-        icon={<Smile size={14} />}
-        label="Insert emoji"
-        onClick={() => {
-          const emojis = ["😀", "🎯", "🚀", "💡", "✅", "❌", "⭐", "🔥", "📌", "💎", "🎉", "📝"];
-          const choice = prompt(`Pick emoji:\n${emojis.join(" ")}\n\nOr type your own:`);
-          if (choice) exec("insertHTML", choice);
-        }}
-        lightMode={lm}
-      />
-    </ToolbarSegment>
+      <ChecklistInsert exec={exec} lm={lm} />
+    </>
   );
+};
+
+/* ─── Link Insert ─── */
+const LinkInsert = ({ exec, lm }: { exec: (cmd: string, value?: string) => void; lm: boolean }) => {
+  const [url, setUrl] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const insert = () => {
+    if (url.trim()) {
+      exec("createLink", url.trim());
+      setUrl("");
+      setOpen(false);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div><ToolbarButton icon={<Link2 size={14} />} label="Insert link (⌘K)" onClick={() => setOpen(true)} lightMode={lm} /></div>
+      </PopoverTrigger>
+      <PopoverContent
+        className={`w-64 p-3 z-[300] rounded-xl backdrop-blur-xl shadow-2xl border ${
+          lm ? "bg-white/95 border-gray-200/60" : "bg-popover/95 border-white/[0.12]"
+        }`}
+        align="start" sideOffset={8}
+      >
+        <p className={`text-[10px] font-semibold mb-2 uppercase tracking-wider ${lm ? "text-gray-500" : "text-foreground/40"}`}>Insert Link</p>
+        <input
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && insert()}
+          placeholder="https://example.com"
+          className={popInputCls(lm)}
+          autoFocus
+        />
+        <button
+          onClick={insert}
+          className={`w-full mt-2 py-1.5 text-[11px] font-medium rounded-lg transition-all duration-150 ${
+            url.trim()
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : `cursor-not-allowed ${lm ? "bg-gray-100 text-gray-400" : "bg-white/[0.06] text-foreground/30"}`
+          }`}
+        >
+          Insert
+        </button>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+/* ─── Image Insert ─── */
+const ImageInsert = ({ exec, lm }: { exec: (cmd: string, value?: string) => void; lm: boolean }) => {
+  const [url, setUrl] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const insert = () => {
+    if (url.trim()) {
+      exec("insertImage", url.trim());
+      setUrl("");
+      setOpen(false);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div><ToolbarButton icon={<Image size={14} />} label="Insert image" onClick={() => setOpen(true)} lightMode={lm} /></div>
+      </PopoverTrigger>
+      <PopoverContent
+        className={`w-64 p-3 z-[300] rounded-xl backdrop-blur-xl shadow-2xl border ${
+          lm ? "bg-white/95 border-gray-200/60" : "bg-popover/95 border-white/[0.12]"
+        }`}
+        align="start" sideOffset={8}
+      >
+        <p className={`text-[10px] font-semibold mb-2 uppercase tracking-wider ${lm ? "text-gray-500" : "text-foreground/40"}`}>Insert Image</p>
+        <input
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && insert()}
+          placeholder="https://example.com/image.png"
+          className={popInputCls(lm)}
+          autoFocus
+        />
+        <button
+          onClick={insert}
+          className={`w-full mt-2 py-1.5 text-[11px] font-medium rounded-lg transition-all duration-150 ${
+            url.trim()
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : `cursor-not-allowed ${lm ? "bg-gray-100 text-gray-400" : "bg-white/[0.06] text-foreground/30"}`
+          }`}
+        >
+          Insert
+        </button>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+/* ─── Table Insert ─── */
+const TableInsert = ({ exec, lm }: { exec: (cmd: string, value?: string) => void; lm: boolean }) => {
+  const [open, setOpen] = useState(false);
+  const [hoverCell, setHoverCell] = useState<{ r: number; c: number } | null>(null);
+  const maxR = 6;
+  const maxC = 6;
+
+  const insert = (rows: number, cols: number) => {
+    const thead = `<tr>${Array.from({ length: cols }, (_, i) => `<th>Header ${i + 1}</th>`).join("")}</tr>`;
+    const tbody = Array.from({ length: rows - 1 }, () => `<tr>${Array.from({ length: cols }, () => "<td>&nbsp;</td>").join("")}</tr>`).join("");
+    exec("insertHTML", `<table>${thead}${tbody}</table>`);
+    setOpen(false);
+    setHoverCell(null);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div><ToolbarButton icon={<Table2 size={14} />} label="Insert table" onClick={() => setOpen(true)} lightMode={lm} /></div>
+      </PopoverTrigger>
+      <PopoverContent
+        className={`w-auto p-3 z-[300] rounded-xl backdrop-blur-xl shadow-2xl border ${
+          lm ? "bg-white/95 border-gray-200/60" : "bg-popover/95 border-white/[0.12]"
+        }`}
+        align="start" sideOffset={8}
+      >
+        <p className={`text-[10px] font-semibold mb-2 uppercase tracking-wider ${lm ? "text-gray-500" : "text-foreground/40"}`}>
+          {hoverCell ? `${hoverCell.r + 1} × ${hoverCell.c + 1}` : "Select size"}
+        </p>
+        <div className="grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${maxC}, 1fr)` }}>
+          {Array.from({ length: maxR * maxC }, (_, idx) => {
+            const r = Math.floor(idx / maxC);
+            const c = idx % maxC;
+            const active = hoverCell && r <= hoverCell.r && c <= hoverCell.c;
+            return (
+              <div
+                key={idx}
+                onMouseEnter={() => setHoverCell({ r, c })}
+                onClick={() => insert(r + 1, c + 1)}
+                className={`w-5 h-5 rounded-[4px] border cursor-pointer transition-all duration-100 ${
+                  active
+                    ? "bg-primary/30 border-primary/50 scale-105"
+                    : lm
+                      ? "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                      : "border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08]"
+                }`}
+              />
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+/* ─── Checklist Insert ─── */
+const ChecklistInsert = ({ exec, lm }: { exec: (cmd: string, value?: string) => void; lm: boolean }) => {
+  const insert = () => {
+    exec(
+      "insertHTML",
+      `<ul><li><span class="doc-checkbox" data-checked="false" contenteditable="false">☐</span> Task item</li></ul>`
+    );
+  };
+
+  return <ToolbarButton icon={<ListChecks size={14} />} label="Insert checklist" onClick={insert} lightMode={lm} />;
 };
 
 export default InsertMenu;

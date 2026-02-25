@@ -709,3 +709,15 @@
   border-color: hsl(var(--primary) / 0.5);
   box-shadow: 0 0 0 2px hsl(var(--primary) / 0.15), 0 4px 16px rgba(0, 0, 0, 0.12);
 }
+
+/* Print / PDF export styles */
+@media print {
+  body { background: white !important; color: black !important; }
+  nav, aside, .no-print, [data-radix-popper-content-wrapper] { display: none !important; }
+  .prose { max-width: 100% !important; color: black !important; }
+  .prose h1, .prose h2, .prose h3 { color: black !important; }
+  .prose p, .prose li { color: #333 !important; }
+  .prose blockquote { border-color: #999 !important; color: #555 !important; }
+  .prose table { border-color: #ccc !important; }
+  .prose td, .prose th { border-color: #ccc !important; color: black !important; }
+}
