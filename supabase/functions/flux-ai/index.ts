@@ -286,6 +286,54 @@ OUTPUT: Return blocks sorted by time, with proper task_id linkage.`;
   });
 }
 
+async function handleDocumentChat(messages: any[], context: any, apiKey: string) {
+  const documentContent = context?.documentContent || "";
+  const systemPrompt = `You are Flux Document AI — an expert document analyst and writing coach.
+
+You have access to the user's document content below. Analyze it thoroughly and provide:
+- Constructive feedback on structure, clarity, and tone
+- Specific suggestions for improvements with exact quotes from the document
+- Highlight strengths and weak spots
+- Ideas for expanding or restructuring sections
+- Grammar and style corrections when relevant
+
+Write in the same language as the user's message (Danish if Danish, English if English).
+Be specific — reference exact parts of the document. Use markdown formatting for clarity.
+
+═══ DOCUMENT CONTENT ═══
+${documentContent}
+═══ END DOCUMENT ═══`;
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages,
+      ],
+      stream: true,
+    }),
+  });
+
+  const errResp = handleAIError(response);
+  if (errResp) return errResp;
+
+  if (!response.ok) {
+    const t = await response.text();
+    console.error("Document chat AI error:", response.status, t);
+    throw new Error("AI gateway error");
+  }
+
+  return new Response(response.body, {
+    headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+  });
+}
+
 async function handleChat(messages: any[], apiKey: string) {
   const systemPrompt = "You are Flux, a helpful productivity assistant. Keep answers clear, concise, and actionable.";
 
@@ -428,6 +476,7 @@ serve(async (req) => {
     if (type === "classify") return await handleClassify(messages, context, LOVABLE_API_KEY);
     if (type === "plan") return await handlePlan(context, LOVABLE_API_KEY);
     if (type === "council") return await handleCouncil(messages, LOVABLE_API_KEY);
+    if (type === "document-chat") return await handleDocumentChat(messages, context, LOVABLE_API_KEY);
     return await handleChat(messages, LOVABLE_API_KEY);
   } catch (e) {
     console.error("flux-ai error:", e);
