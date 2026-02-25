@@ -1,5 +1,5 @@
 import React from "react";
-import { Pencil, Trash2, Check, X, Download, Undo, Redo } from "lucide-react";
+import { Pencil, Trash2, Check, X, Download, Undo, Redo, Mail } from "lucide-react";
 import { motion } from "framer-motion";
 import ToolbarButton from "./ToolbarButton";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -126,9 +126,22 @@ const FileMenu = ({
               </>
             )}
             {editorRef && (
-              <button onClick={printDocument} className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}>
-                Print / PDF
-              </button>
+              <>
+                <button onClick={printDocument} className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}>
+                  Print / PDF
+                </button>
+                <button
+                  onClick={() => {
+                    const text = editorRef?.current?.innerText || "";
+                    const subject = encodeURIComponent(documentTitle);
+                    const body = encodeURIComponent(text);
+                    window.open(`mailto:?subject=${subject}&body=${body}`, "_self");
+                  }}
+                  className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors flex items-center gap-1.5 ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}
+                >
+                  <Mail size={12} /> Send som email
+                </button>
+              </>
             )}
           </PopoverContent>
         </Popover>
