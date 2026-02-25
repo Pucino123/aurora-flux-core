@@ -36,5 +36,12 @@ export function useToolbarVisibility(storageKey: string, allSegments: string[]) 
     localStorage.removeItem(getKey(storageKey));
   }, [storageKey]);
 
-  return { visible, hiddenSegments, hideSegment, showSegment, showAll };
+  const reset = useCallback(() => {
+    setHidden([]);
+    localStorage.removeItem(getKey(storageKey));
+    // Clear any saved position data
+    localStorage.removeItem(`flux-toolbar-pos-${storageKey}`);
+  }, [storageKey]);
+
+  return { visible, hiddenSegments, hideSegment, showSegment, showAll, reset };
 }

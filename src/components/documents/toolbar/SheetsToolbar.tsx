@@ -59,7 +59,7 @@ const SheetsToolbar = ({
 }: SheetsToolbarProps) => {
   const lm = lightMode;
   const [fs, setFs] = useState("12");
-  const { visible, hiddenSegments, hideSegment, showSegment, showAll } = useToolbarVisibility("sheets", ALL_SEGMENTS);
+  const { visible, hiddenSegments, hideSegment, showSegment, showAll, reset } = useToolbarVisibility("sheets", ALL_SEGMENTS);
 
   const sep = <div className={`w-px h-5 mx-0.5 ${lm ? "bg-gray-200" : "bg-white/[0.1]"}`} />;
   const selectCls = `text-[11px] h-7 px-1.5 rounded-lg border outline-none transition-colors ${
@@ -129,7 +129,7 @@ const SheetsToolbar = ({
         drag
         dragMomentum={false}
         dragElastic={0.08}
-        dragConstraints={false}
+        dragConstraints={{ top: -9999, left: -9999, right: 9999, bottom: 9999 }}
         whileDrag={{ scale: 1.02, boxShadow: "0 25px 60px -12px rgba(0,0,0,0.5)" }}
         className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-wrap items-center gap-1 px-2 py-2 rounded-2xl bg-popover/95 backdrop-blur-xl border border-border/30 shadow-2xl max-w-[95vw] cursor-grab active:cursor-grabbing"
         style={{ overflow: "visible" }}
@@ -137,7 +137,7 @@ const SheetsToolbar = ({
         <AnimatePresence mode="sync">
           {renderSegments(true)}
         </AnimatePresence>
-        <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} lightMode={lm} />
+        <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} onReset={reset} lightMode={lm} />
       </motion.div>
     );
   }
@@ -153,7 +153,7 @@ const SheetsToolbar = ({
       <AnimatePresence mode="sync">
         {renderSegments(false)}
       </AnimatePresence>
-      <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} lightMode={lm} />
+      <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} onReset={reset} lightMode={lm} />
     </motion.div>
   );
 };
