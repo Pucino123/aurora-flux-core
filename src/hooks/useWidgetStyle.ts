@@ -17,7 +17,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   borderColor: "",
   borderWidth: 0,
   borderRadius: 16,
-  blurAmount: 16,
+  blurAmount: 0,
 };
 
 const STORAGE_KEY = "flux-widget-styles";

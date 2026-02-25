@@ -1,12 +1,12 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { Slider } from "@/components/ui/slider";
-import { RotateCcw, GripHorizontal } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import type { WidgetStyle } from "@/hooks/useWidgetStyle";
 
-const PRESET_COLORS = [
-  "", "#ffffff", "#000000", "#1a1a2e", "#16213e",
-  "#0f3460", "#533483", "#e94560", "#f5a623",
-  "#4ecdc4", "#2ecc71", "#3498db", "#9b59b6",
+const PALETTE = [
+  "", "#ffffff", "#f5f5f7", "#1d1d1f", "#0a84ff",
+  "#30d158", "#ff9f0a", "#ff375f", "#bf5af2",
+  "#64d2ff", "#ac8e68", "#ff6482",
 ];
 
 interface WidgetStyleEditorProps {
@@ -15,7 +15,8 @@ interface WidgetStyleEditorProps {
   onReset: () => void;
 }
 
-const ColorRow = ({
+/* ─── Apple-style color swatch row ─── */
+const SwatchRow = ({
   label,
   value,
   onChange,
@@ -24,25 +25,49 @@ const ColorRow = ({
   value: string;
   onChange: (c: string) => void;
 }) => (
-  <div className="space-y-1.5">
-    <span className="text-[10px] font-medium text-white/50 uppercase tracking-wider">{label}</span>
-    <div className="flex flex-wrap gap-1">
-      {PRESET_COLORS.map((c) => (
-        <button
-          key={c || "none"}
-          onClick={() => onChange(c)}
-          className={`w-5 h-5 rounded-md border transition-all duration-150 hover:scale-110 ${
-            value === c ? "ring-2 ring-primary ring-offset-1 ring-offset-transparent" : "border-white/15"
-          }`}
-          style={{
-            backgroundColor: c || "transparent",
-            backgroundImage: c ? undefined : "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%)",
-            backgroundSize: c ? undefined : "6px 6px",
-            backgroundPosition: c ? undefined : "0 0, 3px 3px",
-          }}
-        />
-      ))}
-      <label className="w-5 h-5 rounded-md border border-white/15 overflow-hidden cursor-pointer relative hover:scale-110 transition-transform">
+  <div className="space-y-2">
+    <span className="text-[11px] font-medium text-white/60 tracking-tight">{label}</span>
+    <div className="flex items-center gap-2 flex-wrap">
+      {PALETTE.map((c) => {
+        const isActive = value === c;
+        return (
+          <button
+            key={c || "none"}
+            onClick={() => onChange(c)}
+            className="relative transition-transform duration-200 hover:scale-110"
+            style={{ width: 28, height: 28 }}
+          >
+            {/* Selection ring */}
+            <div
+              className="absolute inset-0 rounded-full transition-all duration-200"
+              style={{
+                border: isActive ? "2px solid rgba(255,255,255,0.9)" : "2px solid transparent",
+                transform: isActive ? "scale(1.15)" : "scale(1)",
+              }}
+            />
+            <div
+              className="w-full h-full rounded-full border border-white/15"
+              style={{
+                backgroundColor: c || "transparent",
+                backgroundImage: c
+                  ? undefined
+                  : "linear-gradient(135deg, rgba(255,255,255,0.1) 50%, transparent 50%)",
+              }}
+            />
+            {/* No-color slash */}
+            {!c && (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ transform: "rotate(-45deg)" }}
+              >
+                <div className="w-[1px] h-4 bg-red-400/70" />
+              </div>
+            )}
+          </button>
+        );
+      })}
+      {/* Custom color picker */}
+      <label className="relative transition-transform duration-200 hover:scale-110 cursor-pointer" style={{ width: 28, height: 28 }}>
         <input
           type="color"
           value={value || "#ffffff"}
@@ -50,9 +75,9 @@ const ColorRow = ({
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
         <div
-          className="w-full h-full"
+          className="w-full h-full rounded-full border border-white/15"
           style={{
-            background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+            background: "conic-gradient(hsl(0 80% 60%), hsl(60 80% 60%), hsl(120 80% 60%), hsl(180 80% 60%), hsl(240 80% 60%), hsl(300 80% 60%), hsl(360 80% 60%))",
           }}
         />
       </label>
@@ -60,7 +85,8 @@ const ColorRow = ({
   </div>
 );
 
-const SliderRow = ({
+/* ─── Minimal Apple-style slider ─── */
+const AppleSlider = ({
   label,
   value,
   min,
@@ -79,8 +105,8 @@ const SliderRow = ({
 }) => (
   <div className="space-y-1.5">
     <div className="flex items-center justify-between">
-      <span className="text-[10px] font-medium text-white/50 uppercase tracking-wider">{label}</span>
-      <span className="text-[10px] tabular-nums text-white/30">
+      <span className="text-[11px] font-medium text-white/60 tracking-tight">{label}</span>
+      <span className="text-[11px] tabular-nums text-white/35 font-medium">
         {Math.round(value)}{unit}
       </span>
     </div>
@@ -90,7 +116,7 @@ const SliderRow = ({
       min={min}
       max={max}
       step={step}
-      className="[&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-primary/60 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3"
+      className="[&_[data-radix-slider-track]]:h-[6px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-track]]:rounded-full [&_[data-radix-slider-range]]:bg-white/25 [&_[data-radix-slider-range]]:rounded-full [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-[18px] [&_[data-radix-slider-thumb]]:h-[18px] [&_[data-radix-slider-thumb]]:shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
     />
   </div>
 );
@@ -127,78 +153,94 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset }: WidgetStyleEditorProps)
 
   return (
     <div
-      className="w-64 rounded-xl overflow-hidden"
+      className="w-72 rounded-2xl overflow-hidden"
       style={{
         transform: `translate(${dragPos.x}px, ${dragPos.y}px)`,
-        background: "rgba(20, 20, 35, 0.85)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        border: "1px solid rgba(255,255,255,0.12)",
-        boxShadow: "0 16px 48px -12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)",
+        background: "rgba(28, 28, 30, 0.92)",
+        backdropFilter: "blur(40px) saturate(180%)",
+        WebkitBackdropFilter: "blur(40px) saturate(180%)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 24px 80px -16px rgba(0,0,0,0.6), 0 0 1px rgba(255,255,255,0.1)",
       }}
       onMouseDown={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {/* Draggable title bar */}
+      {/* iOS-style drag pill */}
       <div
-        className="flex items-center justify-between px-3 py-2 border-b border-white/10 cursor-grab active:cursor-grabbing select-none"
+        className="flex items-center justify-center pt-2.5 pb-1 cursor-grab active:cursor-grabbing"
         onPointerDown={onDragStart}
       >
-        <div className="flex items-center gap-1.5">
-          <GripHorizontal size={12} className="text-white/40" />
-          <span className="text-[11px] font-semibold text-white/70">Widget Style</span>
-        </div>
+        <div className="w-9 h-[5px] rounded-full bg-white/20" />
+      </div>
+
+      {/* Title + reset */}
+      <div className="flex items-center justify-between px-4 pb-2">
+        <span className="text-[13px] font-semibold text-white/85 tracking-tight">Customize</span>
         <button
           onClick={(e) => { e.stopPropagation(); onReset(); }}
           onPointerDown={(e) => e.stopPropagation()}
-          className="p-1 rounded-md hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
-          title="Reset to defaults"
+          className="p-1.5 rounded-full hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
+          title="Reset"
         >
-          <RotateCcw size={12} />
+          <RotateCcw size={13} />
         </button>
       </div>
 
-      <div className="p-3 space-y-3 max-h-[360px] overflow-y-auto council-hidden-scrollbar">
-        <ColorRow
-          label="Background Color"
+      {/* Separator */}
+      <div className="h-px bg-white/8 mx-4" />
+
+      {/* Controls */}
+      <div className="p-4 space-y-4 max-h-[380px] overflow-y-auto council-hidden-scrollbar">
+        <SwatchRow
+          label="Background"
           value={style.backgroundColor}
           onChange={(c) => onUpdate({ backgroundColor: c })}
         />
 
-        <SliderRow
-          label="Background Opacity"
+        <AppleSlider
+          label="Opacity"
           value={style.backgroundOpacity}
           min={0} max={100} step={5} unit="%"
           onChange={(v) => onUpdate({ backgroundOpacity: v })}
         />
 
-        <ColorRow
-          label="Text Color"
+        {/* Separator */}
+        <div className="h-px bg-white/6" />
+
+        <SwatchRow
+          label="Text"
           value={style.textColor}
           onChange={(c) => onUpdate({ textColor: c })}
         />
 
-        <ColorRow
-          label="Border Color"
+        {/* Separator */}
+        <div className="h-px bg-white/6" />
+
+        <SwatchRow
+          label="Border"
           value={style.borderColor}
           onChange={(c) => onUpdate({ borderColor: c })}
         />
 
-        <SliderRow
-          label="Border Width"
-          value={style.borderWidth}
-          min={0} max={10} step={1} unit="px"
-          onChange={(v) => onUpdate({ borderWidth: v })}
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <AppleSlider
+            label="Width"
+            value={style.borderWidth}
+            min={0} max={10} step={1} unit="px"
+            onChange={(v) => onUpdate({ borderWidth: v })}
+          />
+          <AppleSlider
+            label="Radius"
+            value={style.borderRadius}
+            min={0} max={50} step={2} unit="px"
+            onChange={(v) => onUpdate({ borderRadius: v })}
+          />
+        </div>
 
-        <SliderRow
-          label="Border Radius"
-          value={style.borderRadius}
-          min={0} max={50} step={2} unit="px"
-          onChange={(v) => onUpdate({ borderRadius: v })}
-        />
+        {/* Separator */}
+        <div className="h-px bg-white/6" />
 
-        <SliderRow
+        <AppleSlider
           label="Glass Blur"
           value={style.blurAmount}
           min={0} max={40} step={2} unit="px"

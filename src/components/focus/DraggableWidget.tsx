@@ -205,7 +205,7 @@ const DraggableWidget = ({
   const bgAlpha = isGlass ? 0 : 0.1 + opacity * 0.8;
   const borderAlpha = isGlass ? 0 : 0.2 + opacity * 0.4;
 
-  // True transparency: if custom bg with 0% opacity, force transparent and no blur
+  // True transparency: 0% opacity or no bg = fully transparent
   const isFullyTransparent = hasCustomBg && widgetStyle.backgroundOpacity === 0;
 
   const effectiveBg = isFullyTransparent
@@ -218,12 +218,13 @@ const DraggableWidget = ({
     ? widgetStyle.borderColor
     : (isGlass ? "transparent" : `rgba(255,255,255,${borderAlpha})`);
 
-  // Disable blur when fully transparent (unless blur was explicitly set > 0 by user with a bg color)
-  const effectiveBlur = isFullyTransparent
-    ? "none"
-    : widgetStyle.blurAmount > 0
+  // Blur: only apply when user explicitly set it > 0 via style editor, or legacy non-glass
+  const userSetBlur = widgetStyle.blurAmount > 0;
+  const effectiveBlur = isFullyTransparent || isGlass
+    ? (userSetBlur ? `blur(${widgetStyle.blurAmount}px)` : "none")
+    : userSetBlur
       ? `blur(${widgetStyle.blurAmount}px)`
-      : (isGlass ? "none" : "blur(16px)");
+      : (hasCustomBg ? "none" : "blur(16px)");
 
   const effectiveRadius = `${widgetStyle.borderRadius}px`;
 
@@ -296,7 +297,7 @@ const DraggableWidget = ({
       </AnimatePresence>
 
       <div
-        className={`w-full h-full flex flex-col ${widgetMinimalMode ? "" : `${isGlass && !hasCustomBg ? "" : (isFocusMode ? "shadow-lg" : "shadow-2xl")}`} overflow-hidden`}
+        className={`w-full h-full flex flex-col ${widgetMinimalMode || isFullyTransparent || (isGlass && !hasCustomBg) ? "" : (isFocusMode ? "shadow-lg" : "shadow-2xl")} overflow-hidden`}
         style={{
           background: widgetMinimalMode ? "transparent" : effectiveBg,
           borderWidth: widgetMinimalMode ? 0 : (widgetStyle.borderWidth || (isGlass && !hasCustomBg ? 0 : 1)),
