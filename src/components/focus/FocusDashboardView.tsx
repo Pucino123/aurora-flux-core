@@ -6,7 +6,7 @@ import { useFlux } from "@/context/FluxContext";
 import { suggestIcon } from "@/components/CreateFolderModal";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useAuth } from "@/hooks/useAuth";
-import { useWidgetStyle } from "@/hooks/useWidgetStyle";
+import { useWidgetStyle, GLOBAL_STYLE_KEY } from "@/hooks/useWidgetStyle";
 import { StyleEditorProvider } from "./StyleEditorContext";
 import BackgroundEngine from "./BackgroundEngine";
 import FocusTimer from "./FocusTimer";
@@ -78,23 +78,31 @@ const FocusContent = () => {
   const [editorPosition, setEditorPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const handleOpenStyleEditor = useCallback((widgetId: string) => {
+    if (widgetId === GLOBAL_STYLE_KEY) {
+      // Center the editor for global style
+      const editorWidth = 340;
+      const editorHeight = 420;
+      setEditorPosition({
+        x: Math.round(window.innerWidth / 2 - editorWidth / 2),
+        y: Math.round(window.innerHeight / 2 - editorHeight / 2),
+      });
+      setStyleEditorTarget(widgetId);
+      return;
+    }
     const widgetEl = document.querySelector(`[data-widget-id="${widgetId}"]`) as HTMLElement;
     if (widgetEl) {
       const rect = widgetEl.getBoundingClientRect();
       const editorWidth = 340;
       const editorHeight = 420;
       const gap = 24;
-      // Always try right side first with a proper gap
       let x: number;
       if (rect.right + gap + editorWidth < window.innerWidth) {
         x = rect.right + gap;
       } else if (rect.left - gap - editorWidth > 0) {
         x = rect.left - gap - editorWidth;
       } else {
-        // Last resort: place to the right but clamp to screen
         x = Math.min(rect.right + gap, window.innerWidth - editorWidth - 10);
       }
-      // Vertically align to top of widget
       let y = rect.top;
       y = Math.max(20, Math.min(y, window.innerHeight - editorHeight - 20));
       setEditorPosition({ x, y });
