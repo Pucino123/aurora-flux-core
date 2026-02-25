@@ -12,6 +12,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { toast } from "sonner";
+import AddToCalendarModal from "./AddToCalendarModal";
 
 interface FolderContentsProps {
   subfolders: FolderNode[];
@@ -27,6 +28,7 @@ interface FolderContentsProps {
   onDeleteDocument?: (id: string) => void;
   onDeleteFolder?: (id: string) => void;
   onRenameFolder?: (id: string) => void;
+  onAddToCalendar?: (title: string, date: string, time: string) => void;
 }
 
 const highlightMatch = (text: string, query: string) => {
@@ -56,10 +58,12 @@ const FolderContents = ({
   onDeleteDocument,
   onDeleteFolder,
   onRenameFolder,
+  onAddToCalendar,
 }: FolderContentsProps) => {
   const isEmpty = subfolders.length === 0 && documents.length === 0;
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const draggedId = useRef<string | null>(null);
+  const [calendarModal, setCalendarModal] = useState<{ open: boolean; title: string }>({ open: false, title: "" });
 
   const handleDragStart = (e: React.DragEvent, folderId: string) => {
     draggedId.current = folderId;
@@ -103,9 +107,13 @@ const FolderContents = ({
   };
 
   const handleAddToCalendar = (title: string) => {
-    // Create a calendar-style schedule block via a prompt
-    const today = new Date().toISOString().split("T")[0];
-    toast.success(`"${title}" tilføjet til dagens plan`, { description: today });
+    setCalendarModal({ open: true, title });
+  };
+
+  const handleCalendarConfirm = (date: string, time: string) => {
+    onAddToCalendar?.(calendarModal.title, date, time);
+    setCalendarModal({ open: false, title: "" });
+    toast.success(`"${calendarModal.title}" tilføjet til planner`, { description: `${date} kl. ${time}` });
   };
 
   const handleSend = async (title: string) => {
@@ -292,65 +300,80 @@ const FolderContents = ({
     </ContextMenu>
   );
 
+  const calendarModalEl = (
+    <AddToCalendarModal
+      open={calendarModal.open}
+      title={calendarModal.title}
+      onClose={() => setCalendarModal({ open: false, title: "" })}
+      onConfirm={handleCalendarConfirm}
+    />
+  );
+
   if (viewMode === "list") {
     return (
-      <div className="space-y-0.5">
-        {subfolders.map((sf, i) => renderFolderContextMenu(sf, renderSubfolderList(sf, i)))}
+      <>
+        <div className="space-y-0.5">
+          {subfolders.map((sf, i) => renderFolderContextMenu(sf, renderSubfolderList(sf, i)))}
+          {documents.map((doc, i) =>
+            renderDocContextMenu(
+              doc,
+              <motion.button
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (subfolders.length + i) * 0.02 }}
+                onDoubleClick={() => onOpenDocument?.(doc)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors text-left group"
+              >
+                {doc.type === "spreadsheet" ? (
+                  <Table size={18} className="text-emerald-500" />
+                ) : (
+                  <FileText size={18} className="text-blue-400" />
+                )}
+                <span className="text-sm font-medium text-foreground flex-1 truncate">
+                  {highlightMatch(doc.title, searchQuery)}
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground uppercase tracking-wider">
+                  {doc.type === "spreadsheet" ? "xlsx" : "doc"}
+                </span>
+              </motion.button>
+            )
+          )}
+        </div>
+        {calendarModalEl}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+        {subfolders.map((sf, i) => renderFolderContextMenu(sf, renderSubfolderGrid(sf, i)))}
         {documents.map((doc, i) =>
           renderDocContextMenu(
             doc,
             <motion.button
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: (subfolders.length + i) * 0.02 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: (subfolders.length + i) * 0.03 }}
               onDoubleClick={() => onOpenDocument?.(doc)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors text-left group"
+              className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-secondary/50 transition-all duration-200 hover:scale-[1.03] group"
             >
-              {doc.type === "spreadsheet" ? (
-                <Table size={18} className="text-emerald-500" />
-              ) : (
-                <FileText size={18} className="text-blue-400" />
-              )}
-              <span className="text-sm font-medium text-foreground flex-1 truncate">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-secondary/40 transition-transform duration-200 group-hover:scale-110">
+                {doc.type === "spreadsheet" ? (
+                  <Table size={24} className="text-emerald-500" strokeWidth={1.5} />
+                ) : (
+                  <FileText size={24} className="text-blue-400" strokeWidth={1.5} />
+                )}
+              </div>
+              <span className="text-xs font-medium text-foreground text-center truncate w-full leading-tight">
                 {highlightMatch(doc.title, searchQuery)}
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground uppercase tracking-wider">
-                {doc.type === "spreadsheet" ? "xlsx" : "doc"}
               </span>
             </motion.button>
           )
         )}
       </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-      {subfolders.map((sf, i) => renderFolderContextMenu(sf, renderSubfolderGrid(sf, i)))}
-      {documents.map((doc, i) =>
-        renderDocContextMenu(
-          doc,
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: (subfolders.length + i) * 0.03 }}
-            onDoubleClick={() => onOpenDocument?.(doc)}
-            className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-secondary/50 transition-all duration-200 hover:scale-[1.03] group"
-          >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-secondary/40 transition-transform duration-200 group-hover:scale-110">
-              {doc.type === "spreadsheet" ? (
-                <Table size={24} className="text-emerald-500" strokeWidth={1.5} />
-              ) : (
-                <FileText size={24} className="text-blue-400" strokeWidth={1.5} />
-              )}
-            </div>
-            <span className="text-xs font-medium text-foreground text-center truncate w-full leading-tight">
-              {highlightMatch(doc.title, searchQuery)}
-            </span>
-          </motion.button>
-        )
-      )}
-    </div>
+      {calendarModalEl}
+    </>
   );
 };
 

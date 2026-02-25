@@ -36,7 +36,7 @@ interface FolderModalProps {
 }
 
 const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
-  const { findFolderNode, updateFolder, removeFolder, createFolder, moveFolder } = useFlux();
+  const { findFolderNode, updateFolder, removeFolder, createFolder, moveFolder, createBlock } = useFlux();
 
   const [navStack, setNavStack] = useState<string[]>([folderId]);
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -469,7 +469,10 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
                   onMoveFolder={handleMoveFolder}
                   onDeleteDocument={removeDocument}
                   onDeleteFolder={(id) => { removeFolder(id); toast.success("Mappe slettet"); }}
-                  onRenameFolder={(id) => { /* navigate into folder to rename via header */ drillIn(id); }}
+                  onRenameFolder={(id) => { drillIn(id); }}
+                  onAddToCalendar={(title, date, time) => {
+                    createBlock({ title, time, scheduled_date: date, duration: "30m", type: "custom" });
+                  }}
                 />
               </motion.div>
             </AnimatePresence>
