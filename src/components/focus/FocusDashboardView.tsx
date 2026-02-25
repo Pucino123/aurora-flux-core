@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FocusProvider, useFocusStore } from "@/context/FocusContext";
 import { useFlux } from "@/context/FluxContext";
@@ -416,41 +417,40 @@ const FocusContent = () => {
         </>
       )}
 
-      {/* Widget Style Editor Focus Mode */}
-      <AnimatePresence>
-        {styleEditorTarget && (
-          <>
-            {/* Overlay — dims everything below z-60, click to close */}
-            <motion.div
-              key="style-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[60]"
-              style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
-              onClick={() => setStyleEditorTarget(null)}
+      {/* Widget Style Editor Focus Mode — portaled to body to escape stacking context */}
+      {styleEditorTarget && createPortal(
+        <>
+          {/* Overlay — dims everything below z-60, click to close */}
+          <motion.div
+            key="style-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0"
+            style={{ zIndex: 60, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+            onClick={() => setStyleEditorTarget(null)}
+          />
+          {/* Editor popup */}
+          <motion.div
+            key="style-editor-popup"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed"
+            style={{ zIndex: 80, left: editorPosition.x, top: editorPosition.y, pointerEvents: "auto" }}
+          >
+            <WidgetStyleEditor
+              style={activeStyle.style}
+              onUpdate={activeStyle.update}
+              onReset={activeStyle.reset}
+              onClose={() => setStyleEditorTarget(null)}
             />
-            {/* Editor popup */}
-            <motion.div
-              key="style-editor-popup"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="fixed z-[80]"
-              style={{ left: editorPosition.x, top: editorPosition.y, pointerEvents: "auto" }}
-            >
-              <WidgetStyleEditor
-                style={activeStyle.style}
-                onUpdate={activeStyle.update}
-                onReset={activeStyle.reset}
-                onClose={() => setStyleEditorTarget(null)}
-              />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+          </motion.div>
+        </>,
+        document.body
+      )}
 
       <ToolDrawer />
     </div>
