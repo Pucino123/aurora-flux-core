@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Folder, FileText, Table, FolderPlus, FolderOpen, Trash2, Copy, CalendarPlus, Send, MoreHorizontal } from "lucide-react";
+import { Folder, FileText, Table, FolderPlus, FolderOpen, Trash2, Copy, CalendarPlus, Send, Pencil } from "lucide-react";
 import { FolderNode } from "@/context/FluxContext";
 import { DbDocument } from "@/hooks/useDocuments";
 import { FOLDER_ICONS } from "@/components/CreateFolderModal";
@@ -25,6 +25,8 @@ interface FolderContentsProps {
   onCreateDocument: (type: "text" | "spreadsheet") => void;
   onMoveFolder?: (draggedId: string, targetId: string) => void;
   onDeleteDocument?: (id: string) => void;
+  onDeleteFolder?: (id: string) => void;
+  onRenameFolder?: (id: string) => void;
 }
 
 const highlightMatch = (text: string, query: string) => {
@@ -52,6 +54,8 @@ const FolderContents = ({
   onCreateDocument,
   onMoveFolder,
   onDeleteDocument,
+  onDeleteFolder,
+  onRenameFolder,
 }: FolderContentsProps) => {
   const isEmpty = subfolders.length === 0 && documents.length === 0;
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -93,12 +97,17 @@ const FolderContents = ({
     toast.success("Titel kopieret");
   };
 
-  const handleAddToCalendar = (doc: DbDocument) => {
-    toast.info(`"${doc.title}" — kalender-integration kommer snart`);
+  const handleCopyFolderTitle = (sf: FolderNode) => {
+    navigator.clipboard.writeText(sf.title);
+    toast.success("Titel kopieret");
   };
 
-  const handleSend = (doc: DbDocument) => {
-    toast.info(`"${doc.title}" — del-funktion kommer snart`);
+  const handleAddToCalendar = (title: string) => {
+    toast.info(`"${title}" — kalender-integration kommer snart`);
+  };
+
+  const handleSend = (title: string) => {
+    toast.info(`"${title}" — del-funktion kommer snart`);
   };
 
   if (loading) {
@@ -228,10 +237,10 @@ const FolderContents = ({
         <ContextMenuItem onClick={() => handleCopyTitle(doc)} className="gap-2 text-xs">
           <Copy size={14} /> Kopiér titel
         </ContextMenuItem>
-        <ContextMenuItem onClick={() => handleSend(doc)} className="gap-2 text-xs">
+        <ContextMenuItem onClick={() => handleSend(doc.title)} className="gap-2 text-xs">
           <Send size={14} /> Send / Del
         </ContextMenuItem>
-        <ContextMenuItem onClick={() => handleAddToCalendar(doc)} className="gap-2 text-xs">
+        <ContextMenuItem onClick={() => handleAddToCalendar(doc.title)} className="gap-2 text-xs">
           <CalendarPlus size={14} /> Tilføj til kalender
         </ContextMenuItem>
         <ContextMenuSeparator />
@@ -245,10 +254,37 @@ const FolderContents = ({
     </ContextMenu>
   );
 
+  const renderFolderContextMenu = (sf: FolderNode, children: React.ReactNode) => (
+    <ContextMenu key={sf.id}>
+      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={() => handleCopyFolderTitle(sf)} className="gap-2 text-xs">
+          <Copy size={14} /> Kopiér titel
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => onRenameFolder?.(sf.id)} className="gap-2 text-xs">
+          <Pencil size={14} /> Omdøb
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => handleSend(sf.title)} className="gap-2 text-xs">
+          <Send size={14} /> Send / Del
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => handleAddToCalendar(sf.title)} className="gap-2 text-xs">
+          <CalendarPlus size={14} /> Tilføj til kalender
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          onClick={() => onDeleteFolder?.(sf.id)}
+          className="gap-2 text-xs text-destructive focus:text-destructive"
+        >
+          <Trash2 size={14} /> Slet mappe
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
+
   if (viewMode === "list") {
     return (
       <div className="space-y-0.5">
-        {subfolders.map((sf, i) => renderSubfolderList(sf, i))}
+        {subfolders.map((sf, i) => renderFolderContextMenu(sf, renderSubfolderList(sf, i)))}
         {documents.map((doc, i) =>
           renderDocContextMenu(
             doc,
@@ -279,7 +315,7 @@ const FolderContents = ({
 
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-      {subfolders.map((sf, i) => renderSubfolderGrid(sf, i))}
+      {subfolders.map((sf, i) => renderFolderContextMenu(sf, renderSubfolderGrid(sf, i)))}
       {documents.map((doc, i) =>
         renderDocContextMenu(
           doc,

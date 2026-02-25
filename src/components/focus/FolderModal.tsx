@@ -455,6 +455,8 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
                   onCreateDocument={handleCreateDocument}
                   onMoveFolder={handleMoveFolder}
                   onDeleteDocument={removeDocument}
+                  onDeleteFolder={(id) => { removeFolder(id); toast.success("Mappe slettet"); }}
+                  onRenameFolder={(id) => { /* navigate into folder to rename via header */ drillIn(id); }}
                 />
               </motion.div>
             </AnimatePresence>
