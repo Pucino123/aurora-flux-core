@@ -4,6 +4,7 @@ export interface WidgetStyle {
   backgroundColor: string;
   backgroundOpacity: number;
   textColor: string;
+  textOpacity: number;
   borderColor: string;
   borderWidth: number;
   borderRadius: number;
@@ -17,6 +18,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   backgroundColor: "",
   backgroundOpacity: 0,
   textColor: "",
+  textOpacity: 100,
   borderColor: "",
   borderWidth: 0,
   borderRadius: 16,

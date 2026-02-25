@@ -258,7 +258,7 @@ const DraggableWidget = ({
         top: pos.y,
         width: pos.w,
         ...(autoHeight ? {} : { height: pos.h }),
-        pointerEvents: isEditingOther ? "none" : "none",
+        pointerEvents: isEditingOther ? "none" : "auto",
         zIndex: isBeingEdited ? 65 : 50,
         ...containerStyle,
       }}
@@ -451,6 +451,7 @@ const DraggableWidget = ({
           className={`flex-1 ${scrollable ? "overflow-auto council-hidden-scrollbar" : "overflow-hidden"} px-3 ${isFocusMode ? "py-3" : "py-2"} ${widgetMinimalMode || isFocusMode ? "cursor-grab active:cursor-grabbing" : ""}`}
           style={{
             color: widgetStyle.textColor || "inherit",
+            opacity: (widgetStyle.textOpacity ?? 100) / 100,
             fontFamily: widgetStyle.fontFamily || undefined,
             fontSize: widgetStyle.fontSize ? `${widgetStyle.fontSize}px` : undefined,
             textShadow: "0 4px 20px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.15)",

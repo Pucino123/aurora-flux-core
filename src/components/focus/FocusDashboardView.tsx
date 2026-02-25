@@ -264,7 +264,7 @@ const FocusContent = () => {
         )}
       </AnimatePresence>
 
-      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: styleEditorTarget ? 65 : 20 }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 20 }}>
         <div className="pointer-events-auto w-full h-full">
           <AnimatePresence>
             {activeWidgets.includes("clock") && !clockEditorOpen && <ClockWidget key="clock" onOpenEditor={() => setClockEditorOpen(true)} />}
