@@ -454,6 +454,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
                   onCreateFolder={handleCreateSubfolder}
                   onCreateDocument={handleCreateDocument}
                   onMoveFolder={handleMoveFolder}
+                  onDeleteDocument={removeDocument}
                 />
               </motion.div>
             </AnimatePresence>
