@@ -174,47 +174,32 @@ const FontTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Partia
 );
 
 /* ─── Color tab ─── */
-const ColorTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Partial<WidgetStyle>) => void }) => {
-  const [mode, setMode] = useState<"bg" | "text">("text");
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-1 p-0.5 rounded-xl bg-white/[0.05]">
-        <button
-          onClick={() => setMode("text")}
-          className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
-            mode === "text" ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"
-          }`}
-        >
-          Text
-        </button>
-        <button
-          onClick={() => setMode("bg")}
-          className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
-            mode === "bg" ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"
-          }`}
-        >
-          Background
-        </button>
-      </div>
-      <SwatchGrid
-        value={mode === "bg" ? style.backgroundColor : style.textColor}
-        onChange={(c) => onUpdate(mode === "bg" ? { backgroundColor: c } : { textColor: c })}
-      />
-      {/* Opacity slider for current mode */}
-      <div className="flex items-center gap-3 px-1">
-        <span className="text-[10px] text-white/30 w-12 shrink-0">{mode === "text" ? "Text α" : "BG α"}</span>
-        <BottomSlider
-          value={mode === "text" ? (style.textOpacity ?? 100) : style.backgroundOpacity}
-          min={0}
-          max={100}
-          step={5}
-          displayValue={`${Math.round(mode === "text" ? (style.textOpacity ?? 100) : style.backgroundOpacity)}%`}
-          onChange={(v) => onUpdate(mode === "text" ? { textOpacity: v } : { backgroundOpacity: v })}
-        />
-      </div>
+const ColorTab = ({ style, onUpdate, colorMode, setColorMode }: { style: WidgetStyle; onUpdate: (u: Partial<WidgetStyle>) => void; colorMode: "text" | "bg"; setColorMode: (m: "text" | "bg") => void }) => (
+  <div className="space-y-4">
+    <div className="flex gap-1 p-0.5 rounded-xl bg-white/[0.05]">
+      <button
+        onClick={() => setColorMode("text")}
+        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
+          colorMode === "text" ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"
+        }`}
+      >
+        Text
+      </button>
+      <button
+        onClick={() => setColorMode("bg")}
+        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
+          colorMode === "bg" ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"
+        }`}
+      >
+        Background
+      </button>
     </div>
-  );
-};
+    <SwatchGrid
+      value={colorMode === "bg" ? style.backgroundColor : style.textColor}
+      onChange={(c) => onUpdate(colorMode === "bg" ? { backgroundColor: c } : { textColor: c })}
+    />
+  </div>
+);
 
 /* ─── Style tab ─── */
 const StyleTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Partial<WidgetStyle>) => void }) => (
@@ -305,6 +290,7 @@ const LayoutTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Part
 /* ─── Main editor ─── */
 const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition }: WidgetStyleEditorProps) => {
   const [activeTab, setActiveTab] = useState<Tab>("font");
+  const [colorMode, setColorMode] = useState<"text" | "bg">("text");
   const [dragPos, setDragPos] = useState(initialPosition ?? { x: 0, y: 0 });
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -334,10 +320,14 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition 
     };
   }, []);
 
-  /* Bottom slider config per tab */
+  /* Bottom slider config per tab — color tab switches based on text/bg mode */
+  const colorSlider = colorMode === "text"
+    ? { value: style.textOpacity ?? 100, display: `${Math.round(style.textOpacity ?? 100)}%`, key: "textOpacity" as keyof WidgetStyle, label: "Text" }
+    : { value: style.backgroundOpacity, display: `${Math.round(style.backgroundOpacity)}%`, key: "backgroundOpacity" as keyof WidgetStyle, label: "BG" };
+
   const sliderConfig: Record<Tab, { value: number; min: number; max: number; step: number; display: string; key: keyof WidgetStyle; label?: string }> = {
     font: { value: style.fontSize || 14, min: 8, max: 200, step: 1, display: `${style.fontSize || 14}px`, key: "fontSize", label: "Size" },
-    color: { value: style.textOpacity ?? 100, min: 0, max: 100, step: 5, display: `${Math.round(style.textOpacity ?? 100)}%`, key: "textOpacity", label: "Opacity" },
+    color: { value: colorSlider.value, min: 0, max: 100, step: 5, display: colorSlider.display, key: colorSlider.key, label: colorSlider.label },
     style: { value: style.borderRadius, min: 0, max: 50, step: 1, display: `${style.borderRadius}px`, key: "borderRadius", label: "Radius" },
     layout: { value: style.borderWidth, min: 0, max: 10, step: 1, display: `${style.borderWidth}px`, key: "borderWidth", label: "Width" },
   };

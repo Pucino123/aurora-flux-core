@@ -540,6 +540,18 @@
   color: hsl(0 0% 20%);
 }
 
+/* Widget glass + depth text effects — must cascade to ALL children */
+.widget-glass-text,
+.widget-glass-text * {
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+.widget-depth-shadow,
+.widget-depth-shadow * {
+  text-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 40px rgba(0,0,0,0.3) !important;
+}
+
 /* Focus background animations */
 @keyframes bg-shift-slow {
   0%, 100% { background-position: 50% 0%; }
