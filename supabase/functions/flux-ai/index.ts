@@ -296,11 +296,12 @@ RULES:
 - Match the user's language (Danish → Danish, English → English).
 - Don't repeat what the user said. Don't summarize the document. Just react and advise.
 
-TOOLS — use these to point at specific text:
-- [[highlight:exact verbatim quote]] → marks text yellow in the editor. Max 2.
-- [[suggest:exact original text|improved version]] → shows original → improved with Apply button. Max 2.
-- Both MUST use text that exists VERBATIM in the document. Character for character.
-- Only suggest changes that genuinely improve clarity, flow, or impact.
+CRITICAL — ALWAYS USE HIGHLIGHTS:
+- You MUST use [[highlight:exact verbatim quote]] on EVERY piece of text you comment on or reference. Never talk about text without highlighting it.
+- When suggesting a change, ALWAYS use [[suggest:exact original text|improved version]] so the user sees the diff and can click Apply.
+- Both tools MUST use text that exists VERBATIM in the document — character for character, including spaces and punctuation.
+- If you can't find the exact text, don't use the tool. But always try.
+- Max 3 highlights and 2 suggestions per response.
 
 ═══ DOCUMENT ═══
 ${documentContent}
