@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from "react";
-import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Settings2 } from "lucide-react";
+import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw } from "lucide-react";
 import { useFocusStore, SystemMode } from "@/context/FocusContext";
 import { AnimatePresence, motion } from "framer-motion";
 import FocusReportModal from "./FocusReportModal";
 import CollabMessagesModal from "./CollabMessagesModal";
 import { getSuggestedWidgets } from "@/hooks/useWidgetIntelligence";
 import { useTeamChat } from "@/hooks/useTeamChat";
-import { useStyleEditorCallback } from "./StyleEditorContext";
-import { GLOBAL_STYLE_KEY } from "@/hooks/useWidgetStyle";
 const TOOL_CATEGORIES = [
   {
     label: "Core",
@@ -56,7 +54,7 @@ const MODES: { key: SystemMode; label: string; icon: any; desc: string }[] = [
 
 const ToolDrawer = () => {
   const { activeWidgets, toggleWidget, systemMode, setSystemMode, resetDashboard } = useFocusStore();
-  const openStyleEditor = useStyleEditorCallback();
+  
   const [open, setOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
@@ -155,19 +153,6 @@ const ToolDrawer = () => {
                 >
                   <RotateCcw size={10} />
                   Reset Layout
-                </button>
-                <button
-                  onClick={() => {
-                    if (openStyleEditor) {
-                      openStyleEditor(GLOBAL_STYLE_KEY);
-                    }
-                    setOpen(false);
-                  }}
-                  className="text-[10px] text-white/30 hover:text-white/60 transition-colors px-2 py-1 rounded-lg hover:bg-white/5 flex items-center gap-1"
-                  title="Edit global widget style"
-                >
-                  <Settings2 size={10} />
-                  Global Style
                 </button>
                 <button
                   onClick={() => { setReportOpen(true); setOpen(false); }}

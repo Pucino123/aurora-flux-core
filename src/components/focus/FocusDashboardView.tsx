@@ -6,7 +6,7 @@ import { useFlux } from "@/context/FluxContext";
 import { suggestIcon } from "@/components/CreateFolderModal";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useAuth } from "@/hooks/useAuth";
-import { useWidgetStyle, GLOBAL_STYLE_KEY } from "@/hooks/useWidgetStyle";
+import { useWidgetStyle } from "@/hooks/useWidgetStyle";
 import { StyleEditorProvider } from "./StyleEditorContext";
 import BackgroundEngine from "./BackgroundEngine";
 import FocusTimer from "./FocusTimer";
@@ -78,17 +78,6 @@ const FocusContent = () => {
   const [editorPosition, setEditorPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const handleOpenStyleEditor = useCallback((widgetId: string) => {
-    if (widgetId === GLOBAL_STYLE_KEY) {
-      // Center the editor for global style
-      const editorWidth = 340;
-      const editorHeight = 420;
-      setEditorPosition({
-        x: Math.round(window.innerWidth / 2 - editorWidth / 2),
-        y: Math.round(window.innerHeight / 2 - editorHeight / 2),
-      });
-      setStyleEditorTarget(widgetId);
-      return;
-    }
     const widgetEl = document.querySelector(`[data-widget-id="${widgetId}"]`) as HTMLElement;
     if (widgetEl) {
       const rect = widgetEl.getBoundingClientRect();
