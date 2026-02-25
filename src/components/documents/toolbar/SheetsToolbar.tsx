@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, Palette, PaintBucket, ArrowDownAZ, ArrowUpAZ, Filter, Download } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { DndContext, closestCenter, DragEndEvent, DragOverlay, DragStartEvent } from "@dnd-kit/core";
-import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { useToolbarOrder } from "@/hooks/useToolbarOrder";
 import ToolbarSegment from "./ToolbarSegment";
 import ToolbarButton from "./ToolbarButton";
 import ColorPickerPopover from "./ColorPickerPopover";
@@ -39,7 +36,7 @@ interface SheetsToolbarProps {
   onToggleLightMode?: () => void;
 }
 
-const DEFAULT_ORDER = ["file", "cell-format", "emoji", "data-tools", "view"];
+const SEGMENTS = ["file", "cell-format", "emoji", "data-tools", "view"];
 
 const SheetsToolbar = ({
   onBoldToggle, onItalicToggle, onUnderlineToggle, onStrikethroughToggle,
@@ -51,8 +48,6 @@ const SheetsToolbar = ({
 }: SheetsToolbarProps) => {
   const lm = lightMode;
   const [fs, setFs] = useState("12");
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const { order, handleReorder } = useToolbarOrder("flux-sheets-toolbar-order", DEFAULT_ORDER);
 
   const sep = <div className={`w-px h-5 mx-0.5 ${lm ? "bg-gray-200" : "bg-white/[0.1]"}`} />;
   const selectCls = `text-[11px] h-7 px-1.5 rounded-lg border outline-none transition-colors ${
@@ -104,26 +99,24 @@ const SheetsToolbar = ({
     ),
   };
 
-  const onDragStart = (event: DragStartEvent) => setActiveId(event.active.id as string);
-  const onDragEnd = (event: DragEndEvent) => {
-    setActiveId(null);
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      handleReorder(active.id as string, over.id as string);
-    }
-  };
-
   if (studioMode) {
     return (
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-wrap items-center gap-1.5 px-2 py-2 rounded-2xl bg-popover/95 backdrop-blur-xl border border-border/30 shadow-2xl max-w-[95vw]">
+      <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0.08}
+        whileDrag={{ scale: 1.02, boxShadow: "0 25px 60px -12px rgba(0,0,0,0.5)" }}
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-wrap items-center gap-1.5 px-2 py-2 rounded-2xl bg-popover/95 backdrop-blur-xl border border-border/30 shadow-2xl max-w-[95vw] cursor-grab active:cursor-grabbing overflow-visible"
+        style={{ overflow: "visible" }}
+      >
         <AnimatePresence mode="sync">
-          {order.map(id => (
-            <ToolbarSegment key={id} id={id} sortable studioMode>
+          {SEGMENTS.map(id => (
+            <ToolbarSegment key={id} studioMode lightMode={lm}>
               {segmentContent[id]}
             </ToolbarSegment>
           ))}
         </AnimatePresence>
-      </div>
+      </motion.div>
     );
   }
 
@@ -133,34 +126,15 @@ const SheetsToolbar = ({
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={`flex flex-wrap items-center gap-1.5 px-2 py-2 border-b transition-colors ${
         lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
-      }`}>
-      <DndContext collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <SortableContext items={order} strategy={horizontalListSortingStrategy}>
-          <AnimatePresence mode="sync">
-            {order.map(id => (
-              <ToolbarSegment key={id} id={id} sortable>
-                {segmentContent[id]}
-              </ToolbarSegment>
-            ))}
-          </AnimatePresence>
-        </SortableContext>
-        <DragOverlay dropAnimation={{ duration: 200, easing: "cubic-bezier(0.25, 1, 0.5, 1)" }}>
-          {activeId ? (
-            <motion.div
-              initial={{ scale: 1.05, rotate: 1.5 }}
-              animate={{ scale: 1.06, rotate: -0.5 }}
-              className={`flex items-center gap-0.5 px-1.5 py-1 rounded-xl backdrop-blur-[16px] border pointer-events-none ${
-                lm
-                  ? "bg-white/95 border-primary/30"
-                  : "bg-popover/95 border-primary/40"
-              }`}
-              style={{ boxShadow: "0 20px 50px -10px rgba(0,0,0,0.4), 0 0 24px rgba(139,92,246,0.2)" }}
-            >
-              {segmentContent[activeId]}
-            </motion.div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      }`}
+    >
+      <AnimatePresence mode="sync">
+        {SEGMENTS.map(id => (
+          <ToolbarSegment key={id} lightMode={lm}>
+            {segmentContent[id]}
+          </ToolbarSegment>
+        ))}
+      </AnimatePresence>
     </motion.div>
   );
 };
