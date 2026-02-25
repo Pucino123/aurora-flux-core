@@ -73,6 +73,7 @@ const WordsToolbar = ({
       <ViewModeToggle
         studioMode={studioMode} onToggleStudio={onToggleStudio}
         zoom={zoom} onZoomChange={onZoomChange} lightMode={lm}
+        editorRef={editorRef} documentTitle={documentTitle}
         onToggleLightMode={onToggleLightMode}
       />
     ),
