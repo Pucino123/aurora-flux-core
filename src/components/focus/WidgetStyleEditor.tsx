@@ -388,7 +388,7 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition 
       {/* Content area */}
       <div className="px-4 py-2 min-h-[160px]">
         {activeTab === "font" && <FontTab style={style} onUpdate={onUpdate} />}
-        {activeTab === "color" && <ColorTab style={style} onUpdate={onUpdate} />}
+        {activeTab === "color" && <ColorTab style={style} onUpdate={onUpdate} colorMode={colorMode} setColorMode={setColorMode} />}
         {activeTab === "style" && <StyleTab style={style} onUpdate={onUpdate} />}
         {activeTab === "layout" && <LayoutTab style={style} onUpdate={onUpdate} />}
       </div>
