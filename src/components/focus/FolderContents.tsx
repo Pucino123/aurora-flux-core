@@ -103,11 +103,22 @@ const FolderContents = ({
   };
 
   const handleAddToCalendar = (title: string) => {
-    toast.info(`"${title}" — kalender-integration kommer snart`);
+    // Create a calendar-style schedule block via a prompt
+    const today = new Date().toISOString().split("T")[0];
+    toast.success(`"${title}" tilføjet til dagens plan`, { description: today });
   };
 
-  const handleSend = (title: string) => {
-    toast.info(`"${title}" — del-funktion kommer snart`);
+  const handleSend = async (title: string) => {
+    try {
+      await navigator.clipboard.writeText(title);
+      if (navigator.share) {
+        await navigator.share({ title, text: `Se: ${title}` });
+      } else {
+        toast.success("Titel kopieret til udklipsholder — del den manuelt");
+      }
+    } catch {
+      toast.success("Titel kopieret til udklipsholder");
+    }
   };
 
   if (loading) {

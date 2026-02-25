@@ -476,11 +476,51 @@ RULES:
   });
 }
 
+async function handleDocumentTools(action: string, text: string, apiKey: string) {
+  const prompts: Record<string, string> = {
+    rewrite: `Rewrite the following text. Keep the same meaning but use different words and sentence structure. Return ONLY the rewritten text, nothing else.\n\nText:\n${text}`,
+    improve: `Improve the tone of the following text. Make it more professional, polished, and clear. Return ONLY the improved text, nothing else.\n\nText:\n${text}`,
+    summarize: `Summarize the following text in 1-3 concise sentences. Return ONLY the summary, nothing else.\n\nText:\n${text}`,
+    expand: `Expand the following text with more detail, examples, and depth. Keep the same tone. Return ONLY the expanded text, nothing else.\n\nText:\n${text}`,
+    shorten: `Shorten the following text while keeping the core message intact. Be concise. Return ONLY the shortened text, nothing else.\n\nText:\n${text}`,
+    translate: `Detect the language of the following text. If it's Danish, translate to English. If it's English, translate to Danish. If another language, translate to English. Return ONLY the translated text, nothing else.\n\nText:\n${text}`,
+  };
+
+  const prompt = prompts[action] || prompts.rewrite;
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  const errResp = handleAIError(response);
+  if (errResp) return errResp;
+
+  if (!response.ok) {
+    const t = await response.text();
+    console.error("Document tools AI error:", response.status, t);
+    throw new Error("AI gateway error");
+  }
+
+  const data = await response.json();
+  const result = data.choices?.[0]?.message?.content || "";
+  return new Response(JSON.stringify({ result }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, messages, context } = await req.json();
+    const { type, messages, context, action, text } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -488,6 +528,7 @@ serve(async (req) => {
     if (type === "plan") return await handlePlan(context, LOVABLE_API_KEY);
     if (type === "council") return await handleCouncil(messages, LOVABLE_API_KEY);
     if (type === "document-chat") return await handleDocumentChat(messages, context, LOVABLE_API_KEY);
+    if (type === "document-tools") return await handleDocumentTools(action, text, LOVABLE_API_KEY);
     return await handleChat(messages, LOVABLE_API_KEY);
   } catch (e) {
     console.error("flux-ai error:", e);
