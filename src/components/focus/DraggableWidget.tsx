@@ -1,4 +1,5 @@
 import React, { useRef, useCallback, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, GripHorizontal, Minus, Plus, Settings2 } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -241,7 +242,7 @@ const DraggableWidget = ({
 
   const ALL_DIRS: ResizeDirection[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
-  return (
+  const widgetContent = (
     <motion.div
       data-widget-id={id}
       initial={{ opacity: 0, scale: 0.95 }}
@@ -252,7 +253,7 @@ const DraggableWidget = ({
       }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
-      className={`absolute ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
+      className={`${isBeingEdited ? "fixed" : "absolute"} ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
       style={{
         left: pos.x,
         top: pos.y,
@@ -490,6 +491,13 @@ const DraggableWidget = ({
       </div>
     </motion.div>
   );
+
+  // Portal the widget to document.body when being edited so it escapes the z-20 parent stacking context
+  if (isBeingEdited) {
+    return createPortal(widgetContent, document.body);
+  }
+
+  return widgetContent;
 };
 
 export default DraggableWidget;
