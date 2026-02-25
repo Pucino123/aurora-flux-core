@@ -282,19 +282,30 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false, stud
                               const gIdx = msgSuggestionStartIdx + si;
                               const applied = appliedSuggestions.has(gIdx);
                               return (
-                                <button
-                                  key={si}
-                                  disabled={applied}
-                                  onClick={() => applySuggestion(s, gIdx)}
-                                  className={`flex items-center gap-1.5 w-full text-left text-[10px] px-2 py-1.5 rounded-md transition-all ${
-                                    applied
-                                      ? lm ? "bg-green-50 text-green-700 border border-green-200" : "bg-green-500/10 text-green-400 border border-green-500/20"
-                                      : lm ? "bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20" : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                                  }`}
-                                >
-                                  {applied ? <Check size={10} /> : <Sparkles size={10} />}
-                                  <span>{applied ? (isDanish ? "Anvendt" : "Applied") : (isDanish ? "Anvend rettelse" : "Apply fix")}</span>
-                                </button>
+                                <div key={si} className={`text-[10px] rounded-md overflow-hidden transition-all ${
+                                  applied
+                                    ? lm ? "border border-green-200" : "border border-green-500/20"
+                                    : lm ? "border border-primary/20" : "border border-primary/20"
+                                }`}>
+                                  <div className={`px-2 py-1 ${lm ? "bg-red-50/50" : "bg-destructive/5"}`}>
+                                    <span className={`line-through ${lm ? "text-gray-400" : "text-foreground/30"}`}>{s.original}</span>
+                                  </div>
+                                  <div className={`px-2 py-1 ${lm ? "bg-green-50/50" : "bg-green-500/5"}`}>
+                                    <span className={`${lm ? "text-gray-700" : "text-foreground/80"}`}>{s.replacement}</span>
+                                  </div>
+                                  <button
+                                    disabled={applied}
+                                    onClick={() => applySuggestion(s, gIdx)}
+                                    className={`flex items-center gap-1.5 w-full px-2 py-1 transition-all ${
+                                      applied
+                                        ? lm ? "bg-green-50 text-green-700" : "bg-green-500/10 text-green-400"
+                                        : lm ? "bg-primary/5 text-primary hover:bg-primary/10" : "bg-primary/10 text-primary hover:bg-primary/20"
+                                    }`}
+                                  >
+                                    {applied ? <Check size={10} /> : <Sparkles size={10} />}
+                                    <span>{applied ? (isDanish ? "✓ Anvendt" : "✓ Applied") : (isDanish ? "Anvend ændring" : "Apply change")}</span>
+                                  </button>
+                                </div>
                               );
                             })}
                           </div>
@@ -417,19 +428,30 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false, stud
                                   const gIdx = msgSuggestionStartIdx2 + si;
                                   const applied = appliedSuggestions.has(gIdx);
                                   return (
-                                    <button
-                                      key={si}
-                                      disabled={applied}
-                                      onClick={() => applySuggestion(s, gIdx)}
-                                      className={`flex items-center gap-1.5 w-full text-left text-[10px] px-2 py-1.5 rounded-md transition-all ${
-                                        applied
-                                          ? lm ? "bg-green-50 text-green-700 border border-green-200" : "bg-green-500/10 text-green-400 border border-green-500/20"
-                                          : lm ? "bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20" : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                                      }`}
-                                    >
-                                      {applied ? <Check size={10} /> : <Sparkles size={10} />}
-                                      <span>{applied ? (isDanish ? "Anvendt" : "Applied") : (isDanish ? "Anvend rettelse" : "Apply fix")}</span>
-                                    </button>
+                                    <div key={si} className={`text-[10px] rounded-md overflow-hidden transition-all ${
+                                      applied
+                                        ? lm ? "border border-green-200" : "border border-green-500/20"
+                                        : lm ? "border border-primary/20" : "border border-primary/20"
+                                    }`}>
+                                      <div className={`px-2 py-1 ${lm ? "bg-red-50/50" : "bg-destructive/5"}`}>
+                                        <span className={`line-through ${lm ? "text-gray-400" : "text-foreground/30"}`}>{s.original}</span>
+                                      </div>
+                                      <div className={`px-2 py-1 ${lm ? "bg-green-50/50" : "bg-green-500/5"}`}>
+                                        <span className={`${lm ? "text-gray-700" : "text-foreground/80"}`}>{s.replacement}</span>
+                                      </div>
+                                      <button
+                                        disabled={applied}
+                                        onClick={() => applySuggestion(s, gIdx)}
+                                        className={`flex items-center gap-1.5 w-full px-2 py-1 transition-all ${
+                                          applied
+                                            ? lm ? "bg-green-50 text-green-700" : "bg-green-500/10 text-green-400"
+                                            : lm ? "bg-primary/5 text-primary hover:bg-primary/10" : "bg-primary/10 text-primary hover:bg-primary/20"
+                                        }`}
+                                      >
+                                        {applied ? <Check size={10} /> : <Sparkles size={10} />}
+                                        <span>{applied ? (isDanish ? "✓ Anvendt" : "✓ Applied") : (isDanish ? "Anvend ændring" : "Apply change")}</span>
+                                      </button>
+                                    </div>
                                   );
                                 })}
                               </div>
