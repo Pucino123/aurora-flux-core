@@ -5,6 +5,8 @@ import { useFlux } from "@/context/FluxContext";
 import { suggestIcon } from "@/components/CreateFolderModal";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useAuth } from "@/hooks/useAuth";
+import { useWidgetStyle } from "@/hooks/useWidgetStyle";
+import { StyleEditorProvider } from "./StyleEditorContext";
 import BackgroundEngine from "./BackgroundEngine";
 import FocusTimer from "./FocusTimer";
 import DesktopFolder from "./DesktopFolder";
@@ -23,6 +25,7 @@ import BreathingWidget from "./BreathingWidget";
 import FocusCouncilWidget from "./FocusCouncilWidget";
 import RoutineBuilderWidget from "./RoutineBuilderWidget";
 import ClockEditor from "./ClockEditor";
+import WidgetStyleEditor from "./WidgetStyleEditor";
 import CreateFolderModal from "@/components/CreateFolderModal";
 import {
   FocusBudgetWidget,
@@ -68,6 +71,38 @@ const FocusContent = () => {
   const [docDragState, setDocDragState] = useState<{ id: string; x: number; y: number } | null>(null);
   const dragStateRef = useRef<{ id: string; x: number; y: number } | null>(null);
   const docDragStateRef = useRef<{ id: string; x: number; y: number } | null>(null);
+
+  // Style editor focus mode state
+  const [styleEditorTarget, setStyleEditorTarget] = useState<string | null>(null);
+  const [editorPosition, setEditorPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const handleOpenStyleEditor = useCallback((widgetId: string) => {
+    // Find the widget element to calculate position
+    const widgetEl = document.querySelector(`[data-widget-id="${widgetId}"]`) as HTMLElement;
+    if (widgetEl) {
+      const rect = widgetEl.getBoundingClientRect();
+      const editorWidth = 340;
+      const editorHeight = 420;
+      // Smart positioning: right of widget if space, otherwise left
+      let x: number;
+      if (rect.right + editorWidth + 20 < window.innerWidth) {
+        x = rect.right + 20;
+      } else {
+        x = Math.max(10, rect.left - editorWidth - 20);
+      }
+      // Vertically center with widget
+      let y = rect.top + (rect.height - editorHeight) / 2;
+      y = Math.max(20, Math.min(y, window.innerHeight - editorHeight - 20));
+      setEditorPosition({ x, y });
+    } else {
+      // Fallback: center of screen
+      setEditorPosition({ x: window.innerWidth / 2 - 170, y: window.innerHeight / 2 - 210 });
+    }
+    setStyleEditorTarget(widgetId);
+  }, []);
+
+  // Widget style for active editor target
+  const activeStyle = useWidgetStyle(styleEditorTarget ?? "__none__");
 
   const handleCreateDocument = useCallback(async (type: "text" | "spreadsheet") => {
     setShowDocPicker(false);
@@ -200,6 +235,7 @@ const FocusContent = () => {
   }, [moveFolder, refetchDesktopDocs]);
 
   return (
+    <StyleEditorProvider value={handleOpenStyleEditor}>
     <div
       className="relative w-full h-[100dvh] overflow-hidden bg-black"
       onContextMenu={handleContextMenu}
@@ -380,8 +416,45 @@ const FocusContent = () => {
         </>
       )}
 
+      {/* Widget Style Editor Focus Mode */}
+      <AnimatePresence>
+        {styleEditorTarget && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              key="style-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[60]"
+              style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+              onClick={() => setStyleEditorTarget(null)}
+            />
+            {/* Editor popup */}
+            <motion.div
+              key="style-editor-popup"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="fixed z-[80]"
+              style={{ left: editorPosition.x, top: editorPosition.y, pointerEvents: "auto" }}
+            >
+              <WidgetStyleEditor
+                style={activeStyle.style}
+                onUpdate={activeStyle.update}
+                onReset={activeStyle.reset}
+                onClose={() => setStyleEditorTarget(null)}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <ToolDrawer />
     </div>
+    </StyleEditorProvider>
   );
 };
 

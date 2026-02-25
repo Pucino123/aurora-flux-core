@@ -47,6 +47,8 @@ interface WidgetStyleEditorProps {
   style: WidgetStyle;
   onUpdate: (updates: Partial<WidgetStyle>) => void;
   onReset: () => void;
+  onClose?: () => void;
+  initialPosition?: { x: number; y: number };
 }
 
 /* ─── Swatch grid ─── */
@@ -268,9 +270,9 @@ const LayoutTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Part
 );
 
 /* ─── Main editor ─── */
-const WidgetStyleEditor = ({ style, onUpdate, onReset }: WidgetStyleEditorProps) => {
+const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition }: WidgetStyleEditorProps) => {
   const [activeTab, setActiveTab] = useState<Tab>("font");
-  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [dragPos, setDragPos] = useState(initialPosition ?? { x: 0, y: 0 });
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
 
@@ -331,7 +333,7 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset }: WidgetStyleEditorProps)
         <div className="w-6" />
         <div className="w-9 h-[5px] rounded-full bg-white/20" />
         <button
-          onClick={(e) => { e.stopPropagation(); onReset(); }}
+          onClick={(e) => { e.stopPropagation(); (onClose ?? onReset)(); }}
           onPointerDown={(e) => e.stopPropagation()}
           className="p-1 rounded-full hover:bg-white/10 text-white/35 hover:text-white/60 transition-colors"
         >
