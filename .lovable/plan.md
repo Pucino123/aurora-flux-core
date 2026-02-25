@@ -1,95 +1,88 @@
 
 
-# Ultimate Widget Editor: Focus Mode + Pixel-Perfect UI
+# Editor Parity and iOS-Style Toolbar Physics
 
-## Overview
+## Current State Analysis
 
-Transform the Widget Style Editor into a "Focus Mode" experience matching the existing Clock Editor pattern: dimmed background overlay, elevated widget, and a draggable editor panel positioned intelligently beside the widget.
+After thorough code review, both editors are already **functional** (not placeholders):
 
-## Current State
+- **Word Editor**: Uses `contentEditable` + `document.execCommand()` -- Bold, Italic, Headers, Lists, Links, Tables, Checklists all work when clicked
+- **Sheet Editor**: Custom grid with real cell input, formatting (bold/italic/color/alignment), Tab/Enter navigation, column/row resize, context menus, CSV export
+- **Toolbar DnD**: Already uses `@dnd-kit/sortable` with localStorage persistence via `useToolbarOrder` hook
 
-- **ClockEditor** already implements the desired UX: a fixed dark overlay (`bg-black/30 backdrop-blur-[3px]`), the clock widget elevated above it at `z-[65]`, and the editor at `z-[80]`.
-- **WidgetStyleEditor** is rendered as a child `absolute` div inside `DraggableWidget`, meaning it overlaps the widget and has no focus overlay.
-- The editor's visual design (tabs, glassmorphism, swatches) is already close to the reference but needs refinement.
+## What Needs Improvement
 
-## Plan
+### 1. Word Editor -- Formula Bar and Missing Features
+- Add a **formula/address bar** showing current block type (like Word's style dropdown)
+- Add **Undo/Redo** buttons to the toolbar (currently only keyboard shortcuts)
+- Add **Print/Export** capability
+- Fix: `execCommand` is deprecated but still functional in all browsers -- adding a comment noting this
 
-### 1. Focus Mode Overlay System
+### 2. Sheet Editor -- Formula Support
+- Add basic formula evaluation (`=SUM`, `=AVG`, `=COUNT`, `=MIN`, `=MAX`) for cell values
+- Display formula in an **address bar** above the grid when cell is focused
+- Add arrow key navigation between cells
 
-**File: `src/components/focus/DraggableWidget.tsx`**
+### 3. iOS-Style Toolbar Physics (Enhanced DnD)
 
-- Remove the inline `WidgetStyleEditor` rendering (lines 394-412) from inside the widget.
-- Instead, when the gear icon is clicked, call a new callback prop `onOpenStyleEditor(widgetId, widgetRect)` that bubbles up to `FocusDashboardView`.
+Currently DnD uses `@dnd-kit` with basic CSS transitions. Upgrade to **spring-based physics**:
 
-**File: `src/components/focus/FocusDashboardView.tsx`**
+- Replace `ToolbarSegment`'s static CSS transition with framer-motion `layout` animations using `type: "spring"` (stiffness: 400, damping: 30)
+- Add **scale bounce** on drag start (1.05x) and **drop settle** animation
+- Add subtle **rotation** during drag (like iOS wiggle)
+- Make the toolbar container width animate smoothly when segments reorder
+- Individual **tool buttons** within segments become sortable (not just segment groups)
 
-- Add state: `styleEditorTarget: { id: string, rect: DOMRect } | null`.
-- When `styleEditorTarget` is set, render:
-  1. A fixed overlay: `fixed inset-0 z-[60] bg-black/30 backdrop-blur-[3px]` (same as ClockEditor).
-  2. The target widget re-rendered at `z-[65]` above the overlay (same pattern as ClockEditor lines 370-376).
-  3. The `WidgetStyleEditor` at `z-[80]`, initially positioned to the right of the widget rect (or left if no space).
-- Clicking the overlay closes the editor.
+## Implementation Plan
 
-### 2. Smart "No-Overlap" Positioning
+### File Changes
 
-When opening the editor:
-- Read the widget's bounding rect via `getBoundingClientRect()`.
-- If `widgetRect.right + 360 < window.innerWidth`, position editor at `left: widgetRect.right + 20px`.
-- Otherwise, position at `right: window.innerWidth - widgetRect.left + 20px`.
-- Vertically center with the widget.
-- The editor remains draggable from its header for manual repositioning.
+**`src/components/documents/toolbar/ToolbarSegment.tsx`**
+- Enhance `SortableSegment` with improved spring physics
+- Add drag scale, rotation tilt, and bounce-settle animations
+- Add haptic-like visual feedback (brief color pulse on drop)
 
-### 3. Visual Polish (Matching Reference Screenshot)
+**`src/components/documents/toolbar/WordsToolbar.tsx`**
+- Add Undo/Redo buttons to the file segment
+- Add individual tool-level reordering within segments (optional, phase 2)
+- Wrap toolbar container in `motion.div` with `layout` for smooth width transitions
 
-**File: `src/components/focus/WidgetStyleEditor.tsx`**
+**`src/components/documents/toolbar/SheetsToolbar.tsx`**
+- Same spring physics upgrade as WordsToolbar
+- Add formula bar component above grid
 
-Minor refinements to match the screenshot pixel-perfectly:
-- Container: keep current `rgba(28,28,30,0.88)` with `blur(60px)` -- already matches.
-- Tab bar: ensure active tab has `bg-white/12` highlight with subtle shadow.
-- Bottom slider: keep blue accent track (`#0a84ff`), white 22px thumb with drop shadow.
-- Close button (`X`): subtle in top-right corner -- already implemented.
-- Add `onClose` prop (rename from `onReset`) so closing just closes without resetting styles.
+**`src/components/documents/DocumentView.tsx`**
+- **Sheet**: Add formula evaluation engine (basic arithmetic + SUM/AVG/COUNT/MIN/MAX)
+- **Sheet**: Add formula bar showing active cell address + content
+- **Sheet**: Add arrow key navigation between cells
+- **Word**: Add undo/redo toolbar buttons
 
-### 4. Clock Widget Integration
+**`src/hooks/useToolbarOrder.ts`**
+- No changes needed (already handles persistence correctly)
 
-The ClockEditor already has its own Focus Mode. No changes needed there. But ensure:
-- The `ClockWidget` does NOT render any default background colors or glows (already fixed in prior iterations -- will verify `ClockWidget.tsx` has no hardcoded bg classes).
+### Formula Engine (Sheet)
 
-### 5. 0% Opacity = True Transparency
-
-**File: `src/components/focus/DraggableWidget.tsx`**
-
-Already implemented in current code (lines 209-215): when `backgroundOpacity === 0`, background is set to `"transparent"` and blur is disabled. Will verify this path works correctly when the editor is externalized.
-
-## Technical Details
-
-### Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/components/focus/DraggableWidget.tsx` | Remove inline editor rendering. Add `onOpenStyleEditor` callback prop. Pass widget ref for rect calculation. |
-| `src/components/focus/FocusDashboardView.tsx` | Add focus overlay + elevated widget + positioned editor pattern (mirroring ClockEditor). Wire up `onOpenStyleEditor` for all widget instances. |
-| `src/components/focus/WidgetStyleEditor.tsx` | Add `onClose` prop separate from `onReset`. Minor visual tweaks for pixel-perfect match. |
-
-### Files Unchanged
-- `ClockWidget.tsx` -- already transparent by default.
-- `ClockEditor.tsx` -- already has its own focus mode.
-- `useWidgetStyle.ts` -- no changes needed.
-
-### Z-Index Stack
 ```text
-z-[60]  Focus overlay (dimmed + blur)
-z-[65]  Active widget (elevated above overlay)
-z-[80]  Style Editor popup (draggable, above everything)
+User types "=SUM(A1:A3)" in cell B1
+  --> Parse formula, extract range A1:A3
+  --> Resolve cell references to values
+  --> Compute result (display value, store formula)
+  --> Re-evaluate dependent cells on change
 ```
 
-### Component Flow
+Supported functions: `SUM`, `AVG`, `COUNT`, `MIN`, `MAX`, basic arithmetic (`+`, `-`, `*`, `/`)
+
+### Spring Physics Parameters
+
 ```text
-User clicks gear icon on widget header
-  --> DraggableWidget calls onOpenStyleEditor(id)
-  --> FocusDashboardView sets styleEditorTarget = { id }
-  --> Renders: overlay + elevated widget + WidgetStyleEditor
-  --> User edits in real-time, can drag editor aside
-  --> Click overlay or X to close
+Drag start:  scale 1.05, rotate +/-2deg, shadow elevation increase
+During drag: spring { stiffness: 400, damping: 28 }
+Swap:        neighbors slide with spring { stiffness: 500, damping: 35 }
+Drop settle: spring { stiffness: 300, damping: 22, bounce: 0.15 }
 ```
+
+### Estimated Scope
+- 5 files modified
+- No new dependencies needed (framer-motion + @dnd-kit already installed)
+- All changes are additive -- no breaking changes to existing functionality
 
