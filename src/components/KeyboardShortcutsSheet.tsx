@@ -70,33 +70,35 @@ const KeyboardShortcutsSheet = ({ open, onClose }: KeyboardShortcutsSheetProps) 
             transition={{ duration: 0.2 }}
             className="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-md z-50"
           >
-            <div className="bg-card/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-border/50 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
-                <div className="flex items-center gap-2">
-                  <Keyboard size={16} className="text-muted-foreground" />
+            <div className="bg-card/80 backdrop-blur-2xl rounded-2xl shadow-2xl shadow-black/30 border border-border/30 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/20">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Keyboard size={14} className="text-primary" />
+                  </div>
                   <h2 className="text-sm font-semibold text-foreground">
                     {isDanish ? "Tastaturgenveje" : "Keyboard Shortcuts"}
                   </h2>
                 </div>
-                <button onClick={onClose} className="p-1 rounded-lg hover:bg-secondary transition-colors">
+                <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary/60 transition-colors">
                   <X size={14} className="text-muted-foreground" />
                 </button>
               </div>
-              <div className="p-4 space-y-5 max-h-[60vh] overflow-y-auto">
+              <div className="p-5 space-y-5 max-h-[60vh] overflow-y-auto">
                 {groups.map((group) => (
                   <div key={group.title}>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2.5">
                       {group.title}
                     </p>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       {group.shortcuts.map((s) => (
-                        <div key={s.description} className="flex items-center justify-between py-1.5">
-                          <span className="text-sm text-foreground/80">{s.description}</span>
+                        <div key={s.description} className="flex items-center justify-between py-2 px-2.5 rounded-xl hover:bg-secondary/30 transition-colors">
+                          <span className="text-[13px] text-foreground/70">{s.description}</span>
                           <div className="flex items-center gap-1">
                             {s.keys.map((k, i) => (
                               <kbd
                                 key={i}
-                                className="min-w-[24px] h-6 flex items-center justify-center text-[11px] font-mono text-muted-foreground bg-secondary/80 border border-border/50 rounded-md px-1.5"
+                                className="min-w-[26px] h-[26px] flex items-center justify-center text-[11px] font-mono text-foreground/50 bg-secondary/60 border border-border/30 rounded-lg px-1.5 shadow-sm"
                               >
                                 {k}
                               </kbd>
