@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, DragEndEvent, DragOverlay, DragStartEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { Undo2, Redo2 } from "lucide-react";
 import { useToolbarOrder } from "@/hooks/useToolbarOrder";
 import FileMenu from "./FileMenu";
 import TypographyPanel from "./TypographyPanel";
@@ -12,7 +11,6 @@ import AiToolsPanel from "./AiToolsPanel";
 import ViewModeToggle from "./ViewModeToggle";
 import EmojiTouchbar from "./EmojiTouchbar";
 import ToolbarSegment from "./ToolbarSegment";
-import ToolbarButton from "./ToolbarButton";
 
 interface WordsToolbarProps {
   editorRef: React.RefObject<HTMLDivElement>;
@@ -44,6 +42,12 @@ const WordsToolbar = ({
 }: WordsToolbarProps) => {
   const lm = lightMode;
   const { order, handleReorder } = useToolbarOrder("flux-words-toolbar-order", DEFAULT_ORDER);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const SEGMENT_LABELS: Record<string, string> = {
+    file: "File", typography: "Text", structure: "Structure",
+    insert: "Insert", emoji: "Emoji", ai: "AI", view: "View",
+  };
 
   const segmentMap: Record<string, React.ReactNode> = {
     file: (
@@ -53,9 +57,6 @@ const WordsToolbar = ({
           commitRename={commitRename} documentTitle={documentTitle} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete}
           onDelete={onDelete} exec={exec} editorRef={editorRef} lightMode={lm}
         />
-        {/* Undo/Redo — uses document.execCommand (deprecated but functional in all browsers) */}
-        <ToolbarButton icon={<Undo2 size={14} />} label="Undo (Ctrl+Z)" onClick={() => exec("undo")} lightMode={lm} />
-        <ToolbarButton icon={<Redo2 size={14} />} label="Redo (Ctrl+Y)" onClick={() => exec("redo")} lightMode={lm} />
       </ToolbarSegment>
     ),
     typography: (
@@ -94,7 +95,9 @@ const WordsToolbar = ({
     ),
   };
 
+  const onDragStart = (event: DragStartEvent) => setActiveId(event.active.id as string);
   const onDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
     if (over && active.id !== over.id) {
       handleReorder(active.id as string, over.id as string);
@@ -110,12 +113,29 @@ const WordsToolbar = ({
           ? "fixed top-4 left-1/2 -translate-x-1/2 z-[200] rounded-2xl bg-popover/95 backdrop-blur-xl border-border/30 shadow-2xl max-w-[95vw]"
           : lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
       }`}>
-      <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={horizontalListSortingStrategy}>
           <AnimatePresence mode="sync">
             {order.map(id => segmentMap[id])}
           </AnimatePresence>
         </SortableContext>
+        <DragOverlay dropAnimation={{ duration: 200, easing: "cubic-bezier(0.25, 1, 0.5, 1)" }}>
+          {activeId ? (
+            <motion.div
+              initial={{ scale: 1.05, rotate: 2 }}
+              animate={{ scale: 1.08, rotate: -1 }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-xl border shadow-2xl pointer-events-none ${
+                lm
+                  ? "bg-white/90 border-primary/30 shadow-primary/10"
+                  : "bg-popover/90 border-primary/40 shadow-primary/20"
+              }`}
+            >
+              <span className={`text-[10px] font-semibold ${lm ? "text-primary" : "text-primary"}`}>
+                {SEGMENT_LABELS[activeId] || activeId}
+              </span>
+            </motion.div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </motion.div>
   );
