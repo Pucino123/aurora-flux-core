@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Image, Link2, Code, Table2, ListChecks } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Image, Link2, Code, Table2, ListChecks, Upload } from "lucide-react";
 import ToolbarButton from "./ToolbarButton";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
@@ -89,12 +89,47 @@ const LinkInsert = ({ exec, lm }: { exec: (cmd: string, value?: string) => void;
 const ImageInsert = ({ exec, lm }: { exec: (cmd: string, value?: string) => void; lm: boolean }) => {
   const [url, setUrl] = useState("");
   const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const insert = () => {
     if (url.trim()) {
       exec("insertImage", url.trim());
       setUrl("");
       setOpen(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { toast } = await import("sonner");
+        toast.error("Log ind for at uploade billeder");
+        setUploading(false);
+        return;
+      }
+
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("document-images").upload(path, file);
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage.from("document-images").getPublicUrl(path);
+      exec("insertImage", urlData.publicUrl);
+      setOpen(false);
+    } catch (err) {
+      console.error("Upload failed:", err);
+      const { toast } = await import("sonner");
+      toast.error("Upload fejlede");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   };
 
@@ -110,13 +145,34 @@ const ImageInsert = ({ exec, lm }: { exec: (cmd: string, value?: string) => void
         align="start" sideOffset={8}
       >
         <p className={`text-[10px] font-semibold mb-2 uppercase tracking-wider ${lm ? "text-gray-500" : "text-foreground/40"}`}>Insert Image</p>
+
+        {/* File upload */}
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className={`w-full flex items-center justify-center gap-2 py-2 mb-2 text-[11px] font-medium rounded-lg border-2 border-dashed transition-all duration-150 ${
+            uploading
+              ? `${lm ? "border-gray-200 bg-gray-50 text-gray-400" : "border-white/[0.1] bg-white/[0.04] text-foreground/30"}`
+              : `${lm ? "border-gray-300 hover:border-primary/50 hover:bg-primary/5 text-gray-600" : "border-white/[0.15] hover:border-primary/40 hover:bg-primary/5 text-foreground/60"}`
+          }`}
+        >
+          <Upload size={14} />
+          {uploading ? "Uploader..." : "Upload billede"}
+        </button>
+
+        <div className={`flex items-center gap-2 mb-2 ${lm ? "text-gray-400" : "text-foreground/30"}`}>
+          <div className="flex-1 h-px bg-current" />
+          <span className="text-[9px] uppercase tracking-wider">eller URL</span>
+          <div className="flex-1 h-px bg-current" />
+        </div>
+
         <input
           value={url}
           onChange={e => setUrl(e.target.value)}
           onKeyDown={e => e.key === "Enter" && insert()}
           placeholder="https://example.com/image.png"
           className={popInputCls(lm)}
-          autoFocus
         />
         <button
           onClick={insert}
