@@ -195,7 +195,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
           ${lm ? "selection:bg-primary/20" : "selection:bg-primary/20"}`}
         data-placeholder="Start typing..."
       />
-      <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} />
+      <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
       <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
     </div>
   );
@@ -531,7 +531,7 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
         </div>
       </div>
 
-      <DocumentAiChat getDocumentContent={() => rows.map(r => r.join("\t")).join("\n")} lightMode={lm} />
+      <DocumentAiChat getDocumentContent={() => rows.map(r => r.join("\t")).join("\n")} lightMode={lm} studioMode={studioMode} />
 
       {cellMenu && (
         <div className={`fixed z-[300] min-w-[160px] py-1.5 rounded-xl ${ctxBg} backdrop-blur-xl border ${ctxBorder} shadow-2xl shadow-black/30 animate-scale-in`}

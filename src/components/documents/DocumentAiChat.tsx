@@ -1,24 +1,31 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { MessageSquare, Send, ChevronDown, ChevronUp, Loader2, Sparkles } from "lucide-react";
+import { Send, ChevronDown, ChevronUp, Loader2, Sparkles, Check, GripVertical } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { motion } from "framer-motion";
 import { isDanish } from "@/lib/i18n";
+import FloatingStudioItem from "./toolbar/FloatingStudioItem";
 
 interface Highlight {
   text: string;
   color: string;
 }
 
+interface Suggestion {
+  original: string;
+  replacement: string;
+}
+
 interface DocumentAiChatProps {
   getDocumentContent: () => string;
   editorRef?: React.RefObject<HTMLDivElement>;
   lightMode?: boolean;
+  studioMode?: boolean;
 }
 
-type Msg = { role: "user" | "assistant"; content: string; highlights?: Highlight[] };
+type Msg = { role: "user" | "assistant"; content: string; highlights?: Highlight[]; suggestions?: Suggestion[] };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flux-ai`;
 
-// Parse highlights from AI response: [[highlight:text here]] patterns
 function extractHighlights(content: string): { cleanContent: string; highlights: Highlight[] } {
   const highlights: Highlight[] = [];
   const cleanContent = content.replace(/\[\[highlight:(.*?)\]\]/g, (_, text) => {
@@ -28,25 +35,32 @@ function extractHighlights(content: string): { cleanContent: string; highlights:
   return { cleanContent, highlights };
 }
 
-const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: DocumentAiChatProps) => {
+function extractSuggestions(content: string): { cleanContent: string; suggestions: Suggestion[] } {
+  const suggestions: Suggestion[] = [];
+  const cleanContent = content.replace(/\[\[suggest:(.+?)\|(.+?)\]\]/g, (_, original, replacement) => {
+    suggestions.push({ original: original.trim(), replacement: replacement.trim() });
+    return `\n> ~~${original.trim()}~~ → **${replacement.trim()}**\n`;
+  });
+  return { cleanContent, suggestions };
+}
+
+const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false, studioMode = false }: DocumentAiChatProps) => {
   const lm = lightMode;
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeHighlights, setActiveHighlights] = useState<Highlight[]>([]);
+  const [appliedSuggestions, setAppliedSuggestions] = useState<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
-  // Apply highlights to the editor
   const applyHighlights = useCallback((highlights: Highlight[]) => {
     if (!editorRef?.current) return;
-    // Clear previous highlights
     clearHighlights();
-    
     const editor = editorRef.current;
     highlights.forEach(({ text, color }) => {
       const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
@@ -65,7 +79,7 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
         mark.style.transition = "background-color 0.3s";
         mark.style.cursor = "pointer";
         range.surroundContents(mark);
-        break; // Only first occurrence
+        break;
       }
     });
     setActiveHighlights(highlights);
@@ -83,7 +97,6 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
     setActiveHighlights([]);
   }, [editorRef]);
 
-  // Clear highlights when chat closes
   useEffect(() => {
     if (!open) clearHighlights();
   }, [open, clearHighlights]);
@@ -103,11 +116,31 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
     }
   }, [editorRef]);
 
+  const applySuggestion = useCallback((suggestion: Suggestion, globalIdx: number) => {
+    if (!editorRef?.current) return;
+    const editor = editorRef.current;
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+    let node: Text | null;
+    while ((node = walker.nextNode() as Text | null)) {
+      const idx = node.textContent?.indexOf(suggestion.original) ?? -1;
+      if (idx === -1) continue;
+      const before = node.textContent!.substring(0, idx);
+      const after = node.textContent!.substring(idx + suggestion.original.length);
+      node.textContent = before + suggestion.replacement + after;
+      setAppliedSuggestions(prev => new Set(prev).add(globalIdx));
+      // Trigger content save
+      const event = new Event("input", { bubbles: true });
+      editor.dispatchEvent(event);
+      break;
+    }
+  }, [editorRef]);
+
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
     setInput("");
     clearHighlights();
+    setAppliedSuggestions(new Set());
     const userMsg: Msg = { role: "user", content: text };
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
@@ -131,7 +164,7 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: "Unknown error" }));
-        setMessages(prev => [...prev, { role: "assistant", content: `❌ ${err.error || "Fejl"}` }]);
+        setMessages(prev => [...prev, { role: "assistant", content: `❌ ${err.error || "Error"}` }]);
         setLoading(false);
         return;
       }
@@ -143,13 +176,14 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
 
       const upsert = (chunk: string) => {
         assistantSoFar += chunk;
-        const { cleanContent, highlights } = extractHighlights(assistantSoFar);
+        const h = extractHighlights(assistantSoFar);
+        const s = extractSuggestions(h.cleanContent);
         setMessages(prev => {
           const last = prev[prev.length - 1];
           if (last?.role === "assistant" && prev.length > 0 && prev[prev.length - 2]?.role === "user") {
-            return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: cleanContent, highlights } : m);
+            return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: s.cleanContent, highlights: h.highlights, suggestions: s.suggestions } : m);
           }
-          return [...prev, { role: "assistant", content: cleanContent, highlights }];
+          return [...prev, { role: "assistant", content: s.cleanContent, highlights: h.highlights, suggestions: s.suggestions }];
         });
       };
 
@@ -179,7 +213,6 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
         }
       }
 
-      // Apply highlights after streaming is done
       const { highlights } = extractHighlights(assistantSoFar);
       if (highlights.length > 0) applyHighlights(highlights);
 
@@ -190,7 +223,10 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
     setLoading(false);
   };
 
-  return (
+  // Track suggestion index globally across messages
+  let globalSuggestionIdx = 0;
+
+  const chatContent = (
     <div className={`border-t ${lm ? "border-gray-200 bg-gray-50/80" : "border-border/20 bg-secondary/10"}`}>
       <button
         onClick={() => setOpen(!open)}
@@ -199,50 +235,75 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
         }`}
       >
         <Sparkles size={13} className="text-primary" />
-        <span>{isDanish ? "Dokument AI" : "Document AI"}</span>
-        <span className={`text-[10px] ml-1 ${lm ? "text-gray-400" : "text-foreground/30"}`}>
-          {isDanish ? "sparring partner" : "sparring partner"}
-        </span>
+        <span>Sparring Partner</span>
         {open ? <ChevronDown size={13} className="ml-auto" /> : <ChevronUp size={13} className="ml-auto" />}
       </button>
 
       {open && (
         <div className="px-3 pb-3">
           {messages.length > 0 && (
-            <div ref={scrollRef} className="max-h-[200px] overflow-y-auto space-y-2 mb-2">
-              {messages.map((m, i) => (
-                <div key={i} className={`text-xs rounded-lg px-3 py-2 ${
-                  m.role === "user"
-                    ? lm ? "bg-primary/10 text-gray-800 ml-8" : "bg-primary/15 text-foreground/90 ml-8"
-                    : lm ? "bg-white border border-gray-200 text-gray-700 mr-4" : "bg-card/60 border border-border/20 text-foreground/80 mr-4"
-                }`}>
-                  {m.role === "assistant" ? (
-                    <div className="prose prose-sm max-w-none [&_p]:mb-1 [&_p]:text-xs [&_li]:text-xs [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_strong]:text-primary/80">
-                      <ReactMarkdown
-                        components={{
-                          strong: ({ children }) => {
-                            const text = String(children);
-                            // Check if this is a highlighted quote (starts and ends with ")
-                            const isHighlightRef = text.startsWith('"') && text.endsWith('"');
-                            if (isHighlightRef) {
+            <div ref={scrollRef} className="max-h-[250px] overflow-y-auto space-y-2 mb-2">
+              {messages.map((m, i) => {
+                const msgSuggestionStartIdx = globalSuggestionIdx;
+                if (m.suggestions) globalSuggestionIdx += m.suggestions.length;
+                return (
+                  <div key={i} className={`text-xs rounded-lg px-3 py-2 ${
+                    m.role === "user"
+                      ? lm ? "bg-primary/10 text-gray-800 ml-8" : "bg-primary/15 text-foreground/90 ml-8"
+                      : lm ? "bg-white border border-gray-200 text-gray-700 mr-4" : "bg-card/60 border border-border/20 text-foreground/80 mr-4"
+                  }`}>
+                    {m.role === "assistant" ? (
+                      <>
+                        <div className="prose prose-sm max-w-none [&_p]:mb-1 [&_p]:text-xs [&_li]:text-xs [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_strong]:text-primary/80 [&_del]:text-destructive/60 [&_blockquote]:border-l-2 [&_blockquote]:border-primary/30 [&_blockquote]:pl-2 [&_blockquote]:my-1">
+                          <ReactMarkdown
+                            components={{
+                              strong: ({ children }) => {
+                                const text = String(children);
+                                const isHighlightRef = text.startsWith('"') && text.endsWith('"');
+                                if (isHighlightRef) {
+                                  return (
+                                    <strong
+                                      className="cursor-pointer hover:underline text-primary/90"
+                                      onClick={() => scrollToHighlight(text.slice(1, -1))}
+                                      title={isDanish ? "Klik for at finde i dokument" : "Click to find in document"}
+                                    >
+                                      {children}
+                                    </strong>
+                                  );
+                                }
+                                return <strong>{children}</strong>;
+                              }
+                            }}
+                          >{m.content}</ReactMarkdown>
+                        </div>
+                        {m.suggestions && m.suggestions.length > 0 && (
+                          <div className="mt-2 space-y-1.5">
+                            {m.suggestions.map((s, si) => {
+                              const gIdx = msgSuggestionStartIdx + si;
+                              const applied = appliedSuggestions.has(gIdx);
                               return (
-                                <strong
-                                  className="cursor-pointer hover:underline text-primary/90"
-                                  onClick={() => scrollToHighlight(text.slice(1, -1))}
-                                  title={isDanish ? "Klik for at finde i dokument" : "Click to find in document"}
+                                <button
+                                  key={si}
+                                  disabled={applied}
+                                  onClick={() => applySuggestion(s, gIdx)}
+                                  className={`flex items-center gap-1.5 w-full text-left text-[10px] px-2 py-1.5 rounded-md transition-all ${
+                                    applied
+                                      ? lm ? "bg-green-50 text-green-700 border border-green-200" : "bg-green-500/10 text-green-400 border border-green-500/20"
+                                      : lm ? "bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20" : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                                  }`}
                                 >
-                                  {children}
-                                </strong>
+                                  {applied ? <Check size={10} /> : <Sparkles size={10} />}
+                                  <span>{applied ? (isDanish ? "Anvendt" : "Applied") : (isDanish ? "Anvend rettelse" : "Apply fix")}</span>
+                                </button>
                               );
-                            }
-                            return <strong>{children}</strong>;
-                          }
-                        }}
-                      >{m.content}</ReactMarkdown>
-                    </div>
-                  ) : m.content}
-                </div>
-              ))}
+                            })}
+                          </div>
+                        )}
+                      </>
+                    ) : m.content}
+                  </div>
+                );
+              })}
               {loading && messages[messages.length - 1]?.role === "user" && (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3">
                   <Loader2 size={12} className="animate-spin" />
@@ -266,7 +327,7 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
-              placeholder={isDanish ? "Spørg AI om dit dokument..." : "Ask AI about your document..."}
+              placeholder={isDanish ? "Spørg din sparring partner..." : "Ask your sparring partner..."}
               className={`flex-1 text-xs px-3 py-2 rounded-lg outline-none transition-colors ${
                 lm
                   ? "bg-white border border-gray-200 text-gray-800 placeholder:text-gray-400 focus:border-primary/40"
@@ -289,6 +350,134 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false }: Do
       )}
     </div>
   );
+
+  if (studioMode && open) {
+    return (
+      <>
+        {/* Collapsed toggle stays docked */}
+        {!open && chatContent}
+        <FloatingStudioItem active={studioMode} className="">
+          <motion.div
+            drag
+            dragMomentum={false}
+            dragElastic={0.08}
+            dragConstraints={{ top: -9999, left: -9999, right: 9999, bottom: 9999 }}
+            whileDrag={{ scale: 1.02, boxShadow: "0 25px 60px -12px rgba(0,0,0,0.5)" }}
+            className={`fixed bottom-8 right-8 w-[380px] rounded-2xl shadow-2xl backdrop-blur-xl border cursor-grab active:cursor-grabbing ${
+              lm ? "bg-white/95 border-gray-200" : "bg-popover/95 border-border/30"
+            }`}
+            style={{ zIndex: 9999 }}
+          >
+            <div className={`flex items-center gap-2 px-3 py-2 border-b ${lm ? "border-gray-200" : "border-border/20"}`}>
+              <GripVertical size={12} className="text-muted-foreground/40" />
+              <Sparkles size={13} className="text-primary" />
+              <span className={`text-xs font-medium ${lm ? "text-gray-700" : "text-foreground/70"}`}>Sparring Partner</span>
+              <button onClick={() => setOpen(false)} className="ml-auto">
+                <ChevronDown size={13} className="text-muted-foreground/50" />
+              </button>
+            </div>
+            <div className="px-3 pb-3 pt-2">
+              {messages.length > 0 && (
+                <div ref={scrollRef} className="max-h-[300px] overflow-y-auto space-y-2 mb-2">
+                  {messages.map((m, i) => {
+                    const msgSuggestionStartIdx2 = (() => {
+                      let count = 0;
+                      for (let j = 0; j < i; j++) { count += (messages[j].suggestions?.length || 0); }
+                      return count;
+                    })();
+                    return (
+                      <div key={i} className={`text-xs rounded-lg px-3 py-2 ${
+                        m.role === "user"
+                          ? lm ? "bg-primary/10 text-gray-800 ml-6" : "bg-primary/15 text-foreground/90 ml-6"
+                          : lm ? "bg-gray-50 border border-gray-200 text-gray-700" : "bg-card/60 border border-border/20 text-foreground/80"
+                      }`}>
+                        {m.role === "assistant" ? (
+                          <>
+                            <div className="prose prose-sm max-w-none [&_p]:mb-1 [&_p]:text-xs [&_li]:text-xs [&_strong]:text-primary/80 [&_del]:text-destructive/60 [&_blockquote]:border-l-2 [&_blockquote]:border-primary/30 [&_blockquote]:pl-2 [&_blockquote]:my-1">
+                              <ReactMarkdown
+                                components={{
+                                  strong: ({ children }) => {
+                                    const text = String(children);
+                                    const isHighlightRef = text.startsWith('"') && text.endsWith('"');
+                                    if (isHighlightRef) {
+                                      return (
+                                        <strong className="cursor-pointer hover:underline text-primary/90" onClick={() => scrollToHighlight(text.slice(1, -1))}>
+                                          {children}
+                                        </strong>
+                                      );
+                                    }
+                                    return <strong>{children}</strong>;
+                                  }
+                                }}
+                              >{m.content}</ReactMarkdown>
+                            </div>
+                            {m.suggestions && m.suggestions.length > 0 && (
+                              <div className="mt-2 space-y-1.5">
+                                {m.suggestions.map((s, si) => {
+                                  const gIdx = msgSuggestionStartIdx2 + si;
+                                  const applied = appliedSuggestions.has(gIdx);
+                                  return (
+                                    <button
+                                      key={si}
+                                      disabled={applied}
+                                      onClick={() => applySuggestion(s, gIdx)}
+                                      className={`flex items-center gap-1.5 w-full text-left text-[10px] px-2 py-1.5 rounded-md transition-all ${
+                                        applied
+                                          ? lm ? "bg-green-50 text-green-700 border border-green-200" : "bg-green-500/10 text-green-400 border border-green-500/20"
+                                          : lm ? "bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20" : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                                      }`}
+                                    >
+                                      {applied ? <Check size={10} /> : <Sparkles size={10} />}
+                                      <span>{applied ? (isDanish ? "Anvendt" : "Applied") : (isDanish ? "Anvend rettelse" : "Apply fix")}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </>
+                        ) : m.content}
+                      </div>
+                    );
+                  })}
+                  {loading && messages[messages.length - 1]?.role === "user" && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3">
+                      <Loader2 size={12} className="animate-spin" />
+                      {isDanish ? "Tænker..." : "Thinking..."}
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeHighlights.length > 0 && (
+                <button onClick={clearHighlights} className={`text-[10px] mb-2 px-2 py-1 rounded transition-colors ${lm ? "text-gray-500 hover:bg-gray-100" : "text-foreground/40 hover:bg-white/5"}`}>
+                  {isDanish ? "Fjern markeringer" : "Clear highlights"} ({activeHighlights.length})
+                </button>
+              )}
+              <div className="flex gap-2">
+                <input
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
+                  placeholder={isDanish ? "Spørg din sparring partner..." : "Ask your sparring partner..."}
+                  className={`flex-1 text-xs px-3 py-2 rounded-lg outline-none transition-colors ${
+                    lm ? "bg-white border border-gray-200 text-gray-800 placeholder:text-gray-400 focus:border-primary/40" : "bg-card/40 border border-border/20 text-foreground/90 placeholder:text-foreground/30 focus:border-primary/40"
+                  }`}
+                />
+                <button
+                  onClick={send}
+                  disabled={loading || !input.trim()}
+                  className={`p-2 rounded-lg transition-colors ${loading || !input.trim() ? "opacity-40 cursor-not-allowed" : lm ? "bg-primary text-white hover:bg-primary/90" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
+                >
+                  <Send size={13} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </FloatingStudioItem>
+      </>
+    );
+  }
+
+  return chatContent;
 };
 
 export default DocumentAiChat;
