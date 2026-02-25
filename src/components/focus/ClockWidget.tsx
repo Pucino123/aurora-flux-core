@@ -3,6 +3,7 @@ import DraggableWidget from "./DraggableWidget";
 import { useFocusStore } from "@/context/FocusContext";
 import { useFlux } from "@/context/FluxContext";
 import { motion } from "framer-motion";
+import { useWidgetStyle } from "@/hooks/useWidgetStyle";
 
 const FONT_MAP: Record<string, string> = {
   inter: "'Inter', sans-serif",
@@ -29,6 +30,8 @@ interface ClockWidgetProps {
 }
 
 const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
+  const { style: widgetStyle } = useWidgetStyle("clock");
+  const hideSubtitle = widgetStyle.hideSubtitle;
   const defaultClockPos = React.useMemo(() => ({
     x: typeof window !== 'undefined' ? Math.round((window.innerWidth - 400) / 2) : 500,
     y: 30,
@@ -179,25 +182,25 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
           )}
         </div>
 
-        {clockShowGreeting && (
+        {!hideSubtitle && clockShowGreeting && (
           <p style={{ color: "inherit", opacity: 0.5, fontSize: `${greetingSize}px`, fontFamily }} className="font-medium relative z-[1]">
             {displayName ? `${greeting}, ${displayName}` : greeting}
           </p>
         )}
 
-        {clockShowDate && (
+        {!hideSubtitle && clockShowDate && (
           <p style={{ color: "inherit", opacity: 0.25, fontSize: `${dateSize}px`, marginTop: 2 }} className="relative z-[1]">
             {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
           </p>
         )}
 
-        {secondaryTime && (
+        {!hideSubtitle && secondaryTime && (
           <p style={{ color: "inherit", opacity: 0.2, fontSize: `${dateSize}px`, marginTop: 4 }} className="relative z-[1]">
             {tzLabel} · {secondaryTime}
           </p>
         )}
 
-        {showRing && (
+        {!hideSubtitle && showRing && (
           <p style={{ color: "inherit", opacity: 0.15, fontSize: "10px", marginTop: 4 }} className="relative z-[1]">
             {tasksDone}/{tasksTotal} tasks complete
           </p>

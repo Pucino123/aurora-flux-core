@@ -455,10 +455,8 @@ const DraggableWidget = ({
             opacity: (widgetStyle.textOpacity ?? 100) / 100,
             fontFamily: widgetStyle.fontFamily || undefined,
             fontSize: widgetStyle.fontSize ? `${widgetStyle.fontSize}px` : undefined,
-            ...(widgetStyle.glassEffect ? {
-              backgroundImage: `linear-gradient(135deg, ${widgetStyle.textColor || "rgba(255,255,255,1)"} 0%, rgba(255,255,255,0.35) 50%, ${widgetStyle.textColor || "rgba(255,255,255,1)"} 100%)`,
-            } : {}),
-          }}
+            "--widget-glass-gradient": `linear-gradient(135deg, ${widgetStyle.textColor || "rgba(255,255,255,1)"} 0%, rgba(255,255,255,0.35) 50%, ${widgetStyle.textColor || "rgba(255,255,255,1)"} 100%)`,
+          } as React.CSSProperties}
           onPointerDown={(widgetMinimalMode || isFocusMode) ? onPointerDownDrag : undefined}
         >
           {children}

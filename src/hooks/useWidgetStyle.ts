@@ -14,6 +14,7 @@ export interface WidgetStyle {
   fontSize: number;
   glassEffect: boolean;
   depthShadow: boolean;
+  hideSubtitle: boolean;
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
@@ -30,6 +31,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   fontSize: 0,
   glassEffect: false,
   depthShadow: false,
+  hideSubtitle: false,
 };
 
 const STORAGE_KEY = "flux-widget-styles";
