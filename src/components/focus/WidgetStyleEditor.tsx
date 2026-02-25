@@ -229,6 +229,16 @@ const StyleTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Parti
         );
       })}
     </div>
+    {/* Inline radius slider */}
+    <div className="flex items-center gap-3 px-1">
+      <Slider
+        value={[style.borderRadius]}
+        onValueChange={([v]) => onUpdate({ borderRadius: v })}
+        min={0} max={50} step={1}
+        className="flex-1 [&_[data-radix-slider-track]]:h-[6px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-[#0a84ff] [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-[18px] [&_[data-radix-slider-thumb]]:h-[18px] [&_[data-radix-slider-thumb]]:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+      />
+      <span className="text-[11px] tabular-nums text-white/40 font-medium w-10 text-right">{style.borderRadius}px</span>
+    </div>
 
     {/* Effects */}
     <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Effects</span>
@@ -284,6 +294,17 @@ const LayoutTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Part
         );
       })}
     </div>
+
+    {/* Display options */}
+    <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Display</span>
+    <button
+      onClick={() => onUpdate({ hideSubtitle: !style.hideSubtitle })}
+      className={`w-full px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all ${
+        style.hideSubtitle ? "bg-white/15 text-white ring-1 ring-white/20" : "text-white/35 hover:bg-white/5 border border-white/10"
+      }`}
+    >
+      Hide Subtitle
+    </button>
   </div>
 );
 
@@ -393,17 +414,19 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition 
         {activeTab === "layout" && <LayoutTab style={style} onUpdate={onUpdate} />}
       </div>
 
-      {/* Bottom slider */}
-      <div className="px-4 pb-4 pt-1">
-        <BottomSlider
-          value={sl.value}
-          min={sl.min}
-          max={sl.max}
-          step={sl.step}
-          displayValue={sl.display}
-          onChange={(v) => onUpdate({ [sl.key]: v })}
-        />
-      </div>
+      {/* Bottom slider — hidden for Style tab (slider is inline there) */}
+      {activeTab !== "style" && (
+        <div className="px-4 pb-4 pt-1">
+          <BottomSlider
+            value={sl.value}
+            min={sl.min}
+            max={sl.max}
+            step={sl.step}
+            displayValue={sl.display}
+            onChange={(v) => onUpdate({ [sl.key]: v })}
+          />
+        </div>
+      )}
     </div>
   );
 };
