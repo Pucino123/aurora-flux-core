@@ -235,7 +235,7 @@ const FocusContent = () => {
   }, [moveFolder, refetchDesktopDocs]);
 
   return (
-    <StyleEditorProvider value={handleOpenStyleEditor}>
+    <StyleEditorProvider value={{ openEditor: handleOpenStyleEditor, activeWidgetId: styleEditorTarget }}>
     <div
       className="relative w-full h-[100dvh] overflow-hidden bg-black"
       onContextMenu={handleContextMenu}
@@ -264,7 +264,7 @@ const FocusContent = () => {
         )}
       </AnimatePresence>
 
-      <div className="absolute inset-0 z-20 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: styleEditorTarget ? 65 : 20 }}>
         <div className="pointer-events-auto w-full h-full">
           <AnimatePresence>
             {activeWidgets.includes("clock") && !clockEditorOpen && <ClockWidget key="clock" onOpenEditor={() => setClockEditorOpen(true)} />}

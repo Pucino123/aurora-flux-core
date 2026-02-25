@@ -1,11 +1,20 @@
 import { createContext, useContext } from "react";
 
-type StyleEditorCallback = (widgetId: string) => void;
+interface StyleEditorContextValue {
+  openEditor: (widgetId: string) => void;
+  activeWidgetId: string | null;
+}
 
-const StyleEditorContext = createContext<StyleEditorCallback | null>(null);
+const StyleEditorContext = createContext<StyleEditorContextValue | null>(null);
 
 export const StyleEditorProvider = StyleEditorContext.Provider;
 
-export function useStyleEditorCallback(): StyleEditorCallback | null {
-  return useContext(StyleEditorContext);
+export function useStyleEditorCallback(): ((widgetId: string) => void) | null {
+  const ctx = useContext(StyleEditorContext);
+  return ctx?.openEditor ?? null;
+}
+
+export function useStyleEditorTarget(): string | null {
+  const ctx = useContext(StyleEditorContext);
+  return ctx?.activeWidgetId ?? null;
 }
