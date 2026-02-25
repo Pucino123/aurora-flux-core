@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useState, useEffect } from "react";
-import { X, GripHorizontal, Minus, Plus, Settings2, Palette } from "lucide-react";
+import { X, GripHorizontal, Minus, Plus, Settings2 } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
@@ -205,17 +205,25 @@ const DraggableWidget = ({
   const bgAlpha = isGlass ? 0 : 0.1 + opacity * 0.8;
   const borderAlpha = isGlass ? 0 : 0.2 + opacity * 0.4;
 
-  const effectiveBg = hasCustomBg
-    ? customBgColor
-    : (isGlass ? "transparent" : `rgba(255,255,255,${bgAlpha})`);
+  // True transparency: if custom bg with 0% opacity, force transparent and no blur
+  const isFullyTransparent = hasCustomBg && widgetStyle.backgroundOpacity === 0;
+
+  const effectiveBg = isFullyTransparent
+    ? "transparent"
+    : hasCustomBg
+      ? customBgColor
+      : (isGlass ? "transparent" : `rgba(255,255,255,${bgAlpha})`);
 
   const effectiveBorder = widgetStyle.borderColor
     ? widgetStyle.borderColor
     : (isGlass ? "transparent" : `rgba(255,255,255,${borderAlpha})`);
 
-  const effectiveBlur = widgetStyle.blurAmount > 0
-    ? `blur(${widgetStyle.blurAmount}px)`
-    : (isGlass ? "none" : "blur(16px)");
+  // Disable blur when fully transparent (unless blur was explicitly set > 0 by user with a bg color)
+  const effectiveBlur = isFullyTransparent
+    ? "none"
+    : widgetStyle.blurAmount > 0
+      ? `blur(${widgetStyle.blurAmount}px)`
+      : (isGlass ? "none" : "blur(16px)");
 
   const effectiveRadius = `${widgetStyle.borderRadius}px`;
 
@@ -325,7 +333,7 @@ const DraggableWidget = ({
                   animate={{ opacity: isHovered || isBuildMode ? 1 : 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  {/* Style editor button (build mode only) */}
+                  {/* Build mode: only gear icon */}
                   {isBuildMode && (
                     <button
                       onPointerDown={(e) => e.stopPropagation()}
@@ -334,51 +342,46 @@ const DraggableWidget = ({
                       style={{ color: iconColor }}
                       title="Widget Style"
                     >
-                      <Palette size={14} />
-                    </button>
-                  )}
-                  {onEditAction && isBuildMode && (
-                    <button
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={onEditAction}
-                      className="p-1 rounded-lg transition-colors bg-white/10 hover:bg-white/20"
-                      style={{ color: iconColor }}
-                      title="Edit"
-                    >
                       <Settings2 size={14} />
                     </button>
                   )}
-                  {fontSizeControl && (
-                    <button
-                      onClick={() => { setShowFontSize(!showFontSize); setShowOpacity(false); setShowStyleEditor(false); }}
-                      className={`p-1 rounded-lg transition-colors ${showFontSize ? activeIconBg : ""}`}
-                      style={{ color: iconColor }}
-                      title="Adjust text size"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <text x="2" y="17" fontSize="14" fontWeight="bold" fill="currentColor" stroke="none">A</text>
-                        <text x="14" y="17" fontSize="10" fill="currentColor" stroke="none">A</text>
-                      </svg>
-                    </button>
+                  {/* Non-build mode controls */}
+                  {!isBuildMode && (
+                    <>
+                      {fontSizeControl && (
+                        <button
+                          onClick={() => { setShowFontSize(!showFontSize); setShowOpacity(false); setShowStyleEditor(false); }}
+                          className={`p-1 rounded-lg transition-colors ${showFontSize ? activeIconBg : ""}`}
+                          style={{ color: iconColor }}
+                          title="Adjust text size"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <text x="2" y="17" fontSize="14" fontWeight="bold" fill="currentColor" stroke="none">A</text>
+                            <text x="14" y="17" fontSize="10" fill="currentColor" stroke="none">A</text>
+                          </svg>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { setShowOpacity(!showOpacity); setShowFontSize(false); setShowStyleEditor(false); }}
+                        className={`p-1 rounded-lg transition-colors ${showOpacity ? activeIconBg : ""}`}
+                        style={{ color: iconColor }}
+                        title="Adjust opacity"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 2a10 10 0 0 1 0 20V2z" fill="currentColor" opacity="0.3" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => toggleWidget(id)}
+                        className="p-1 rounded-lg transition-colors"
+                        style={{ color: iconColor }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </>
                   )}
-                  <button
-                    onClick={() => { setShowOpacity(!showOpacity); setShowFontSize(false); setShowStyleEditor(false); }}
-                    className={`p-1 rounded-lg transition-colors ${showOpacity ? activeIconBg : ""}`}
-                    style={{ color: iconColor }}
-                    title="Adjust opacity"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 2a10 10 0 0 1 0 20V2z" fill="currentColor" opacity="0.3" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => toggleWidget(id)}
-                    className="p-1 rounded-lg transition-colors"
-                    style={{ color: iconColor }}
-                  >
-                    <X size={14} />
-                  </button>
+
                 </motion.div>
               </div>
             </motion.div>
