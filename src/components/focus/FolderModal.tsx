@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, MoreHorizontal, Pencil, Trash2, Copy, FolderPlus, FileText, Table,
   ChevronRight, LayoutGrid, List, Folder, ArrowLeft, Search, SlidersHorizontal,
-  Sparkles,
+  Sparkles, Sun, Moon,
 } from "lucide-react";
 
 import { useFlux, FolderNode } from "@/context/FluxContext";
@@ -45,6 +45,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const [renameValue, setRenameValue] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [openDocument, setOpenDocument] = useState<DbDocument | null>(null);
+  const [lightMode, setLightMode] = useState(false);
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -204,8 +205,13 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
         className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none"
       >
         <div
-          className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-card/80 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-2xl pointer-events-auto overflow-hidden"
+          className={`relative w-full max-w-4xl max-h-[85vh] flex flex-col backdrop-blur-2xl border rounded-2xl shadow-2xl pointer-events-auto overflow-hidden transition-colors duration-300 ${
+            lightMode
+              ? "force-light bg-white border-gray-200"
+              : "bg-card/80 border-border/50"
+          }`}
           onClick={(e) => e.stopPropagation()}
+          data-light-mode={lightMode ? "true" : undefined}
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-5 pt-5 pb-3">
@@ -246,6 +252,13 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
                 </h2>
               )}
             </div>
+            <button
+              onClick={() => setLightMode(!lightMode)}
+              className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
+              title={lightMode ? "Dark mode" : "Light mode"}
+            >
+              {lightMode ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
             <button
               onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
               className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
