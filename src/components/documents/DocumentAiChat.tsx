@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, ChevronDown, ChevronUp, Loader2, Sparkles, Check, GripVertical } from "lucide-react";
+import { Send, ChevronDown, ChevronUp, Loader2, Sparkles, Check, GripVertical, RotateCcw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { motion } from "framer-motion";
 import { isDanish } from "@/lib/i18n";
@@ -236,6 +236,15 @@ const DocumentAiChat = ({ getDocumentContent, editorRef, lightMode = false, stud
       >
         <Sparkles size={13} className="text-primary" />
         <span>Sparring Partner</span>
+        {open && messages.length > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setMessages([]); setAppliedSuggestions(new Set()); clearHighlights(); }}
+            className={`ml-1 p-1 rounded transition-colors ${lm ? "hover:bg-gray-200 text-gray-400" : "hover:bg-white/10 text-foreground/30"}`}
+            title={isDanish ? "Nulstil chat" : "Reset chat"}
+          >
+            <RotateCcw size={11} />
+          </button>
+        )}
         {open ? <ChevronDown size={13} className="ml-auto" /> : <ChevronUp size={13} className="ml-auto" />}
       </button>
 
