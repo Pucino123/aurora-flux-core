@@ -1,9 +1,11 @@
 import React, { useRef, useCallback, useState, useEffect } from "react";
-import { X, GripHorizontal, Minus, Plus, Settings2 } from "lucide-react";
+import { X, GripHorizontal, Minus, Plus, Settings2, Palette } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { useResizable, ResizeDirection } from "@/hooks/useResizable";
+import { useWidgetStyle } from "@/hooks/useWidgetStyle";
+import WidgetStyleEditor from "./WidgetStyleEditor";
 
 interface FontSizeControl {
   value: number;
@@ -30,7 +32,6 @@ interface DraggableWidgetProps {
 
 const GRID = 40;
 
-// Cursor map per direction
 const CURSOR_MAP: Record<ResizeDirection, string> = {
   n: "ns-resize", s: "ns-resize",
   e: "ew-resize", w: "ew-resize",
@@ -90,6 +91,17 @@ const ResizeHandle = ({
   );
 };
 
+/** Convert hex to rgba with alpha */
+function hexToRgba(hex: string, alpha: number): string {
+  if (!hex) return "transparent";
+  const c = hex.replace("#", "");
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return "transparent";
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 const DraggableWidget = ({
   id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle,
 }: DraggableWidgetProps) => {
@@ -124,11 +136,15 @@ const DraggableWidget = ({
   const [isDragging, setIsDragging] = useState(false);
   const [showOpacity, setShowOpacity] = useState(false);
   const [showFontSize, setShowFontSize] = useState(false);
+  const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   const opacity = getWidgetOpacity(id);
   const textDark = opacity > 0.55;
   const textClass = textDark ? "focus-widget-light" : "";
+
+  // Widget style from hook
+  const { style: widgetStyle, update: updateWidgetStyle, reset: resetWidgetStyle } = useWidgetStyle(id);
 
   const posRef = useRef(pos);
   posRef.current = pos;
@@ -139,7 +155,6 @@ const DraggableWidget = ({
     offset.current = { x: e.clientX - posRef.current.x, y: e.clientY - posRef.current.y };
   }, []);
 
-  // Resizable hook
   const { onPointerDownResize } = useResizable({
     pos,
     minW: 220,
@@ -179,10 +194,30 @@ const DraggableWidget = ({
     };
   }, [id, isBuildMode, updateWidgetPosition]);
 
-  const isGlass = opacity < 0.01;
+  // Compute styled background
+  const hasCustomBg = !!widgetStyle.backgroundColor;
+  const customBgColor = hasCustomBg
+    ? hexToRgba(widgetStyle.backgroundColor, widgetStyle.backgroundOpacity / 100)
+    : undefined;
+
+  // Fallback to legacy opacity system if no custom style
+  const isGlass = !hasCustomBg && opacity < 0.01;
   const bgAlpha = isGlass ? 0 : 0.1 + opacity * 0.8;
   const borderAlpha = isGlass ? 0 : 0.2 + opacity * 0.4;
-  const blurClass = isGlass ? "" : "backdrop-blur-[16px]";
+
+  const effectiveBg = hasCustomBg
+    ? customBgColor
+    : (isGlass ? "transparent" : `rgba(255,255,255,${bgAlpha})`);
+
+  const effectiveBorder = widgetStyle.borderColor
+    ? widgetStyle.borderColor
+    : (isGlass ? "transparent" : `rgba(255,255,255,${borderAlpha})`);
+
+  const effectiveBlur = widgetStyle.blurAmount > 0
+    ? `blur(${widgetStyle.blurAmount}px)`
+    : (isGlass ? "none" : "blur(16px)");
+
+  const effectiveRadius = `${widgetStyle.borderRadius}px`;
 
   const iconColor = textDark ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.5)";
   const activeIconBg = textDark ? "bg-black/10" : "bg-white/15";
@@ -199,15 +234,14 @@ const DraggableWidget = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
-      className={`absolute z-50 ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className} ${
-        isBuildMode ? "rounded-2xl" : ""
-      }`}
+      className={`absolute z-50 ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
       style={{
         left: pos.x,
         top: pos.y,
         width: pos.w,
         ...(autoHeight ? {} : { height: pos.h }),
         pointerEvents: "none",
+        color: widgetStyle.textColor || undefined,
         ...containerStyle,
       }}
       onMouseEnter={() => setIsHovered(true)}
@@ -216,8 +250,8 @@ const DraggableWidget = ({
       {/* Build mode selection ring */}
       {isBuildMode && (
         <motion.div
-          className="absolute inset-0 rounded-2xl pointer-events-none"
-          style={{ border: "1px solid rgba(255,255,255,0.2)" }}
+          className="absolute inset-0 pointer-events-none"
+          style={{ borderRadius: effectiveRadius, border: "1px solid rgba(255,255,255,0.2)" }}
           animate={{ opacity: [0.15, 0.35, 0.15] }}
           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -235,7 +269,7 @@ const DraggableWidget = ({
         </div>
       )}
 
-      {/* 8-point resize handles (build mode only) */}
+      {/* 8-point resize handles */}
       <AnimatePresence>
         {showResize && (
           <motion.div
@@ -254,12 +288,15 @@ const DraggableWidget = ({
       </AnimatePresence>
 
       <div
-        className={`w-full h-full flex flex-col ${widgetMinimalMode ? "" : `rounded-2xl ${blurClass} ${isGlass ? "" : (isFocusMode ? "shadow-lg" : "shadow-2xl")}`} overflow-hidden`}
+        className={`w-full h-full flex flex-col ${widgetMinimalMode ? "" : `${isGlass && !hasCustomBg ? "" : (isFocusMode ? "shadow-lg" : "shadow-2xl")}`} overflow-hidden`}
         style={{
-          background: widgetMinimalMode ? "transparent" : (isGlass ? "transparent" : `rgba(255,255,255,${bgAlpha})`),
-          borderWidth: widgetMinimalMode ? 0 : (isGlass ? 0 : 1),
+          background: widgetMinimalMode ? "transparent" : effectiveBg,
+          borderWidth: widgetMinimalMode ? 0 : (widgetStyle.borderWidth || (isGlass && !hasCustomBg ? 0 : 1)),
           borderStyle: "solid",
-          borderColor: widgetMinimalMode ? "transparent" : (isGlass ? "transparent" : `rgba(255,255,255,${borderAlpha})`),
+          borderColor: widgetMinimalMode ? "transparent" : effectiveBorder,
+          borderRadius: widgetMinimalMode ? 0 : effectiveRadius,
+          backdropFilter: widgetMinimalMode ? "none" : effectiveBlur,
+          WebkitBackdropFilter: widgetMinimalMode ? "none" : effectiveBlur,
           pointerEvents: "auto",
         }}
       >
@@ -288,6 +325,18 @@ const DraggableWidget = ({
                   animate={{ opacity: isHovered || isBuildMode ? 1 : 0 }}
                   transition={{ duration: 0.15 }}
                 >
+                  {/* Style editor button (build mode only) */}
+                  {isBuildMode && (
+                    <button
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => { setShowStyleEditor(!showStyleEditor); setShowOpacity(false); setShowFontSize(false); }}
+                      className={`p-1 rounded-lg transition-colors ${showStyleEditor ? activeIconBg : ""} bg-white/10 hover:bg-white/20`}
+                      style={{ color: iconColor }}
+                      title="Widget Style"
+                    >
+                      <Palette size={14} />
+                    </button>
+                  )}
                   {onEditAction && isBuildMode && (
                     <button
                       onPointerDown={(e) => e.stopPropagation()}
@@ -301,7 +350,7 @@ const DraggableWidget = ({
                   )}
                   {fontSizeControl && (
                     <button
-                      onClick={() => { setShowFontSize(!showFontSize); setShowOpacity(false); }}
+                      onClick={() => { setShowFontSize(!showFontSize); setShowOpacity(false); setShowStyleEditor(false); }}
                       className={`p-1 rounded-lg transition-colors ${showFontSize ? activeIconBg : ""}`}
                       style={{ color: iconColor }}
                       title="Adjust text size"
@@ -313,7 +362,7 @@ const DraggableWidget = ({
                     </button>
                   )}
                   <button
-                    onClick={() => { setShowOpacity(!showOpacity); setShowFontSize(false); }}
+                    onClick={() => { setShowOpacity(!showOpacity); setShowFontSize(false); setShowStyleEditor(false); }}
                     className={`p-1 rounded-lg transition-colors ${showOpacity ? activeIconBg : ""}`}
                     style={{ color: iconColor }}
                     title="Adjust opacity"
@@ -332,6 +381,27 @@ const DraggableWidget = ({
                   </button>
                 </motion.div>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Style editor popup */}
+        <AnimatePresence>
+          {showStyleEditor && isBuildMode && (
+            <motion.div
+              key="style-editor"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-10 z-[200]"
+              style={{ pointerEvents: "auto" }}
+            >
+              <WidgetStyleEditor
+                style={widgetStyle}
+                onUpdate={updateWidgetStyle}
+                onReset={() => { resetWidgetStyle(); setShowStyleEditor(false); }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -379,6 +449,7 @@ const DraggableWidget = ({
 
         <div
           className={`flex-1 ${scrollable ? "overflow-auto council-hidden-scrollbar" : "overflow-hidden"} px-3 ${isFocusMode ? "py-3" : "py-2"} ${widgetMinimalMode || isFocusMode ? "cursor-grab active:cursor-grabbing" : ""}`}
+          style={{ color: "inherit" }}
           onPointerDown={(widgetMinimalMode || isFocusMode) ? onPointerDownDrag : undefined}
         >
           {children}
@@ -395,10 +466,18 @@ const DraggableWidget = ({
               transition={{ duration: 0.2 }}
               className="pointer-events-none"
             >
-              <div className="absolute top-0 left-0 w-2 h-2 rounded-full bg-primary/40 border border-primary/60 -translate-x-1/2 -translate-y-1/2" style={{ pointerEvents: "none" }} />
-              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-primary/40 border border-primary/60 translate-x-1/2 -translate-y-1/2" style={{ pointerEvents: "none" }} />
-              <div className="absolute bottom-0 left-0 w-2 h-2 rounded-full bg-primary/40 border border-primary/60 -translate-x-1/2 translate-y-1/2" style={{ pointerEvents: "none" }} />
-              <div className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-primary/50 border border-primary/70 translate-x-1/2 translate-y-1/2" style={{ pointerEvents: "none" }} />
+              {[
+                "top-0 left-0 -translate-x-1/2 -translate-y-1/2",
+                "top-0 right-0 translate-x-1/2 -translate-y-1/2",
+                "bottom-0 left-0 -translate-x-1/2 translate-y-1/2",
+                "bottom-0 right-0 translate-x-1/2 translate-y-1/2",
+              ].map((cls, i) => (
+                <div
+                  key={i}
+                  className={`absolute w-2 h-2 rounded-full bg-primary/40 border border-primary/60 ${cls}`}
+                  style={{ pointerEvents: "none" }}
+                />
+              ))}
             </motion.div>
           )}
         </AnimatePresence>
