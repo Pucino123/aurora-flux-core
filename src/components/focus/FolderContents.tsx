@@ -1,9 +1,17 @@
 import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Folder, FileText, Table, FolderPlus, FolderOpen } from "lucide-react";
+import { Folder, FileText, Table, FolderPlus, FolderOpen, Trash2, Copy, CalendarPlus, Send, MoreHorizontal } from "lucide-react";
 import { FolderNode } from "@/context/FluxContext";
 import { DbDocument } from "@/hooks/useDocuments";
 import { FOLDER_ICONS } from "@/components/CreateFolderModal";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { toast } from "sonner";
 
 interface FolderContentsProps {
   subfolders: FolderNode[];
@@ -16,6 +24,7 @@ interface FolderContentsProps {
   onCreateFolder: () => void;
   onCreateDocument: (type: "text" | "spreadsheet") => void;
   onMoveFolder?: (draggedId: string, targetId: string) => void;
+  onDeleteDocument?: (id: string) => void;
 }
 
 const highlightMatch = (text: string, query: string) => {
@@ -42,6 +51,7 @@ const FolderContents = ({
   onCreateFolder,
   onCreateDocument,
   onMoveFolder,
+  onDeleteDocument,
 }: FolderContentsProps) => {
   const isEmpty = subfolders.length === 0 && documents.length === 0;
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -76,6 +86,19 @@ const FolderContents = ({
       onMoveFolder(draggedId.current, targetId);
     }
     draggedId.current = null;
+  };
+
+  const handleCopyTitle = (doc: DbDocument) => {
+    navigator.clipboard.writeText(doc.title);
+    toast.success("Titel kopieret");
+  };
+
+  const handleAddToCalendar = (doc: DbDocument) => {
+    toast.info(`"${doc.title}" — kalender-integration kommer snart`);
+  };
+
+  const handleSend = (doc: DbDocument) => {
+    toast.info(`"${doc.title}" — del-funktion kommer snart`);
   };
 
   if (loading) {
@@ -198,32 +221,58 @@ const FolderContents = ({
     );
   };
 
+  const renderDocContextMenu = (doc: DbDocument, children: React.ReactNode) => (
+    <ContextMenu key={doc.id}>
+      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={() => handleCopyTitle(doc)} className="gap-2 text-xs">
+          <Copy size={14} /> Kopiér titel
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => handleSend(doc)} className="gap-2 text-xs">
+          <Send size={14} /> Send / Del
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => handleAddToCalendar(doc)} className="gap-2 text-xs">
+          <CalendarPlus size={14} /> Tilføj til kalender
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          onClick={() => onDeleteDocument?.(doc.id)}
+          className="gap-2 text-xs text-destructive focus:text-destructive"
+        >
+          <Trash2 size={14} /> Slet dokument
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
+
   if (viewMode === "list") {
     return (
       <div className="space-y-0.5">
         {subfolders.map((sf, i) => renderSubfolderList(sf, i))}
-        {documents.map((doc, i) => (
-          <motion.button
-            key={doc.id}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: (subfolders.length + i) * 0.02 }}
-            onDoubleClick={() => onOpenDocument?.(doc)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors text-left group"
-          >
-            {doc.type === "spreadsheet" ? (
-              <Table size={18} className="text-emerald-500" />
-            ) : (
-              <FileText size={18} className="text-blue-400" />
-            )}
-            <span className="text-sm font-medium text-foreground flex-1 truncate">
-              {highlightMatch(doc.title, searchQuery)}
-            </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground uppercase tracking-wider">
-              {doc.type === "spreadsheet" ? "xlsx" : "doc"}
-            </span>
-          </motion.button>
-        ))}
+        {documents.map((doc, i) =>
+          renderDocContextMenu(
+            doc,
+            <motion.button
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (subfolders.length + i) * 0.02 }}
+              onDoubleClick={() => onOpenDocument?.(doc)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors text-left group"
+            >
+              {doc.type === "spreadsheet" ? (
+                <Table size={18} className="text-emerald-500" />
+              ) : (
+                <FileText size={18} className="text-blue-400" />
+              )}
+              <span className="text-sm font-medium text-foreground flex-1 truncate">
+                {highlightMatch(doc.title, searchQuery)}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground uppercase tracking-wider">
+                {doc.type === "spreadsheet" ? "xlsx" : "doc"}
+              </span>
+            </motion.button>
+          )
+        )}
       </div>
     );
   }
@@ -231,27 +280,29 @@ const FolderContents = ({
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
       {subfolders.map((sf, i) => renderSubfolderGrid(sf, i))}
-      {documents.map((doc, i) => (
-        <motion.button
-          key={doc.id}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: (subfolders.length + i) * 0.03 }}
-          onDoubleClick={() => onOpenDocument?.(doc)}
-          className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-secondary/50 transition-all duration-200 hover:scale-[1.03] group"
-        >
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-secondary/40 transition-transform duration-200 group-hover:scale-110">
-            {doc.type === "spreadsheet" ? (
-              <Table size={24} className="text-emerald-500" strokeWidth={1.5} />
-            ) : (
-              <FileText size={24} className="text-blue-400" strokeWidth={1.5} />
-            )}
-          </div>
-          <span className="text-xs font-medium text-foreground text-center truncate w-full leading-tight">
-            {highlightMatch(doc.title, searchQuery)}
-          </span>
-        </motion.button>
-      ))}
+      {documents.map((doc, i) =>
+        renderDocContextMenu(
+          doc,
+          <motion.button
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: (subfolders.length + i) * 0.03 }}
+            onDoubleClick={() => onOpenDocument?.(doc)}
+            className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-secondary/50 transition-all duration-200 hover:scale-[1.03] group"
+          >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-secondary/40 transition-transform duration-200 group-hover:scale-110">
+              {doc.type === "spreadsheet" ? (
+                <Table size={24} className="text-emerald-500" strokeWidth={1.5} />
+              ) : (
+                <FileText size={24} className="text-blue-400" strokeWidth={1.5} />
+              )}
+            </div>
+            <span className="text-xs font-medium text-foreground text-center truncate w-full leading-tight">
+              {highlightMatch(doc.title, searchQuery)}
+            </span>
+          </motion.button>
+        )
+      )}
     </div>
   );
 };
