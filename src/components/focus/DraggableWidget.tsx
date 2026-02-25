@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { useResizable, ResizeDirection } from "@/hooks/useResizable";
 import { useWidgetStyle } from "@/hooks/useWidgetStyle";
-import WidgetStyleEditor from "./WidgetStyleEditor";
+import { useStyleEditorCallback } from "./StyleEditorContext";
 
 interface FontSizeControl {
   value: number;
@@ -106,6 +106,7 @@ const DraggableWidget = ({
   id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle,
 }: DraggableWidgetProps) => {
   const { widgetPositions, updateWidgetPosition, toggleWidget, getWidgetOpacity, setWidgetOpacity, widgetMinimalMode, systemMode } = useFocusStore();
+  const openStyleEditor = useStyleEditorCallback();
   const isBuildMode = systemMode === "build";
   const isFocusMode = systemMode === "focus";
   const defW = defaultSize?.w ?? 380;
@@ -136,7 +137,7 @@ const DraggableWidget = ({
   const [isDragging, setIsDragging] = useState(false);
   const [showOpacity, setShowOpacity] = useState(false);
   const [showFontSize, setShowFontSize] = useState(false);
-  const [showStyleEditor, setShowStyleEditor] = useState(false);
+  const [showStyleEditor, setShowStyleEditor] = useState(false); // kept for non-focus-mode toggle tracking
   const [isHovered, setIsHovered] = useState(false);
 
   const opacity = getWidgetOpacity(id);
@@ -239,6 +240,7 @@ const DraggableWidget = ({
 
   return (
     <motion.div
+      data-widget-id={id}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
@@ -340,8 +342,14 @@ const DraggableWidget = ({
                   {isBuildMode && (
                     <button
                       onPointerDown={(e) => e.stopPropagation()}
-                      onClick={() => { setShowStyleEditor(!showStyleEditor); setShowOpacity(false); setShowFontSize(false); }}
-                      className={`p-1 rounded-lg transition-colors ${showStyleEditor ? activeIconBg : ""} bg-white/10 hover:bg-white/20`}
+                      onClick={() => {
+                        if (openStyleEditor) {
+                          openStyleEditor(id);
+                        }
+                        setShowOpacity(false);
+                        setShowFontSize(false);
+                      }}
+                      className={`p-1 rounded-lg transition-colors bg-white/10 hover:bg-white/20`}
                       style={{ color: iconColor }}
                       title="Widget Style"
                     >
@@ -391,26 +399,7 @@ const DraggableWidget = ({
           )}
         </AnimatePresence>
 
-        {/* Style editor popup */}
-        <AnimatePresence>
-          {showStyleEditor && isBuildMode && (
-            <motion.div
-              key="style-editor"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
-              className="absolute right-0 top-10 z-[200]"
-              style={{ pointerEvents: "auto" }}
-            >
-              <WidgetStyleEditor
-                style={widgetStyle}
-                onUpdate={updateWidgetStyle}
-                onReset={() => { resetWidgetStyle(); setShowStyleEditor(false); }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Style editor removed — now rendered in FocusDashboardView as Focus Mode overlay */}
 
         {showFontSize && fontSizeControl && !widgetMinimalMode && !isFocusMode && (
           <div className="px-4 py-2 flex items-center gap-3" style={{ borderBottom: `1px solid rgba(${textDark ? "0,0,0" : "255,255,255"},0.08)` }}>
