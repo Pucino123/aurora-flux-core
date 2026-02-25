@@ -17,11 +17,14 @@ interface FileMenuProps {
   exec?: (cmd: string, value?: string) => void;
   editorRef?: React.RefObject<HTMLDivElement>;
   lightMode?: boolean;
+  documentType?: "text" | "spreadsheet";
+  onExportCsv?: () => void;
 }
 
 const FileMenu = ({
   renaming, setRenaming, renameValue, setRenameValue, commitRename,
-  documentTitle, confirmDelete, setConfirmDelete, onDelete, exec, editorRef, lightMode = false
+  documentTitle, confirmDelete, setConfirmDelete, onDelete, exec, editorRef, lightMode = false,
+  documentType = "text", onExportCsv,
 }: FileMenuProps) => {
   const lm = lightMode;
 
@@ -34,14 +37,40 @@ const FileMenu = ({
     a.click();
   };
 
-  const exportHtml = () => {
+  const exportDocx = () => {
     const html = editorRef?.current?.innerHTML || "";
-    const blob = new Blob([html], { type: "text/html" });
+    const docContent = `
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>${documentTitle}</title>
+<style>body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.5;}</style>
+</head><body>${html}</body></html>`;
+    const blob = new Blob([docContent], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${documentTitle}.html`;
+    a.download = `${documentTitle}.doc`;
     a.click();
   };
+
+  const printDocument = () => {
+    const content = editorRef?.current?.innerHTML || "";
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>${documentTitle}</title>
+<style>
+  body { font-family: Georgia, serif; font-size: 12pt; line-height: 1.6; max-width: 700px; margin: 40px auto; color: #1a1a1a; }
+  @media print { body { margin: 0; } }
+</style></head><body>${content}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
+  const isSheet = documentType === "spreadsheet";
 
   return (
     <>
@@ -72,23 +101,35 @@ const FileMenu = ({
         <ToolbarButton icon={<Pencil size={13} />} label="Rename" onClick={() => { setRenameValue(documentTitle); setRenaming(true); }} lightMode={lm} />
       )}
 
-      {editorRef && (
+      {(editorRef || isSheet) && (
         <Popover>
           <PopoverTrigger asChild>
             <div>
               <ToolbarButton icon={<Download size={13} />} label="Export" onClick={() => {}} lightMode={lm} />
             </div>
           </PopoverTrigger>
-          <PopoverContent className="w-36 p-1.5 z-[300] bg-popover border-border shadow-xl" align="start" sideOffset={6}>
-            <button onClick={exportTxt} className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}>
-              Export as TXT
-            </button>
-            <button onClick={exportHtml} className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}>
-              Export as HTML
-            </button>
-            <button onClick={() => window.print()} className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}>
-              Print / PDF
-            </button>
+          <PopoverContent className="w-44 p-1.5 z-[300] bg-popover border-border shadow-xl" align="start" sideOffset={6}>
+            {isSheet ? (
+              <>
+                <button onClick={onExportCsv} className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}>
+                  Export as CSV (Sheets)
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={exportDocx} className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}>
+                  Export as Word (.doc)
+                </button>
+                <button onClick={exportTxt} className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}>
+                  Export as TXT
+                </button>
+              </>
+            )}
+            {editorRef && (
+              <button onClick={printDocument} className={`w-full text-left px-3 py-1.5 text-[11px] rounded-md transition-colors ${lm ? "hover:bg-gray-100 text-gray-700" : "hover:bg-secondary/40 text-foreground/80"}`}>
+                Print / PDF
+              </button>
+            )}
           </PopoverContent>
         </Popover>
       )}
