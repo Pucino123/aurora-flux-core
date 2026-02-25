@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Sparkles, RefreshCw, Maximize2, Minimize2, Languages, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import ToolbarButton from "./ToolbarButton";
 import { toast } from "sonner";
 
@@ -18,6 +17,8 @@ const AI_ACTIONS = [
   { key: "shorten", label: "Shorten", icon: <Minimize2 size={13} /> },
   { key: "translate", label: "Translate", icon: <Languages size={13} /> },
 ];
+
+const FLUX_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flux-ai`;
 
 const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false }: AiToolsPanelProps) => {
   const lm = lightMode;
@@ -37,11 +38,21 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false }: AiTools
 
     setLoading(action);
     try {
-      const { data, error } = await supabase.functions.invoke("document-ai", {
-        body: { action, text },
+      const resp = await fetch(FLUX_AI_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ type: "document-tools", action, text }),
       });
 
-      if (error) throw error;
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "AI tool failed");
+      }
+
+      const data = await resp.json();
       if (data?.result) {
         document.execCommand("insertText", false, data.result);
         onContentChange();
@@ -49,7 +60,7 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false }: AiTools
       }
     } catch (err: any) {
       console.error("AI tool error:", err);
-      toast.error("AI tool failed. Please try again.");
+      toast.error(err.message || "AI tool failed. Please try again.");
     } finally {
       setLoading(null);
     }
