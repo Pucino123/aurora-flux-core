@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { Slider } from "@/components/ui/slider";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, GripHorizontal } from "lucide-react";
 import type { WidgetStyle } from "@/hooks/useWidgetStyle";
 
 const PRESET_COLORS = [
@@ -96,10 +96,40 @@ const SliderRow = ({
 );
 
 const WidgetStyleEditor = ({ style, onUpdate, onReset }: WidgetStyleEditorProps) => {
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const dragging = useRef(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+
+  const onDragStart = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragging.current = true;
+    dragOffset.current = { x: e.clientX - dragPos.x, y: e.clientY - dragPos.y };
+  }, [dragPos]);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!dragging.current) return;
+      e.preventDefault();
+      setDragPos({
+        x: e.clientX - dragOffset.current.x,
+        y: e.clientY - dragOffset.current.y,
+      });
+    };
+    const onUp = () => { dragging.current = false; };
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, []);
+
   return (
     <div
       className="w-64 rounded-xl overflow-hidden"
       style={{
+        transform: `translate(${dragPos.x}px, ${dragPos.y}px)`,
         background: "rgba(20, 20, 35, 0.85)",
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
@@ -109,10 +139,18 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset }: WidgetStyleEditorProps)
       onMouseDown={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
-        <span className="text-[11px] font-semibold text-white/70">Widget Style</span>
+      {/* Draggable title bar */}
+      <div
+        className="flex items-center justify-between px-3 py-2 border-b border-white/10 cursor-grab active:cursor-grabbing select-none"
+        onPointerDown={onDragStart}
+      >
+        <div className="flex items-center gap-1.5">
+          <GripHorizontal size={12} className="text-white/40" />
+          <span className="text-[11px] font-semibold text-white/70">Widget Style</span>
+        </div>
         <button
-          onClick={onReset}
+          onClick={(e) => { e.stopPropagation(); onReset(); }}
+          onPointerDown={(e) => e.stopPropagation()}
           className="p-1 rounded-md hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
           title="Reset to defaults"
         >

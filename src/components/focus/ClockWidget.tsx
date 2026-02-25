@@ -21,13 +21,7 @@ const getGreeting = (hour: number) => {
   return "Good night";
 };
 
-/** Subtle color temp shift based on time of day */
-function getTimeTone(hour: number): string {
-  if (hour >= 5 && hour < 10) return "rgba(255,200,120,0.08)";  // warm amber morning
-  if (hour >= 10 && hour < 16) return "rgba(255,255,255,0)";     // neutral midday
-  if (hour >= 16 && hour < 20) return "rgba(255,180,100,0.06)";  // warm evening
-  return "rgba(100,140,255,0.06)";                                // cool night
-}
+/** Time tone removed – clock is fully transparent by default */
 
 interface ClockWidgetProps {
   onOpenEditor?: () => void;
@@ -100,7 +94,7 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
     ? { WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", backgroundImage: `linear-gradient(135deg, ${clockColor} 0%, rgba(255,255,255,0.35) 50%, ${clockColor} 100%)`, backgroundColor: "transparent", filter: "drop-shadow(0 0 8px rgba(255,255,255,0.12))" }
     : {};
 
-  const timeTone = getTimeTone(now.getHours());
+  
 
   // Secondary timezone
   let secondaryTime = "";
@@ -137,7 +131,7 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
       containerStyle={editorOpen ? { zIndex: 70, position: 'relative' } : undefined}
     >
       <div className="relative flex flex-col items-center justify-center h-full gap-2 group">
-        <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{ background: timeTone, transition: "background 2s ease" }} />
+        
 
         {/* Productivity ring */}
         {showRing && (
