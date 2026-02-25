@@ -1,7 +1,8 @@
 import React from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import { Undo2, Redo2 } from "lucide-react";
 import { useToolbarOrder } from "@/hooks/useToolbarOrder";
 import FileMenu from "./FileMenu";
 import TypographyPanel from "./TypographyPanel";
@@ -11,6 +12,7 @@ import AiToolsPanel from "./AiToolsPanel";
 import ViewModeToggle from "./ViewModeToggle";
 import EmojiTouchbar from "./EmojiTouchbar";
 import ToolbarSegment from "./ToolbarSegment";
+import ToolbarButton from "./ToolbarButton";
 
 interface WordsToolbarProps {
   editorRef: React.RefObject<HTMLDivElement>;
@@ -51,6 +53,9 @@ const WordsToolbar = ({
           commitRename={commitRename} documentTitle={documentTitle} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete}
           onDelete={onDelete} exec={exec} editorRef={editorRef} lightMode={lm}
         />
+        {/* Undo/Redo — uses document.execCommand (deprecated but functional in all browsers) */}
+        <ToolbarButton icon={<Undo2 size={14} />} label="Undo (Ctrl+Z)" onClick={() => exec("undo")} lightMode={lm} />
+        <ToolbarButton icon={<Redo2 size={14} />} label="Redo (Ctrl+Y)" onClick={() => exec("redo")} lightMode={lm} />
       </ToolbarSegment>
     ),
     typography: (
@@ -97,11 +102,14 @@ const WordsToolbar = ({
   };
 
   return (
-    <div className={`flex flex-wrap items-center gap-1.5 px-2 py-2 border-b transition-colors ${
-      studioMode
-        ? "fixed top-4 left-1/2 -translate-x-1/2 z-[200] rounded-2xl bg-popover/95 backdrop-blur-xl border-border/30 shadow-2xl max-w-[95vw]"
-        : lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
-    }`}>
+    <motion.div
+      layout
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      className={`flex flex-wrap items-center gap-1.5 px-2 py-2 border-b transition-colors ${
+        studioMode
+          ? "fixed top-4 left-1/2 -translate-x-1/2 z-[200] rounded-2xl bg-popover/95 backdrop-blur-xl border-border/30 shadow-2xl max-w-[95vw]"
+          : lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
+      }`}>
       <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={horizontalListSortingStrategy}>
           <AnimatePresence mode="sync">
@@ -109,7 +117,7 @@ const WordsToolbar = ({
           </AnimatePresence>
         </SortableContext>
       </DndContext>
-    </div>
+    </motion.div>
   );
 };
 

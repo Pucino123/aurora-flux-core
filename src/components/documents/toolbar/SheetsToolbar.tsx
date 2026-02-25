@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, Palette, PaintBucket, ArrowDownAZ, ArrowUpAZ, Filter, Download } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { useToolbarOrder } from "@/hooks/useToolbarOrder";
@@ -117,11 +117,14 @@ const SheetsToolbar = ({
   };
 
   return (
-    <div className={`flex flex-wrap items-center gap-1.5 px-2 py-2 border-b transition-colors ${
-      studioMode
-        ? "fixed top-4 left-1/2 -translate-x-1/2 z-[200] rounded-2xl bg-popover/95 backdrop-blur-xl border-border/30 shadow-2xl max-w-[95vw]"
-        : lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
-    }`}>
+    <motion.div
+      layout
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      className={`flex flex-wrap items-center gap-1.5 px-2 py-2 border-b transition-colors ${
+        studioMode
+          ? "fixed top-4 left-1/2 -translate-x-1/2 z-[200] rounded-2xl bg-popover/95 backdrop-blur-xl border-border/30 shadow-2xl max-w-[95vw]"
+          : lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
+      }`}>
       <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={horizontalListSortingStrategy}>
           <AnimatePresence mode="sync">
@@ -129,7 +132,7 @@ const SheetsToolbar = ({
           </AnimatePresence>
         </SortableContext>
       </DndContext>
-    </div>
+    </motion.div>
   );
 };
 

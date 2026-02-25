@@ -4,6 +4,7 @@ import WordsToolbar from "./toolbar/WordsToolbar";
 import SheetsToolbar from "./toolbar/SheetsToolbar";
 import StatusBar from "./toolbar/StatusBar";
 import StudioModeOverlay from "./toolbar/StudioModeToggle";
+import { getCellDisplayValue, colIndexToLetter } from "@/lib/formulaEngine";
 
 interface DocumentViewProps {
   document: DbDocument;
@@ -275,10 +276,32 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
     onUpdate(doc.id, { content: { rows: newRows, cellFormats: fmts, colHeaders: ch, rowHeaders: rh } });
   }, [doc.id, onUpdate, cellFormats, colHeaders, rowHeaders]);
 
+  const resolveCell = useCallback((col: number, row: number): number => {
+    const val = rows[row]?.[col];
+    if (!val) return 0;
+    if (val.startsWith("=")) {
+      const result = getCellDisplayValue(val, resolveCell);
+      const n = parseFloat(result);
+      return isNaN(n) ? 0 : n;
+    }
+    const n = parseFloat(val);
+    return isNaN(n) ? 0 : n;
+  }, [rows]);
+
   const updateCell = (r: number, c: number, val: string) => {
     const updated = rows.map((row, ri) => ri === r ? row.map((cell, ci) => ci === c ? val : cell) : row);
     setRows(updated);
     saveContent(updated);
+  };
+
+  const focusCellInput = (r: number, c: number) => {
+    const tbody = window.document.querySelector("[data-sheet-tbody]");
+    if (!tbody) return;
+    const row = tbody.querySelectorAll("tr")[r];
+    if (!row) return;
+    // +1 because first td is row number
+    const inputs = row.querySelectorAll("td input");
+    (inputs?.[c] as HTMLInputElement)?.focus();
   };
 
   const addRow = () => { const nr = [...rows, Array(colCount).fill("")]; setRows(nr); saveContent(nr); };
@@ -372,6 +395,27 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
         lightMode={lm}
         onToggleLightMode={onToggleLightMode}
       />
+      {/* Formula / Address Bar */}
+      {(focusedCell || lastFocusedCell.current) && (() => {
+        const cell = focusedCell || lastFocusedCell.current;
+        if (!cell) return null;
+        const addr = `${colIndexToLetter(cell.c)}${cell.r + 1}`;
+        const rawVal = rows[cell.r]?.[cell.c] || "";
+        return (
+          <div className={`flex items-center gap-2 px-3 py-1 border-b text-xs ${lm ? "border-gray-200 bg-gray-50" : "border-border/30 bg-secondary/20"}`}>
+            <span className={`font-mono font-semibold min-w-[40px] ${lm ? "text-gray-600" : "text-foreground/70"}`}>{addr}</span>
+            <div className={`w-px h-4 ${lm ? "bg-gray-300" : "bg-border/30"}`} />
+            <span className={`font-mono flex-1 truncate ${lm ? "text-gray-700" : "text-foreground/80"}`}>
+              {rawVal.startsWith("=") ? rawVal : rawVal}
+            </span>
+            {rawVal.startsWith("=") && (
+              <span className={`font-mono ${lm ? "text-green-600" : "text-green-400"}`}>
+                = {getCellDisplayValue(rawVal, resolveCell)}
+              </span>
+            )}
+          </div>
+        );
+      })()}
       <div className={`flex-1 overflow-auto rounded-xl border ${cellBorder} ${studioMode ? (lm ? "bg-white shadow-xl" : "bg-card/80 shadow-xl") : ""}`}>
         <table className="border-collapse text-xs" style={{ tableLayout: "fixed" }}>
           <colgroup>
@@ -400,7 +444,7 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody data-sheet-tbody>
             {rows.map((row, ri) => (
               <tr key={ri} className={ri === 0 ? headerRowBg : `${lm ? "hover:bg-gray-50" : "hover:bg-secondary/10"} transition-colors`}>
                 <td className={`relative text-center text-[10px] ${rowNumText} border-r border-b ${cellBorder} select-none font-mono font-medium p-0`}
@@ -429,7 +473,7 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
                       className={`border ${cellBorder} p-0 transition-all duration-150 ${isFocused ? `ring-2 ring-primary/40 ring-inset ${lm ? "bg-blue-50" : "bg-primary/5"}` : ""}`}
                       style={{ backgroundColor: fmt.bg || undefined }}
                       onContextMenu={e => { e.preventDefault(); setCellMenu({ x: e.clientX, y: e.clientY, r: ri, c: ci }); }}>
-                      <input value={cell}
+                      <input value={cell.startsWith("=") ? (isFocused ? cell : getCellDisplayValue(cell, resolveCell)) : cell}
                         onChange={e => updateCell(ri, ci, e.target.value)}
                         onFocus={() => { setFocusedCell({ r: ri, c: ci }); lastFocusedCell.current = { r: ri, c: ci }; }}
                         onBlur={() => setFocusedCell(null)}
@@ -438,20 +482,23 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
                             e.preventDefault();
                             const nextC = e.shiftKey ? ci - 1 : ci + 1;
                             if (nextC >= 0 && nextC < colCount) {
-                              const next = (e.target as HTMLElement).closest("tr")?.querySelectorAll("input")[nextC] as HTMLInputElement;
-                              next?.focus();
+                              focusCellInput(ri, nextC);
                             } else if (!e.shiftKey && ri + 1 < rows.length) {
-                              const nextRow = (e.target as HTMLElement).closest("tbody")?.querySelectorAll("tr")[ri + 1];
-                              (nextRow?.querySelector("input") as HTMLInputElement)?.focus();
+                              focusCellInput(ri + 1, 0);
                             }
                           }
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            if (ri + 1 < rows.length) {
-                              const nextRow = (e.target as HTMLElement).closest("tbody")?.querySelectorAll("tr")[ri + 1];
-                              const inputs = nextRow?.querySelectorAll("input");
-                              (inputs?.[ci] as HTMLInputElement)?.focus();
-                            }
+                            if (ri + 1 < rows.length) focusCellInput(ri + 1, ci);
+                          }
+                          // Arrow key navigation
+                          if (e.key === "ArrowDown") { e.preventDefault(); if (ri + 1 < rows.length) focusCellInput(ri + 1, ci); }
+                          if (e.key === "ArrowUp") { e.preventDefault(); if (ri > 0) focusCellInput(ri - 1, ci); }
+                          if (e.key === "ArrowRight" && (e.target as HTMLInputElement).selectionStart === cell.length) {
+                            if (ci + 1 < colCount) { e.preventDefault(); focusCellInput(ri, ci + 1); }
+                          }
+                          if (e.key === "ArrowLeft" && (e.target as HTMLInputElement).selectionStart === 0) {
+                            if (ci > 0) { e.preventDefault(); focusCellInput(ri, ci - 1); }
                           }
                           const mod = e.metaKey || e.ctrlKey;
                           if (mod && e.key === "b") { e.preventDefault(); updateCellFormat({ bold: !getCellFormat(`${ri}-${ci}`).bold }); }
