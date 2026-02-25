@@ -28,16 +28,17 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flux-ai`;
 
 function extractHighlights(content: string): { cleanContent: string; highlights: Highlight[] } {
   const highlights: Highlight[] = [];
-  const cleanContent = content.replace(/\[\[highlight:(.*?)\]\]/g, (_, text) => {
-    highlights.push({ text: text.trim(), color: "hsl(48 96% 53% / 0.35)" });
-    return `**"${text.trim()}"**`;
+  const cleanContent = content.replace(/\[\[highlight:([\s\S]*?)\]\]/g, (_, text) => {
+    const trimmed = text.trim();
+    if (trimmed) highlights.push({ text: trimmed, color: "hsl(48 96% 53% / 0.35)" });
+    return `**"${trimmed}"**`;
   });
   return { cleanContent, highlights };
 }
 
 function extractSuggestions(content: string): { cleanContent: string; suggestions: Suggestion[] } {
   const suggestions: Suggestion[] = [];
-  const cleanContent = content.replace(/\[\[suggest:(.+?)\|(.+?)\]\]/g, (_, original, replacement) => {
+  const cleanContent = content.replace(/\[\[suggest:([\s\S]+?)\|([\s\S]+?)\]\]/g, (_, original, replacement) => {
     suggestions.push({ original: original.trim(), replacement: replacement.trim() });
     return `\n> ~~${original.trim()}~~ → **${replacement.trim()}**\n`;
   });
