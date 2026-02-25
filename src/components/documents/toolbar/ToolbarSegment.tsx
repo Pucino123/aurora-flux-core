@@ -32,7 +32,9 @@ const ToolbarSegment = ({ children, className = "", visible = true, studioMode =
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ type: "spring", stiffness: 400, damping: 28 }}
-      className={`group/seg flex items-center gap-0.5 cursor-grab active:cursor-grabbing ${className}`}
+      className={`group/seg flex items-center gap-0.5 px-1.5 py-1 rounded-xl cursor-grab active:cursor-grabbing ${
+        lm ? "bg-white/60" : "bg-white/[0.06]"
+      } ${className}`}
       style={{ position: "relative", zIndex: 1 }}
     >
       <div className="flex items-center justify-center w-3 h-5 opacity-0 group-hover/seg:opacity-40 hover:!opacity-70 transition-opacity duration-200 shrink-0">
