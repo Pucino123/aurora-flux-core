@@ -244,17 +244,26 @@ const StyleTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Parti
         );
       })}
     </div>
-    {/* Border radius slider for fine control */}
-    <div className="flex items-center gap-3 px-1">
-      <span className="text-[10px] text-white/30 w-12 shrink-0">Radius</span>
-      <BottomSlider
-        value={style.borderRadius}
-        min={0}
-        max={50}
-        step={1}
-        displayValue={`${style.borderRadius}px`}
-        onChange={(v) => onUpdate({ borderRadius: v })}
-      />
+
+    {/* Effects */}
+    <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Effects</span>
+    <div className="flex gap-2">
+      <button
+        onClick={() => onUpdate({ glassEffect: !style.glassEffect })}
+        className={`flex-1 px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all ${
+          style.glassEffect ? "bg-white/15 text-white ring-1 ring-white/20" : "text-white/35 hover:bg-white/5 border border-white/10"
+        }`}
+      >
+        Glass Effect
+      </button>
+      <button
+        onClick={() => onUpdate({ depthShadow: !style.depthShadow })}
+        className={`flex-1 px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all ${
+          style.depthShadow ? "bg-white/15 text-white ring-1 ring-white/20" : "text-white/35 hover:bg-white/5 border border-white/10"
+        }`}
+      >
+        Depth Shadow
+      </button>
     </div>
   </div>
 );
@@ -326,11 +335,11 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition 
   }, []);
 
   /* Bottom slider config per tab */
-  const sliderConfig: Record<Tab, { value: number; min: number; max: number; step: number; display: string; key: keyof WidgetStyle }> = {
-    font: { value: style.fontSize || 14, min: 8, max: 200, step: 1, display: `${style.fontSize || 14}px`, key: "fontSize" },
-    color: { value: style.textOpacity ?? 100, min: 0, max: 100, step: 5, display: `${Math.round(style.textOpacity ?? 100)}%`, key: "textOpacity" },
-    style: { value: style.blurAmount, min: 0, max: 40, step: 2, display: `${style.blurAmount}`, key: "blurAmount" },
-    layout: { value: style.borderWidth, min: 0, max: 10, step: 1, display: `${style.borderWidth}`, key: "borderWidth" },
+  const sliderConfig: Record<Tab, { value: number; min: number; max: number; step: number; display: string; key: keyof WidgetStyle; label?: string }> = {
+    font: { value: style.fontSize || 14, min: 8, max: 200, step: 1, display: `${style.fontSize || 14}px`, key: "fontSize", label: "Size" },
+    color: { value: style.textOpacity ?? 100, min: 0, max: 100, step: 5, display: `${Math.round(style.textOpacity ?? 100)}%`, key: "textOpacity", label: "Opacity" },
+    style: { value: style.borderRadius, min: 0, max: 50, step: 1, display: `${style.borderRadius}px`, key: "borderRadius", label: "Radius" },
+    layout: { value: style.borderWidth, min: 0, max: 10, step: 1, display: `${style.borderWidth}px`, key: "borderWidth", label: "Width" },
   };
 
   const sl = sliderConfig[activeTab];
