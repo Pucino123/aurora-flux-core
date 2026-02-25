@@ -1,13 +1,10 @@
 import React, { useRef, useCallback, useState } from "react";
-import { createPortal } from "react-dom";
-import { X, Plus, Users, Loader2, StickyNote } from "lucide-react";
+import { X, Plus, Users, Loader2 } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import WidgetStyleEditor from "./WidgetStyleEditor";
-import { useWidgetStyle } from "@/hooks/useWidgetStyle";
 
 const COLORS = [
   { key: "yellow", bg: "hsl(50 95% 88%)", border: "hsl(50 90% 65%)" },
@@ -65,7 +62,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
   const resizing = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [showStyleEditor, setShowStyleEditor] = useState(false);
+  const [showControls, setShowControls] = useState(false);
   const [showCouncil, setShowCouncil] = useState(false);
   const [councilLoading, setCouncilLoading] = useState(false);
   const [councilFeedback, setCouncilFeedback] = useState<{ persona: typeof COUNCIL_PERSONAS[0]; text: string } | null>(null);
@@ -73,22 +70,18 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
   const c = getColors(note.color);
   const noteW = note.w ?? DEFAULT_W;
   const noteH = note.h ?? DEFAULT_H;
-  const { style: widgetStyle, update: updateWidgetStyle, reset: resetWidgetStyle } = useWidgetStyle(`sticky-${note.id}`);
 
-  // Close style editor when clicking outside the note
+  // Close controls when clicking outside the note
   React.useEffect(() => {
-    if (!showStyleEditor) return;
+    if (!showControls) return;
     const handler = (e: PointerEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        // Don't close if clicking inside the portaled editor
-        const editorEl = document.getElementById(`sticky-editor-${note.id}`);
-        if (editorEl && editorEl.contains(e.target as Node)) return;
-        setShowStyleEditor(false);
+        setShowControls(false);
       }
     };
     window.addEventListener("pointerdown", handler);
     return () => window.removeEventListener("pointerdown", handler);
-  }, [showStyleEditor, note.id]);
+  }, [showControls]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
@@ -167,7 +160,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
       animate={{ scale: 1, opacity: 1, rotate: note.rotation }}
       exit={{ scale: 0.5, opacity: 0 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className={`absolute group ${isDragging ? "cursor-grabbing z-[60]" : "cursor-grab z-50"} ${showStyleEditor ? "z-[65]" : ""}`}
+      className={`absolute group ${isDragging ? "cursor-grabbing z-[60]" : "cursor-grab z-50"}`}
       ref={containerRef}
       style={{
         left: note.x,
@@ -181,34 +174,24 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
       onPointerUp={onPointerUp}
     >
       <div
-        className={`w-full h-full rounded-lg flex flex-col overflow-visible relative ${widgetStyle.glassEffect ? "widget-glass-text" : ""} ${widgetStyle.depthShadow ? "widget-depth-shadow" : ""}`}
+        className="w-full h-full rounded-lg flex flex-col overflow-visible relative"
         style={{
-          backgroundColor: widgetStyle.backgroundColor
-            ? `${widgetStyle.backgroundColor}${Math.round((widgetStyle.backgroundOpacity / 100) * 255).toString(16).padStart(2, '0')}`
-            : (bgAlpha > 0 ? c.bg.replace(")", ` / ${bgAlpha})`) : "transparent"),
+          backgroundColor: bgAlpha > 0 ? c.bg.replace(")", ` / ${bgAlpha})`) : "transparent",
           borderLeft: bgAlpha > 0.05 ? `4px solid ${c.border.replace(")", ` / ${borderAlpha})`)}` : "none",
-          borderWidth: widgetStyle.borderWidth || undefined,
-          borderStyle: widgetStyle.borderStyle !== "none" ? widgetStyle.borderStyle : undefined,
-          borderColor: widgetStyle.borderColor || undefined,
-          borderRadius: widgetStyle.borderRadius ? `${widgetStyle.borderRadius}px` : undefined,
-          backdropFilter: widgetStyle.blurAmount > 0 ? `blur(${widgetStyle.blurAmount}px)` : undefined,
-          WebkitBackdropFilter: widgetStyle.blurAmount > 0 ? `blur(${widgetStyle.blurAmount}px)` : undefined,
           boxShadow: bgAlpha > 0.1 ? `0 4px 16px rgba(0,0,0,${0.15 * bgAlpha}), 0 1px 3px rgba(0,0,0,${0.1 * bgAlpha})` : "none",
-          color: widgetStyle.textColor || undefined,
-          fontFamily: widgetStyle.fontFamily || undefined,
         }}
       >
         {/* Header strip */}
         <div className="flex items-center justify-between px-2 pt-1.5 pb-0.5">
           <button
-            onClick={(e) => { e.stopPropagation(); setShowStyleEditor(!showStyleEditor); }}
+            onClick={(e) => { e.stopPropagation(); setShowControls(!showControls); }}
             className="w-3.5 h-3.5 rounded-full border border-black/10 hover:scale-125 transition-transform"
             style={{ backgroundColor: c.border, opacity: Math.max(bgAlpha, 0.3) }}
             title="Note settings"
           />
           <div className="flex items-center gap-0.5">
             <button
-              onClick={(e) => { e.stopPropagation(); setShowCouncil(!showCouncil); setShowStyleEditor(false); }}
+              onClick={(e) => { e.stopPropagation(); setShowCouncil(!showCouncil); setShowControls(false); }}
               className="p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
               style={{ color: iconColor }}
               title="Få Council feedback"
@@ -233,93 +216,61 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
           </div>
         </div>
 
-        {/* Style Editor popup — portaled to body */}
-        {showStyleEditor && createPortal(
-          <>
-            {/* Overlay — no blur so the note stays crisp */}
+        {/* Per-note controls popover */}
+        <AnimatePresence>
+          {showControls && (
             <motion.div
-              key="sticky-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0"
-              style={{ zIndex: 60, background: "rgba(0,0,0,0.5)" }}
-              onClick={() => setShowStyleEditor(false)}
-            />
-            {/* Editor popup */}
-            <motion.div
-              id={`sticky-editor-${note.id}`}
-              key="sticky-editor-popup"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="fixed"
-              style={{
-                zIndex: 80,
-                left: Math.min(note.x + noteW + 24, window.innerWidth - 360),
-                top: Math.max(20, Math.min(note.y, window.innerHeight - 440)),
-                pointerEvents: "auto",
-              }}
+              initial={{ opacity: 0, y: -4, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              data-no-drag
+              className="absolute left-0 top-7 z-[70] w-44 sm:w-48 p-2.5 rounded-lg bg-black/70 backdrop-blur-xl border border-white/15 shadow-xl cursor-default max-h-[60vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
-              <WidgetStyleEditor
-                style={widgetStyle}
-                onUpdate={updateWidgetStyle}
-                onReset={resetWidgetStyle}
-                onClose={() => setShowStyleEditor(false)}
-                extraTab={{
-                  id: "note",
-                  label: "Note",
-                  icon: <StickyNote size={14} />,
-                  content: (
-                    <div className="space-y-3">
-                      {/* Note Color */}
-                      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Note Color</span>
-                      <div className="flex flex-wrap gap-2">
-                        {COLORS.map((col) => (
-                          <button
-                            key={col.key}
-                            onClick={() => onUpdateNote(note.id, { color: col.key })}
-                            className={`w-7 h-7 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
-                              note.color === col.key ? "border-white/80 scale-110 shadow-[0_0_8px_rgba(255,255,255,0.2)]" : "border-transparent"
-                            }`}
-                            style={{ backgroundColor: col.border }}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Rotation */}
-                      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Rotation</span>
-                      <div className="flex items-center gap-3 px-1">
-                        <Slider
-                          value={[note.rotation]}
-                          onValueChange={([v]) => onUpdateNote(note.id, { rotation: v })}
-                          min={-15} max={15} step={1}
-                          className="flex-1 [&_[data-radix-slider-track]]:h-[6px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-[#0a84ff] [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-[18px] [&_[data-radix-slider-thumb]]:h-[18px] [&_[data-radix-slider-thumb]]:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
-                        />
-                        <span className="text-[11px] tabular-nums text-white/40 font-medium w-10 text-right">{note.rotation}°</span>
-                      </div>
-
-                      {/* Opacity */}
-                      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Note Opacity</span>
-                      <div className="flex items-center gap-3 px-1">
-                        <Slider
-                          value={[Math.round(note.opacity * 100)]}
-                          onValueChange={([v]) => onUpdateNote(note.id, { opacity: v / 100 })}
-                          min={0} max={100} step={5}
-                          className="flex-1 [&_[data-radix-slider-track]]:h-[6px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-[#0a84ff] [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-[18px] [&_[data-radix-slider-thumb]]:h-[18px] [&_[data-radix-slider-thumb]]:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
-                        />
-                        <span className="text-[11px] tabular-nums text-white/40 font-medium w-10 text-right">{Math.round(note.opacity * 100)}%</span>
-                      </div>
-                    </div>
-                  ),
-                }}
-              />
+              {/* Color swatches */}
+              <div className="mb-2">
+                <span className="text-[9px] text-white/40 mb-1.5 block">Color</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {COLORS.map((col) => (
+                    <button
+                      key={col.key}
+                      onClick={() => onUpdateNote(note.id, { color: col.key })}
+                      className={`w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 ${note.color === col.key ? "border-white/80 scale-110" : "border-transparent"}`}
+                      style={{ backgroundColor: col.border }}
+                    />
+                  ))}
+                </div>
+              </div>
+              {/* Opacity slider */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[9px] text-white/40 w-10 shrink-0">Opacity</span>
+                <Slider
+                  value={[note.opacity]}
+                  onValueChange={([v]) => onUpdateNote(note.id, { opacity: v })}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3"
+                />
+              </div>
+              {/* Rotation slider */}
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-white/40 w-10 shrink-0">Rotate</span>
+                <Slider
+                  value={[note.rotation]}
+                  onValueChange={([v]) => onUpdateNote(note.id, { rotation: v })}
+                  min={-15}
+                  max={15}
+                  step={1}
+                  className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3"
+                />
+                <span className="text-[9px] text-white/30 tabular-nums w-6 text-right">{note.rotation}°</span>
+              </div>
             </motion.div>
-          </>,
-          document.body
-        )}
+          )}
+        </AnimatePresence>
 
         {/* Council persona picker */}
         <AnimatePresence>

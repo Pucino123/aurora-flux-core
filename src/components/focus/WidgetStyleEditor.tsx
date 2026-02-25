@@ -34,7 +34,7 @@ const BORDER_STYLES = [
   { label: "Dotted", value: "dotted" },
 ];
 
-type Tab = "font" | "color" | "style" | "layout" | "note";
+type Tab = "font" | "color" | "style" | "layout";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "font", label: "Font", icon: <Type size={14} /> },
@@ -49,8 +49,6 @@ interface WidgetStyleEditorProps {
   onReset: () => void;
   onClose?: () => void;
   initialPosition?: { x: number; y: number };
-  /** Optional extra tab rendered at the end (e.g. note-specific controls) */
-  extraTab?: { id: string; label: string; icon: React.ReactNode; content: React.ReactNode };
 }
 
 /* ─── Swatch grid ─── */
@@ -334,8 +332,8 @@ const LayoutTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Part
 );
 
 /* ─── Main editor ─── */
-const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition, extraTab }: WidgetStyleEditorProps) => {
-  const [activeTab, setActiveTab] = useState<Tab>(extraTab ? extraTab.id as Tab : "font");
+const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition }: WidgetStyleEditorProps) => {
+  const [activeTab, setActiveTab] = useState<Tab>("font");
   const [colorMode, setColorMode] = useState<"text" | "bg" | "border">("text");
   const [dragPos, setDragPos] = useState(initialPosition ?? { x: 0, y: 0 });
   const dragging = useRef(false);
@@ -373,11 +371,7 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition,
     ? { value: style.borderOpacity ?? 100, display: `${Math.round(style.borderOpacity ?? 100)}%`, key: "borderOpacity" as keyof WidgetStyle, label: "Border" }
     : { value: style.backgroundOpacity, display: `${Math.round(style.backgroundOpacity)}%`, key: "backgroundOpacity" as keyof WidgetStyle, label: "BG" };
 
-  const allTabs = extraTab
-    ? [{ id: extraTab.id as Tab, label: extraTab.label, icon: extraTab.icon }, ...TABS]
-    : TABS;
-
-  const sliderConfig: Record<string, { value: number; min: number; max: number; step: number; display: string; key: keyof WidgetStyle; label?: string }> = {
+  const sliderConfig: Record<Tab, { value: number; min: number; max: number; step: number; display: string; key: keyof WidgetStyle; label?: string }> = {
     font: { value: style.fontSize || 14, min: 8, max: 200, step: 1, display: `${style.fontSize || 14}px`, key: "fontSize", label: "Size" },
     color: { value: colorSlider.value, min: 0, max: 100, step: 5, display: colorSlider.display, key: colorSlider.key, label: colorSlider.label },
     style: { value: style.borderRadius, min: 0, max: 50, step: 1, display: `${style.borderRadius}px`, key: "borderRadius", label: "Radius" },
@@ -418,12 +412,12 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition,
 
       {/* Tab bar */}
       <div className="flex items-center gap-1 mx-3 mt-1 mb-2 p-1 rounded-2xl bg-white/[0.04]">
-        {allTabs.map((tab) => {
+        {TABS.map((tab) => {
           const active = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as Tab)}
+              onClick={() => setActiveTab(tab.id)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-semibold transition-all duration-200 ${
                 active
                   ? "bg-white/[0.12] text-white shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
@@ -443,11 +437,10 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition,
         {activeTab === "color" && <ColorTab style={style} onUpdate={onUpdate} colorMode={colorMode} setColorMode={setColorMode} />}
         {activeTab === "style" && <StyleTab style={style} onUpdate={onUpdate} />}
         {activeTab === "layout" && <LayoutTab style={style} onUpdate={onUpdate} />}
-        {extraTab && activeTab === extraTab.id && extraTab.content}
       </div>
 
       {/* Bottom slider — hidden for Style tab (slider is inline there) */}
-      {sl && activeTab !== "style" && (
+      {activeTab !== "style" && (
         <div className="px-4 pb-4 pt-1">
           <BottomSlider
             value={sl.value}
