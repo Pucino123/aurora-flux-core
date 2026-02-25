@@ -175,18 +175,10 @@ const FontTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Partia
 
 /* ─── Color tab ─── */
 const ColorTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Partial<WidgetStyle>) => void }) => {
-  const [mode, setMode] = useState<"bg" | "text">("bg");
+  const [mode, setMode] = useState<"bg" | "text">("text");
   return (
     <div className="space-y-4">
       <div className="flex gap-1 p-0.5 rounded-xl bg-white/[0.05]">
-        <button
-          onClick={() => setMode("bg")}
-          className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
-            mode === "bg" ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"
-          }`}
-        >
-          Background
-        </button>
         <button
           onClick={() => setMode("text")}
           className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
@@ -195,11 +187,31 @@ const ColorTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Parti
         >
           Text
         </button>
+        <button
+          onClick={() => setMode("bg")}
+          className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
+            mode === "bg" ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"
+          }`}
+        >
+          Background
+        </button>
       </div>
       <SwatchGrid
         value={mode === "bg" ? style.backgroundColor : style.textColor}
         onChange={(c) => onUpdate(mode === "bg" ? { backgroundColor: c } : { textColor: c })}
       />
+      {/* Opacity slider for current mode */}
+      <div className="flex items-center gap-3 px-1">
+        <span className="text-[10px] text-white/30 w-12 shrink-0">{mode === "text" ? "Text α" : "BG α"}</span>
+        <BottomSlider
+          value={mode === "text" ? (style.textOpacity ?? 100) : style.backgroundOpacity}
+          min={0}
+          max={100}
+          step={5}
+          displayValue={`${Math.round(mode === "text" ? (style.textOpacity ?? 100) : style.backgroundOpacity)}%`}
+          onChange={(v) => onUpdate(mode === "text" ? { textOpacity: v } : { backgroundOpacity: v })}
+        />
+      </div>
     </div>
   );
 };
@@ -231,6 +243,18 @@ const StyleTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Parti
           </button>
         );
       })}
+    </div>
+    {/* Border radius slider for fine control */}
+    <div className="flex items-center gap-3 px-1">
+      <span className="text-[10px] text-white/30 w-12 shrink-0">Radius</span>
+      <BottomSlider
+        value={style.borderRadius}
+        min={0}
+        max={50}
+        step={1}
+        displayValue={`${style.borderRadius}px`}
+        onChange={(v) => onUpdate({ borderRadius: v })}
+      />
     </div>
   </div>
 );
@@ -303,7 +327,7 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition 
 
   /* Bottom slider config per tab */
   const sliderConfig: Record<Tab, { value: number; min: number; max: number; step: number; display: string; key: keyof WidgetStyle }> = {
-    font: { value: style.fontSize || 14, min: 8, max: 64, step: 1, display: `${style.fontSize || 14}`, key: "fontSize" },
+    font: { value: style.fontSize || 14, min: 8, max: 200, step: 1, display: `${style.fontSize || 14}px`, key: "fontSize" },
     color: { value: style.textOpacity ?? 100, min: 0, max: 100, step: 5, display: `${Math.round(style.textOpacity ?? 100)}%`, key: "textOpacity" },
     style: { value: style.blurAmount, min: 0, max: 40, step: 2, display: `${style.blurAmount}`, key: "blurAmount" },
     layout: { value: style.borderWidth, min: 0, max: 10, step: 1, display: `${style.borderWidth}`, key: "borderWidth" },
