@@ -105,7 +105,9 @@ const WordsToolbar = ({
           dragMomentum={false}
           dragElastic={0.08}
           whileDrag={{ scale: 1.02, boxShadow: "0 25px 60px -12px rgba(0,0,0,0.5)" }}
-          className="fixed top-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center gap-1 px-2 py-2 rounded-2xl bg-popover/95 backdrop-blur-xl border border-border/30 shadow-2xl max-w-[95vw] cursor-grab active:cursor-grabbing"
+          className={`fixed top-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center gap-1 px-2 py-2 rounded-2xl backdrop-blur-xl border shadow-2xl max-w-[95vw] cursor-grab active:cursor-grabbing ${
+            lm ? "bg-white/95 border-gray-200 shadow-gray-300/30" : "bg-popover/95 border-border/30"
+          }`}
           style={{ overflow: "visible", zIndex: 9999 }}
         >
           {toolbarContent}
