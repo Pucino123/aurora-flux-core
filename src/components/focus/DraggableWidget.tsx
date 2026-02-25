@@ -219,14 +219,17 @@ const DraggableWidget = ({
       ? customBgColor
       : (isGlass ? "transparent" : `rgba(255,255,255,${bgAlpha})`);
 
+  const bdrOpacity = (widgetStyle.borderOpacity ?? 100) / 100;
   const effectiveBorder = widgetStyle.borderColor
-    ? widgetStyle.borderColor
-    : (isGlass ? "transparent" : `rgba(255,255,255,${borderAlpha})`);
+    ? hexToRgba(widgetStyle.borderColor, bdrOpacity)
+    : (isGlass ? "transparent" : `rgba(255,255,255,${borderAlpha * bdrOpacity})`);
 
   // Blur: only apply when user explicitly set it > 0 via style editor, or legacy non-glass
+  // 0% background opacity = no blur at all
+  const zeroBgOpacity = hasCustomBg && widgetStyle.backgroundOpacity === 0;
   const userSetBlur = widgetStyle.blurAmount > 0;
-  const effectiveBlur = isFullyTransparent || isGlass
-    ? (userSetBlur ? `blur(${widgetStyle.blurAmount}px)` : "none")
+  const effectiveBlur = (isFullyTransparent || zeroBgOpacity || isGlass)
+    ? (userSetBlur && !zeroBgOpacity ? `blur(${widgetStyle.blurAmount}px)` : "none")
     : userSetBlur
       ? `blur(${widgetStyle.blurAmount}px)`
       : (hasCustomBg ? "none" : "blur(16px)");
