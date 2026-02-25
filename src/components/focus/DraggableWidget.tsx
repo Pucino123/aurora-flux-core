@@ -3,6 +3,7 @@ import { X, GripHorizontal, Minus, Plus, Settings2 } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
+import { useResizable, ResizeDirection } from "@/hooks/useResizable";
 
 interface FontSizeControl {
   value: number;
@@ -28,6 +29,66 @@ interface DraggableWidgetProps {
 }
 
 const GRID = 40;
+
+// Cursor map per direction
+const CURSOR_MAP: Record<ResizeDirection, string> = {
+  n: "ns-resize", s: "ns-resize",
+  e: "ew-resize", w: "ew-resize",
+  ne: "nesw-resize", sw: "nesw-resize",
+  nw: "nwse-resize", se: "nwse-resize",
+};
+
+const ResizeHandle = ({
+  dir,
+  onPointerDown,
+}: {
+  dir: ResizeDirection;
+  onPointerDown: (e: React.PointerEvent, dir: ResizeDirection) => void;
+}) => {
+  const isCorner = dir.length === 2;
+  const posStyle: React.CSSProperties = (() => {
+    const SIZE = isCorner ? 10 : 6;
+    const OFFSET = isCorner ? -5 : -3;
+    const base: React.CSSProperties = {
+      position: "absolute",
+      cursor: CURSOR_MAP[dir],
+      pointerEvents: "auto",
+      zIndex: 10,
+    };
+    if (isCorner) {
+      if (dir === "nw") return { ...base, top: OFFSET, left: OFFSET, width: SIZE, height: SIZE };
+      if (dir === "ne") return { ...base, top: OFFSET, right: OFFSET, width: SIZE, height: SIZE };
+      if (dir === "sw") return { ...base, bottom: OFFSET, left: OFFSET, width: SIZE, height: SIZE };
+      if (dir === "se") return { ...base, bottom: OFFSET, right: OFFSET, width: SIZE, height: SIZE };
+    } else {
+      if (dir === "n") return { ...base, top: OFFSET, left: "25%", right: "25%", height: SIZE };
+      if (dir === "s") return { ...base, bottom: OFFSET, left: "25%", right: "25%", height: SIZE };
+      if (dir === "w") return { ...base, top: "25%", bottom: "25%", left: OFFSET, width: SIZE };
+      if (dir === "e") return { ...base, top: "25%", bottom: "25%", right: OFFSET, width: SIZE };
+    }
+    return base;
+  })();
+
+  return (
+    <div
+      style={posStyle}
+      onPointerDown={(e) => onPointerDown(e, dir)}
+      className="group"
+    >
+      {isCorner ? (
+        <div
+          style={{ width: "100%", height: "100%" }}
+          className="rounded-full bg-primary/70 border border-primary/90 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+        />
+      ) : (
+        <div
+          style={{ width: "100%", height: "100%" }}
+          className="rounded-full bg-primary/50 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+        />
+      )}
+    </div>
+  );
+};
 
 const DraggableWidget = ({
   id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle,
@@ -59,7 +120,6 @@ const DraggableWidget = ({
   };
 
   const dragging = useRef(false);
-  const resizing = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [showOpacity, setShowOpacity] = useState(false);
@@ -79,45 +139,34 @@ const DraggableWidget = ({
     offset.current = { x: e.clientX - posRef.current.x, y: e.clientY - posRef.current.y };
   }, []);
 
-  const onPointerDownResize = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-    resizing.current = true;
-    setIsDragging(true);
-    offset.current = { x: e.clientX, y: e.clientY };
-  }, []);
+  // Resizable hook
+  const { onPointerDownResize } = useResizable({
+    pos,
+    minW: 220,
+    minH: 160,
+    onUpdate: (updates) => updateWidgetPosition(id, updates),
+    enabled: isBuildMode,
+  });
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
-      if (dragging.current || resizing.current) {
-        e.preventDefault();
-      }
       if (dragging.current) {
+        e.preventDefault();
         const nx = e.clientX - offset.current.x;
         const ny = e.clientY - offset.current.y;
         updateWidgetPosition(id, { x: nx, y: ny });
       }
-      if (resizing.current) {
-        const dx = e.clientX - offset.current.x;
-        const dy = e.clientY - offset.current.y;
-        offset.current = { x: e.clientX, y: e.clientY };
-        updateWidgetPosition(id, {
-          w: Math.max(280, posRef.current.w + dx),
-          h: Math.max(200, posRef.current.h + dy),
-        });
-      }
     };
 
     const onUp = () => {
-      if (dragging.current || resizing.current) {
-        // Snap to grid on drop in build mode
-        if (isBuildMode && dragging.current) {
+      if (dragging.current) {
+        if (isBuildMode) {
           updateWidgetPosition(id, {
             x: Math.round(posRef.current.x / GRID) * GRID,
             y: Math.round(posRef.current.y / GRID) * GRID,
           });
         }
         dragging.current = false;
-        resizing.current = false;
         setIsDragging(false);
       }
     };
@@ -138,10 +187,11 @@ const DraggableWidget = ({
   const iconColor = textDark ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.5)";
   const activeIconBg = textDark ? "bg-black/10" : "bg-white/15";
 
-  // In focus mode: no chrome, minimal shadow
   const showHeader = !isFocusMode && !hideHeader && !widgetMinimalMode;
-  const showResize = !isFocusMode && !widgetMinimalMode;
+  const showResize = isBuildMode && !widgetMinimalMode;
   const showCorners = isBuildMode && !widgetMinimalMode;
+
+  const ALL_DIRS: ResizeDirection[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
   return (
     <motion.div
@@ -149,7 +199,6 @@ const DraggableWidget = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
-
       className={`absolute z-50 ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className} ${
         isBuildMode ? "rounded-2xl" : ""
       }`}
@@ -164,7 +213,7 @@ const DraggableWidget = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Build mode: pulsing ring */}
+      {/* Build mode selection ring */}
       {isBuildMode && (
         <motion.div
           className="absolute inset-0 rounded-2xl pointer-events-none"
@@ -174,7 +223,7 @@ const DraggableWidget = ({
         />
       )}
 
-      {/* Build mode: prominent drag handle overlay */}
+      {/* Build mode drag handle */}
       {isBuildMode && (
         <div
           className="absolute -top-0.5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1 px-3 py-1 rounded-b-lg bg-white/10 backdrop-blur-sm cursor-grab active:cursor-grabbing select-none border border-t-0 border-white/15"
@@ -185,6 +234,24 @@ const DraggableWidget = ({
           <span className="text-[9px] font-semibold text-white/40 uppercase tracking-wider">{title}</span>
         </div>
       )}
+
+      {/* 8-point resize handles (build mode only) */}
+      <AnimatePresence>
+        {showResize && (
+          <motion.div
+            key="resize-handles"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="absolute inset-0 pointer-events-none"
+          >
+            {ALL_DIRS.map((dir) => (
+              <ResizeHandle key={dir} dir={dir} onPointerDown={onPointerDownResize} />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div
         className={`w-full h-full flex flex-col ${widgetMinimalMode ? "" : `rounded-2xl ${blurClass} ${isGlass ? "" : (isFocusMode ? "shadow-lg" : "shadow-2xl")}`} overflow-hidden`}
@@ -310,39 +377,14 @@ const DraggableWidget = ({
           </div>
         )}
 
-        <div className={`flex-1 ${scrollable ? "overflow-auto council-hidden-scrollbar" : "overflow-hidden"} px-3 ${isFocusMode ? "py-3" : "py-2"} ${widgetMinimalMode || isFocusMode ? "cursor-grab active:cursor-grabbing" : ""}`}
+        <div
+          className={`flex-1 ${scrollable ? "overflow-auto council-hidden-scrollbar" : "overflow-hidden"} px-3 ${isFocusMode ? "py-3" : "py-2"} ${widgetMinimalMode || isFocusMode ? "cursor-grab active:cursor-grabbing" : ""}`}
           onPointerDown={(widgetMinimalMode || isFocusMode) ? onPointerDownDrag : undefined}
         >
           {children}
         </div>
 
-        {/* Resize handle */}
-        <AnimatePresence>
-          {showResize && (
-            <motion.div
-              key="resize"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className={`absolute bottom-0 right-0 cursor-nwse-resize ${isBuildMode ? "w-10 h-10" : "w-7 h-7"}`}
-              style={{ pointerEvents: "auto" }}
-              onPointerDown={onPointerDownResize}
-            >
-              {isBuildMode ? (
-                <div className="w-full h-full flex items-end justify-end p-0.5">
-                  <div className="w-3 h-3 rounded-sm border-r-2 border-b-2 border-white/40" />
-                </div>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 16 16" style={{ color: textDark ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.3)" }}>
-                  <path d="M14 16L16 14M9 16L16 9M4 16L16 4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                </svg>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Build mode: corner dots */}
+        {/* Build mode corner dots */}
         <AnimatePresence>
           {showCorners && (
             <motion.div
@@ -351,11 +393,12 @@ const DraggableWidget = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
+              className="pointer-events-none"
             >
-              <div className="absolute top-0 left-0 w-2 h-2 rounded-full bg-white/20 border border-white/30 -translate-x-1/2 -translate-y-1/2" style={{ pointerEvents: "none" }} />
-              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-white/20 border border-white/30 translate-x-1/2 -translate-y-1/2" style={{ pointerEvents: "none" }} />
-              <div className="absolute bottom-0 left-0 w-2 h-2 rounded-full bg-white/20 border border-white/30 -translate-x-1/2 translate-y-1/2" style={{ pointerEvents: "none" }} />
-              <div className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-white/30 border border-white/40 translate-x-1/2 translate-y-1/2" style={{ pointerEvents: "none" }} />
+              <div className="absolute top-0 left-0 w-2 h-2 rounded-full bg-primary/40 border border-primary/60 -translate-x-1/2 -translate-y-1/2" style={{ pointerEvents: "none" }} />
+              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-primary/40 border border-primary/60 translate-x-1/2 -translate-y-1/2" style={{ pointerEvents: "none" }} />
+              <div className="absolute bottom-0 left-0 w-2 h-2 rounded-full bg-primary/40 border border-primary/60 -translate-x-1/2 translate-y-1/2" style={{ pointerEvents: "none" }} />
+              <div className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-primary/50 border border-primary/70 translate-x-1/2 translate-y-1/2" style={{ pointerEvents: "none" }} />
             </motion.div>
           )}
         </AnimatePresence>

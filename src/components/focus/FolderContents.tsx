@@ -130,7 +130,7 @@ const FolderContents = ({
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: i * 0.03 }}
-        onClick={() => onOpenSubfolder(sf.id)}
+        onDoubleClick={() => onOpenSubfolder(sf.id)}
         draggable
         onDragStart={(e) => handleDragStart(e as any, sf.id)}
         onDragEnd={(e) => handleDragEnd(e as any)}
@@ -172,7 +172,7 @@ const FolderContents = ({
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: i * 0.02 }}
-        onClick={() => onOpenSubfolder(sf.id)}
+        onDoubleClick={() => onOpenSubfolder(sf.id)}
         draggable
         onDragStart={(e) => handleDragStart(e as any, sf.id)}
         onDragEnd={(e) => handleDragEnd(e as any)}
@@ -208,7 +208,7 @@ const FolderContents = ({
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: (subfolders.length + i) * 0.02 }}
-            onClick={() => onOpenDocument?.(doc)}
+            onDoubleClick={() => onOpenDocument?.(doc)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors text-left group"
           >
             {doc.type === "spreadsheet" ? (
@@ -237,7 +237,7 @@ const FolderContents = ({
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: (subfolders.length + i) * 0.03 }}
-          onClick={() => onOpenDocument?.(doc)}
+          onDoubleClick={() => onOpenDocument?.(doc)}
           className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-secondary/50 transition-all duration-200 hover:scale-[1.03] group"
         >
           <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-secondary/40 transition-transform duration-200 group-hover:scale-110">
