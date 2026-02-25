@@ -455,8 +455,16 @@ const DraggableWidget = ({
             opacity: (widgetStyle.textOpacity ?? 100) / 100,
             fontFamily: widgetStyle.fontFamily || undefined,
             fontSize: widgetStyle.fontSize ? `${widgetStyle.fontSize}px` : undefined,
-            textShadow: "0 2px 8px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.35), 0 0 2px rgba(255,255,255,0.08)",
-            WebkitBackgroundClip: undefined,
+            textShadow: widgetStyle.depthShadow
+              ? "0 4px 20px rgba(0,0,0,0.5), 0 0 40px rgba(0,0,0,0.3)"
+              : "none",
+            ...(widgetStyle.glassEffect ? {
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundImage: `linear-gradient(135deg, ${widgetStyle.textColor || "rgba(255,255,255,1)"} 0%, rgba(255,255,255,0.35) 50%, ${widgetStyle.textColor || "rgba(255,255,255,1)"} 100%)`,
+              filter: "drop-shadow(0 0 8px rgba(255,255,255,0.12))",
+            } : {}),
           }}
           onPointerDown={(widgetMinimalMode || isFocusMode) ? onPointerDownDrag : undefined}
         >

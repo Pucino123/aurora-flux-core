@@ -12,6 +12,8 @@ export interface WidgetStyle {
   blurAmount: number;
   fontFamily: string;
   fontSize: number;
+  glassEffect: boolean;
+  depthShadow: boolean;
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
@@ -26,6 +28,8 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   blurAmount: 0,
   fontFamily: "",
   fontSize: 0,
+  glassEffect: false,
+  depthShadow: false,
 };
 
 const STORAGE_KEY = "flux-widget-styles";
