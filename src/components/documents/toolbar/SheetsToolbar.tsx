@@ -7,6 +7,9 @@ import ColorPickerPopover from "./ColorPickerPopover";
 import FileMenu from "./FileMenu";
 import ViewModeToggle from "./ViewModeToggle";
 import EmojiTouchbar from "./EmojiTouchbar";
+import ToolboxPopover from "./ToolboxPopover";
+import { useToolbarVisibility } from "@/hooks/useToolbarVisibility";
+import { isDanish } from "@/lib/i18n";
 
 interface SheetsToolbarProps {
   onBoldToggle: () => void;
@@ -36,7 +39,15 @@ interface SheetsToolbarProps {
   onToggleLightMode?: () => void;
 }
 
-const SEGMENTS = ["file", "cell-format", "emoji", "data-tools", "view"];
+const ALL_SEGMENTS = ["file", "cell-format", "emoji", "data-tools", "view"];
+
+const SEGMENT_LABELS: Record<string, string> = {
+  file: isDanish ? "Fil" : "File",
+  "cell-format": isDanish ? "Celleformat" : "Cell Format",
+  emoji: "Emoji",
+  "data-tools": isDanish ? "Dataværktøjer" : "Data Tools",
+  view: isDanish ? "Visning" : "View",
+};
 
 const SheetsToolbar = ({
   onBoldToggle, onItalicToggle, onUnderlineToggle, onStrikethroughToggle,
@@ -48,6 +59,7 @@ const SheetsToolbar = ({
 }: SheetsToolbarProps) => {
   const lm = lightMode;
   const [fs, setFs] = useState("12");
+  const { visible, hiddenSegments, hideSegment, showSegment, showAll } = useToolbarVisibility("sheets", ALL_SEGMENTS);
 
   const sep = <div className={`w-px h-5 mx-0.5 ${lm ? "bg-gray-200" : "bg-white/[0.1]"}`} />;
   const selectCls = `text-[11px] h-7 px-1.5 rounded-lg border outline-none transition-colors ${
@@ -99,6 +111,18 @@ const SheetsToolbar = ({
     ),
   };
 
+  const toolbarSep = <div className={`w-px h-5 mx-1 ${lm ? "bg-gray-200" : "bg-white/[0.08]"}`} />;
+
+  const renderSegments = (isStudio: boolean) =>
+    visible.map((id, i) => (
+      <React.Fragment key={id}>
+        {i > 0 && toolbarSep}
+        <ToolbarSegment studioMode={isStudio} lightMode={lm} onHide={() => hideSegment(id)}>
+          {segmentContent[id]}
+        </ToolbarSegment>
+      </React.Fragment>
+    ));
+
   if (studioMode) {
     return (
       <motion.div
@@ -106,16 +130,13 @@ const SheetsToolbar = ({
         dragMomentum={false}
         dragElastic={0.08}
         whileDrag={{ scale: 1.02, boxShadow: "0 25px 60px -12px rgba(0,0,0,0.5)" }}
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-wrap items-center gap-1.5 px-2 py-2 rounded-2xl bg-popover/95 backdrop-blur-xl border border-border/30 shadow-2xl max-w-[95vw] cursor-grab active:cursor-grabbing overflow-visible"
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-wrap items-center gap-1 px-2 py-2 rounded-2xl bg-popover/95 backdrop-blur-xl border border-border/30 shadow-2xl max-w-[95vw] cursor-grab active:cursor-grabbing"
         style={{ overflow: "visible" }}
       >
         <AnimatePresence mode="sync">
-          {SEGMENTS.map(id => (
-            <ToolbarSegment key={id} studioMode lightMode={lm}>
-              {segmentContent[id]}
-            </ToolbarSegment>
-          ))}
+          {renderSegments(true)}
         </AnimatePresence>
+        <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} lightMode={lm} />
       </motion.div>
     );
   }
@@ -124,17 +145,14 @@ const SheetsToolbar = ({
     <motion.div
       layout
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      className={`flex flex-wrap items-center gap-1.5 px-2 py-2 border-b transition-colors ${
+      className={`flex flex-wrap items-center gap-1 px-2 py-2 border-b transition-colors ${
         lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
       }`}
     >
       <AnimatePresence mode="sync">
-        {SEGMENTS.map(id => (
-          <ToolbarSegment key={id} lightMode={lm}>
-            {segmentContent[id]}
-          </ToolbarSegment>
-        ))}
+        {renderSegments(false)}
       </AnimatePresence>
+      <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} lightMode={lm} />
     </motion.div>
   );
 };
