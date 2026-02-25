@@ -37,6 +37,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
 };
 
 const STORAGE_KEY = "flux-widget-styles";
+export const GLOBAL_STYLE_KEY = "__global__";
 
 function loadStyles(): Record<string, WidgetStyle> {
   try {
@@ -55,8 +56,14 @@ function persist() {
   listeners.forEach((fn) => fn());
 }
 
+export function getGlobalStyle(): WidgetStyle {
+  return { ...DEFAULT_WIDGET_STYLE, ...(cachedStyles[GLOBAL_STYLE_KEY] || {}) };
+}
+
 export function getWidgetStyle(id: string): WidgetStyle {
-  return { ...DEFAULT_WIDGET_STYLE, ...(cachedStyles[id] || {}) };
+  const global = cachedStyles[GLOBAL_STYLE_KEY] || {};
+  const perWidget = cachedStyles[id] || {};
+  return { ...DEFAULT_WIDGET_STYLE, ...global, ...perWidget };
 }
 
 export function setWidgetStyle(id: string, updates: Partial<WidgetStyle>) {
