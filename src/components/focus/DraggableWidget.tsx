@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { useResizable, ResizeDirection } from "@/hooks/useResizable";
 import { useWidgetStyle } from "@/hooks/useWidgetStyle";
-import { useStyleEditorCallback } from "./StyleEditorContext";
+import { useStyleEditorCallback, useStyleEditorTarget } from "./StyleEditorContext";
 
 interface FontSizeControl {
   value: number;
@@ -107,6 +107,7 @@ const DraggableWidget = ({
 }: DraggableWidgetProps) => {
   const { widgetPositions, updateWidgetPosition, toggleWidget, getWidgetOpacity, setWidgetOpacity, widgetMinimalMode, systemMode } = useFocusStore();
   const openStyleEditor = useStyleEditorCallback();
+  const styleEditorTarget = useStyleEditorTarget();
   const isBuildMode = systemMode === "build";
   const isFocusMode = systemMode === "focus";
   const defW = defaultSize?.w ?? 380;
@@ -245,16 +246,14 @@ const DraggableWidget = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
-      className={`absolute z-50 ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
+      className={`absolute ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
       style={{
         left: pos.x,
         top: pos.y,
         width: pos.w,
         ...(autoHeight ? {} : { height: pos.h }),
         pointerEvents: "none",
-        color: widgetStyle.textColor || undefined,
-        fontFamily: widgetStyle.fontFamily || undefined,
-        fontSize: widgetStyle.fontSize ? `${widgetStyle.fontSize}px` : undefined,
+        zIndex: (openStyleEditor && styleEditorTarget === id) ? 65 : 50,
         ...containerStyle,
       }}
       onMouseEnter={() => setIsHovered(true)}
@@ -444,7 +443,11 @@ const DraggableWidget = ({
 
         <div
           className={`flex-1 ${scrollable ? "overflow-auto council-hidden-scrollbar" : "overflow-hidden"} px-3 ${isFocusMode ? "py-3" : "py-2"} ${widgetMinimalMode || isFocusMode ? "cursor-grab active:cursor-grabbing" : ""}`}
-          style={{ color: "inherit" }}
+          style={{
+            color: widgetStyle.textColor || "inherit",
+            fontFamily: widgetStyle.fontFamily || undefined,
+            fontSize: widgetStyle.fontSize ? `${widgetStyle.fontSize}px` : undefined,
+          }}
           onPointerDown={(widgetMinimalMode || isFocusMode) ? onPointerDownDrag : undefined}
         >
           {children}
