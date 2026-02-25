@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { CalendarPlus, X, Clock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -30,21 +31,21 @@ const AddToCalendarModal = ({ open, title, onClose, onConfirm }: AddToCalendarMo
     onConfirm(dateStr, selectedTime);
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           onClick={onClose}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
+            className="bg-card/95 backdrop-blur-2xl border border-border/30 rounded-2xl shadow-2xl shadow-black/40 p-5 w-full max-w-sm"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -106,7 +107,8 @@ const AddToCalendarModal = ({ open, title, onClose, onConfirm }: AddToCalendarMo
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
