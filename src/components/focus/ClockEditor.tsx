@@ -60,6 +60,7 @@ const ClockEditor = ({ onClose }: ClockEditorProps) => {
     clockWeight, setClockWeight,
     clockShowDate, setClockShowDate,
     clockShowSeconds, setClockShowSeconds,
+    clockShowGreeting, setClockShowGreeting,
     clockSecondaryTz, setClockSecondaryTz,
     clockGlassEffect, setClockGlassEffect,
     clockDepthShadow, setClockDepthShadow,
@@ -203,6 +204,14 @@ const ClockEditor = ({ onClose }: ClockEditorProps) => {
               <motion.div key="layout" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.15 }} className="space-y-3">
                 <div className="flex gap-3">
                   <button
+                    onClick={() => setClockShowGreeting(!clockShowGreeting)}
+                    className={`flex-1 px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all ${
+                      clockShowGreeting ? "bg-white/15 text-white ring-1 ring-white/20" : "text-white/35 hover:bg-white/5 border border-white/10"
+                    }`}
+                  >
+                    Greeting
+                  </button>
+                  <button
                     onClick={() => setClockShowDate(!clockShowDate)}
                     className={`flex-1 px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all ${
                       clockShowDate ? "bg-white/15 text-white ring-1 ring-white/20" : "text-white/35 hover:bg-white/5 border border-white/10"
@@ -216,7 +225,7 @@ const ClockEditor = ({ onClose }: ClockEditorProps) => {
                       clockShowSeconds ? "bg-white/15 text-white ring-1 ring-white/20" : "text-white/35 hover:bg-white/5 border border-white/10"
                     }`}
                   >
-                    Show Seconds
+                    Seconds
                   </button>
                 </div>
                 {/* Secondary timezone */}

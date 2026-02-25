@@ -38,6 +38,7 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
     clockFontSize, setClockFontSize,
     clockFont, clockColor, clockWeight,
     clockShowDate, clockShowSeconds,
+    clockShowGreeting,
     clockSecondaryTz,
     clockGlassEffect, clockDepthShadow,
     systemMode,
@@ -178,9 +179,11 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
           )}
         </div>
 
-        <p style={{ color: "inherit", opacity: 0.5, fontSize: `${greetingSize}px`, fontFamily }} className="font-medium relative z-[1]">
-          {displayName ? `${greeting}, ${displayName}` : greeting}
-        </p>
+        {clockShowGreeting && (
+          <p style={{ color: "inherit", opacity: 0.5, fontSize: `${greetingSize}px`, fontFamily }} className="font-medium relative z-[1]">
+            {displayName ? `${greeting}, ${displayName}` : greeting}
+          </p>
+        )}
 
         {clockShowDate && (
           <p style={{ color: "inherit", opacity: 0.25, fontSize: `${dateSize}px`, marginTop: 2 }} className="relative z-[1]">

@@ -51,6 +51,7 @@ interface FocusState {
   clockWeight: number;
   clockShowDate: boolean;
   clockShowSeconds: boolean;
+  clockShowGreeting: boolean;
   clockSecondaryTz: string;
   clockGlassEffect: boolean;
   clockDepthShadow: boolean;
@@ -98,6 +99,7 @@ const DEFAULT_STATE: FocusState = {
   clockWeight: 200,
   clockShowDate: true,
   clockShowSeconds: true,
+  clockShowGreeting: true,
   clockSecondaryTz: "",
   clockGlassEffect: false,
   clockDepthShadow: false,
@@ -186,6 +188,7 @@ interface FocusContextValue extends FocusState {
   setClockWeight: (v: number) => void;
   setClockShowDate: (v: boolean) => void;
   setClockShowSeconds: (v: boolean) => void;
+  setClockShowGreeting: (v: boolean) => void;
   setClockSecondaryTz: (v: string) => void;
   setClockGlassEffect: (v: boolean) => void;
   setClockDepthShadow: (v: boolean) => void;
@@ -333,6 +336,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     setClockWeight: (v) => update({ clockWeight: v }),
     setClockShowDate: (v) => update({ clockShowDate: v }),
     setClockShowSeconds: (v) => update({ clockShowSeconds: v }),
+    setClockShowGreeting: (v) => update({ clockShowGreeting: v }),
     setClockSecondaryTz: (v) => update({ clockSecondaryTz: v }),
     setClockGlassEffect: (v) => update({ clockGlassEffect: v }),
     setClockDepthShadow: (v) => update({ clockDepthShadow: v }),
