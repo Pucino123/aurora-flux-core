@@ -9,6 +9,7 @@ import ViewModeToggle from "./ViewModeToggle";
 import EmojiTouchbar from "./EmojiTouchbar";
 import ToolbarSegment from "./ToolbarSegment";
 import ToolboxPopover from "./ToolboxPopover";
+import FloatingStudioItem from "./FloatingStudioItem";
 import { useToolbarVisibility } from "@/hooks/useToolbarVisibility";
 import { isDanish } from "@/lib/i18n";
 
@@ -87,22 +88,29 @@ const WordsToolbar = ({
       </React.Fragment>
     ));
 
+  const toolbarContent = (
+    <>
+      <AnimatePresence mode="sync">
+        {renderSegments(studioMode)}
+      </AnimatePresence>
+      <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} onReset={reset} lightMode={lm} />
+    </>
+  );
+
   if (studioMode) {
     return (
-      <motion.div
-        drag
-        dragMomentum={false}
-        dragElastic={0.08}
-        dragConstraints={{ top: -9999, left: -9999, right: 9999, bottom: 9999 }}
-        whileDrag={{ scale: 1.02, boxShadow: "0 25px 60px -12px rgba(0,0,0,0.5)" }}
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-wrap items-center gap-1 px-2 py-2 rounded-2xl bg-popover/95 backdrop-blur-xl border border-border/30 shadow-2xl max-w-[95vw] cursor-grab active:cursor-grabbing"
-        style={{ overflow: "visible" }}
-      >
-        <AnimatePresence mode="sync">
-          {renderSegments(true)}
-        </AnimatePresence>
-        <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} onReset={reset} lightMode={lm} />
-      </motion.div>
+      <FloatingStudioItem active={studioMode} className="">
+        <motion.div
+          drag
+          dragMomentum={false}
+          dragElastic={0.08}
+          whileDrag={{ scale: 1.02, boxShadow: "0 25px 60px -12px rgba(0,0,0,0.5)" }}
+          className="fixed top-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center gap-1 px-2 py-2 rounded-2xl bg-popover/95 backdrop-blur-xl border border-border/30 shadow-2xl max-w-[95vw] cursor-grab active:cursor-grabbing"
+          style={{ overflow: "visible", zIndex: 9999 }}
+        >
+          {toolbarContent}
+        </motion.div>
+      </FloatingStudioItem>
     );
   }
 
@@ -114,10 +122,7 @@ const WordsToolbar = ({
         lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
       }`}
     >
-      <AnimatePresence mode="sync">
-        {renderSegments(false)}
-      </AnimatePresence>
-      <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} onReset={reset} lightMode={lm} />
+      {toolbarContent}
     </motion.div>
   );
 };
