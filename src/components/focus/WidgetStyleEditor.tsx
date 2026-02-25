@@ -251,6 +251,18 @@ const StyleTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Parti
       <span className="text-[11px] tabular-nums text-white/40 font-medium w-10 text-right">{style.borderOpacity ?? 100}%</span>
     </div>
 
+    {/* Blur Amount slider */}
+    <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Blur</span>
+    <div className="flex items-center gap-3 px-1">
+      <Slider
+        value={[style.blurAmount]}
+        onValueChange={([v]) => onUpdate({ blurAmount: v })}
+        min={0} max={40} step={1}
+        className="flex-1 [&_[data-radix-slider-track]]:h-[6px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-[#0a84ff] [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-[18px] [&_[data-radix-slider-thumb]]:h-[18px] [&_[data-radix-slider-thumb]]:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+      />
+      <span className="text-[11px] tabular-nums text-white/40 font-medium w-10 text-right">{style.blurAmount}px</span>
+    </div>
+
     {/* Effects */}
     <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Effects</span>
     <div className="flex gap-2">
