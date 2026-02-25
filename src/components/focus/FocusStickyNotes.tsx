@@ -1,10 +1,13 @@
 import React, { useRef, useCallback, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Plus, Users, Loader2 } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import WidgetStyleEditor from "./WidgetStyleEditor";
+import { useWidgetStyle } from "@/hooks/useWidgetStyle";
 
 const COLORS = [
   { key: "yellow", bg: "hsl(50 95% 88%)", border: "hsl(50 90% 65%)" },
@@ -62,7 +65,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
   const resizing = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [showControls, setShowControls] = useState(false);
+  const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [showCouncil, setShowCouncil] = useState(false);
   const [councilLoading, setCouncilLoading] = useState(false);
   const [councilFeedback, setCouncilFeedback] = useState<{ persona: typeof COUNCIL_PERSONAS[0]; text: string } | null>(null);
@@ -70,18 +73,22 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
   const c = getColors(note.color);
   const noteW = note.w ?? DEFAULT_W;
   const noteH = note.h ?? DEFAULT_H;
+  const { style: widgetStyle, update: updateWidgetStyle, reset: resetWidgetStyle } = useWidgetStyle(`sticky-${note.id}`);
 
-  // Close controls when clicking outside the note
+  // Close style editor when clicking outside the note
   React.useEffect(() => {
-    if (!showControls) return;
+    if (!showStyleEditor) return;
     const handler = (e: PointerEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setShowControls(false);
+        // Don't close if clicking inside the portaled editor
+        const editorEl = document.getElementById(`sticky-editor-${note.id}`);
+        if (editorEl && editorEl.contains(e.target as Node)) return;
+        setShowStyleEditor(false);
       }
     };
     window.addEventListener("pointerdown", handler);
     return () => window.removeEventListener("pointerdown", handler);
-  }, [showControls]);
+  }, [showStyleEditor, note.id]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
@@ -174,24 +181,34 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
       onPointerUp={onPointerUp}
     >
       <div
-        className="w-full h-full rounded-lg flex flex-col overflow-visible relative"
+        className={`w-full h-full rounded-lg flex flex-col overflow-visible relative ${widgetStyle.glassEffect ? "widget-glass-text" : ""} ${widgetStyle.depthShadow ? "widget-depth-shadow" : ""}`}
         style={{
-          backgroundColor: bgAlpha > 0 ? c.bg.replace(")", ` / ${bgAlpha})`) : "transparent",
+          backgroundColor: widgetStyle.backgroundColor
+            ? `${widgetStyle.backgroundColor}${Math.round((widgetStyle.backgroundOpacity / 100) * 255).toString(16).padStart(2, '0')}`
+            : (bgAlpha > 0 ? c.bg.replace(")", ` / ${bgAlpha})`) : "transparent"),
           borderLeft: bgAlpha > 0.05 ? `4px solid ${c.border.replace(")", ` / ${borderAlpha})`)}` : "none",
+          borderWidth: widgetStyle.borderWidth || undefined,
+          borderStyle: widgetStyle.borderStyle !== "none" ? widgetStyle.borderStyle : undefined,
+          borderColor: widgetStyle.borderColor || undefined,
+          borderRadius: widgetStyle.borderRadius ? `${widgetStyle.borderRadius}px` : undefined,
+          backdropFilter: widgetStyle.blurAmount > 0 ? `blur(${widgetStyle.blurAmount}px)` : undefined,
+          WebkitBackdropFilter: widgetStyle.blurAmount > 0 ? `blur(${widgetStyle.blurAmount}px)` : undefined,
           boxShadow: bgAlpha > 0.1 ? `0 4px 16px rgba(0,0,0,${0.15 * bgAlpha}), 0 1px 3px rgba(0,0,0,${0.1 * bgAlpha})` : "none",
+          color: widgetStyle.textColor || undefined,
+          fontFamily: widgetStyle.fontFamily || undefined,
         }}
       >
         {/* Header strip */}
         <div className="flex items-center justify-between px-2 pt-1.5 pb-0.5">
           <button
-            onClick={(e) => { e.stopPropagation(); setShowControls(!showControls); }}
+            onClick={(e) => { e.stopPropagation(); setShowStyleEditor(!showStyleEditor); }}
             className="w-3.5 h-3.5 rounded-full border border-black/10 hover:scale-125 transition-transform"
             style={{ backgroundColor: c.border, opacity: Math.max(bgAlpha, 0.3) }}
             title="Note settings"
           />
           <div className="flex items-center gap-0.5">
             <button
-              onClick={(e) => { e.stopPropagation(); setShowCouncil(!showCouncil); setShowControls(false); }}
+              onClick={(e) => { e.stopPropagation(); setShowCouncil(!showCouncil); setShowStyleEditor(false); }}
               className="p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
               style={{ color: iconColor }}
               title="Få Council feedback"
@@ -216,61 +233,44 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
           </div>
         </div>
 
-        {/* Per-note controls popover */}
-        <AnimatePresence>
-          {showControls && (
+        {/* Style Editor popup — portaled to body */}
+        {showStyleEditor && createPortal(
+          <>
             <motion.div
-              initial={{ opacity: 0, y: -4, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -4, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              data-no-drag
-              className="absolute left-0 top-7 z-[70] w-44 sm:w-48 p-2.5 rounded-lg bg-black/70 backdrop-blur-xl border border-white/15 shadow-xl cursor-default max-h-[60vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
+              key="sticky-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0"
+              style={{ zIndex: 60, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+              onClick={() => setShowStyleEditor(false)}
+            />
+            <motion.div
+              id={`sticky-editor-${note.id}`}
+              key="sticky-editor-popup"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="fixed"
+              style={{
+                zIndex: 80,
+                left: Math.min(note.x + noteW + 24, window.innerWidth - 360),
+                top: Math.max(20, Math.min(note.y, window.innerHeight - 440)),
+                pointerEvents: "auto",
+              }}
             >
-              {/* Color swatches */}
-              <div className="mb-2">
-                <span className="text-[9px] text-white/40 mb-1.5 block">Color</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {COLORS.map((col) => (
-                    <button
-                      key={col.key}
-                      onClick={() => onUpdateNote(note.id, { color: col.key })}
-                      className={`w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 ${note.color === col.key ? "border-white/80 scale-110" : "border-transparent"}`}
-                      style={{ backgroundColor: col.border }}
-                    />
-                  ))}
-                </div>
-              </div>
-              {/* Opacity slider */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[9px] text-white/40 w-10 shrink-0">Opacity</span>
-                <Slider
-                  value={[note.opacity]}
-                  onValueChange={([v]) => onUpdateNote(note.id, { opacity: v })}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3"
-                />
-              </div>
-              {/* Rotation slider */}
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-white/40 w-10 shrink-0">Rotate</span>
-                <Slider
-                  value={[note.rotation]}
-                  onValueChange={([v]) => onUpdateNote(note.id, { rotation: v })}
-                  min={-15}
-                  max={15}
-                  step={1}
-                  className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3"
-                />
-                <span className="text-[9px] text-white/30 tabular-nums w-6 text-right">{note.rotation}°</span>
-              </div>
+              <WidgetStyleEditor
+                style={widgetStyle}
+                onUpdate={updateWidgetStyle}
+                onReset={resetWidgetStyle}
+                onClose={() => setShowStyleEditor(false)}
+              />
             </motion.div>
-          )}
-        </AnimatePresence>
+          </>,
+          document.body
+        )}
 
         {/* Council persona picker */}
         <AnimatePresence>
