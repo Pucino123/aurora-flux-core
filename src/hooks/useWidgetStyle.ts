@@ -7,7 +7,10 @@ export interface WidgetStyle {
   borderColor: string;
   borderWidth: number;
   borderRadius: number;
+  borderStyle: string;
   blurAmount: number;
+  fontFamily: string;
+  fontSize: number;
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
@@ -17,7 +20,10 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   borderColor: "",
   borderWidth: 0,
   borderRadius: 16,
+  borderStyle: "solid",
   blurAmount: 0,
+  fontFamily: "",
+  fontSize: 0,
 };
 
 const STORAGE_KEY = "flux-widget-styles";

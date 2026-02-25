@@ -251,6 +251,8 @@ const DraggableWidget = ({
         ...(autoHeight ? {} : { height: pos.h }),
         pointerEvents: "none",
         color: widgetStyle.textColor || undefined,
+        fontFamily: widgetStyle.fontFamily || undefined,
+        fontSize: widgetStyle.fontSize ? `${widgetStyle.fontSize}px` : undefined,
         ...containerStyle,
       }}
       onMouseEnter={() => setIsHovered(true)}
@@ -301,7 +303,7 @@ const DraggableWidget = ({
         style={{
           background: widgetMinimalMode ? "transparent" : effectiveBg,
           borderWidth: widgetMinimalMode ? 0 : (widgetStyle.borderWidth || (isGlass && !hasCustomBg ? 0 : 1)),
-          borderStyle: "solid",
+          borderStyle: widgetStyle.borderStyle === "none" ? "none" : (widgetStyle.borderStyle || "solid"),
           borderColor: widgetMinimalMode ? "transparent" : effectiveBorder,
           borderRadius: widgetMinimalMode ? 0 : effectiveRadius,
           backdropFilter: widgetMinimalMode ? "none" : effectiveBlur,
