@@ -21,6 +21,7 @@ const ToolbarSegment = ({ children, className = "", visible = true, studioMode =
       drag
       dragMomentum={false}
       dragElastic={0.18}
+      dragConstraints={studioMode ? false : undefined}
       whileDrag={{
         scale: 1.06,
         rotate: 1.5,

@@ -1,7 +1,6 @@
 import React from "react";
 import { Pencil, Trash2, Check, X, Download, Undo, Redo } from "lucide-react";
 import { motion } from "framer-motion";
-import ToolbarSegment from "./ToolbarSegment";
 import ToolbarButton from "./ToolbarButton";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
@@ -45,7 +44,7 @@ const FileMenu = ({
   };
 
   return (
-    <ToolbarSegment>
+    <>
       {exec && (
         <>
           <ToolbarButton icon={<Undo size={14} />} label="Undo (⌘Z)" onClick={() => exec("undo")} lightMode={lm} />
@@ -110,7 +109,7 @@ const FileMenu = ({
         <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60 animate-pulse" />
         <span className="text-[9px] hidden md:inline">Auto-saved</span>
       </div>
-    </ToolbarSegment>
+    </>
   );
 };
 

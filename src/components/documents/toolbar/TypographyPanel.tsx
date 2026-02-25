@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Bold, Italic, Underline, Strikethrough, Subscript, Superscript, Palette, Highlighter, RemoveFormatting } from "lucide-react";
-import ToolbarSegment from "./ToolbarSegment";
 import ToolbarButton from "./ToolbarButton";
 import ColorPickerPopover from "./ColorPickerPopover";
 
@@ -26,7 +25,7 @@ const TypographyPanel = ({ exec, lightMode = false }: TypographyPanelProps) => {
   }`;
 
   return (
-    <ToolbarSegment>
+    <>
       <select
         value={fontFamily}
         onMouseDown={e => e.stopPropagation()}
@@ -68,7 +67,7 @@ const TypographyPanel = ({ exec, lightMode = false }: TypographyPanelProps) => {
       <ColorPickerPopover icon={<Palette size={14} />} label="Text color" onSelect={c => exec("foreColor", c || "inherit")} lightMode={lm} />
       <ColorPickerPopover icon={<Highlighter size={14} />} label="Highlight" onSelect={c => exec("hiliteColor", c || "transparent")} lightMode={lm} />
       <ToolbarButton icon={<RemoveFormatting size={14} />} label="Clear formatting" onClick={() => exec("removeFormat")} lightMode={lm} />
-    </ToolbarSegment>
+    </>
   );
 };
 

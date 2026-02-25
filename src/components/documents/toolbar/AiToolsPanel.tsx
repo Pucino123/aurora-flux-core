@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Sparkles, RefreshCw, Maximize2, Minimize2, Languages, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import ToolbarSegment from "./ToolbarSegment";
 import ToolbarButton from "./ToolbarButton";
 import { toast } from "sonner";
 
@@ -57,7 +56,7 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false }: AiTools
   };
 
   return (
-    <ToolbarSegment>
+    <>
       {AI_ACTIONS.map(a => (
         <ToolbarButton
           key={a.key}
@@ -68,7 +67,7 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false }: AiTools
           lightMode={lm}
         />
       ))}
-    </ToolbarSegment>
+    </>
   );
 };
 

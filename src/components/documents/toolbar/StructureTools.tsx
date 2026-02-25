@@ -1,6 +1,5 @@
 import React from "react";
 import { AlignLeft, AlignCenter, AlignRight, AlignJustify, List, ListOrdered, CheckSquare, IndentIncrease, IndentDecrease, Heading1, Heading2, Heading3, Type, Minus, Quote, SeparatorHorizontal } from "lucide-react";
-import ToolbarSegment from "./ToolbarSegment";
 import ToolbarButton from "./ToolbarButton";
 
 interface StructureToolsProps {
@@ -23,7 +22,7 @@ const StructureTools = ({ exec, editorRef, lightMode = false }: StructureToolsPr
   };
 
   return (
-    <ToolbarSegment>
+    <>
       <ToolbarButton icon={<Heading1 size={14} />} label="Heading 1" onClick={() => exec("formatBlock", "h1")} lightMode={lm} />
       <ToolbarButton icon={<Heading2 size={14} />} label="Heading 2" onClick={() => exec("formatBlock", "h2")} lightMode={lm} />
       <ToolbarButton icon={<Heading3 size={14} />} label="Heading 3" onClick={() => exec("formatBlock", "h3")} lightMode={lm} />
@@ -44,7 +43,7 @@ const StructureTools = ({ exec, editorRef, lightMode = false }: StructureToolsPr
       <ToolbarButton icon={<Quote size={14} />} label="Blockquote" onClick={() => exec("formatBlock", "blockquote")} lightMode={lm} />
       <ToolbarButton icon={<Minus size={14} />} label="Divider" onClick={() => exec("insertHorizontalRule")} lightMode={lm} />
       <ToolbarButton icon={<SeparatorHorizontal size={14} />} label="Callout" onClick={insertCallout} lightMode={lm} />
-    </ToolbarSegment>
+    </>
   );
 };
 
