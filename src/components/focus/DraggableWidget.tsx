@@ -108,6 +108,8 @@ const DraggableWidget = ({
   const { widgetPositions, updateWidgetPosition, toggleWidget, getWidgetOpacity, setWidgetOpacity, widgetMinimalMode, systemMode } = useFocusStore();
   const openStyleEditor = useStyleEditorCallback();
   const styleEditorTarget = useStyleEditorTarget();
+  const isBeingEdited = !!styleEditorTarget && styleEditorTarget === id;
+  const isEditingOther = !!styleEditorTarget && styleEditorTarget !== id;
   const isBuildMode = systemMode === "build";
   const isFocusMode = systemMode === "focus";
   const defW = defaultSize?.w ?? 380;
@@ -243,7 +245,11 @@ const DraggableWidget = ({
     <motion.div
       data-widget-id={id}
       initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      animate={{
+        opacity: isEditingOther ? 0.15 : 1,
+        scale: isEditingOther ? 0.98 : 1,
+        filter: isEditingOther ? "blur(4px)" : "none",
+      }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
       className={`absolute ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
@@ -252,8 +258,8 @@ const DraggableWidget = ({
         top: pos.y,
         width: pos.w,
         ...(autoHeight ? {} : { height: pos.h }),
-        pointerEvents: "none",
-        zIndex: (openStyleEditor && styleEditorTarget === id) ? 65 : 50,
+        pointerEvents: isEditingOther ? "none" : "none",
+        zIndex: isBeingEdited ? 65 : 50,
         ...containerStyle,
       }}
       onMouseEnter={() => setIsHovered(true)}
@@ -447,6 +453,7 @@ const DraggableWidget = ({
             color: widgetStyle.textColor || "inherit",
             fontFamily: widgetStyle.fontFamily || undefined,
             fontSize: widgetStyle.fontSize ? `${widgetStyle.fontSize}px` : undefined,
+            textShadow: "0 4px 20px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.15)",
           }}
           onPointerDown={(widgetMinimalMode || isFocusMode) ? onPointerDownDrag : undefined}
         >

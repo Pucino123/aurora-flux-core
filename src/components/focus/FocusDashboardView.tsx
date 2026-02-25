@@ -420,7 +420,7 @@ const FocusContent = () => {
       <AnimatePresence>
         {styleEditorTarget && (
           <>
-            {/* Overlay */}
+            {/* Overlay — dims everything below z-60, click to close */}
             <motion.div
               key="style-overlay"
               initial={{ opacity: 0 }}
@@ -428,7 +428,7 @@ const FocusContent = () => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-[60]"
-              style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+              style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
               onClick={() => setStyleEditorTarget(null)}
             />
             {/* Editor popup */}

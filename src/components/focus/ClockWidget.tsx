@@ -161,7 +161,7 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
               fontFamily,
               fontSize: `${clockFontSize}px`,
               fontWeight: clockWeight,
-              color: clockGlassEffect ? undefined : clockColor,
+              color: clockGlassEffect ? undefined : (clockColor || "inherit"),
               lineHeight: 1.1,
               textShadow,
               transition: "all 0.3s ease",
@@ -174,28 +174,28 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
             )}
           </div>
           {systemMode === "build" && (
-            <p className="text-white/30 text-[9px] text-center mt-1">✏️ Use header edit button</p>
+            <p style={{ color: "inherit", opacity: 0.3, fontSize: "9px", textAlign: "center", marginTop: 4 }}>✏️ Use header edit button</p>
           )}
         </div>
 
-        <p className="text-white/50 font-medium relative z-[1]" style={{ fontSize: `${greetingSize}px`, fontFamily }}>
+        <p style={{ color: "inherit", opacity: 0.5, fontSize: `${greetingSize}px`, fontFamily }} className="font-medium relative z-[1]">
           {displayName ? `${greeting}, ${displayName}` : greeting}
         </p>
 
         {clockShowDate && (
-          <p className="text-white/25 mt-0.5 relative z-[1]" style={{ fontSize: `${dateSize}px` }}>
+          <p style={{ color: "inherit", opacity: 0.25, fontSize: `${dateSize}px`, marginTop: 2 }} className="relative z-[1]">
             {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
           </p>
         )}
 
         {secondaryTime && (
-          <p className="text-white/20 mt-1 relative z-[1]" style={{ fontSize: `${dateSize}px` }}>
+          <p style={{ color: "inherit", opacity: 0.2, fontSize: `${dateSize}px`, marginTop: 4 }} className="relative z-[1]">
             {tzLabel} · {secondaryTime}
           </p>
         )}
 
         {showRing && (
-          <p className="text-white/15 text-[10px] mt-1 relative z-[1]">
+          <p style={{ color: "inherit", opacity: 0.15, fontSize: "10px", marginTop: 4 }} className="relative z-[1]">
             {tasksDone}/{tasksTotal} tasks complete
           </p>
         )}
