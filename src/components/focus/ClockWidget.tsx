@@ -158,10 +158,10 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
           <div
             className="tracking-widest tabular-nums text-center"
             style={{
-              fontFamily,
-              fontSize: `${clockFontSize}px`,
+              fontFamily: "inherit",
+              fontSize: "inherit",
               fontWeight: clockWeight,
-              color: clockGlassEffect ? undefined : (clockColor || "inherit"),
+              color: clockGlassEffect ? undefined : "inherit",
               lineHeight: 1.1,
               textShadow,
               transition: "all 0.3s ease",

@@ -304,7 +304,7 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition 
   /* Bottom slider config per tab */
   const sliderConfig: Record<Tab, { value: number; min: number; max: number; step: number; display: string; key: keyof WidgetStyle }> = {
     font: { value: style.fontSize || 14, min: 8, max: 64, step: 1, display: `${style.fontSize || 14}`, key: "fontSize" },
-    color: { value: style.backgroundOpacity, min: 0, max: 100, step: 5, display: `${Math.round(style.backgroundOpacity)}`, key: "backgroundOpacity" },
+    color: { value: style.textOpacity ?? 100, min: 0, max: 100, step: 5, display: `${Math.round(style.textOpacity ?? 100)}%`, key: "textOpacity" },
     style: { value: style.blurAmount, min: 0, max: 40, step: 2, display: `${style.blurAmount}`, key: "blurAmount" },
     layout: { value: style.borderWidth, min: 0, max: 10, step: 1, display: `${style.borderWidth}`, key: "borderWidth" },
   };
