@@ -34,7 +34,7 @@ const ToolbarButton = ({ icon, label, onClick, active = false, lightMode = false
             {icon}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-[11px] px-2 py-1">
+        <TooltipContent side="bottom" className="text-[11px] px-2 py-1 z-[9999]">
           {label}
         </TooltipContent>
       </Tooltip>

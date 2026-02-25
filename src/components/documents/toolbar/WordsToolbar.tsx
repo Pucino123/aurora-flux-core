@@ -44,54 +44,26 @@ const WordsToolbar = ({
   const { order, handleReorder } = useToolbarOrder("flux-words-toolbar-order", DEFAULT_ORDER);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const SEGMENT_LABELS: Record<string, string> = {
-    file: "File", typography: "Text", structure: "Structure",
-    insert: "Insert", emoji: "Emoji", ai: "AI", view: "View",
-  };
-
-  const segmentMap: Record<string, React.ReactNode> = {
+  /* Segment content builders — used both for live segments and drag overlay */
+  const segmentContent: Record<string, React.ReactNode> = {
     file: (
-      <ToolbarSegment key="file" id="file" sortable>
-        <FileMenu
-          renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
-          commitRename={commitRename} documentTitle={documentTitle} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete}
-          onDelete={onDelete} exec={exec} editorRef={editorRef} lightMode={lm}
-        />
-      </ToolbarSegment>
+      <FileMenu
+        renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
+        commitRename={commitRename} documentTitle={documentTitle} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete}
+        onDelete={onDelete} exec={exec} editorRef={editorRef} lightMode={lm}
+      />
     ),
-    typography: (
-      <ToolbarSegment key="typography" id="typography" sortable>
-        <TypographyPanel exec={exec} lightMode={lm} />
-      </ToolbarSegment>
-    ),
-    structure: (
-      <ToolbarSegment key="structure" id="structure" sortable>
-        <StructureTools exec={exec} editorRef={editorRef} lightMode={lm} />
-      </ToolbarSegment>
-    ),
-    insert: (
-      <ToolbarSegment key="insert" id="insert" sortable>
-        <InsertMenu exec={exec} lightMode={lm} />
-      </ToolbarSegment>
-    ),
-    emoji: (
-      <ToolbarSegment key="emoji" id="emoji" sortable>
-        <EmojiTouchbar onInsert={(emoji) => exec("insertText", emoji)} lightMode={lm} />
-      </ToolbarSegment>
-    ),
-    ai: (
-      <ToolbarSegment key="ai" id="ai" sortable>
-        <AiToolsPanel editorRef={editorRef} onContentChange={onContentChange} lightMode={lm} />
-      </ToolbarSegment>
-    ),
+    typography: <TypographyPanel exec={exec} lightMode={lm} />,
+    structure: <StructureTools exec={exec} editorRef={editorRef} lightMode={lm} />,
+    insert: <InsertMenu exec={exec} lightMode={lm} />,
+    emoji: <EmojiTouchbar onInsert={(emoji) => exec("insertText", emoji)} lightMode={lm} />,
+    ai: <AiToolsPanel editorRef={editorRef} onContentChange={onContentChange} lightMode={lm} />,
     view: (
-      <ToolbarSegment key="view" id="view" sortable>
-        <ViewModeToggle
-          studioMode={studioMode} onToggleStudio={onToggleStudio}
-          zoom={zoom} onZoomChange={onZoomChange} lightMode={lm}
-          onToggleLightMode={onToggleLightMode}
-        />
-      </ToolbarSegment>
+      <ViewModeToggle
+        studioMode={studioMode} onToggleStudio={onToggleStudio}
+        zoom={zoom} onZoomChange={onZoomChange} lightMode={lm}
+        onToggleLightMode={onToggleLightMode}
+      />
     ),
   };
 
@@ -104,35 +76,51 @@ const WordsToolbar = ({
     }
   };
 
+  // In studio mode: free-drag segments, no DndContext reorder
+  if (studioMode) {
+    return (
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-wrap items-center gap-1.5 px-2 py-2 rounded-2xl bg-popover/95 backdrop-blur-xl border border-border/30 shadow-2xl max-w-[95vw]">
+        <AnimatePresence mode="sync">
+          {order.map(id => (
+            <ToolbarSegment key={id} id={id} sortable studioMode>
+              {segmentContent[id]}
+            </ToolbarSegment>
+          ))}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       layout
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={`flex flex-wrap items-center gap-1.5 px-2 py-2 border-b transition-colors ${
-        studioMode
-          ? "fixed top-4 left-1/2 -translate-x-1/2 z-[200] rounded-2xl bg-popover/95 backdrop-blur-xl border-border/30 shadow-2xl max-w-[95vw]"
-          : lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
+        lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
       }`}>
       <DndContext collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={horizontalListSortingStrategy}>
           <AnimatePresence mode="sync">
-            {order.map(id => segmentMap[id])}
+            {order.map(id => (
+              <ToolbarSegment key={id} id={id} sortable>
+                {segmentContent[id]}
+              </ToolbarSegment>
+            ))}
           </AnimatePresence>
         </SortableContext>
         <DragOverlay dropAnimation={{ duration: 200, easing: "cubic-bezier(0.25, 1, 0.5, 1)" }}>
           {activeId ? (
             <motion.div
-              initial={{ scale: 1.05, rotate: 2 }}
-              animate={{ scale: 1.08, rotate: -1 }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-xl border shadow-2xl pointer-events-none ${
+              initial={{ scale: 1.05, rotate: 1.5 }}
+              animate={{ scale: 1.06, rotate: -0.5 }}
+              className={`flex items-center gap-0.5 px-1.5 py-1 rounded-xl backdrop-blur-[16px] border shadow-2xl pointer-events-none ${
                 lm
-                  ? "bg-white/90 border-primary/30 shadow-primary/10"
-                  : "bg-popover/90 border-primary/40 shadow-primary/20"
+                  ? "bg-white/95 border-primary/30"
+                  : "bg-popover/95 border-primary/40"
               }`}
+              style={{ boxShadow: "0 20px 50px -10px rgba(0,0,0,0.4), 0 0 24px rgba(139,92,246,0.2)" }}
             >
-              <span className={`text-[10px] font-semibold ${lm ? "text-primary" : "text-primary"}`}>
-                {SEGMENT_LABELS[activeId] || activeId}
-              </span>
+              {segmentContent[activeId]}
             </motion.div>
           ) : null}
         </DragOverlay>
