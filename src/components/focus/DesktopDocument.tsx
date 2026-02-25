@@ -78,10 +78,15 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   }, [iconSearch]);
   const displayedIcons = showAllIcons ? filteredIcons : filteredIcons.slice(0, 12);
 
+  const [selected, setSelected] = useState(false);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isDraggingActive, setIsDraggingActive] = useState(false);
+
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
     dragging.current = true;
     didDrag.current = false;
+    setIsDraggingActive(true);
     offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
   }, [pos.x, pos.y]);
 
@@ -97,6 +102,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
     const onUp = () => {
       if (!dragging.current) return;
       dragging.current = false;
+      setIsDraggingActive(false);
       if (didDrag.current && onDragStateChange) { onDragStateChange(null); }
     };
     window.addEventListener("pointermove", onMove);
@@ -153,10 +159,11 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   return (
     <>
       <div
-        className="desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group"
-        style={{ left: pos.x, top: pos.y, width: 90, minHeight: 90, zIndex: 45, background: "transparent", backdropFilter: docOpacity <= 0.06 ? "none" : undefined, WebkitBackdropFilter: docOpacity <= 0.06 ? "none" : undefined, boxShadow: docOpacity <= 0.06 ? "none" : undefined, border: docOpacity <= 0.06 ? "none" : undefined }}
+        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group ${selected ? "ring-2 ring-primary/60" : ""}`}
+        style={{ left: pos.x, top: pos.y, width: 90, minHeight: 90, zIndex: isDraggingActive ? 9999 : selected ? 55 : 45, background: "transparent", backdropFilter: docOpacity <= 0.06 ? "none" : undefined, WebkitBackdropFilter: docOpacity <= 0.06 ? "none" : undefined, boxShadow: docOpacity <= 0.06 ? "none" : (isDraggingActive ? "0 20px 60px rgba(0,0,0,0.5)" : undefined), border: docOpacity <= 0.06 ? "none" : undefined }}
         onPointerDown={handlePointerDown}
-        onClick={(e) => { e.stopPropagation(); if (!didDrag.current) onOpen(doc); }}
+        onClick={(e) => { e.stopPropagation(); if (!didDrag.current) setSelected(s => !s); }}
+        onDoubleClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setSelected(false); onOpen(doc); } }}
         onContextMenu={handleContextMenu}
       >
         {docOpacity > 0.06 && (

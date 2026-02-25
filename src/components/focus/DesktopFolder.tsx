@@ -221,11 +221,12 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
         }}
         transition={justAbsorbed ? { duration: 0.4, ease: "easeOut" } : { duration: 0.2 }}
         className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl ${
-          isDropTarget ? "ring-2 ring-blue-400/60 shadow-[0_0_28px_rgba(59,130,246,0.35)]" : ""
+          isDropTarget ? "ring-2 ring-blue-400/60 shadow-[0_0_28px_rgba(59,130,246,0.35)]" : (selected && !isDragging ? "ring-2 ring-primary/50" : "")
         }`}
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,
-          zIndex: isDragging ? 999 : selected ? 55 : 45,
+          zIndex: isDragging ? 9999 : selected ? 55 : 45,
+          filter: isDragging ? "drop-shadow(0 20px 40px rgba(0,0,0,0.5))" : undefined,
           background: "transparent",
           backdropFilter: folderOpacity <= 0.06 ? "none" : undefined,
           WebkitBackdropFilter: folderOpacity <= 0.06 ? "none" : undefined,
