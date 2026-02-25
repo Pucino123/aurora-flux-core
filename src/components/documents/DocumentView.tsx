@@ -144,7 +144,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const charCount = editorRef.current?.innerText?.length || 0;
 
   return (
-    <div className={`flex flex-col h-full relative ${studioMode ? "z-[150]" : ""}`}>
+    <div className={`flex flex-col h-full relative ${studioMode ? "z-[150] overflow-visible" : ""}`}>
       <StudioModeOverlay active={studioMode} onClose={() => setStudioMode(false)} />
       <WordsToolbar
         editorRef={editorRef as React.RefObject<HTMLDivElement>}
@@ -369,7 +369,7 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
   const ctxHover = lm ? "hover:bg-gray-100" : "hover:bg-secondary/50";
 
   return (
-    <div className={`flex flex-col h-full relative ${studioMode ? "z-[150]" : ""}`}>
+    <div className={`flex flex-col h-full relative ${studioMode ? "z-[150] overflow-visible" : ""}`}>
       <StudioModeOverlay active={studioMode} onClose={() => setStudioMode(false)} />
       <SheetsToolbar
         onBoldToggle={() => updateCellFormat({ bold: !getCellFormat(getCellKey() || "").bold })}
