@@ -195,7 +195,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
           ${lm ? "selection:bg-primary/20" : "selection:bg-primary/20"}`}
         data-placeholder="Start typing..."
       />
-      <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} lightMode={lm} />
+      <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} />
       <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
     </div>
   );
