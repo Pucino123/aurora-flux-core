@@ -9,6 +9,7 @@ export interface WidgetStyle {
   borderWidth: number;
   borderRadius: number;
   borderStyle: string;
+  borderOpacity: number;
   blurAmount: number;
   fontFamily: string;
   fontSize: number;
@@ -26,6 +27,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   borderWidth: 0,
   borderRadius: 16,
   borderStyle: "solid",
+  borderOpacity: 100,
   blurAmount: 0,
   fontFamily: "",
   fontSize: 0,
