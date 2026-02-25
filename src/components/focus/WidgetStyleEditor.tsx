@@ -174,29 +174,28 @@ const FontTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Partia
 );
 
 /* ─── Color tab ─── */
-const ColorTab = ({ style, onUpdate, colorMode, setColorMode }: { style: WidgetStyle; onUpdate: (u: Partial<WidgetStyle>) => void; colorMode: "text" | "bg"; setColorMode: (m: "text" | "bg") => void }) => (
+const ColorTab = ({ style, onUpdate, colorMode, setColorMode }: { style: WidgetStyle; onUpdate: (u: Partial<WidgetStyle>) => void; colorMode: "text" | "bg" | "border"; setColorMode: (m: "text" | "bg" | "border") => void }) => (
   <div className="space-y-4">
     <div className="flex gap-1 p-0.5 rounded-xl bg-white/[0.05]">
-      <button
-        onClick={() => setColorMode("text")}
-        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
-          colorMode === "text" ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"
-        }`}
-      >
-        Text
-      </button>
-      <button
-        onClick={() => setColorMode("bg")}
-        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
-          colorMode === "bg" ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"
-        }`}
-      >
-        Background
-      </button>
+      {(["text", "bg", "border"] as const).map((m) => (
+        <button
+          key={m}
+          onClick={() => setColorMode(m)}
+          className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
+            colorMode === m ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"
+          }`}
+        >
+          {m === "text" ? "Text" : m === "bg" ? "Background" : "Border"}
+        </button>
+      ))}
     </div>
     <SwatchGrid
-      value={colorMode === "bg" ? style.backgroundColor : style.textColor}
-      onChange={(c) => onUpdate(colorMode === "bg" ? { backgroundColor: c } : { textColor: c })}
+      value={colorMode === "bg" ? style.backgroundColor : colorMode === "border" ? style.borderColor : style.textColor}
+      onChange={(c) => onUpdate(
+        colorMode === "bg" ? { backgroundColor: c }
+        : colorMode === "border" ? { borderColor: c, borderWidth: Math.max(1, style.borderWidth), borderStyle: style.borderStyle === "none" ? "solid" : style.borderStyle }
+        : { textColor: c }
+      )}
     />
   </div>
 );
@@ -323,7 +322,7 @@ const LayoutTab = ({ style, onUpdate }: { style: WidgetStyle; onUpdate: (u: Part
 /* ─── Main editor ─── */
 const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition }: WidgetStyleEditorProps) => {
   const [activeTab, setActiveTab] = useState<Tab>("font");
-  const [colorMode, setColorMode] = useState<"text" | "bg">("text");
+  const [colorMode, setColorMode] = useState<"text" | "bg" | "border">("text");
   const [dragPos, setDragPos] = useState(initialPosition ?? { x: 0, y: 0 });
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -356,6 +355,8 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition 
   /* Bottom slider config per tab — color tab switches based on text/bg mode */
   const colorSlider = colorMode === "text"
     ? { value: style.textOpacity ?? 100, display: `${Math.round(style.textOpacity ?? 100)}%`, key: "textOpacity" as keyof WidgetStyle, label: "Text" }
+    : colorMode === "border"
+    ? { value: style.borderOpacity ?? 100, display: `${Math.round(style.borderOpacity ?? 100)}%`, key: "borderOpacity" as keyof WidgetStyle, label: "Border" }
     : { value: style.backgroundOpacity, display: `${Math.round(style.backgroundOpacity)}%`, key: "backgroundOpacity" as keyof WidgetStyle, label: "BG" };
 
   const sliderConfig: Record<Tab, { value: number; min: number; max: number; step: number; display: string; key: keyof WidgetStyle; label?: string }> = {
