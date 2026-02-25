@@ -74,7 +74,7 @@ const SheetsToolbar = ({
       <FileMenu
         renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
         commitRename={commitRename} documentTitle={documentTitle} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete}
-        onDelete={onDelete} lightMode={lm}
+        onDelete={onDelete} lightMode={lm} documentType="spreadsheet" onExportCsv={onExportCsv}
       />
     ),
     "cell-format": (
