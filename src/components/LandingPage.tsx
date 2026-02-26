@@ -35,7 +35,7 @@ const FEATURES_ROW2 = [
 /* ── Marquee Pill ── */
 const MarqueePill = ({ icon: Icon, title, isDark }: { icon: LucideIcon; title: string; isDark: boolean }) => (
   <div
-    className="flex-shrink-0 flex items-center gap-2.5 px-4 py-2.5 rounded-full transition-colors cursor-default"
+    className="flex-shrink-0 flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-full transition-colors cursor-default"
     style={{
       background: isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.18)",
       border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(255,255,255,0.35)",
@@ -43,11 +43,11 @@ const MarqueePill = ({ icon: Icon, title, isDark }: { icon: LucideIcon; title: s
       WebkitBackdropFilter: "blur(16px)",
     }}
   >
-    <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+    <div className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center shrink-0"
       style={{ background: isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.30)" }}>
-      <Icon size={13} className="text-white" />
+      <Icon size={11} className="text-white" />
     </div>
-    <span className="text-white font-medium text-sm whitespace-nowrap">{title}</span>
+    <span className="text-white font-medium text-xs md:text-sm whitespace-nowrap">{title}</span>
   </div>
 );
 
@@ -169,45 +169,44 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         style={{ background: isDark ? "rgba(10,10,14,0.55)" : "rgba(255,255,255,0.08)" }} />
 
       {/* ── Navbar ── */}
-      <nav className="relative z-20 flex items-center justify-between px-8 md:px-16 py-5">
-        <span className="text-2xl font-bold text-white drop-shadow-lg tracking-tight" style={{ fontFamily: "Georgia, serif" }}>Flux</span>
-        <div className="flex items-center gap-3">
-          {/* Dark mode toggle */}
+      <nav className="relative z-20 flex items-center justify-between px-5 md:px-16 py-4 md:py-5">
+        <span className="text-xl md:text-2xl font-bold text-white drop-shadow-lg tracking-tight" style={{ fontFamily: "Georgia, serif" }}>Flux</span>
+        <div className="flex items-center gap-2 md:gap-3">
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/70 hover:text-white hover:bg-white/20 transition-all"
+            className="flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/70 hover:text-white hover:bg-white/20 transition-all"
           >
-            {isDark ? <Sun size={14} /> : <Moon size={14} />}
+            {isDark ? <Sun size={13} /> : <Moon size={13} />}
           </button>
-          <button onClick={() => navigate("/auth")} className="text-white/80 hover:text-white text-sm font-medium transition-colors drop-shadow">Sign in</button>
-          <button onClick={handleCTA} className="flex items-center gap-1.5 bg-white text-slate-800 text-sm font-bold px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
-            Get started <ArrowRight size={13} />
+          <button onClick={() => navigate("/auth")} className="hidden sm:block text-white/80 hover:text-white text-sm font-medium transition-colors drop-shadow">Sign in</button>
+          <button onClick={handleCTA} className="flex items-center gap-1.5 bg-white text-slate-800 text-xs md:text-sm font-bold px-4 md:px-5 py-2 md:py-2.5 rounded-full shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all">
+            Get started <ArrowRight size={12} />
           </button>
         </div>
       </nav>
 
       {/* ── Hero ── */}
-      <section className="relative z-10 flex flex-col items-center text-center pt-16 pb-24 px-6">
-        <motion.div initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }} className="flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/35 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-10 shadow-sm">
-            <Sparkles size={11} className="text-yellow-200" /> The workspace that shapes itself around you
+      <section className="relative z-10 flex flex-col items-center text-center pt-10 md:pt-16 pb-16 md:pb-24 px-5">
+        <motion.div initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }} className="flex flex-col items-center w-full">
+          <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md border border-white/35 text-white text-[11px] md:text-xs font-semibold px-3 md:px-4 py-1 md:py-1.5 rounded-full mb-7 md:mb-10 shadow-sm">
+            <Sparkles size={10} className="text-yellow-200" /> The workspace that shapes itself around you
           </div>
-          <h1 className="text-6xl sm:text-7xl md:text-[5.5rem] lg:text-[6.5rem] font-bold text-white leading-[1.0] mb-3"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif", textShadow: isDark ? "0 4px 40px rgba(0,0,0,0.6)" : "0 4px 30px rgba(0,40,100,0.25), 0 1px 0 rgba(255,255,255,0.15)" }}>
+          <h1 className="text-[2.6rem] sm:text-6xl md:text-[5rem] lg:text-[6.5rem] font-bold text-white leading-[1.05] mb-2 md:mb-3 w-full"
+            style={{ fontFamily: "Georgia, 'Times New Roman', serif", textShadow: isDark ? "0 4px 40px rgba(0,0,0,0.6)" : "0 4px 30px rgba(0,40,100,0.25)" }}>
             Your workspace,
           </h1>
-          <h1 className="text-6xl sm:text-7xl md:text-[5.5rem] lg:text-[6.5rem] font-bold text-white leading-[1.0] mb-8"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", textShadow: isDark ? "0 4px 40px rgba(0,0,0,0.6)" : "0 4px 30px rgba(0,40,100,0.25), 0 1px 0 rgba(255,255,255,0.15)" }}>
+          <h1 className="text-[2.6rem] sm:text-6xl md:text-[5rem] lg:text-[6.5rem] font-bold text-white leading-[1.05] mb-6 md:mb-8 w-full"
+            style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", textShadow: isDark ? "0 4px 40px rgba(0,0,0,0.6)" : "0 4px 30px rgba(0,40,100,0.25)" }}>
             fully yours.
           </h1>
-          <p className="text-lg md:text-xl text-white/85 max-w-lg mx-auto mb-10 leading-relaxed drop-shadow font-sans">
+          <p className="text-base md:text-xl text-white/85 max-w-sm md:max-w-lg mx-auto mb-8 md:mb-10 leading-relaxed drop-shadow font-sans">
             Drag widgets, build your dashboard, let AI handle the rest. Flux is the personalizable OS for focused people.
           </p>
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <button onClick={handleCTA} className="flex items-center gap-2 bg-white text-slate-800 font-bold px-9 py-4 rounded-full shadow-2xl hover:scale-[1.03] active:scale-[0.98] transition-all text-base">
-              Start for free <ArrowRight size={16} />
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <button onClick={handleCTA} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-slate-800 font-bold px-8 py-3.5 md:py-4 rounded-full shadow-2xl hover:scale-[1.03] active:scale-[0.98] transition-all text-sm md:text-base">
+              Start for free <ArrowRight size={15} />
             </button>
-            <button onClick={() => navigate("/auth")} className="flex items-center gap-2 backdrop-blur-md border border-white/30 text-white font-semibold px-8 py-4 rounded-full transition-all text-base"
+            <button onClick={() => navigate("/auth")} className="w-full sm:w-auto flex items-center justify-center gap-2 backdrop-blur-md border border-white/30 text-white font-semibold px-7 py-3.5 md:py-4 rounded-full transition-all text-sm md:text-base"
               style={{ background: isDark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.20)" }}>
               Sign in
             </button>
@@ -216,7 +215,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       </section>
 
       {/* ── Intro video section ── */}
-      <section className="relative z-10 px-6 pb-24">
+      <section className="relative z-10 px-4 md:px-6 pb-16 md:pb-24">
         <div className="max-w-4xl mx-auto">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-8">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
@@ -231,9 +230,9 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       </section>
 
       {/* ── "More than just tasks" marquee banner ── */}
-      <section className="relative z-10 pb-24">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-10 px-6">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
+      <section className="relative z-10 pb-16 md:pb-24">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-8 md:mb-10 px-5">
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
             More than just <em style={{ fontStyle: "italic" }}>tasks</em>
           </h2>
           <p className="text-base max-w-md mx-auto" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.65)" }}>
@@ -244,9 +243,9 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       </section>
 
       {/* ── CTA ── */}
-      <section className="relative z-10 px-6 pb-28">
+      <section className="relative z-10 px-4 md:px-6 pb-20 md:pb-28">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
-          className="max-w-2xl mx-auto text-center rounded-3xl p-14 shadow-2xl transition-all duration-500"
+          className="max-w-2xl mx-auto text-center rounded-3xl p-8 md:p-14 shadow-2xl transition-all duration-500"
           style={{
             background: isDark ? "rgba(28,28,32,0.70)" : "rgba(255,255,255,0.15)",
             backdropFilter: "blur(32px)",
