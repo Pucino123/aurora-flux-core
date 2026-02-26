@@ -226,6 +226,8 @@ const da: Record<string, string> = {
   "budget.category_placeholder": "f.eks. Mad, Transport...",
   "budget.interactive": "Interaktiv Tabel",
 
+  "folder.create_title": "New folder",
+  "folder.create_desc": "Enter folder description",
   // Folders
   "folder.finance": "Økonomi",
   "folder.fitness": "Træning",

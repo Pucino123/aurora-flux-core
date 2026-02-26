@@ -137,10 +137,11 @@ const ToolDrawer = () => {
       <AnimatePresence>
         {open && (
       <motion.div
-            initial={{ opacity: 0, y: 80, scaleX: 0.6, scaleY: 0.3, originX: "50%", originY: "100%" }}
-            animate={{ opacity: 1, y: 0, scaleX: 1, scaleY: 1, originX: "50%", originY: "100%" }}
-            exit={{ opacity: 0, y: 80, scaleX: 0.6, scaleY: 0.3, originX: "50%", originY: "100%" }}
-            transition={{ type: "spring", stiffness: 380, damping: 28 }}
+            initial={{ opacity: 0, y: 24, scaleX: 0.92, scaleY: 0.88 }}
+            animate={{ opacity: 1, y: 0, scaleX: 1, scaleY: 1 }}
+            exit={{ opacity: 0, y: 18, scaleX: 0.94, scaleY: 0.90 }}
+            transition={{ type: "spring", stiffness: 500, damping: 36, mass: 0.8 }}
+            style={{ transformOrigin: "50% 100%" }}
             className="fixed bottom-16 left-1/2 -translate-x-1/2 z-40 w-[92vw] max-w-[520px] p-4 rounded-2xl bg-black/60 backdrop-blur-[24px] border border-white/15 shadow-2xl"
           >
             <div className="flex items-center justify-between mb-3">

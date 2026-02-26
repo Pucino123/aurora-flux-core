@@ -218,9 +218,9 @@ const CreateFolderModal = ({ open, onClose, onCreate }: CreateFolderModalProps) 
                         <PenTool size={6} className="text-muted-foreground" />
                       </div>
                     </button>
-                    {t("folder.create_title")}
+                    New folder
                   </h2>
-                  <p className="text-xs text-muted-foreground mt-1 ml-11">{t("folder.create_desc")}</p>
+                  <p className="text-xs text-muted-foreground mt-1 ml-11">Enter folder description</p>
                 </div>
 
                 <AnimatePresence>
