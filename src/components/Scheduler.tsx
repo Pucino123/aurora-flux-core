@@ -76,12 +76,29 @@ function getNowTopPercent(blocks: { time: string }[]): number | null {
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes();
   if (blocks.length === 0) return null;
-  const [firstH, firstM] = blocks[0].time.split(":").map(Number);
-  const [lastH, lastM] = blocks[blocks.length - 1].time.split(":").map(Number);
-  const start = firstH * 60 + (firstM || 0);
-  const end = lastH * 60 + (lastM || 0) + 60;
-  if (nowMins < start || nowMins > end) return null;
-  return ((nowMins - start) / (end - start)) * 100;
+
+  // Find which two adjacent blocks the current time falls between
+  for (let i = 0; i < blocks.length - 1; i++) {
+    const [ah, am] = blocks[i].time.split(":").map(Number);
+    const [bh, bm] = blocks[i + 1].time.split(":").map(Number);
+    const startMins = ah * 60 + (am || 0);
+    const endMins = bh * 60 + (bm || 0);
+    if (nowMins >= startMins && nowMins <= endMins) {
+      const fraction = (nowMins - startMins) / (endMins - startMins);
+      // Each block occupies 1/(blocks.length) of height; position is (i + fraction) / blocks.length
+      return ((i + fraction) / blocks.length) * 100;
+    }
+  }
+
+  // Before first block
+  const [fh, fm] = blocks[0].time.split(":").map(Number);
+  if (nowMins < fh * 60 + (fm || 0)) return 0;
+
+  // After last block
+  const [lh, lm] = blocks[blocks.length - 1].time.split(":").map(Number);
+  if (nowMins > lh * 60 + (lm || 0)) return 100;
+
+  return null;
 }
 
 function sortBlocksByTime(blocks: DbScheduleBlock[]): DbScheduleBlock[] {
@@ -490,40 +507,43 @@ const Scheduler = ({ onOpenFullCalendar }: { onOpenFullCalendar?: () => void } =
           </div>
         )}
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-1">
-              {blocks.map((block, index) => {
-                const folderInfo = blockFolderMap.get(block.id);
-                return (
-                  <SortableBlock
-                    key={block.id}
-                    block={block}
-                    index={index}
-                    currentIdx={currentIdx}
-                    isEditing={editingId === block.id}
-                    onStartEdit={startEdit}
-                    onDelete={handleDelete}
-                    onReschedule={rescheduleBlock}
-                    selectedDate={selectedDate}
-                    editState={{ title: editTitle, time: editTime, duration: editDuration, type: editType }}
-                    onEditChange={(field, value) => {
-                      if (field === "title") setEditTitle(value);
-                      else if (field === "time") setEditTime(value);
-                      else if (field === "duration") setEditDuration(value);
-                      else if (field === "type") setEditType(value);
-                    }}
-                    onSaveEdit={saveEdit}
-                    onCancelEdit={() => setEditingId(null)}
-                    folderName={folderInfo?.name}
-                    folderColor={folderInfo?.color}
-                    onBadgeClick={folderInfo ? () => { setActiveView("canvas"); setActiveFolder(folderInfo.folderId); } : undefined}
-                  />
-                );
-              })}
-            </div>
-          </SortableContext>
-        </DndContext>
+        {/* Stop pointer events from bubbling to DraggableWidget drag handler */}
+        <div onPointerDown={(e) => e.stopPropagation()}>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-1">
+                {blocks.map((block, index) => {
+                  const folderInfo = blockFolderMap.get(block.id);
+                  return (
+                    <SortableBlock
+                      key={block.id}
+                      block={block}
+                      index={index}
+                      currentIdx={currentIdx}
+                      isEditing={editingId === block.id}
+                      onStartEdit={startEdit}
+                      onDelete={handleDelete}
+                      onReschedule={rescheduleBlock}
+                      selectedDate={selectedDate}
+                      editState={{ title: editTitle, time: editTime, duration: editDuration, type: editType }}
+                      onEditChange={(field, value) => {
+                        if (field === "title") setEditTitle(value);
+                        else if (field === "time") setEditTime(value);
+                        else if (field === "duration") setEditDuration(value);
+                        else if (field === "type") setEditType(value);
+                      }}
+                      onSaveEdit={saveEdit}
+                      onCancelEdit={() => setEditingId(null)}
+                      folderName={folderInfo?.name}
+                      folderColor={folderInfo?.color}
+                      onBadgeClick={folderInfo ? () => { setActiveView("canvas"); setActiveFolder(folderInfo.folderId); } : undefined}
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
 
         {blocks.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">

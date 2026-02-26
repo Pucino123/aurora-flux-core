@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import { useFlux } from "@/context/FluxContext";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday,
   addMonths, subMonths, startOfWeek, endOfWeek, addDays, isSameMonth,
-  parseISO, startOfDay,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Clock, CheckCircle2, Plus, CalendarDays, Grip, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,9 +24,6 @@ const PRIORITY_BADGE: Record<string, string> = {
   medium: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   low: "bg-muted/40 text-muted-foreground border-border/30",
 };
-
-const FullCalendarView = () => {
-  const { tasks, scheduleBlocks, createBlock, updateTask } = useFlux();
 
 const FullCalendarView = () => {
   const { tasks, scheduleBlocks, createBlock, updateTask } = useFlux();
