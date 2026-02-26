@@ -29,6 +29,7 @@ interface DraggableWidgetProps {
   autoHeight?: boolean;
   onEditAction?: () => void;
   containerStyle?: React.CSSProperties;
+  headerActions?: React.ReactNode;
 }
 
 const GRID = 40;
@@ -104,7 +105,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 const DraggableWidget = ({
-  id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle,
+  id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle, headerActions,
 }: DraggableWidgetProps) => {
   const { widgetPositions, updateWidgetPosition, toggleWidget, getWidgetOpacity, setWidgetOpacity, widgetMinimalMode, systemMode } = useFocusStore();
   const openStyleEditor = useStyleEditorCallback();
@@ -347,6 +348,12 @@ const DraggableWidget = ({
                   animate={{ opacity: isHovered || isBuildMode ? 1 : 0 }}
                   transition={{ duration: 0.15 }}
                 >
+                  {/* Extra actions injected by parent (e.g. calendar icon) */}
+                  {headerActions && (
+                    <div onPointerDown={(e) => e.stopPropagation()} className="flex items-center gap-1">
+                      {headerActions}
+                    </div>
+                  )}
                   {/* Build mode: gear + close */}
                   {isBuildMode && (
                     <>
