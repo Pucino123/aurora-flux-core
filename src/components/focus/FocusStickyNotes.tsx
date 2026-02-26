@@ -274,7 +274,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="fixed z-[9999] w-48 rounded-xl bg-black/75 backdrop-blur-xl border border-white/15 shadow-2xl cursor-default overflow-hidden"
+                  className="fixed z-[9999] w-72 rounded-xl bg-black/75 backdrop-blur-xl border border-white/15 shadow-2xl cursor-default overflow-hidden"
                   style={{ left: popupPos.x, top: popupPos.y, maxHeight: "70vh" }}
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
@@ -297,65 +297,75 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
                   </div>
 
                   <div className="p-2.5 overflow-y-auto" style={{ maxHeight: "calc(70vh - 32px)" }}>
-                    {/* Color swatches */}
-                    <div className="mb-2">
-                      <span className="text-[9px] text-white/40 mb-1.5 block">Color</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {COLORS.map((col) => (
-                          <button
-                            key={col.key}
-                            onClick={() => onUpdateNote(note.id, { color: col.key })}
-                            className={`w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 ${note.color === col.key ? "border-white/80 scale-110" : "border-transparent"}`}
-                            style={{ backgroundColor: col.border }}
-                          />
-                        ))}
+                    {/* 2-column layout */}
+                    <div className="flex gap-3">
+                      {/* LEFT COL — appearance */}
+                      <div className="flex-1 min-w-0">
+                        {/* Color swatches */}
+                        <div className="mb-2.5">
+                          <span className="text-[9px] text-white/40 mb-1.5 block uppercase tracking-wider">Color</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {COLORS.map((col) => (
+                              <button
+                                key={col.key}
+                                onClick={() => onUpdateNote(note.id, { color: col.key })}
+                                className={`w-4 h-4 rounded-full border-2 transition-transform hover:scale-110 ${note.color === col.key ? "border-white/80 scale-110" : "border-transparent"}`}
+                                style={{ backgroundColor: col.border }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        {/* Opacity */}
+                        <div className="mb-2">
+                          <span className="text-[9px] text-white/40 block mb-1 uppercase tracking-wider">Opacity</span>
+                          <Slider value={[note.opacity]} onValueChange={([v]) => onUpdateNote(note.id, { opacity: v })} min={0} max={1} step={0.05}
+                            className="[&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3" />
+                        </div>
+                        {/* Rotation */}
+                        <div>
+                          <span className="text-[9px] text-white/40 block mb-1 uppercase tracking-wider">Rotate <span className="text-white/25">{note.rotation}°</span></span>
+                          <Slider value={[note.rotation]} onValueChange={([v]) => onUpdateNote(note.id, { rotation: v })} min={-15} max={15} step={1}
+                            className="[&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3" />
+                        </div>
                       </div>
-                    </div>
-                    {/* Opacity */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[9px] text-white/40 w-10 shrink-0">Opacity</span>
-                      <Slider value={[note.opacity]} onValueChange={([v]) => onUpdateNote(note.id, { opacity: v })} min={0} max={1} step={0.05}
-                        className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3" />
-                    </div>
-                    {/* Rotation */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-[9px] text-white/40 w-10 shrink-0">Rotate</span>
-                      <Slider value={[note.rotation]} onValueChange={([v]) => onUpdateNote(note.id, { rotation: v })} min={-15} max={15} step={1}
-                        className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3" />
-                      <span className="text-[9px] text-white/30 tabular-nums w-6 text-right">{note.rotation}°</span>
-                    </div>
-                    <div className="border-t border-white/10 mb-2.5" />
-                    {/* Font family */}
-                    <div className="mb-2">
-                      <span className="text-[9px] text-white/40 mb-1.5 block">Font</span>
-                      <div className="flex flex-col gap-1">
-                        {FONT_FAMILIES.map((f) => (
-                          <button key={f.value} onClick={() => onUpdateNote(note.id, { fontFamily: f.value })}
-                            className={`text-left text-[10px] px-2 py-1 rounded transition-colors ${(note.fontFamily ?? FONT_FAMILIES[0].value) === f.value ? "bg-white/20 text-white" : "text-white/50 hover:bg-white/10 hover:text-white/80"}`}
-                            style={{ fontFamily: f.value }}>
-                            {f.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Font size */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[9px] text-white/40 w-10 shrink-0">Size</span>
-                      <Slider value={[note.fontSize ?? 15]} onValueChange={([v]) => onUpdateNote(note.id, { fontSize: v })} min={9} max={22} step={1}
-                        className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3" />
-                      <span className="text-[9px] text-white/30 tabular-nums w-5 text-right">{note.fontSize ?? 15}</span>
-                    </div>
-                    {/* Font weight */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] text-white/40 w-10 shrink-0">Weight</span>
-                      <div className="flex gap-1">
-                        {[300, 400, 600, 700].map((w) => (
-                          <button key={w} onClick={() => onUpdateNote(note.id, { fontWeight: w })}
-                            className={`text-[8px] px-1 py-0.5 rounded border transition-colors ${(note.fontWeight ?? 400) === w ? "bg-white/20 border-white/40 text-white" : "border-white/10 text-white/40 hover:border-white/30"}`}
-                            style={{ fontWeight: w }}>
-                            {w === 300 ? "L" : w === 400 ? "R" : w === 600 ? "S" : "B"}
-                          </button>
-                        ))}
+
+                      {/* Vertical divider */}
+                      <div className="w-px bg-white/10 shrink-0" />
+
+                      {/* RIGHT COL — font */}
+                      <div className="flex-1 min-w-0">
+                        {/* Font family */}
+                        <div className="mb-2.5">
+                          <span className="text-[9px] text-white/40 mb-1.5 block uppercase tracking-wider">Font</span>
+                          <div className="flex flex-col gap-0.5">
+                            {FONT_FAMILIES.map((f) => (
+                              <button key={f.value} onClick={() => onUpdateNote(note.id, { fontFamily: f.value })}
+                                className={`text-left text-[10px] px-1.5 py-0.5 rounded transition-colors truncate ${(note.fontFamily ?? FONT_FAMILIES[0].value) === f.value ? "bg-white/20 text-white" : "text-white/50 hover:bg-white/10 hover:text-white/80"}`}
+                                style={{ fontFamily: f.value }}>
+                                {f.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Font size */}
+                        <div className="mb-2">
+                          <span className="text-[9px] text-white/40 block mb-1 uppercase tracking-wider">Size <span className="text-white/25">{note.fontSize ?? 15}px</span></span>
+                          <Slider value={[note.fontSize ?? 15]} onValueChange={([v]) => onUpdateNote(note.id, { fontSize: v })} min={9} max={22} step={1}
+                            className="[&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3" />
+                        </div>
+                        {/* Font weight */}
+                        <div>
+                          <span className="text-[9px] text-white/40 block mb-1 uppercase tracking-wider">Weight</span>
+                          <div className="flex gap-1 flex-wrap">
+                            {[300, 400, 600, 700].map((w) => (
+                              <button key={w} onClick={() => onUpdateNote(note.id, { fontWeight: w })}
+                                className={`text-[8px] px-1.5 py-0.5 rounded border transition-colors ${(note.fontWeight ?? 400) === w ? "bg-white/20 border-white/40 text-white" : "border-white/10 text-white/40 hover:border-white/30"}`}
+                                style={{ fontWeight: w }}>
+                                {w === 300 ? "L" : w === 400 ? "R" : w === 600 ? "S" : "B"}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
