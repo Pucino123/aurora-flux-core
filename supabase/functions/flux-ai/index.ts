@@ -516,20 +516,55 @@ async function handleDocumentTools(action: string, text: string, apiKey: string)
   });
 }
 
+async function handleCouncilQuick(question: string, mode: string, personaKey: string | undefined, apiKey: string) {
+  const PERSONAS_MAP: Record<string, string> = {
+    oracle: "🔮 THE ORACLE — Intuition, pattern recognition, long-term wisdom. Speak with depth and foresight.",
+    sage: "🌿 THE SAGE — Calm logic, first principles, evidence-based reasoning. Be analytical and grounded.",
+    devil: "🌹 THE DEVIL'S ADVOCATE — Challenge every assumption. Find the fatal flaw. Be provocative.",
+    stoic: "💧 THE STOIC — Emotional resilience, risk mitigation, steady execution. Be pragmatic.",
+    visionary: "☀️ THE VISIONARY — Bold ideas, creative leaps, future possibilities. Be inspiring.",
+  };
+
+  let systemPrompt = "";
+  if (mode === "debate") {
+    systemPrompt = `You are "The Council" — 5 AI personas debating a topic. Format: each persona makes ONE sharp argument (2-3 sentences), then attacks another's point. Use: **🔮 Oracle:**, **🌿 Sage:**, **🌹 Devil's Advocate:**, **💧 Stoic:**, **☀️ Visionary:** as headers. Be concise, direct, and opinionated. Write in the same language as the user's input.`;
+  } else if (mode === "single" && personaKey && PERSONAS_MAP[personaKey]) {
+    systemPrompt = `You are ${PERSONAS_MAP[personaKey]} Respond in 3-5 sentences. Be direct and in character. Write in the same language as the user's input.`;
+  } else {
+    systemPrompt = `You are "The Council" — 5 distinct AI advisors. Each gives a short (2-3 sentence) take. Use: **🔮 Oracle:**, **🌿 Sage:**, **🌹 Devil's Advocate:**, **💧 Stoic:**, **☀️ Visionary:** as headers. Be concise and in character. Write in the same language as the user's input.`;
+  }
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: question }],
+      stream: true,
+    }),
+  });
+
+  const errResp = handleAIError(response);
+  if (errResp) return errResp;
+  if (!response.ok) { const t = await response.text(); throw new Error(`AI error: ${t}`); }
+  return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, messages, context, action, text } = await req.json();
+    const { type, messages, context, action, text, question, mode, persona_key } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     if (type === "classify") return await handleClassify(messages, context, LOVABLE_API_KEY);
     if (type === "plan") return await handlePlan(context, LOVABLE_API_KEY);
-    if (type === "council") return await handleCouncil(messages, LOVABLE_API_KEY);
+    if (type === "council") return await handleCouncil(messages ?? [{ role: "user", content: question || "" }], LOVABLE_API_KEY);
+    if (type === "council-quick") return await handleCouncilQuick(question, mode, persona_key, LOVABLE_API_KEY);
     if (type === "document-chat") return await handleDocumentChat(messages, context, LOVABLE_API_KEY);
     if (type === "document-tools") return await handleDocumentTools(action, text, LOVABLE_API_KEY);
-    return await handleChat(messages, LOVABLE_API_KEY);
+    return await handleChat(Array.isArray(messages) ? messages : [], LOVABLE_API_KEY);
   } catch (e) {
     console.error("flux-ai error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
