@@ -43,32 +43,7 @@ const GoogleCalendarSync = ({ onSynced }: Props) => {
 
   useEffect(() => { checkStatus(); }, [checkStatus]);
 
-  // Handle OAuth callback (code in URL after redirect from Google)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const state = params.get("state");
-    // Only handle if state looks like a UUID (our user_id) — avoids conflicts with other OAuth flows
-    if (!code || !state || !/^[0-9a-f-]{36}$/i.test(state)) return;
-    // Remove from URL
-    const url = new URL(window.location.href);
-    url.searchParams.delete("code");
-    url.searchParams.delete("state");
-    url.searchParams.delete("scope");
-    window.history.replaceState({}, "", url.toString());
-    (async () => {
-      setSyncing(true);
-      const redirect = `${window.location.origin}/calendar`;
-      const res = await callSync("exchange", "POST", { code, redirect_uri: redirect });
-      if (res.error) { toast.error("Google Calendar: " + res.error); setSyncing(false); return; }
-      setConnected(true);
-      const syncRes = await callSync("sync", "POST");
-      if (syncRes.error) toast.error("Sync error: " + syncRes.error);
-      else toast.success(`Synced ${syncRes.count ?? 0} events from Google Calendar`);
-      setSyncing(false);
-      onSynced?.();
-    })();
-  }, []);
+  // OAuth callback is handled by /calendar route (CalendarCallback.tsx)
 
   const handleConnect = async () => {
     setLoading(true);

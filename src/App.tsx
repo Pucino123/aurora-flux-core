@@ -10,6 +10,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import Index from "./pages/Index";
 import Focus from "./pages/Focus";
 import Auth from "./pages/Auth";
+import CalendarCallback from "./pages/CalendarCallback";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
@@ -45,6 +46,7 @@ const App = () => (
               <Routes>
                 <Route path="/focus" element={<Focus />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/calendar" element={<CalendarCallback />} />
                 <Route path="/" element={<Index />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
