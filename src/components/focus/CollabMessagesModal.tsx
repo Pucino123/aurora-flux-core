@@ -52,9 +52,13 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) return;
-    await createTeam(newTeamName.trim());
+    const result = await createTeam(newTeamName.trim());
     setNewTeamName("");
     setShowCreateTeam(false);
+    if (result) {
+      // Switch to chat tab and ensure UI refreshes
+      setTab("chat");
+    }
   };
 
   return (
