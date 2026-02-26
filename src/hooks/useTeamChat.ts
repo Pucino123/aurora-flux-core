@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -25,6 +25,20 @@ export interface TeamMember {
   display_name?: string;
 }
 
+const LAST_READ_KEY = "colab_last_read";
+
+function getLastReadMap(): Record<string, number> {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_READ_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function setLastReadMap(map: Record<string, number>) {
+  localStorage.setItem(LAST_READ_KEY, JSON.stringify(map));
+}
+
 export function useTeamChat() {
   const { user } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
@@ -33,15 +47,22 @@ export function useTeamChat() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [lastReadMap, setLastReadMapState] = useState<Record<string, number>>(getLastReadMap);
 
   // Fetch teams the user belongs to
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: memberRows } = await (supabase as any)
+      const { data: memberRows, error } = await (supabase as any)
         .from("team_members")
         .select("team_id")
         .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Failed to fetch team memberships:", error);
+        setLoading(false);
+        return;
+      }
 
       if (memberRows && memberRows.length > 0) {
         const teamIds = memberRows.map((r: any) => r.team_id);
@@ -120,14 +141,39 @@ export function useTeamChat() {
     };
   }, [activeTeamId, user]);
 
+  // Unread count: messages newer than lastReadAt for the active team NOT from current user
+  const unreadCount = useMemo(() => {
+    if (!user) return 0;
+    let total = 0;
+    for (const team of teams) {
+      const lastRead = lastReadMap[team.id] || 0;
+      // If this team is NOT currently active, count all messages since lastRead from others
+      // If active, still count (they may not have opened the modal)
+      total += messages.filter(
+        (m) => m.team_id === team.id &&
+          m.user_id !== user.id &&
+          new Date(m.created_at).getTime() > lastRead
+      ).length;
+    }
+    return total;
+  }, [messages, teams, lastReadMap, user]);
+
+  const markAsRead = useCallback(() => {
+    if (!activeTeamId) return;
+    const updated = { ...getLastReadMap(), [activeTeamId]: Date.now() };
+    setLastReadMap(updated);
+    setLastReadMapState(updated);
+  }, [activeTeamId]);
+
   const sendMessage = useCallback(
     async (content: string) => {
       if (!user || !activeTeamId || !content.trim()) return;
-      await (supabase as any).from("team_messages").insert({
+      const { error } = await (supabase as any).from("team_messages").insert({
         team_id: activeTeamId,
         user_id: user.id,
         content: content.trim(),
       });
+      if (error) console.error("Failed to send message:", error);
     },
     [user, activeTeamId]
   );
@@ -135,19 +181,26 @@ export function useTeamChat() {
   const createTeam = useCallback(
     async (name: string) => {
       if (!user) return null;
-      const { data: team, error } = await (supabase as any)
+      const { data: team, error: teamError } = await (supabase as any)
         .from("teams")
         .insert({ name, created_by: user.id })
         .select()
         .single();
-      if (error || !team) return null;
+      if (teamError || !team) {
+        console.error("Failed to create team:", teamError);
+        return null;
+      }
 
-      // Add creator as member
-      await (supabase as any).from("team_members").insert({
+      // Add creator as admin member
+      const { error: memberError } = await (supabase as any).from("team_members").insert({
         team_id: (team as any).id,
         user_id: user.id,
         role: "admin",
       });
+      if (memberError) {
+        console.error("Failed to add creator as admin member:", memberError);
+        return null;
+      }
 
       const newTeam = team as Team;
       setTeams((prev) => [...prev, newTeam]);
@@ -160,18 +213,18 @@ export function useTeamChat() {
   const inviteMember = useCallback(
     async (email: string) => {
       if (!activeTeamId) return;
-      // Look up user by email in profiles
       const { data: profile } = await supabase
         .from("profiles")
         .select("id")
         .eq("email", email)
         .maybeSingle();
       if (!profile) return { error: "User not found" };
-      await (supabase as any).from("team_members").insert({
+      const { error } = await (supabase as any).from("team_members").insert({
         team_id: activeTeamId,
         user_id: profile.id,
         role: "member",
       });
+      if (error) return { error: error.message };
       return { error: null };
     },
     [activeTeamId]
@@ -185,6 +238,8 @@ export function useTeamChat() {
     members,
     onlineUsers,
     loading,
+    unreadCount,
+    markAsRead,
     sendMessage,
     createTeam,
     inviteMember,

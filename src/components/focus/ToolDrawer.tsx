@@ -60,14 +60,7 @@ const ToolDrawer = () => {
   const [collabOpen, setCollabOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
   const suggestions = useMemo(() => getSuggestedWidgets(activeWidgets as string[]), [activeWidgets]);
-  const { messages, hasTeams } = useTeamChat();
-
-  // Count unread messages (simple heuristic: messages from last 24h not from current user)
-  const unreadCount = useMemo(() => {
-    if (!hasTeams) return 0;
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    return messages.filter(m => new Date(m.created_at).getTime() > cutoff).length;
-  }, [messages, hasTeams]);
+  const { unreadCount, markAsRead } = useTeamChat();
   return (
     <>
       {/* Bottom bar with trigger + mode switcher */}
@@ -91,7 +84,7 @@ const ToolDrawer = () => {
 
         {/* Collab button – opens modal without switching mode */}
         <button
-          onClick={() => setCollabOpen(true)}
+          onClick={() => { setCollabOpen(true); markAsRead(); }}
           title="Collab"
           className="relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all text-white/30 hover:text-white/60 hover:bg-white/5"
         >

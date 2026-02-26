@@ -444,6 +444,87 @@ export type Database = {
           },
         ]
       }
+      google_calendar_events: {
+        Row: {
+          all_day: boolean
+          calendar_id: string | null
+          created_at: string
+          description: string | null
+          end_time: string | null
+          google_event_id: string
+          id: string
+          scheduled_date: string
+          source: string
+          start_time: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          all_day?: boolean
+          calendar_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          google_event_id: string
+          id?: string
+          scheduled_date: string
+          source?: string
+          start_time: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          all_day?: boolean
+          calendar_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          google_event_id?: string
+          id?: string
+          scheduled_date?: string
+          source?: string
+          start_time?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      google_calendar_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          refresh_token: string | null
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          refresh_token?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          refresh_token?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       idea_versions: {
         Row: {
           change_summary: string | null
@@ -750,7 +831,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_team_admin: { Args: { p_team_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

@@ -1,29 +1,45 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useFlux } from "@/context/FluxContext";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday,
   addMonths, subMonths, startOfWeek, endOfWeek, addDays, isSameMonth,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Clock, CheckCircle2, Plus, CalendarDays, Grip, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, CheckCircle2, Plus, CalendarDays, Grip, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import GoogleCalendarSync from "@/components/focus/GoogleCalendarSync";
 
 type ViewMode = "month" | "week";
 
 const COLOR_MAP: Record<string, string> = {
   deep: "bg-primary/20 border-primary/40 text-primary",
-  meeting: "bg-blue-500/20 border-blue-500/40 text-blue-400",
-  personal: "bg-green-500/20 border-green-500/40 text-green-400",
-  break: "bg-orange-500/20 border-orange-500/40 text-orange-400",
-  workout: "bg-emerald-500/20 border-emerald-500/40 text-emerald-400",
-  reading: "bg-violet-500/20 border-violet-500/40 text-violet-400",
+  meeting: "bg-secondary/60 border-border/50 text-foreground",
+  personal: "bg-secondary/40 border-border/40 text-foreground/80",
+  break: "bg-muted/50 border-border/30 text-muted-foreground",
+  workout: "bg-secondary/50 border-border/40 text-foreground/80",
+  reading: "bg-primary/15 border-primary/30 text-primary/80",
+  google: "bg-primary/10 border-primary/30 text-primary/90",
 };
 
 const PRIORITY_BADGE: Record<string, string> = {
-  high: "bg-red-500/20 text-red-400 border-red-500/30",
-  medium: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  high: "bg-destructive/15 text-destructive border-destructive/30",
+  medium: "bg-secondary/60 text-muted-foreground border-border/30",
   low: "bg-muted/40 text-muted-foreground border-border/30",
 };
+
+interface GoogleEvent {
+  id: string;
+  user_id: string;
+  google_event_id: string;
+  title: string;
+  description?: string;
+  start_time: string;
+  end_time?: string;
+  scheduled_date: string;
+  all_day: boolean;
+  source: string;
+}
 
 const FullCalendarView = () => {
   const { tasks, scheduleBlocks, createBlock, updateTask } = useFlux();
@@ -36,6 +52,15 @@ const FullCalendarView = () => {
   const [newBlockType, setNewBlockType] = useState("deep");
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [googleEvents, setGoogleEvents] = useState<GoogleEvent[]>([]);
+
+  // Fetch Google Calendar events
+  const fetchGoogleEvents = useCallback(async () => {
+    const { data } = await (supabase as any).from("google_calendar_events").select("*").order("start_time");
+    if (data) setGoogleEvents(data as GoogleEvent[]);
+  }, []);
+
+  useEffect(() => { fetchGoogleEvents(); }, [fetchGoogleEvents]);
 
   // ── Month grid ──
   const monthStart = startOfMonth(currentDate);
@@ -47,23 +72,24 @@ const FullCalendarView = () => {
   // ── Week grid ──
   const weekStart = startOfWeek(selectedDate);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const hours = Array.from({ length: 18 }, (_, i) => i + 6); // 6am–11pm
+  const hours = Array.from({ length: 18 }, (_, i) => i + 6);
 
   const dayEvents = useMemo(() => {
-    const map = new Map<string, { tasks: typeof tasks; blocks: typeof scheduleBlocks }>();
+    const map = new Map<string, { tasks: typeof tasks; blocks: typeof scheduleBlocks; googleEvents: GoogleEvent[] }>();
     const allDays = viewMode === "month" ? monthDays : weekDays;
     for (const day of allDays) {
       const key = format(day, "yyyy-MM-dd");
       map.set(key, {
         tasks: tasks.filter(t => t.due_date === key || t.scheduled_date === key),
         blocks: scheduleBlocks.filter(b => b.scheduled_date === key),
+        googleEvents: googleEvents.filter(e => e.scheduled_date === key),
       });
     }
     return map;
-  }, [monthDays, weekDays, tasks, scheduleBlocks, viewMode]);
+  }, [monthDays, weekDays, tasks, scheduleBlocks, googleEvents, viewMode]);
 
   const selectedKey = format(selectedDate, "yyyy-MM-dd");
-  const selectedEvents = dayEvents.get(selectedKey) || { tasks: [], blocks: [] };
+  const selectedEvents = dayEvents.get(selectedKey) || { tasks: [], blocks: [], googleEvents: [] };
 
   const handleAddBlock = async () => {
     if (!newBlockTitle.trim()) return;
@@ -80,7 +106,6 @@ const FullCalendarView = () => {
     setShowAddBlock(false);
   };
 
-  // Drag to reschedule task
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData("task-id", taskId);
     setDraggingTaskId(taskId);
@@ -111,7 +136,10 @@ const FullCalendarView = () => {
           </h2>
           <p className="text-sm text-muted-foreground">Plan your time with drag-and-drop</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Google Calendar Sync */}
+          <GoogleCalendarSync onSynced={fetchGoogleEvents} />
+
           {/* View toggle */}
           <div className="flex items-center bg-secondary/50 rounded-lg p-0.5">
             {(["month", "week"] as ViewMode[]).map((v) => (
@@ -159,7 +187,8 @@ const FullCalendarView = () => {
                 {monthDays.map(day => {
                   const key = format(day, "yyyy-MM-dd");
                   const events = dayEvents.get(key);
-                  const hasEvents = (events?.tasks.length || 0) + (events?.blocks.length || 0) > 0;
+                  const totalCount = (events?.tasks.length || 0) + (events?.blocks.length || 0) + (events?.googleEvents.length || 0);
+                  const hasEvents = totalCount > 0;
                   const isSelected = isSameDay(day, selectedDate);
                   const isCurrentMonth = isSameMonth(day, currentDate);
                   const isDragOver = dragOverDate === key;
@@ -181,12 +210,18 @@ const FullCalendarView = () => {
                         {format(day, "d")}
                       </span>
                       <div className="mt-1 space-y-0.5">
-                        {events?.blocks.slice(0, 2).map(b => (
+                        {events?.blocks.slice(0, 1).map(b => (
                           <div key={b.id} className={`text-[9px] px-1 py-0.5 rounded truncate border ${COLOR_MAP[b.type] || COLOR_MAP.deep}`}>
                             {b.time} {b.title}
                           </div>
                         ))}
-                        {events?.tasks.slice(0, 2).map(t => (
+                        {events?.googleEvents.slice(0, 1).map(e => (
+                          <div key={e.id} className={`text-[9px] px-1 py-0.5 rounded truncate border ${COLOR_MAP.google} flex items-center gap-0.5`}>
+                            <Calendar size={6} className="shrink-0" />
+                            {e.start_time} {e.title}
+                          </div>
+                        ))}
+                        {events?.tasks.slice(0, 1).map(t => (
                           <div
                             key={t.id}
                             draggable
@@ -200,8 +235,8 @@ const FullCalendarView = () => {
                             {t.title}
                           </div>
                         ))}
-                        {hasEvents && (events?.tasks.length || 0) + (events?.blocks.length || 0) > 4 && (
-                          <div className="text-[9px] text-muted-foreground/50 px-1">+{((events?.tasks.length || 0) + (events?.blocks.length || 0)) - 4} more</div>
+                        {hasEvents && totalCount > 3 && (
+                          <div className="text-[9px] text-muted-foreground/50 px-1">+{totalCount - 3} more</div>
                         )}
                       </div>
                     </div>
@@ -213,7 +248,6 @@ const FullCalendarView = () => {
             /* ── Week view ── */
             <div className="overflow-x-auto">
               <div className="min-w-[600px]">
-                {/* Day headers */}
                 <div className="grid grid-cols-8 gap-px bg-border/20 rounded-t-xl overflow-hidden border border-border/20 border-b-0">
                   <div className="bg-background py-2" />
                   {weekDays.map(day => (
@@ -231,7 +265,6 @@ const FullCalendarView = () => {
                     </div>
                   ))}
                 </div>
-                {/* Time slots */}
                 <div className="border border-border/20 rounded-b-xl overflow-hidden">
                   {hours.map(hour => (
                     <div key={hour} className="grid grid-cols-8 gap-px bg-border/10 min-h-[40px]">
@@ -240,6 +273,7 @@ const FullCalendarView = () => {
                         const key = format(day, "yyyy-MM-dd");
                         const timeStr = `${String(hour).padStart(2, "0")}:00`;
                         const blocks = (dayEvents.get(key)?.blocks || []).filter(b => b.time === timeStr);
+                        const gEvents = (dayEvents.get(key)?.googleEvents || []).filter(e => e.start_time === timeStr || e.start_time.startsWith(`${String(hour).padStart(2, "0")}`));
                         return (
                           <div
                             key={key}
@@ -252,6 +286,12 @@ const FullCalendarView = () => {
                             {blocks.map(b => (
                               <div key={b.id} className={`text-[9px] px-1 py-0.5 rounded truncate border ${COLOR_MAP[b.type] || COLOR_MAP.deep}`}>
                                 {b.title}
+                              </div>
+                            ))}
+                            {gEvents.map(e => (
+                              <div key={e.id} className={`text-[9px] px-1 py-0.5 rounded truncate border ${COLOR_MAP.google} flex items-center gap-0.5`}>
+                                <Calendar size={6} className="shrink-0" />
+                                {e.title}
                               </div>
                             ))}
                           </div>
@@ -316,10 +356,22 @@ const FullCalendarView = () => {
 
             {/* Events list */}
             <div className="space-y-2">
-              {selectedEvents.blocks.length === 0 && selectedEvents.tasks.length === 0 ? (
+              {selectedEvents.blocks.length === 0 && selectedEvents.tasks.length === 0 && selectedEvents.googleEvents.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-4">No events today</p>
               ) : (
                 <>
+                  {/* Google events */}
+                  {selectedEvents.googleEvents.map(e => (
+                    <div key={e.id} className={`flex items-start gap-2 p-2 rounded-lg border ${COLOR_MAP.google}`}>
+                      <Calendar size={12} className="mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{e.title}</p>
+                        <p className="text-[10px] opacity-70">{e.all_day ? "All day" : `${e.start_time}${e.end_time ? ` – ${e.end_time}` : ""}`}</p>
+                      </div>
+                      <span className="text-[8px] text-muted-foreground/50 shrink-0 mt-0.5">Google</span>
+                    </div>
+                  ))}
+                  {/* Schedule blocks */}
                   {selectedEvents.blocks.map(b => {
                     const linkedTask = b.task_id ? tasks.find(t => t.id === b.task_id) : null;
                     return (
@@ -339,6 +391,7 @@ const FullCalendarView = () => {
                       </div>
                     );
                   })}
+                  {/* Tasks */}
                   {selectedEvents.tasks.map(t => (
                     <div
                       key={t.id}
