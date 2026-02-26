@@ -14,7 +14,7 @@ interface CollabMessagesModalProps {
 type Tab = "chat" | "contacts";
 
 const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) => {
-  const { messages, members, sendMessage, hasTeams, loading, teams, activeTeamId, setActiveTeamId, createTeam, inviteMember } = useTeamChat();
+  const { messages, members, sendMessage, hasTeams, loading, teams, activeTeamId, setActiveTeamId, createTeam, inviteMember, markAsRead } = useTeamChat();
   const { user } = useAuth();
   const [text, setText] = useState("");
   const [tab, setTab] = useState<Tab>("chat");
@@ -26,8 +26,11 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [open, messages.length]);
+    if (open) {
+      markAsRead();
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [open, messages.length, markAsRead]);
 
   const handleSend = async () => { if (!text.trim()) return; await sendMessage(text); setText(""); };
   const getMemberName = (userId: string) => {
@@ -186,8 +189,8 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     {inviteStatus === "ok" ? <Check size={12} /> : inviteStatus === "sending" ? "..." : "Invite"}
                   </button>
                 </div>
-                {inviteStatus === "ok" && <p className="text-[11px] text-green-400/80 mt-2 flex items-center gap-1"><Check size={11} /> Invited!</p>}
-                {inviteStatus === "error" && <p className="text-[11px] text-red-400/80 mt-2 flex items-center gap-1"><AlertCircle size={11} /> {inviteError || "User not found"}</p>}
+                {inviteStatus === "ok" && <p className="text-[11px] text-foreground/60 mt-2 flex items-center gap-1"><Check size={11} /> Invited!</p>}
+                {inviteStatus === "error" && <p className="text-[11px] text-foreground/50 mt-2 flex items-center gap-1"><AlertCircle size={11} /> {inviteError || "User not found"}</p>}
               </div>
 
               {/* Members list */}
