@@ -9,6 +9,7 @@ import { FocusProvider } from "./context/FocusContext";
 import { AuthProvider } from "./hooks/useAuth";
 import Index from "./pages/Index";
 import Focus from "./pages/Focus";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
@@ -43,6 +44,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/focus" element={<Focus />} />
+                <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<Index />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

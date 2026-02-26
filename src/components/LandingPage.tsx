@@ -49,7 +49,7 @@ const FeatureMarquee = () => (
   <div className="py-2 space-y-3 select-none">
     {/* Row 1: scrolls left */}
     <div className="overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-      <div className="flex gap-3 w-max animate-[marquee_32s_linear_infinite]">
+      <div className="flex gap-3 w-max animate-[marquee_55s_linear_infinite]">
         {[...FEATURES_ROW1, ...FEATURES_ROW1].map((f, i) => (
           <MarqueePill key={i} icon={f.icon} title={f.title} />
         ))}
@@ -57,7 +57,7 @@ const FeatureMarquee = () => (
     </div>
     {/* Row 2: scrolls right */}
     <div className="overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-      <div className="flex gap-3 w-max animate-[marquee-reverse_32s_linear_infinite]">
+      <div className="flex gap-3 w-max animate-[marquee-reverse_55s_linear_infinite]">
         {[...FEATURES_ROW2, ...FEATURES_ROW2].map((f, i) => (
           <MarqueePill key={i} icon={f.icon} title={f.title} />
         ))}
