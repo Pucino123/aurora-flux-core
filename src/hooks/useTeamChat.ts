@@ -68,6 +68,16 @@ export function getUserColor(userId: string): string {
 
 export function useTeamChat() {
   const { user } = useAuth();
+
+  // All refs first (stable across renders)
+  const modalOpenRef = useRef(false);
+  const initialLoadRef = useRef(true);
+  const typingTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const isTypingRef = useRef(false);
+  const typingResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // All state
   const [teams, setTeams] = useState<Team[]>([]);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
   const [messages, setMessages] = useState<TeamMessage[]>([]);
@@ -76,12 +86,6 @@ export function useTeamChat() {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [lastReadMap, setLastReadMapState] = useState<Record<string, number>>(getLastReadMap);
-  const modalOpenRef = useRef(false);
-  const initialLoadRef = useRef(true);
-  const typingTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const isTypingRef = useRef(false);
-  const typingResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch teams the user belongs to
   useEffect(() => {
