@@ -228,32 +228,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         <FeatureMarquee />
       </section>
 
-      {/* ── How it works ── */}
-      <section className="relative z-10 px-6 pb-24">
-        <div className="max-w-3xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-14">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
-              How it <em style={{ fontStyle: "italic" }}>works</em>
-            </h2>
-          </motion.div>
-          <div className="space-y-6">
-            {[
-              { step: "1", title: "Build your dashboard", desc: "Choose from 12+ widgets — tasks, calendar, budget, AI council, notes. Drag to arrange, resize as you like." },
-              { step: "2", title: "Let AI prioritize your day", desc: "Flux analyzes tasks, deadlines and energy to generate a perfect daily plan — auto-updated in real-time." },
-              { step: "3", title: "Stay in flow, not in apps", desc: "Everything in one place. No more tab switching between Notion, Google Cal, Todoist, and spreadsheets." },
-            ].map((s, i) => (
-              <motion.div key={s.step} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: i * 0.12 }} className="flex items-start gap-5 group">
-                <div className="shrink-0 w-10 h-10 rounded-2xl bg-white/20 backdrop-blur border border-white/30 flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:bg-white/30 transition-all">{s.step}</div>
-                <div className="flex-1 rounded-2xl p-5 border border-white/20 hover:bg-white/20 transition-all" style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(20px)" }}>
-                  <h3 className="text-white font-bold text-base mb-1" style={{ fontFamily: "Georgia, serif" }}>{s.title}</h3>
-                  <p className="text-white/60 text-sm leading-relaxed">{s.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── CTA ── */}
       <section className="relative z-10 px-6 pb-28">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
