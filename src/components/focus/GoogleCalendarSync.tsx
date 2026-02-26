@@ -70,9 +70,13 @@ const GoogleCalendarSync = ({ onSynced }: Props) => {
 
   const handleDisconnect = async () => {
     setSyncing(true);
-    const res = await callSync("disconnect", "DELETE");
+    const res = await callSync("disconnect", "POST");
     if (res.error) toast.error("Disconnect error: " + res.error);
-    else { toast.success("Google Calendar disconnected. Your local events are safe."); setConnected(false); onSynced?.(); }
+    else {
+      toast.success("Google Calendar disconnected.");
+      setConnected(false);
+      onSynced?.();
+    }
     setSyncing(false);
   };
 

@@ -1,4 +1,4 @@
-import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo } from "lucide-react";
+import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,7 +8,10 @@ import NotificationBell from "./NotificationBell";
 import { useFlux } from "@/context/FluxContext";
 import { t } from "@/lib/i18n";
 import { PERSONAS } from "./TheCouncil";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
+import { useRef, useState, useEffect } from "react";
+import { toast } from "sonner";
 
 interface FluxSidebarProps {
   visible: boolean;
@@ -19,14 +22,58 @@ interface FluxSidebarProps {
 const UserSection = () => {
   const { user, signOut } = useAuth();
   const name = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // Load stored avatar
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("avatar_url").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (data && (data as any).avatar_url) setAvatarUrl((data as any).avatar_url);
+    });
+  }, [user]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `avatars/${user.id}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("document-images").upload(path, file, { upsert: true });
+    if (uploadError) {
+      toast.error("Failed to upload avatar");
+      setUploading(false);
+      return;
+    }
+    const { data: { publicUrl } } = supabase.storage.from("document-images").getPublicUrl(path);
+    await supabase.from("profiles").update({ avatar_url: publicUrl } as any).eq("id", user.id);
+    setAvatarUrl(publicUrl);
+    toast.success("Avatar updated!");
+    setUploading(false);
+  };
+
   return (
     <div className="px-3 pt-3 border-t border-border/20">
       <div className="flex items-center gap-3 py-1">
-        <Avatar className="w-7 h-7">
-          <AvatarFallback className="text-[11px] font-semibold bg-primary/10 text-primary">
-            {name[0]?.toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative group cursor-pointer" onClick={() => fileRef.current?.click()}>
+          <Avatar className="w-7 h-7">
+            {avatarUrl ? (
+              <AvatarImage src={avatarUrl} alt={name} className="object-cover" />
+            ) : null}
+            <AvatarFallback className="text-[11px] font-semibold bg-primary/10 text-primary">
+              {name[0]?.toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            {uploading ? (
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            ) : (
+              <Camera size={8} className="text-white" />
+            )}
+          </div>
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-medium text-foreground truncate">{name}</p>
           <p className="text-[11px] text-muted-foreground leading-tight">{t("app.plan")}</p>

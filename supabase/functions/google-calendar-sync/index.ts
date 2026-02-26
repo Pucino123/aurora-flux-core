@@ -159,8 +159,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ connected: !!data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── Disconnect ──
-    if (req.method === "DELETE" && action === "disconnect") {
+    // ── Disconnect ── (accept both DELETE and POST with action=disconnect)
+    if ((req.method === "DELETE" || req.method === "POST") && action === "disconnect") {
       await supabase.from("google_calendar_tokens" as any).delete().eq("user_id", user.id);
       await supabase.from("google_calendar_events" as any).delete().eq("user_id", user.id);
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

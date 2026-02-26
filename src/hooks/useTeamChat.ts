@@ -23,6 +23,7 @@ export interface TeamMember {
   user_id: string;
   role: string;
   display_name?: string;
+  avatar_url?: string;
 }
 
 const LAST_READ_KEY = "colab_last_read";
