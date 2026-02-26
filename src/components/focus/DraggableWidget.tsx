@@ -347,23 +347,32 @@ const DraggableWidget = ({
                   animate={{ opacity: isHovered || isBuildMode ? 1 : 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  {/* Build mode: only gear icon */}
+                  {/* Build mode: gear + close */}
                   {isBuildMode && (
-                    <button
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={() => {
-                        if (openStyleEditor) {
-                          openStyleEditor(id);
-                        }
-                        setShowOpacity(false);
-                        setShowFontSize(false);
-                      }}
-                      className={`p-1 rounded-lg transition-colors bg-white/10 hover:bg-white/20`}
-                      style={{ color: iconColor }}
-                      title="Widget Style"
-                    >
-                      <Settings2 size={14} />
-                    </button>
+                    <>
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => {
+                          if (openStyleEditor) openStyleEditor(id);
+                          setShowOpacity(false);
+                          setShowFontSize(false);
+                        }}
+                        className="p-1 rounded-lg transition-colors bg-white/10 hover:bg-white/20"
+                        style={{ color: iconColor }}
+                        title="Widget Style"
+                      >
+                        <Settings2 size={14} />
+                      </button>
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => toggleWidget(id)}
+                        className="p-1 rounded-lg transition-colors bg-white/10 hover:bg-red-500/30"
+                        style={{ color: iconColor }}
+                        title="Remove widget"
+                      >
+                        <X size={14} />
+                      </button>
+                    </>
                   )}
                   {/* Non-build mode controls */}
                   {!isBuildMode && (

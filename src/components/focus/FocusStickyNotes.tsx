@@ -46,7 +46,18 @@ interface NoteData {
   opacity: number;
   w?: number;
   h?: number;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: number;
 }
+
+const FONT_FAMILIES = [
+  { label: "Handwritten", value: "'Caveat', cursive, sans-serif" },
+  { label: "System", value: "inherit" },
+  { label: "Serif", value: "Georgia, serif" },
+  { label: "Mono", value: "ui-monospace, monospace" },
+  { label: "Rounded", value: "'Nunito', sans-serif" },
+];
 
 interface StickyNoteItemProps {
   note: NoteData;
@@ -256,7 +267,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
                 />
               </div>
               {/* Rotation slider */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-3">
                 <span className="text-[9px] text-white/40 w-10 shrink-0">Rotate</span>
                 <Slider
                   value={[note.rotation]}
@@ -267,6 +278,53 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
                   className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3"
                 />
                 <span className="text-[9px] text-white/30 tabular-nums w-6 text-right">{note.rotation}°</span>
+              </div>
+              {/* Divider */}
+              <div className="border-t border-white/10 mb-2.5" />
+              {/* Font family */}
+              <div className="mb-2">
+                <span className="text-[9px] text-white/40 mb-1.5 block">Font</span>
+                <div className="flex flex-col gap-1">
+                  {FONT_FAMILIES.map((f) => (
+                    <button
+                      key={f.value}
+                      onClick={() => onUpdateNote(note.id, { fontFamily: f.value })}
+                      className={`text-left text-[10px] px-2 py-1 rounded transition-colors ${(note.fontFamily ?? FONT_FAMILIES[0].value) === f.value ? "bg-white/20 text-white" : "text-white/50 hover:bg-white/10 hover:text-white/80"}`}
+                      style={{ fontFamily: f.value }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Font size */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[9px] text-white/40 w-10 shrink-0">Size</span>
+                <Slider
+                  value={[note.fontSize ?? 15]}
+                  onValueChange={([v]) => onUpdateNote(note.id, { fontSize: v })}
+                  min={9}
+                  max={22}
+                  step={1}
+                  className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-range]]:bg-white/30 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-white/40 [&_[data-radix-slider-thumb]]:w-3 [&_[data-radix-slider-thumb]]:h-3"
+                />
+                <span className="text-[9px] text-white/30 tabular-nums w-5 text-right">{note.fontSize ?? 15}</span>
+              </div>
+              {/* Font weight */}
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-white/40 w-10 shrink-0">Weight</span>
+                <div className="flex gap-1">
+                  {[300, 400, 600, 700].map((w) => (
+                    <button
+                      key={w}
+                      onClick={() => onUpdateNote(note.id, { fontWeight: w })}
+                      className={`text-[8px] px-1 py-0.5 rounded border transition-colors ${(note.fontWeight ?? 400) === w ? "bg-white/20 border-white/40 text-white" : "border-white/10 text-white/40 hover:border-white/30"}`}
+                      style={{ fontWeight: w }}
+                    >
+                      {w === 300 ? "L" : w === 400 ? "R" : w === 600 ? "S" : "B"}
+                    </button>
+                  ))}
+                </div>
               </div>
             </motion.div>
           )}
@@ -340,7 +398,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
           onChange={(e) => onUpdateText(note.id, e.target.value)}
           placeholder="Write a note..."
           className={`flex-1 w-full bg-transparent text-xs leading-relaxed outline-none resize-none px-2.5 pb-2 ${placeholderClass}`}
-          style={{ fontFamily: "'Caveat', cursive, sans-serif", fontSize: "15px", color: textColor }}
+          style={{ fontFamily: note.fontFamily ?? "'Caveat', cursive, sans-serif", fontSize: `${note.fontSize ?? 15}px`, fontWeight: note.fontWeight ?? 400, color: textColor }}
         />
         {/* Resize handle */}
         <div
