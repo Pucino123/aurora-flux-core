@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -39,6 +39,28 @@ function setLastReadMap(map: Record<string, number>) {
   localStorage.setItem(LAST_READ_KEY, JSON.stringify(map));
 }
 
+// Request browser notification permission
+async function requestNotificationPermission(): Promise<boolean> {
+  if (!("Notification" in window)) return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  const perm = await Notification.requestPermission();
+  return perm === "granted";
+}
+
+function sendBrowserNotification(title: string, body: string) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    new Notification(title, {
+      body,
+      icon: "/favicon.png",
+      badge: "/favicon.png",
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
 export function useTeamChat() {
   const { user } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
@@ -48,11 +70,15 @@ export function useTeamChat() {
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [lastReadMap, setLastReadMapState] = useState<Record<string, number>>(getLastReadMap);
+  // Track whether the modal is currently open so we don't notify for visible messages
+  const modalOpenRef = useRef(false);
+  const initialLoadRef = useRef(true);
 
   // Fetch teams the user belongs to
   useEffect(() => {
     if (!user) return;
     (async () => {
+      setLoading(true);
       const { data: memberRows, error } = await (supabase as any)
         .from("team_members")
         .select("team_id")
@@ -70,10 +96,14 @@ export function useTeamChat() {
           .from("teams")
           .select("*")
           .in("id", teamIds);
-        setTeams((teamRows || []) as Team[]);
-        if (!activeTeamId && teamRows && teamRows.length > 0) {
-          setActiveTeamId(teamRows[0].id);
-        }
+        const fetchedTeams = (teamRows || []) as Team[];
+        setTeams(fetchedTeams);
+        setActiveTeamId((prev) => {
+          if (prev && fetchedTeams.some(t => t.id === prev)) return prev;
+          return fetchedTeams.length > 0 ? fetchedTeams[0].id : null;
+        });
+      } else {
+        setTeams([]);
       }
       setLoading(false);
     })();
@@ -82,6 +112,7 @@ export function useTeamChat() {
   // Fetch messages & members when active team changes
   useEffect(() => {
     if (!activeTeamId || !user) return;
+    initialLoadRef.current = true;
 
     (async () => {
       const [msgRes, memRes] = await Promise.all([
@@ -98,6 +129,8 @@ export function useTeamChat() {
       ]);
       setMessages((msgRes.data || []) as TeamMessage[]);
       setMembers((memRes.data || []) as TeamMember[]);
+      // After initial fetch, new messages via realtime are "new"
+      setTimeout(() => { initialLoadRef.current = false; }, 500);
     })();
 
     // Realtime subscription for new messages
@@ -112,10 +145,20 @@ export function useTeamChat() {
           filter: `team_id=eq.${activeTeamId}`,
         },
         (payload) => {
+          const newMsg = payload.new as TeamMessage;
           setMessages((prev) => {
-            if (prev.some((m) => m.id === (payload.new as any).id)) return prev;
-            return [...prev, payload.new as TeamMessage];
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
           });
+          // Browser notification if not from current user, not initial load, modal is closed
+          if (!initialLoadRef.current && newMsg.user_id !== user.id && !modalOpenRef.current) {
+            setMembers((currentMembers) => {
+              const sender = currentMembers.find(m => m.user_id === newMsg.user_id);
+              const senderName = (sender as any)?.display_name || "Someone";
+              sendBrowserNotification(`New message from ${senderName}`, newMsg.content);
+              return currentMembers;
+            });
+          }
         }
       )
       .subscribe();
@@ -141,16 +184,15 @@ export function useTeamChat() {
     };
   }, [activeTeamId, user]);
 
-  // Unread count: messages newer than lastReadAt for the active team NOT from current user
+  // Unread count: messages newer than lastReadAt for ALL teams NOT from current user
   const unreadCount = useMemo(() => {
     if (!user) return 0;
     let total = 0;
     for (const team of teams) {
       const lastRead = lastReadMap[team.id] || 0;
-      // If this team is NOT currently active, count all messages since lastRead from others
-      // If active, still count (they may not have opened the modal)
       total += messages.filter(
-        (m) => m.team_id === team.id &&
+        (m) =>
+          m.team_id === team.id &&
           m.user_id !== user.id &&
           new Date(m.created_at).getTime() > lastRead
       ).length;
@@ -164,6 +206,14 @@ export function useTeamChat() {
     setLastReadMap(updated);
     setLastReadMapState(updated);
   }, [activeTeamId]);
+
+  const setModalOpen = useCallback((open: boolean) => {
+    modalOpenRef.current = open;
+    if (open) {
+      // Request notification permission when the user opens the modal
+      requestNotificationPermission();
+    }
+  }, []);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -196,6 +246,7 @@ export function useTeamChat() {
         team_id: (team as any).id,
         user_id: user.id,
         role: "admin",
+        display_name: user.user_metadata?.display_name || user.email?.split("@")[0] || "Admin",
       });
       if (memberError) {
         console.error("Failed to add creator as admin member:", memberError);
@@ -210,12 +261,35 @@ export function useTeamChat() {
     [user]
   );
 
+  const leaveTeam = useCallback(
+    async (teamId: string) => {
+      if (!user) return { error: "Not authenticated" };
+      const { error } = await (supabase as any)
+        .from("team_members")
+        .delete()
+        .eq("team_id", teamId)
+        .eq("user_id", user.id);
+      if (error) {
+        console.error("Failed to leave team:", error);
+        return { error: error.message };
+      }
+      setTeams((prev) => {
+        const updated = prev.filter((t) => t.id !== teamId);
+        setActiveTeamId(updated.length > 0 ? updated[0].id : null);
+        return updated;
+      });
+      if (teamId === activeTeamId) setMessages([]);
+      return { error: null };
+    },
+    [user, activeTeamId]
+  );
+
   const inviteMember = useCallback(
     async (email: string) => {
       if (!activeTeamId) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, display_name")
         .eq("email", email)
         .maybeSingle();
       if (!profile) return { error: "User not found" };
@@ -223,6 +297,7 @@ export function useTeamChat() {
         team_id: activeTeamId,
         user_id: profile.id,
         role: "member",
+        display_name: profile.display_name,
       });
       if (error) return { error: error.message };
       return { error: null };
@@ -240,8 +315,10 @@ export function useTeamChat() {
     loading,
     unreadCount,
     markAsRead,
+    setModalOpen,
     sendMessage,
     createTeam,
+    leaveTeam,
     inviteMember,
     hasTeams: teams.length > 0,
   };

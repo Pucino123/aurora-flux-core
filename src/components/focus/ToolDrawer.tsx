@@ -60,7 +60,7 @@ const ToolDrawer = () => {
   const [collabOpen, setCollabOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
   const suggestions = useMemo(() => getSuggestedWidgets(activeWidgets as string[]), [activeWidgets]);
-  const { unreadCount, markAsRead } = useTeamChat();
+  const { unreadCount, markAsRead, setModalOpen } = useTeamChat();
   return (
     <>
       {/* Bottom bar with trigger + mode switcher */}
