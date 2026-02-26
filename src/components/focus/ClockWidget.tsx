@@ -115,8 +115,8 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
 
   const tzLabel = clockSecondaryTz ? clockSecondaryTz.split("/").pop()?.replace("_", " ") : "";
 
-  // Productivity ring
-  const showRing = systemMode === "focus" && tasksTotal > 0;
+  // Productivity ring — disabled to keep clock clean
+  const showRing = false && systemMode === "focus" && tasksTotal > 0;
   const ringProgress = tasksTotal > 0 ? tasksDone / tasksTotal : 0;
   const ringSize = clockFontSize * 1.8;
   const ringStroke = 3;

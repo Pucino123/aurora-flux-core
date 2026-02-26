@@ -107,10 +107,12 @@ const ImageInsert = ({ exec, lm }: { exec: (cmd: string, value?: string) => void
     setUploading(true);
     try {
       const { supabase } = await import("@/integrations/supabase/client");
-      const { data: { user } } = await supabase.auth.getUser();
+      // Check session (not just getUser which can fail without network)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
       if (!user) {
         const { toast } = await import("sonner");
-        toast.error("Log ind for at uploade billeder");
+        toast.error("Please sign in to upload images");
         setUploading(false);
         return;
       }

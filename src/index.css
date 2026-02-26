@@ -97,24 +97,29 @@
   }
 
   .dark {
-    /* Apple macOS Sequoia / iOS 18 dark palette */
-    --background: 0 0% 5%;
-    --foreground: 0 0% 93%;
+    /* Apple macOS Sonoma / iOS 17+ accurate dark palette */
+    /* System Background: #1C1C1E  → hsl(240 2% 12%) */
+    --background: 240 2% 11%;
+    --foreground: 0 0% 92%;
 
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 93%;
+    /* Elevated surfaces: #2C2C2E → hsl(240 2% 18%) */
+    --card: 240 2% 17%;
+    --card-foreground: 0 0% 92%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 93%;
+    /* Popovers/sheets: slightly lighter than card */
+    --popover: 240 2% 19%;
+    --popover-foreground: 0 0% 92%;
 
-    --primary: 218 90% 62%;
+    --primary: 211 100% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 80%;
+    /* Secondary surface: #3A3A3C → hsl(240 2% 24%) */
+    --secondary: 240 2% 23%;
+    --secondary-foreground: 0 0% 85%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 44%;
+    /* Muted: tertiary fill */
+    --muted: 240 2% 20%;
+    --muted-foreground: 0 0% 55%;
 
     --accent: 276 68% 68%;
     --accent-foreground: 0 0% 100%;
@@ -122,27 +127,28 @@
     --destructive: 4 86% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 218 90% 62%;
+    /* Separator: #38383A → hsl(240 2% 22%) */
+    --border: 240 2% 22%;
+    --input: 240 2% 22%;
+    --ring: 211 100% 55%;
 
-    /* Apple-style glass for dark — tinted frosted obsidian */
-    --glass-bg: 0 0% 9% / 0.75;
-    --glass-border: 0 0% 100% / 0.07;
-    --glass-hover: 0 0% 14% / 0.80;
+    /* Apple-style glass — vibrancy */
+    --glass-bg: 240 2% 15% / 0.82;
+    --glass-border: 0 0% 100% / 0.08;
+    --glass-hover: 240 2% 20% / 0.88;
 
-    --surface: 0 0% 8% / 0.80;
-    --surface-elevated: 0 0% 11% / 0.90;
+    --surface: 240 2% 14% / 0.85;
+    --surface-elevated: 240 2% 18% / 0.92;
 
-    /* Sidebar */
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 0 0% 80%;
+    /* Sidebar: matches macOS sidebar #1E1E20 */
+    --sidebar-background: 240 2% 12%;
+    --sidebar-foreground: 0 0% 82%;
     --sidebar-primary: 0 0% 98%;
     --sidebar-primary-foreground: 0 0% 5%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 80%;
-    --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 218 90% 62%;
+    --sidebar-accent: 240 2% 20%;
+    --sidebar-accent-foreground: 0 0% 85%;
+    --sidebar-border: 240 2% 18%;
+    --sidebar-ring: 211 100% 55%;
 
     /* Schedule tokens — muted for dark */
     --schedule-meeting: 217 60% 16%;
@@ -203,6 +209,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
   }
 
   h1, h2, h3, h4, h5, h6 {
