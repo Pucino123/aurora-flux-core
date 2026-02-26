@@ -43,14 +43,18 @@ const GoogleCalendarSync = ({ onSynced }: Props) => {
 
   useEffect(() => { checkStatus(); }, [checkStatus]);
 
-  // Handle OAuth callback (code in URL hash/search after redirect)
+  // Handle OAuth callback (code in URL after redirect from Google)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const code = params.get("gcal_code");
-    if (!code) return;
+    const code = params.get("code");
+    const state = params.get("state");
+    // Only handle if state looks like a UUID (our user_id) — avoids conflicts with other OAuth flows
+    if (!code || !state || !/^[0-9a-f-]{36}$/i.test(state)) return;
     // Remove from URL
     const url = new URL(window.location.href);
-    url.searchParams.delete("gcal_code");
+    url.searchParams.delete("code");
+    url.searchParams.delete("state");
+    url.searchParams.delete("scope");
     window.history.replaceState({}, "", url.toString());
     (async () => {
       setSyncing(true);
@@ -58,7 +62,6 @@ const GoogleCalendarSync = ({ onSynced }: Props) => {
       const res = await callSync("exchange", "POST", { code, redirect_uri: redirect });
       if (res.error) { toast.error("Google Calendar: " + res.error); setSyncing(false); return; }
       setConnected(true);
-      // Auto-sync after connecting
       const syncRes = await callSync("sync", "POST");
       if (syncRes.error) toast.error("Sync error: " + syncRes.error);
       else toast.success(`Synced ${syncRes.count ?? 0} events from Google Calendar`);
@@ -77,12 +80,8 @@ const GoogleCalendarSync = ({ onSynced }: Props) => {
       setLoading(false);
       return;
     }
-    // Redirect to Google OAuth — on return the URL will have ?code=...
-    // We rewrite the callback URL to include gcal_code param via a small redirect handler
-    window.location.href = res.url.replace("response_type=code", "response_type=code").replace(
-      `redirect_uri=${encodeURIComponent(redirect)}`,
-      `redirect_uri=${encodeURIComponent(redirect)}`
-    );
+    // Redirect to Google OAuth — on return the URL will have ?code=... and ?state=userId
+    window.location.href = res.url;
   };
 
   const handleSync = async () => {
