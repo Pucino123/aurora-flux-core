@@ -12,17 +12,6 @@ const TodaysPlanWidget = () => {
     y: 20,
   }), []);
 
-  const calendarAction = (
-    <button
-      onClick={() => setActiveView("calendar")}
-      title="Open full calendar"
-      className="p-1 rounded-lg hover:bg-white/15 transition-colors"
-      style={{ color: "rgba(255,255,255,0.5)" }}
-    >
-      <CalendarDays size={14} />
-    </button>
-  );
-
   return (
     <DraggableWidget
       id="planner"
@@ -30,9 +19,19 @@ const TodaysPlanWidget = () => {
       defaultPosition={defaultPlannerPos}
       defaultSize={{ w: 340, h: 520 }}
       scrollable
-      headerActions={calendarAction}
     >
       <div className="focus-planner-dark -mx-4 -mt-4 -mb-4 h-[calc(100%+2rem)] council-hidden-scrollbar overflow-auto flex flex-col">
+        {/* Sub-header row with calendar shortcut */}
+        <div className="flex items-center gap-1 px-3 pt-2 pb-1 shrink-0">
+          <button
+            onClick={() => setActiveView("calendar")}
+            title="Open full calendar"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white/80 transition-colors text-[10px]"
+          >
+            <CalendarDays size={12} />
+            <span>Full Calendar</span>
+          </button>
+        </div>
         <div className="flex-1 min-h-0">
           <Scheduler />
         </div>
