@@ -8,6 +8,8 @@ import MobileNav from "./MobileNav";
 import Canvas from "./Canvas";
 import TheCouncil from "./TheCouncil";
 import FocusDashboardView from "./focus/FocusDashboardView";
+import FullCalendarView from "../pages/FullCalendarView";
+import AITaskManager from "../pages/AITaskManager";
 import CalendarView from "./CalendarView";
 import AnalyticsView from "./AnalyticsView";
 import ProjectsOverview from "./ProjectsOverview";
@@ -143,7 +145,9 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
         ) : activeView === "council" ? (
           <TheCouncil />
         ) : activeView === "calendar" ? (
-          <CalendarView />
+          <FullCalendarView />
+        ) : activeView === "tasks" ? (
+          <AITaskManager />
         ) : activeView === "analytics" ? (
           <AnalyticsView />
         ) : activeView === "projects" ? (
@@ -157,7 +161,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
         )}
 
         {/* Docked input — extra bottom padding on mobile for nav */}
-        {!["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings"].includes(activeView) && (
+        {!["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks"].includes(activeView) && (
           <div className="sticky bottom-0 px-3 pb-16 pt-2 md:px-4 md:pb-6 bg-gradient-to-t from-background/80 to-transparent">
             <InputBar onSubmit={(text) => setLastSubmitted(text)} docked />
           </div>
@@ -165,7 +169,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       </div>
 
       {/* Right sidebar — scheduler, hidden below lg */}
-      {!["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings"].includes(activeView) && (
+      {!["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks"].includes(activeView) && (
         <div className="hidden lg:block">
           <motion.aside
             initial={{ opacity: 0, x: 20 }}
