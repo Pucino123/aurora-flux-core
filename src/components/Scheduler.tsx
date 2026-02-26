@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Plus, Trash2, Sparkles, Calendar as CalendarIcon, GripVertical } from "lucide-react";
+import { Check, X, Plus, Trash2, Sparkles, Calendar as CalendarIcon, GripVertical, CalendarDays } from "lucide-react";
 import { useFlux, DbScheduleBlock } from "@/context/FluxContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -207,7 +207,7 @@ const SortableBlock = ({
 };
 
 // ── Main Scheduler ──
-const Scheduler = () => {
+const Scheduler = ({ onOpenFullCalendar }: { onOpenFullCalendar?: () => void } = {}) => {
   const { scheduleBlocks, tasks, folders, createBlock, updateBlock, removeBlock, replaceBlocksForDate, setActiveFolder, setActiveView } = useFlux();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -399,6 +399,11 @@ const Scheduler = () => {
               <Calendar mode="single" selected={selectedDate} onSelect={(d) => { if (d) { setSelectedDate(d); setCalendarOpen(false); } }} className={cn("p-3 pointer-events-auto")} />
             </PopoverContent>
           </Popover>
+          {onOpenFullCalendar && (
+            <button onClick={onOpenFullCalendar} className="p-1.5 rounded-lg hover:bg-white/30 transition-colors text-muted-foreground hover:text-foreground" title="Full Calendar">
+              <CalendarDays size={14} />
+            </button>
+          )}
           <button onClick={() => setShowAddForm(!showAddForm)} className="p-1.5 rounded-lg hover:bg-white/30 transition-colors text-muted-foreground hover:text-foreground" title={t("sched.add_block")}>
             <Plus size={14} />
           </button>
