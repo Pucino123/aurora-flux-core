@@ -136,8 +136,8 @@ interface FluxContextValue {
   // Navigation
   activeFolder: string | null;
   setActiveFolder: (id: string | null) => void;
-  activeView: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings";
-  setActiveView: (v: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings") => void;
+  activeView: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks";
+  setActiveView: (v: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks") => void;
   filterPersona: string | null;
   setFilterPersona: (p: string | null) => void;
 
@@ -198,7 +198,7 @@ export function FluxProvider({ children }: { children: ReactNode }) {
   const [scheduleBlocks, setScheduleBlocksRaw] = useState<DbScheduleBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<"stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings">("stream");
+  const [activeView, setActiveView] = useState<"stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks">("stream");
   const [filterPersona, setFilterPersona] = useState<string | null>(null);
 
   // Wrap setters to persist to localStorage when no user

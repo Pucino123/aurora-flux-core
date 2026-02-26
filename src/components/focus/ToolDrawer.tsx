@@ -136,11 +136,11 @@ const ToolDrawer = () => {
       {/* Drawer panel */}
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 60 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      <motion.div
+            initial={{ opacity: 0, y: 80, scaleX: 0.6, scaleY: 0.3, originX: "50%", originY: "100%" }}
+            animate={{ opacity: 1, y: 0, scaleX: 1, scaleY: 1, originX: "50%", originY: "100%" }}
+            exit={{ opacity: 0, y: 80, scaleX: 0.6, scaleY: 0.3, originX: "50%", originY: "100%" }}
+            transition={{ type: "spring", stiffness: 380, damping: 28 }}
             className="fixed bottom-16 left-1/2 -translate-x-1/2 z-40 w-[92vw] max-w-[520px] p-4 rounded-2xl bg-black/60 backdrop-blur-[24px] border border-white/15 shadow-2xl"
           >
             <div className="flex items-center justify-between mb-3">

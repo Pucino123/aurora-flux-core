@@ -10,6 +10,7 @@ import { BudgetPreviewWidget, SavingsRingWidget, TotalBalanceWidget } from "./wi
 import { WeeklyWorkoutWidget, NextWorkoutWidget } from "./widgets/FitnessWidget";
 import { Top5TasksWidget, ProjectStatusWidget } from "./widgets/ProductivityWidget";
 import { RecentNotesWidget, PinnedNoteWidget } from "./widgets/NotesWidget";
+import { TodayTodoWidget } from "./widgets/TodayTodoWidget";
 import SmartPlanWidget from "./widgets/SmartPlanWidget";
 import GamificationCard from "./GamificationCard";
 import FinanceDashboard from "./FinanceDashboard";
@@ -37,6 +38,7 @@ const WIDGET_REGISTRY: WidgetConfig[] = [
   { id: "next-workout", type: "next-workout", label: "widget.next_workout", category: "fitness" },
   { id: "recent-notes", type: "recent-notes", label: "widget.recent_notes", category: "notes" },
   { id: "pinned-note", type: "pinned-note", label: "widget.pinned_note", category: "notes" },
+  { id: "today-todo", type: "today-todo", label: "Today's Tasks", category: "productivity" },
 ];
 
 const renderWidget = (type: string) => {
@@ -52,6 +54,7 @@ const renderWidget = (type: string) => {
     case "project-status": return <ProjectStatusWidget />;
     case "recent-notes": return <RecentNotesWidget />;
     case "pinned-note": return <PinnedNoteWidget />;
+    case "today-todo": return <TodayTodoWidget />;
     default: return null;
   }
 };

@@ -1,4 +1,4 @@
-import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon } from "lucide-react";
+import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -97,6 +97,24 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
               >
                 <Home size={18} className="shrink-0" />
                 <span>{t("sidebar.home")}</span>
+              </button>
+
+              {/* Calendar */}
+              <button
+                onClick={() => { setActiveFolder(null); setActiveView("calendar"); }}
+                className={`sidebar-item w-full ${activeView === "calendar" ? "sidebar-item-active" : ""}`}
+              >
+                <CalendarDays size={18} className="shrink-0" />
+                <span>Calendar</span>
+              </button>
+
+              {/* Tasks */}
+              <button
+                onClick={() => { setActiveFolder(null); setActiveView("tasks"); }}
+                className={`sidebar-item w-full ${activeView === "tasks" ? "sidebar-item-active" : ""}`}
+              >
+                <ListTodo size={18} className="shrink-0" />
+                <span>Tasks</span>
               </button>
 
               {/* Council */}
