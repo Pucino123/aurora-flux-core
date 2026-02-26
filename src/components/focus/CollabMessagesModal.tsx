@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, Send, UserPlus, Users, Plus, Check, AlertCircle } from "lucide-react";
+import { X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTeamChat } from "@/hooks/useTeamChat";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 interface CollabMessagesModalProps {
   open: boolean;
@@ -14,7 +15,10 @@ interface CollabMessagesModalProps {
 type Tab = "chat" | "contacts";
 
 const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) => {
-  const { messages, members, sendMessage, hasTeams, loading, teams, activeTeamId, setActiveTeamId, createTeam, inviteMember, markAsRead } = useTeamChat();
+  const {
+    messages, members, sendMessage, hasTeams, loading, teams, activeTeamId,
+    setActiveTeamId, createTeam, inviteMember, markAsRead, setModalOpen, leaveTeam,
+  } = useTeamChat();
   const { user } = useAuth();
   const [text, setText] = useState("");
   const [tab, setTab] = useState<Tab>("chat");
@@ -23,16 +27,32 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const [inviteError, setInviteError] = useState("");
   const [newTeamName, setNewTeamName] = useState("");
   const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [leavingTeamId, setLeavingTeamId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setModalOpen(open);
     if (open) {
       markAsRead();
-      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setTimeout(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }, 50);
     }
-  }, [open, messages.length, markAsRead]);
+  }, [open, markAsRead, setModalOpen]);
 
-  const handleSend = async () => { if (!text.trim()) return; await sendMessage(text); setText(""); };
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (open && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages.length, open]);
+
+  const handleSend = async () => {
+    if (!text.trim()) return;
+    await sendMessage(text);
+    setText("");
+  };
+
   const getMemberName = (userId: string) => {
     const member = members.find((m) => m.user_id === userId);
     return (member as any)?.display_name || userId.slice(0, 6);
@@ -59,10 +79,28 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     setNewTeamName("");
     setShowCreateTeam(false);
     if (result) {
-      // Switch to chat tab and ensure UI refreshes
       setTab("chat");
+      toast.success(`Team "${result.name}" created!`);
+    } else {
+      toast.error("Failed to create team. Please try again.");
     }
   };
+
+  const handleLeaveTeam = async (teamId: string) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) return;
+    setLeavingTeamId(teamId);
+    const result = await leaveTeam(teamId);
+    setLeavingTeamId(null);
+    if (result?.error) {
+      toast.error("Could not leave team: " + result.error);
+    } else {
+      toast.success(`Left "${team.name}"`);
+      if (teams.length <= 1) setTab("chat");
+    }
+  };
+
+  const activeTeam = teams.find((t) => t.id === activeTeamId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,6 +133,9 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
               >
                 {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
+            )}
+            {teams.length === 1 && activeTeam && (
+              <span className="text-[11px] text-white/30 font-medium">{activeTeam.name}</span>
             )}
           </div>
           <button onClick={() => onOpenChange(false)} className="text-white/30 hover:text-white/60 transition-colors">
@@ -135,13 +176,19 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     )}
                   </div>
                 )}
-                {!loading && hasTeams && messages.length === 0 && <p className="text-white/30 text-xs text-center py-8">No messages yet. Say hi! 👋</p>}
+                {!loading && hasTeams && messages.length === 0 && (
+                  <p className="text-white/30 text-xs text-center py-8">No messages yet. Say hi! 👋</p>
+                )}
                 {messages.map((msg) => {
                   const isMe = msg.user_id === user?.id;
                   return (
                     <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                      <span className="text-[9px] text-white/25 mb-0.5 px-1">{isMe ? "You" : getMemberName(msg.user_id)} · {format(new Date(msg.created_at), "HH:mm")}</span>
-                      <div className={`px-3 py-2 rounded-2xl text-xs max-w-[85%] leading-relaxed ${isMe ? "bg-white/15 text-white/90 rounded-br-sm" : "bg-white/5 text-white/70 rounded-bl-sm"}`}>
+                      <span className="text-[9px] text-white/25 mb-0.5 px-1">
+                        {isMe ? "You" : getMemberName(msg.user_id)} · {format(new Date(msg.created_at), "HH:mm")}
+                      </span>
+                      <div className={`px-3 py-2 rounded-2xl text-xs max-w-[85%] leading-relaxed ${
+                        isMe ? "bg-white/15 text-white/90 rounded-br-sm" : "bg-white/5 text-white/70 rounded-bl-sm"
+                      }`}>
                         {msg.content}
                       </div>
                     </div>
@@ -159,7 +206,11 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     placeholder="Type a message..."
                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white/90 placeholder:text-white/25 outline-none focus:border-white/20 transition-colors"
                   />
-                  <button onClick={handleSend} disabled={!text.trim()} className="p-2 rounded-xl bg-white/10 text-white/50 hover:text-white hover:bg-white/15 transition-all disabled:opacity-30">
+                  <button
+                    onClick={handleSend}
+                    disabled={!text.trim()}
+                    className="p-2 rounded-xl bg-white/10 text-white/50 hover:text-white hover:bg-white/15 transition-all disabled:opacity-30"
+                  >
                     <Send size={14} />
                   </button>
                 </div>
@@ -189,28 +240,43 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     {inviteStatus === "ok" ? <Check size={12} /> : inviteStatus === "sending" ? "..." : "Invite"}
                   </button>
                 </div>
-                {inviteStatus === "ok" && <p className="text-[11px] text-foreground/60 mt-2 flex items-center gap-1"><Check size={11} /> Invited!</p>}
-                {inviteStatus === "error" && <p className="text-[11px] text-foreground/50 mt-2 flex items-center gap-1"><AlertCircle size={11} /> {inviteError || "User not found"}</p>}
+                {inviteStatus === "ok" && (
+                  <p className="text-[11px] text-white/50 mt-2 flex items-center gap-1"><Check size={11} /> Invited!</p>
+                )}
+                {inviteStatus === "error" && (
+                  <p className="text-[11px] text-white/40 mt-2 flex items-center gap-1"><AlertCircle size={11} /> {inviteError || "User not found"}</p>
+                )}
               </div>
 
               {/* Members list */}
               <div className="px-5 py-4 overflow-y-auto council-hidden-scrollbar max-h-[38vh]">
-                <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-3">Team Members ({members.length})</p>
+                <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-3">
+                  Team Members ({members.length})
+                </p>
                 {members.length === 0 ? (
                   <p className="text-white/25 text-xs text-center py-6">No members yet</p>
                 ) : (
                   <div className="space-y-2">
                     {members.map((m) => (
-                      <div key={m.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/8 transition-colors">
-                        <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-white/60">
+                      <div key={m.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/[0.07] transition-colors group">
+                        <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-white/60 shrink-0">
                           {((m as any).display_name || m.user_id)[0]?.toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-white/80 truncate">{(m as any).display_name || m.user_id.slice(0, 8)}</p>
                           <p className="text-[10px] text-white/30 capitalize">{m.role}</p>
                         </div>
-                        {m.user_id === user?.id && (
-                          <span className="text-[9px] text-white/25 bg-white/5 px-1.5 py-0.5 rounded-full">You</span>
+                        {m.user_id === user?.id ? (
+                          <button
+                            onClick={() => handleLeaveTeam(activeTeamId!)}
+                            disabled={leavingTeamId === activeTeamId}
+                            className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-30"
+                            title="Leave team"
+                          >
+                            {leavingTeamId === activeTeamId ? "..." : <><LogOut size={10} /> Leave</>}
+                          </button>
+                        ) : (
+                          <span className="text-[9px] text-white/25 bg-white/5 px-1.5 py-0.5 rounded-full capitalize">{m.role}</span>
                         )}
                       </div>
                     ))}
@@ -225,7 +291,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     <input
                       value={newTeamName}
                       onChange={(e) => setNewTeamName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleCreateTeam(); if (e.key === "Escape") setShowCreateTeam(false); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleCreateTeam();
+                        if (e.key === "Escape") setShowCreateTeam(false);
+                      }}
                       placeholder="New team name..."
                       className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white/90 placeholder:text-white/25 outline-none focus:border-white/20"
                       autoFocus
