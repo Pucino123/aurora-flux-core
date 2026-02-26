@@ -1,67 +1,52 @@
 
-# Plan: Studio Mode Fix, Reset-knap og Dokument AI-chat
+## Plan: Landing Page Overhaul
 
-## 1. Fix Studio Mode drag-clipping
+### Changes to `src/components/LandingPage.tsx`
 
-**Problem:** Studio Mode-toolbaren er `fixed` positioneret med `z-[200]`, men det overordnede dokument-container har ikke `overflow: visible` hele vejen op. Elementer bliver klippet af parent-containere.
+**1. Remove `DashboardPreview` section** (lines 226–236) — delete the entire "flux.app · Dashboard" preview section and the `DashboardPreview` component (lines 26–88).
 
-**Losning:**
-- I `DocumentView.tsx`: Nar `studioMode` er aktiv, tilfojes `overflow-visible` pa ALLE parent-containere (den ydre `div` wrapper).
-- Undersog og tilret eventuelle parent-elementer i `FluxSidebar` eller layout-containere der kan klippe.
-- Saet `dragConstraints={{ top: -9999, left: -9999, right: 9999, bottom: 9999 }}` i stedet for `dragConstraints={false}` pa bade `WordsToolbar` og `SheetsToolbar` studio-mode containeren for at sikre framer-motion ikke begrenser drag.
+**2. Replace "More than just tasks" grid with auto-scrolling marquee banner**
+- Create a `FeatureMarquee` component using CSS `@keyframes marquee` (infinite linear scroll left)
+- Two rows: one scrolling left, one scrolling right — exactly like Joobie's "More than a match score" section
+- Each card: glassmorphic `bg-white/12 backdrop-blur-xl`, icon + title + short desc
+- Cards duplicated so the loop is seamless
+- Use `animation: marquee 28s linear infinite` (CSS-in-JSX via Tailwind `animate-none` + inline style)
+- Wrap each row in `overflow-hidden`, cards in a flex row with `gap-4`
 
-**Filer:** `DocumentView.tsx`, `WordsToolbar.tsx`, `SheetsToolbar.tsx`
+**3. "See it in action" video section stays** — keep `VideoSection` component as-is (lines 91–163)
 
-## 2. Reset-knap til standard toolbar-position
-
-**Losning:**
-- Tilfojes i `ToolboxPopover.tsx` som en ekstra knap: "Reset to default" / "Nulstil" der kalder `showAll()` (allerede eksisterende) og ogsa rydder eventuelle gemte positioner.
-- Knappen vises altid i toolbox-popoveren (ogsa nar ingen segmenter er skjulte), sa brugeren altid kan nulstille.
-- Opdater `useToolbarVisibility.ts` sa `showAll` ogsa fjerner gemt position-data fra localStorage.
-
-**Filer:** `ToolboxPopover.tsx`, `useToolbarVisibility.ts`
-
-## 3. AI Document Chat i bunden af hvert dokument
-
-En chatbar i bunden af dokumentet der kan laese dokumentindholdet og give feedback, forslag og fremhaevninger.
-
-**Backend:**
-- Tilfojes en ny `type: "document-chat"` handler i `supabase/functions/flux-ai/index.ts`
-- System-prompten instruerer AI'en til at analysere dokumentet og komme med feedback, ideer, fremhaevninger og forslag til aendringer
-- Bruger streaming (SSE) for real-time svar
-- Modtager `documentContent` (HTML/text) sammen med brugerens besked
-
-**Frontend:**
-- Ny komponent `src/components/documents/DocumentAiChat.tsx`
-  - Fast chatbar i bunden af dokumentet med input-felt og send-knap
-  - Kan kollapses/ekspanderes
-  - Viser AI-svar med markdown-rendering (react-markdown allerede installeret)
-  - Streamer tokens live mens AI svarer
-  - Sender dokumentets indhold med hver besked sa AI'en har kontekst
-- Integreres i `DocumentView.tsx` - tilfojes under editoren og over `StatusBar` i bade TextEditor og SpreadsheetEditor
-
-**Filer:**
-- `supabase/functions/flux-ai/index.ts` (tilfoej document-chat handler)
-- `supabase/config.toml` (verificer function config)
-- `src/components/documents/DocumentAiChat.tsx` (ny)
-- `src/components/documents/DocumentView.tsx` (integrer chat)
-
-## Teknisk oversigt
-
-```text
-DocumentView
-+-- WordsToolbar (studio: fixed, overflow-visible, unconstrained drag)
-+-- Editor (contentEditable)
-+-- DocumentAiChat (kollapserbar chatbar)
-    +-- Input + Send
-    +-- Streaming AI svar (react-markdown)
-+-- StatusBar
+### Implementation approach for marquee:
+```tsx
+// Two rows, opposite directions
+<div className="overflow-hidden">
+  <div className="flex gap-4 animate-[marquee_30s_linear_infinite]">
+    {[...FEATURES, ...FEATURES].map(card => <Card />)}
+  </div>
+</div>
+<div className="overflow-hidden mt-4">
+  <div className="flex gap-4 animate-[marquee-reverse_30s_linear_infinite]">
+    {[...FEATURES2, ...FEATURES2].map(card => <Card />)}
+  </div>
+</div>
 ```
 
-**Edge function flow:**
-```text
-Client -> flux-ai (type: "document-chat")
-       -> System prompt + document content + user message
-       -> Streaming SSE response
-       -> Client renders tokens live
+Add to `tailwind.config.ts`:
+```ts
+keyframes: {
+  marquee: { "0%": { transform: "translateX(0)" }, "100%": { transform: "translateX(-50%)" } },
+  "marquee-reverse": { "0%": { transform: "translateX(-50%)" }, "100%": { transform: "translateX(0)" } },
+}
+animation: {
+  marquee: "marquee 30s linear infinite",
+  "marquee-reverse": "marquee-reverse 30s linear infinite",
+}
 ```
+
+### Section order after changes:
+1. Navbar
+2. Hero
+3. ~~DashboardPreview~~ ← DELETED
+4. Feature Marquee banner (auto-scrolling, 2 rows)
+5. "See it in action" video section
+6. How it works
+7. CTA + Footer
