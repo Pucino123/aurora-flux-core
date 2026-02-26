@@ -26,6 +26,15 @@ export interface TeamMember {
   avatar_url?: string;
 }
 
+export interface MessageReaction {
+  id: string;
+  message_id: string;
+  user_id: string;
+  team_id: string;
+  emoji: string;
+  created_at: string;
+}
+
 const LAST_READ_KEY = "colab_last_read";
 
 function getLastReadMap(): Record<string, number> {
@@ -87,6 +96,7 @@ export function useTeamChat() {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [lastReadMap, setLastReadMapState] = useState<Record<string, number>>(getLastReadMap);
+  const [reactions, setReactions] = useState<MessageReaction[]>([]);
 
   // Fetch teams the user belongs to
   useEffect(() => {
@@ -123,14 +133,14 @@ export function useTeamChat() {
     })();
   }, [user]);
 
-  // Fetch messages & members when active team changes
+  // Fetch messages, members & reactions when active team changes
   useEffect(() => {
     if (!activeTeamId || !user) return;
     initialLoadRef.current = true;
     setTypingUsers([]);
 
     (async () => {
-      const [msgRes, memRes] = await Promise.all([
+      const [msgRes, memRes, reactRes] = await Promise.all([
         (supabase as any)
           .from("team_messages")
           .select("*")
@@ -141,14 +151,19 @@ export function useTeamChat() {
           .from("team_members")
           .select("*")
           .eq("team_id", activeTeamId),
+        (supabase as any)
+          .from("message_reactions")
+          .select("*")
+          .eq("team_id", activeTeamId),
       ]);
       setMessages((msgRes.data || []) as TeamMessage[]);
       setMembers((memRes.data || []) as TeamMember[]);
+      setReactions((reactRes.data || []) as MessageReaction[]);
       setTimeout(() => { initialLoadRef.current = false; }, 500);
     })();
 
     // Realtime subscription for new messages
-    const channel = supabase
+    const msgChannel = supabase
       .channel(`team-messages-${activeTeamId}`)
       .on(
         "postgres_changes",
@@ -159,7 +174,6 @@ export function useTeamChat() {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
-          // Clear typing indicator when message arrives
           setTypingUsers((prev) => prev.filter((uid) => uid !== newMsg.user_id));
           if (!initialLoadRef.current && newMsg.user_id !== user.id && !modalOpenRef.current) {
             setMembers((currentMembers) => {
@@ -169,6 +183,30 @@ export function useTeamChat() {
               return currentMembers;
             });
           }
+        }
+      )
+      .subscribe();
+
+    // Realtime subscription for reactions
+    const reactChannel = supabase
+      .channel(`team-reactions-${activeTeamId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "message_reactions", filter: `team_id=eq.${activeTeamId}` },
+        (payload) => {
+          const newReact = payload.new as MessageReaction;
+          setReactions((prev) => {
+            if (prev.some(r => r.id === newReact.id)) return prev;
+            return [...prev, newReact];
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "message_reactions", filter: `team_id=eq.${activeTeamId}` },
+        (payload) => {
+          const deleted = payload.old as { id: string };
+          setReactions((prev) => prev.filter(r => r.id !== deleted.id));
         }
       )
       .subscribe();
@@ -193,7 +231,6 @@ export function useTeamChat() {
       .on("presence", { event: "join" }, ({ key, newPresences }: any) => {
         if (key !== user.id && newPresences?.[0]?.typing) {
           setTypingUsers((prev) => prev.includes(key) ? prev : [...prev, key]);
-          // Auto-clear after 5s
           if (typingTimeoutRef.current[key]) clearTimeout(typingTimeoutRef.current[key]);
           typingTimeoutRef.current[key] = setTimeout(() => {
             setTypingUsers((prev) => prev.filter((u) => u !== key));
@@ -210,7 +247,8 @@ export function useTeamChat() {
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(msgChannel);
+      supabase.removeChannel(reactChannel);
       supabase.removeChannel(presenceChannel);
       presenceChannelRef.current = null;
       Object.values(typingTimeoutRef.current).forEach(clearTimeout);
@@ -246,7 +284,6 @@ export function useTeamChat() {
     return total;
   }, [messages, teams, lastReadMap, user]);
 
-  // Per-team unread counts
   const unreadPerTeam = useMemo(() => {
     if (!user) return {} as Record<string, number>;
     const map: Record<string, number> = {};
@@ -274,7 +311,6 @@ export function useTeamChat() {
   const sendMessage = useCallback(
     async (content: string) => {
       if (!user || !activeTeamId || !content.trim()) return;
-      // Stop typing indicator
       isTypingRef.current = false;
       broadcastTyping(false);
       const { error } = await (supabase as any).from("team_messages").insert({
@@ -286,6 +322,39 @@ export function useTeamChat() {
     },
     [user, activeTeamId, broadcastTyping]
   );
+
+  const toggleReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      if (!user || !activeTeamId) return;
+      const existing = reactions.find(
+        r => r.message_id === messageId && r.user_id === user.id && r.emoji === emoji
+      );
+      if (existing) {
+        await (supabase as any).from("message_reactions").delete().eq("id", existing.id);
+        setReactions(prev => prev.filter(r => r.id !== existing.id));
+      } else {
+        const { data } = await (supabase as any).from("message_reactions").insert({
+          message_id: messageId,
+          user_id: user.id,
+          team_id: activeTeamId,
+          emoji,
+        }).select().single();
+        if (data) setReactions(prev => [...prev, data as MessageReaction]);
+      }
+    },
+    [user, activeTeamId, reactions]
+  );
+
+  // Reactions grouped by message id
+  const reactionsMap = useMemo(() => {
+    const map: Record<string, Record<string, string[]>> = {};
+    for (const r of reactions) {
+      if (!map[r.message_id]) map[r.message_id] = {};
+      if (!map[r.message_id][r.emoji]) map[r.message_id][r.emoji] = [];
+      map[r.message_id][r.emoji].push(r.user_id);
+    }
+    return map;
+  }, [reactions]);
 
   const createTeam = useCallback(
     async (name: string) => {
@@ -376,6 +445,68 @@ export function useTeamChat() {
     [activeTeamId]
   );
 
+  // Generate a shareable invite link token
+  const generateInviteLink = useCallback(
+    async (teamId: string) => {
+      if (!user) return null;
+      const { data, error } = await (supabase as any)
+        .from("team_invites")
+        .insert({ team_id: teamId, created_by: user.id })
+        .select()
+        .single();
+      if (error || !data) {
+        console.error("Failed to generate invite:", error);
+        return null;
+      }
+      return (data as any).token as string;
+    },
+    [user]
+  );
+
+  // Accept an invite by token — join the team
+  const acceptInvite = useCallback(
+    async (token: string) => {
+      if (!user) return { error: "Not authenticated" };
+      const { data: invite, error: findErr } = await (supabase as any)
+        .from("team_invites")
+        .select("*")
+        .eq("token", token)
+        .maybeSingle();
+      if (findErr || !invite) return { error: "Invite not found or expired" };
+      if (invite.expires_at && new Date(invite.expires_at) < new Date()) return { error: "Invite has expired" };
+
+      // Check not already a member
+      const { data: existing } = await (supabase as any)
+        .from("team_members")
+        .select("id")
+        .eq("team_id", invite.team_id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (existing) return { error: "already_member", teamId: invite.team_id };
+
+      // Get display name from profile
+      const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+
+      const { error: joinErr } = await (supabase as any).from("team_members").insert({
+        team_id: invite.team_id,
+        user_id: user.id,
+        role: "member",
+        display_name: (profile as any)?.display_name || user.email?.split("@")[0] || "Member",
+      });
+      if (joinErr) return { error: joinErr.message };
+
+      // Fetch team info
+      const { data: teamData } = await (supabase as any).from("teams").select("*").eq("id", invite.team_id).single();
+      if (teamData) {
+        const newTeam = teamData as Team;
+        setTeams((prev) => prev.some(t => t.id === newTeam.id) ? prev : [...prev, newTeam]);
+        setActiveTeamId(newTeam.id);
+      }
+      return { error: null, teamId: invite.team_id };
+    },
+    [user]
+  );
+
   return {
     teams,
     activeTeamId,
@@ -396,5 +527,10 @@ export function useTeamChat() {
     inviteMember,
     handleTypingChange,
     hasTeams: teams.length > 0,
+    reactions,
+    reactionsMap,
+    toggleReaction,
+    generateInviteLink,
+    acceptInvite,
   };
 }

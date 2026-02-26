@@ -10,6 +10,7 @@ import GlobalSearch from "../components/GlobalSearch";
 import { useFlux } from "@/context/FluxContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Index = () => {
   const { user } = useAuth();
@@ -23,6 +24,33 @@ const Index = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Handle invite token from URL
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("invite");
+    if (!token) return;
+    // Remove token from URL
+    window.history.replaceState({}, "", window.location.pathname);
+    (async () => {
+      const { data: invite } = await (supabase as any)
+        .from("team_invites").select("*").eq("token", token).maybeSingle();
+      if (!invite) { toast.error("Invite link not found or expired"); return; }
+      if (invite.expires_at && new Date(invite.expires_at) < new Date()) { toast.error("Invite link has expired"); return; }
+      const { data: existing } = await (supabase as any)
+        .from("team_members").select("id").eq("team_id", invite.team_id).eq("user_id", user.id).maybeSingle();
+      if (existing) { toast.info("You're already a member of this team"); return; }
+      const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+      const { error } = await (supabase as any).from("team_members").insert({
+        team_id: invite.team_id, user_id: user.id, role: "member",
+        display_name: (profile as any)?.display_name || user.email?.split("@")[0] || "Member",
+      });
+      if (error) toast.error("Failed to join team");
+      else { const { data: teamData } = await (supabase as any).from("teams").select("name").eq("id", invite.team_id).single();
+        toast.success(`Joined team "${(teamData as any)?.name || "team"}"! Open Colab to chat.`); }
+    })();
+  }, [user]);
 
   // Show landing when NOT logged in
   useEffect(() => {
