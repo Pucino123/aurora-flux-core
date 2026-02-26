@@ -3,6 +3,7 @@ import { X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut, Trash2, Smi
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTeamChat, getUserColor } from "@/hooks/useTeamChat";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -16,11 +17,25 @@ interface CollabMessagesModalProps {
 
 type Tab = "chat" | "contacts";
 
-// Avatar component with consistent color per user
-function UserAvatar({ userId, displayName, size = "sm" }: { userId: string; displayName?: string; size?: "sm" | "md" }) {
+// Avatar with optional image support
+function UserAvatar({ userId, displayName, avatarUrl, size = "sm" }: {
+  userId: string;
+  displayName?: string;
+  avatarUrl?: string;
+  size?: "sm" | "md";
+}) {
   const colorClass = getUserColor(userId);
   const initial = (displayName || userId)[0]?.toUpperCase() || "?";
   const sizeClass = size === "md" ? "w-8 h-8 text-sm" : "w-6 h-6 text-[10px]";
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={displayName || userId}
+        className={`${sizeClass} rounded-full object-cover shrink-0 border border-white/10`}
+      />
+    );
+  }
   return (
     <div className={`${sizeClass} ${colorClass} rounded-full flex items-center justify-center font-bold text-white shrink-0`}>
       {initial}
@@ -60,7 +75,31 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const [leavingTeamId, setLeavingTeamId] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
+  // Map userId -> avatar_url
+  const [avatarMap, setAvatarMap] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch avatars for all known user IDs
+  useEffect(() => {
+    const userIds = [...new Set([
+      ...(user ? [user.id] : []),
+      ...members.map((m) => m.user_id),
+    ])];
+    if (userIds.length === 0) return;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, avatar_url")
+        .in("id", userIds);
+      if (data) {
+        const map: Record<string, string> = {};
+        for (const p of data) {
+          if ((p as any).avatar_url) map[p.id] = (p as any).avatar_url;
+        }
+        setAvatarMap(map);
+      }
+    })();
+  }, [members, user]);
 
   useEffect(() => {
     setModalOpen(open);
@@ -85,7 +124,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   };
 
   const getMemberName = (userId: string) => {
-    if (userId === user?.id) return "You";
+    if (userId === user?.id) return user?.user_metadata?.display_name || user?.email?.split("@")[0] || "You";
     const member = members.find((m) => m.user_id === userId);
     return (member as any)?.display_name || userId.slice(0, 6);
   };
@@ -265,11 +304,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 {messages.map((msg) => {
                   const isMe = msg.user_id === user?.id;
                   const name = getMemberName(msg.user_id);
+                  const avatar = avatarMap[msg.user_id];
                   return (
                     <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                      {!isMe && (
-                        <UserAvatar userId={msg.user_id} displayName={name} />
-                      )}
+                      <UserAvatar userId={msg.user_id} displayName={name} avatarUrl={avatar} size="sm" />
                       <div className={`flex flex-col max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
                         <span className="text-[9px] text-white/25 mb-0.5 px-1">
                           {isMe ? "You" : name} · {format(new Date(msg.created_at), "HH:mm")}
@@ -295,7 +333,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     >
                       <div className="flex -space-x-1">
                         {typingUsers.filter(uid => uid !== user?.id).slice(0, 3).map((uid) => (
-                          <UserAvatar key={uid} userId={uid} displayName={getMemberName(uid)} size="sm" />
+                          <UserAvatar key={uid} userId={uid} displayName={getMemberName(uid)} avatarUrl={avatarMap[uid]} size="sm" />
                         ))}
                       </div>
                       <div className="flex items-center gap-1.5 bg-white/5 rounded-2xl rounded-bl-sm px-3 py-2">
@@ -324,9 +362,13 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     </div>
                   )}
                   <div className="flex items-center gap-2">
+                    {/* Current user's avatar in input row */}
+                    {user && (
+                      <UserAvatar userId={user.id} displayName={getMemberName(user.id)} avatarUrl={avatarMap[user.id]} size="sm" />
+                    )}
                     <button
                       onClick={() => setShowEmojiPicker((v) => !v)}
-                      className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all shrink-0"
+                      className="p-1.5 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all shrink-0"
                     >
                       <Smile size={14} />
                     </button>
@@ -391,7 +433,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                   <div className="space-y-1.5">
                     {members.map((m) => (
                       <div key={m.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/[0.07] transition-colors group">
-                        <UserAvatar userId={m.user_id} displayName={(m as any).display_name} size="md" />
+                        <UserAvatar userId={m.user_id} displayName={(m as any).display_name} avatarUrl={avatarMap[m.user_id]} size="md" />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-white/80 truncate">{(m as any).display_name || m.user_id.slice(0, 8)}</p>
                           <p className="text-[10px] text-white/30 capitalize">{m.role}</p>
