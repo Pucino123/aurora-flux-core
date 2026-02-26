@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Sparkles, CheckSquare, Calendar, Brain, LayoutGrid, Play, Upload, Zap, Target, Music, BarChart3, Users, FileText, Clock, Star } from "lucide-react";
+import { ArrowRight, Sparkles, CheckSquare, Calendar, Brain, LayoutGrid, Play, Upload, Zap, Target, Music, BarChart3, Users, FileText, Clock, Star, LucideIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import cherryBg from "@/assets/bg-cherry-blossom.jpg";
 
@@ -31,47 +31,36 @@ const FEATURES_ROW2 = [
   { icon: Zap, title: "AI Scheduler", desc: "Turn your task list into a perfect day" },
 ];
 
+/* ── Marquee Pill (Joobie-style) ── */
+const MarqueePill = ({ icon: Icon, title }: { icon: LucideIcon; title: string }) => (
+  <div
+    className="flex-shrink-0 flex items-center gap-2.5 px-4 py-2.5 rounded-full border border-white/25 hover:border-white/50 transition-colors cursor-default"
+    style={{ background: "rgba(255,255,255,0.13)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
+  >
+    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+      <Icon size={13} className="text-white" />
+    </div>
+    <span className="text-white font-medium text-sm whitespace-nowrap">{title}</span>
+  </div>
+);
+
 /* ── Marquee Banner ── */
 const FeatureMarquee = () => (
-  <div className="py-4 space-y-4">
+  <div className="py-2 space-y-3 select-none">
     {/* Row 1: scrolls left */}
-    <div className="overflow-hidden">
-      <div className="flex gap-4 w-max animate-[marquee_35s_linear_infinite]">
-        {[...FEATURES_ROW1, ...FEATURES_ROW1].map((f, i) => {
-          const Icon = f.icon;
-          return (
-            <div key={i} className="flex-shrink-0 flex items-start gap-3 px-5 py-4 rounded-2xl border border-white/20 w-52"
-              style={{ background: "rgba(255,255,255,0.10)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}>
-              <div className="w-8 h-8 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
-                <Icon size={15} className="text-white/80" />
-              </div>
-              <div>
-                <p className="text-white font-semibold text-sm leading-tight mb-0.5">{f.title}</p>
-                <p className="text-white/50 text-[11px] leading-snug">{f.desc}</p>
-              </div>
-            </div>
-          );
-        })}
+    <div className="overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+      <div className="flex gap-3 w-max animate-[marquee_32s_linear_infinite]">
+        {[...FEATURES_ROW1, ...FEATURES_ROW1].map((f, i) => (
+          <MarqueePill key={i} icon={f.icon} title={f.title} />
+        ))}
       </div>
     </div>
     {/* Row 2: scrolls right */}
-    <div className="overflow-hidden">
-      <div className="flex gap-4 w-max animate-[marquee-reverse_35s_linear_infinite]">
-        {[...FEATURES_ROW2, ...FEATURES_ROW2].map((f, i) => {
-          const Icon = f.icon;
-          return (
-            <div key={i} className="flex-shrink-0 flex items-start gap-3 px-5 py-4 rounded-2xl border border-white/20 w-52"
-              style={{ background: "rgba(255,255,255,0.10)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}>
-              <div className="w-8 h-8 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
-                <Icon size={15} className="text-white/80" />
-              </div>
-              <div>
-                <p className="text-white font-semibold text-sm leading-tight mb-0.5">{f.title}</p>
-                <p className="text-white/50 text-[11px] leading-snug">{f.desc}</p>
-              </div>
-            </div>
-          );
-        })}
+    <div className="overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+      <div className="flex gap-3 w-max animate-[marquee-reverse_32s_linear_infinite]">
+        {[...FEATURES_ROW2, ...FEATURES_ROW2].map((f, i) => (
+          <MarqueePill key={i} icon={f.icon} title={f.title} />
+        ))}
       </div>
     </div>
   </div>
