@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut, Trash2, Smile } from "lucide-react";
+import { X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut, Trash2, Smile, Hash } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useTeamChat } from "@/hooks/useTeamChat";
+import { useTeamChat, getUserColor } from "@/hooks/useTeamChat";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
 const EMOJIS = ["😀","😂","❤️","👍","🔥","🎉","✅","🚀","💡","😅","🙏","👏","💪","🤔","😎","🥳","😍","🤩","💯","⭐"];
-
 
 interface CollabMessagesModalProps {
   open: boolean;
@@ -17,10 +16,38 @@ interface CollabMessagesModalProps {
 
 type Tab = "chat" | "contacts";
 
+// Avatar component with consistent color per user
+function UserAvatar({ userId, displayName, size = "sm" }: { userId: string; displayName?: string; size?: "sm" | "md" }) {
+  const colorClass = getUserColor(userId);
+  const initial = (displayName || userId)[0]?.toUpperCase() || "?";
+  const sizeClass = size === "md" ? "w-8 h-8 text-sm" : "w-6 h-6 text-[10px]";
+  return (
+    <div className={`${sizeClass} ${colorClass} rounded-full flex items-center justify-center font-bold text-white shrink-0`}>
+      {initial}
+    </div>
+  );
+}
+
+// Typing indicator dots
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce"
+          style={{ animationDelay: `${i * 150}ms`, animationDuration: "900ms" }}
+        />
+      ))}
+    </div>
+  );
+}
+
 const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) => {
   const {
     messages, members, sendMessage, hasTeams, loading, teams, activeTeamId,
     setActiveTeamId, createTeam, inviteMember, markAsRead, setModalOpen, leaveTeam, deleteTeam,
+    typingUsers, unreadPerTeam, handleTypingChange,
   } = useTeamChat();
   const { user } = useAuth();
   const [text, setText] = useState("");
@@ -45,12 +72,11 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     }
   }, [open, markAsRead, setModalOpen]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     if (open && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages.length, open]);
+  }, [messages.length, typingUsers.length, open]);
 
   const handleSend = async () => {
     if (!text.trim()) return;
@@ -59,6 +85,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   };
 
   const getMemberName = (userId: string) => {
+    if (userId === user?.id) return "You";
     const member = members.find((m) => m.user_id === userId);
     return (member as any)?.display_name || userId.slice(0, 6);
   };
@@ -127,16 +154,21 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
   const activeTeam = teams.find((t) => t.id === activeTeamId);
 
+  // Names of people typing (excluding self)
+  const typingNames = typingUsers
+    .filter((uid) => uid !== user?.id)
+    .map((uid) => getMemberName(uid));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-black/80 backdrop-blur-[24px] border-white/15 text-white max-w-md p-0 gap-0 rounded-2xl overflow-hidden [&>button]:hidden">
         <DialogTitle className="sr-only">Team Collaboration</DialogTitle>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            {/* Tabs */}
-            <div className="flex items-center gap-1 bg-white/5 rounded-full p-0.5">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Tab pills */}
+            <div className="flex items-center gap-0.5 bg-white/5 rounded-full p-0.5 shrink-0">
               {(["chat", "contacts"] as Tab[]).map((t) => (
                 <button
                   key={t}
@@ -149,30 +181,56 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 </button>
               ))}
             </div>
-            {/* Team selector */}
-            {teams.length > 1 && (
-              <select
-                value={activeTeamId || ""}
-                onChange={(e) => setActiveTeamId(e.target.value)}
-                className="text-[11px] bg-white/5 border border-white/10 rounded-lg px-2 py-0.5 text-white/60 outline-none"
-              >
-                {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            )}
-            {teams.length === 1 && activeTeam && (
-              <span className="text-[11px] text-white/30 font-medium">{activeTeam.name}</span>
+
+            {/* Team tabs — show all teams as clickable pills */}
+            {teams.length > 0 && (
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                {teams.map((t) => {
+                  const unread = unreadPerTeam?.[t.id] || 0;
+                  const isActive = t.id === activeTeamId;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setActiveTeamId(t.id)}
+                      className={`relative flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all shrink-0 ${
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70"
+                      }`}
+                    >
+                      <Hash size={9} className="opacity-60" />
+                      <span className="max-w-[64px] truncate">{t.name}</span>
+                      {unread > 0 && !isActive && (
+                        <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-rose-500 text-[8px] font-bold text-white flex items-center justify-center">
+                          {unread > 9 ? "9+" : unread}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
-          <button onClick={() => onOpenChange(false)} className="text-white/30 hover:text-white/60 transition-colors">
+
+          <button onClick={() => onOpenChange(false)} className="text-white/30 hover:text-white/60 transition-colors ml-2 shrink-0">
             <X size={16} />
           </button>
         </div>
+
+        {/* Active team banner */}
+        {activeTeam && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] border-b border-white/5">
+            <div className={`w-2 h-2 rounded-full ${getUserColor(activeTeam.id)}`} />
+            <span className="text-[11px] font-semibold text-white/60">#{activeTeam.name}</span>
+            <span className="text-[10px] text-white/25 ml-auto">{members.length} member{members.length !== 1 ? "s" : ""}</span>
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           {tab === "chat" ? (
             <motion.div key="chat" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="flex flex-col">
               {/* Messages */}
-              <div ref={scrollRef} className="overflow-y-auto px-4 py-3 space-y-3 h-[48vh] council-hidden-scrollbar">
+              <div ref={scrollRef} className="overflow-y-auto px-4 py-3 space-y-3 h-[44vh] council-hidden-scrollbar">
                 {loading && <p className="text-white/30 text-xs text-center py-8">Loading...</p>}
                 {!loading && !hasTeams && (
                   <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
@@ -206,19 +264,51 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 )}
                 {messages.map((msg) => {
                   const isMe = msg.user_id === user?.id;
+                  const name = getMemberName(msg.user_id);
                   return (
-                    <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                      <span className="text-[9px] text-white/25 mb-0.5 px-1">
-                        {isMe ? "You" : getMemberName(msg.user_id)} · {format(new Date(msg.created_at), "HH:mm")}
-                      </span>
-                      <div className={`px-3 py-2 rounded-2xl text-xs max-w-[85%] leading-relaxed ${
-                        isMe ? "bg-white/15 text-white/90 rounded-br-sm" : "bg-white/5 text-white/70 rounded-bl-sm"
-                      }`}>
-                        {msg.content}
+                    <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                      {!isMe && (
+                        <UserAvatar userId={msg.user_id} displayName={name} />
+                      )}
+                      <div className={`flex flex-col max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
+                        <span className="text-[9px] text-white/25 mb-0.5 px-1">
+                          {isMe ? "You" : name} · {format(new Date(msg.created_at), "HH:mm")}
+                        </span>
+                        <div className={`px-3 py-2 rounded-2xl text-xs leading-relaxed ${
+                          isMe ? "bg-white/15 text-white/90 rounded-br-sm" : "bg-white/5 text-white/70 rounded-bl-sm"
+                        }`}>
+                          {msg.content}
+                        </div>
                       </div>
                     </div>
                   );
                 })}
+
+                {/* Typing indicator */}
+                <AnimatePresence>
+                  {typingNames.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 4 }}
+                      className="flex items-center gap-2"
+                    >
+                      <div className="flex -space-x-1">
+                        {typingUsers.filter(uid => uid !== user?.id).slice(0, 3).map((uid) => (
+                          <UserAvatar key={uid} userId={uid} displayName={getMemberName(uid)} size="sm" />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-white/5 rounded-2xl rounded-bl-sm px-3 py-2">
+                        <TypingDots />
+                        <span className="text-[10px] text-white/30">
+                          {typingNames.length === 1
+                            ? `${typingNames[0]} is typing`
+                            : `${typingNames.length} people are typing`}
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Input */}
@@ -242,9 +332,9 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     </button>
                     <input
                       value={text}
-                      onChange={(e) => setText(e.target.value)}
+                      onChange={(e) => { setText(e.target.value); handleTypingChange(); }}
                       onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                      placeholder="Type a message..."
+                      placeholder={`Message #${activeTeam?.name || "team"}...`}
                       className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white/90 placeholder:text-white/25 outline-none focus:border-white/20 transition-colors"
                     />
                     <button
@@ -263,7 +353,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
               {/* Invite section */}
               <div className="px-5 py-4 border-b border-white/10">
                 <p className="text-xs font-semibold text-white/60 mb-3 flex items-center gap-1.5">
-                  <UserPlus size={12} /> Invite by email
+                  <UserPlus size={12} /> Invite to #{activeTeam?.name}
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -291,19 +381,17 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
               </div>
 
               {/* Members list */}
-              <div className="px-5 py-4 overflow-y-auto council-hidden-scrollbar max-h-[38vh]">
+              <div className="px-5 py-4 overflow-y-auto council-hidden-scrollbar max-h-[34vh]">
                 <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-3">
-                  Team Members ({members.length})
+                  Members ({members.length})
                 </p>
                 {members.length === 0 ? (
                   <p className="text-white/25 text-xs text-center py-6">No members yet</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {members.map((m) => (
                       <div key={m.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/[0.07] transition-colors group">
-                        <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-white/60 shrink-0">
-                          {((m as any).display_name || m.user_id)[0]?.toUpperCase()}
-                        </div>
+                        <UserAvatar userId={m.user_id} displayName={(m as any).display_name} size="md" />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-white/80 truncate">{(m as any).display_name || m.user_id.slice(0, 8)}</p>
                           <p className="text-[10px] text-white/30 capitalize">{m.role}</p>
@@ -326,7 +414,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 )}
               </div>
 
-              {/* Create new team */}
+              {/* Footer actions */}
               <div className="px-5 py-3 border-t border-white/10 flex flex-col gap-2">
                 {isAdmin && activeTeamId && (
                   <button
