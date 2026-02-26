@@ -401,6 +401,20 @@ const BackgroundEngine = ({ embedded = false, onMouseMove }: { embedded?: boolea
                     onChange={(e) => { const v = parseFloat(e.target.value); setVignette(v); localStorage.setItem("flux-bg-vignette", String(v)); }}
                     className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
                 </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-white/50 font-medium">🔊 Video Audio</span>
+                    <span className="text-[10px] text-white/30 tabular-nums">{Math.round(youtubeVolume * 100)}%</span>
+                  </div>
+                  <input type="range" min={0} max={1} step={0.01} value={youtubeVolume}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      setYoutubeVolume(v);
+                      localStorage.setItem("flux-yt-volume", String(v));
+                      window.dispatchEvent(new CustomEvent("flux-yt-volume-change", { detail: v }));
+                    }}
+                    className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2 mb-4">
