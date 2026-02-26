@@ -58,7 +58,7 @@ const GoogleCalendarSync = ({ onSynced }: Props) => {
     window.history.replaceState({}, "", url.toString());
     (async () => {
       setSyncing(true);
-      const redirect = `${window.location.origin}${window.location.pathname}`;
+      const redirect = `${window.location.origin}/calendar`;
       const res = await callSync("exchange", "POST", { code, redirect_uri: redirect });
       if (res.error) { toast.error("Google Calendar: " + res.error); setSyncing(false); return; }
       setConnected(true);
@@ -73,7 +73,8 @@ const GoogleCalendarSync = ({ onSynced }: Props) => {
   const handleConnect = async () => {
     setLoading(true);
     setError(null);
-    const redirect = `${window.location.origin}${window.location.pathname}`;
+    // Use a fixed redirect URI — must match exactly what's registered in Google Cloud Console
+    const redirect = `${window.location.origin}/calendar`;
     const res = await callSync("auth-url", "POST", { redirect_uri: redirect });
     if (res.error) {
       setError(res.error);
