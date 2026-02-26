@@ -16,7 +16,18 @@ const COLOR_MAP: Record<string, string> = {
   meeting: "bg-blue-500/20 border-blue-500/40 text-blue-400",
   personal: "bg-green-500/20 border-green-500/40 text-green-400",
   break: "bg-orange-500/20 border-orange-500/40 text-orange-400",
+  workout: "bg-emerald-500/20 border-emerald-500/40 text-emerald-400",
+  reading: "bg-violet-500/20 border-violet-500/40 text-violet-400",
 };
+
+const PRIORITY_BADGE: Record<string, string> = {
+  high: "bg-red-500/20 text-red-400 border-red-500/30",
+  medium: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  low: "bg-muted/40 text-muted-foreground border-border/30",
+};
+
+const FullCalendarView = () => {
+  const { tasks, scheduleBlocks, createBlock, updateTask } = useFlux();
 
 const FullCalendarView = () => {
   const { tasks, scheduleBlocks, createBlock, updateTask } = useFlux();
@@ -313,15 +324,25 @@ const FullCalendarView = () => {
                 <p className="text-xs text-muted-foreground text-center py-4">No events today</p>
               ) : (
                 <>
-                  {selectedEvents.blocks.map(b => (
-                    <div key={b.id} className={`flex items-start gap-2 p-2 rounded-lg border ${COLOR_MAP[b.type] || COLOR_MAP.deep}`}>
-                      <Clock size={12} className="mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-xs font-medium">{b.title}</p>
-                        <p className="text-[10px] opacity-70">{b.time} · {b.duration}</p>
+                  {selectedEvents.blocks.map(b => {
+                    const linkedTask = b.task_id ? tasks.find(t => t.id === b.task_id) : null;
+                    return (
+                      <div key={b.id} className={`flex items-start gap-2 p-2 rounded-lg border ${COLOR_MAP[b.type] || COLOR_MAP.deep}`}>
+                        <Clock size={12} className="mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{b.title}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <p className="text-[10px] opacity-70">{b.time} · {b.duration}</p>
+                            {linkedTask?.priority && (
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-medium capitalize ${PRIORITY_BADGE[linkedTask.priority] || PRIORITY_BADGE.medium}`}>
+                                {linkedTask.priority}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {selectedEvents.tasks.map(t => (
                     <div
                       key={t.id}
