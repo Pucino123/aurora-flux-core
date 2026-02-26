@@ -256,12 +256,12 @@ const GridDashboard = () => {
               if (!cfg) return null;
               return (
                 <div key={widgetId} className={`flux-card relative overflow-hidden group ${editMode ? "ring-1 ring-primary/20" : ""}`}>
-                  {/* Always-visible X button — only shown when NOT editing (edit mode has its own) */}
+                  {/* Always-visible X button — shown outside edit mode, appears on hover */}
                   {!editMode && (
                     <button
                       onClick={() => removeWidget(widgetId)}
                       title="Remove widget"
-                      className="absolute top-1.5 right-1.5 z-20 p-1 rounded-lg bg-background/60 backdrop-blur border border-border/30 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                      className="absolute top-2 right-2 z-20 p-1 rounded-lg bg-background/80 backdrop-blur border border-border/40 shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-150 hover:bg-destructive/10 text-muted-foreground hover:text-destructive hover:border-destructive/30"
                     >
                       <X size={11} />
                     </button>

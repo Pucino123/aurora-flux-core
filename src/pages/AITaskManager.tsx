@@ -1,25 +1,24 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useFlux } from "@/context/FluxContext";
-import { format, isToday, isTomorrow, isPast, parseISO, addDays } from "date-fns";
+import { format, isToday, isTomorrow, isPast, parseISO } from "date-fns";
 import {
   Check, Plus, Trash2, ArrowUpRight, Sparkles, Loader2,
-  GripVertical, Calendar, Flag, ChevronDown, Circle,
-  MoreHorizontal, AlignLeft, Tag, User, Clock, Filter,
-  SortAsc, Search, X, CheckCircle2, AlertCircle, Minus, RotateCcw,
+  GripVertical, Calendar, Circle,
+  MoreHorizontal, Search, X, CheckCircle2, AlertCircle, Minus, RotateCcw, Pencil,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  DndContext, closestCorners, PointerSensor, useSensor,
-  useSensors, DragEndEvent, DragOverEvent, DragStartEvent,
-  DragOverlay, rectIntersection,
+  DndContext, PointerSensor, useSensor, useSensors,
+  DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay,
+  rectIntersection,
 } from "@dnd-kit/core";
 import {
-  SortableContext, verticalListSortingStrategy,
-  useSortable, arrayMove,
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useDroppable } from "@dnd-kit/core";
 
 /* ── Priority config ── */
 const PRIORITIES = [
@@ -30,13 +29,12 @@ const PRIORITIES = [
 ];
 const getPriority = (p: string | null) => PRIORITIES.find(x => x.value === p) || PRIORITIES[2];
 
-/* ── Column definitions ── */
-const COLUMNS = [
-  { id: "today",       title: "Today",               accent: "hsl(var(--primary))",  emptyMsg: "No tasks for today — you're crushing it 🎯" },
-  { id: "in_progress", title: "In Progress",          accent: "hsl(217 90% 62%)",    emptyMsg: "Nothing in progress right now" },
-  { id: "upcoming",    title: "Upcoming",             accent: "hsl(240 2% 45%)",     emptyMsg: "No upcoming tasks scheduled" },
-] as const;
-type ColumnId = typeof COLUMNS[number]["id"];
+/* ── Default columns ── */
+const DEFAULT_COLUMNS = [
+  { id: "today",       title: "Today",       accent: "hsl(var(--primary))",  emptyMsg: "No tasks for today 🎯" },
+  { id: "in_progress", title: "In Progress", accent: "hsl(217 90% 62%)",    emptyMsg: "Nothing in progress" },
+  { id: "upcoming",    title: "Upcoming",    accent: "hsl(240 2% 45%)",     emptyMsg: "No upcoming tasks" },
+];
 
 /* ── Status ── */
 const STATUSES = [
@@ -58,13 +56,6 @@ function formatDue(date: string | null): { label: string; urgent: boolean } | nu
   } catch { return null; }
 }
 
-function getTaskColumn(task: any, today: string): ColumnId {
-  if (task.done) return "today";
-  if (task.status === "in_progress" || task.status === "blocked") return "in_progress";
-  if (task.scheduled_date === today || task.due_date === today) return "today";
-  return "upcoming";
-}
-
 /* ── Task Row ── */
 const SortableTaskRow = React.memo(({
   task, editingId, editValue, setEditingId, setEditValue,
@@ -84,8 +75,8 @@ const SortableTaskRow = React.memo(({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? "none" : transition,
-    opacity: isDragging ? 0.4 : 1,
-    zIndex: isDragging ? 999 : "auto",
+    opacity: isDragging ? 0.3 : 1,
+    zIndex: isDragging ? 999 : undefined,
   };
 
   const isEditing = editingId === task.id;
@@ -95,15 +86,13 @@ const SortableTaskRow = React.memo(({
   const due = formatDue(task.due_date);
 
   return (
-    <div ref={setNodeRef} style={style as any} className="touch-none">
+    <div ref={setNodeRef} style={style as any}>
       <div className={`group relative flex items-start gap-2.5 px-3 py-2.5 rounded-xl transition-colors duration-100 border border-transparent hover:border-border/40 hover:bg-secondary/30 ${task.done ? "opacity-50" : ""}`}>
-        {/* Drag handle */}
         <div {...attributes} {...listeners}
-          className="cursor-grab active:cursor-grabbing mt-0.5 text-muted-foreground/25 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 select-none">
+          className="cursor-grab active:cursor-grabbing mt-0.5 text-muted-foreground/30 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 select-none touch-none">
           <GripVertical size={13} />
         </div>
 
-        {/* Checkbox */}
         <button
           onClick={() => onToggle(task.id, task.done)}
           className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-150 ${
@@ -113,7 +102,6 @@ const SortableTaskRow = React.memo(({
           {task.done && <Check size={10} className="text-primary-foreground" strokeWidth={3} />}
         </button>
 
-        {/* Content */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start gap-2">
             {isEditing ? (
@@ -161,7 +149,6 @@ const SortableTaskRow = React.memo(({
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
           {task.done && onUndone && (
             <button onClick={() => onUndone(task.id)} title="Undo complete"
@@ -180,7 +167,6 @@ const SortableTaskRow = React.memo(({
         </div>
       </div>
 
-      {/* Expanded panel */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -240,24 +226,84 @@ const SortableTaskRow = React.memo(({
 });
 SortableTaskRow.displayName = "SortableTaskRow";
 
-/* ── Column drop zone ── */
+/* ── Droppable Column ── */
 const DroppableColumn = ({
-  col, tasks, isOver, editingId, editValue, expandedId,
+  col, tasks, editingId, editValue, expandedId, colTitles, onRenameCol, onDeleteCol, isCustom,
   setEditingId, setEditValue, setExpandedId,
-  onToggle, onRemove, onUpdate, onUndone, footer,
+  onToggle, onRemove, onUpdate, onUndone, onAddTask, isOver,
 }: any) => {
+  const { setNodeRef } = useDroppable({ id: col.id });
+  const [addingTask, setAddingTask] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [editingColTitle, setEditingColTitle] = useState(false);
+  const [colTitleValue, setColTitleValue] = useState(colTitles[col.id] || col.title);
+
+  const handleAddTask = () => {
+    if (!newTitle.trim()) { setAddingTask(false); return; }
+    onAddTask(col.id, newTitle.trim());
+    setNewTitle("");
+    setAddingTask(false);
+  };
+
+  const commitColRename = () => {
+    if (colTitleValue.trim()) onRenameCol(col.id, colTitleValue.trim());
+    setEditingColTitle(false);
+  };
+
+  const displayTitle = colTitles[col.id] || col.title;
+
   return (
-    <div className={`flex flex-col min-w-0 flex-1 transition-all duration-150 ${isOver ? "scale-[1.01]" : ""}`}>
-      <div className="flex items-center gap-2.5 mb-3 px-1">
-        <div className="w-2.5 h-2.5 rounded-sm" style={{ background: col.accent }} />
-        <span className="font-semibold text-sm text-foreground">{col.title}</span>
-        <span className="text-xs text-muted-foreground ml-auto bg-secondary/60 px-2 py-0.5 rounded-full">{tasks.length}</span>
+    <div className={`flex flex-col min-w-0 transition-all duration-150`}>
+      {/* Column header */}
+      <div className="flex items-center gap-2 mb-3 px-1 group/colheader">
+        <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: col.accent }} />
+        {editingColTitle ? (
+          <input
+            value={colTitleValue}
+            onChange={e => setColTitleValue(e.target.value)}
+            onBlur={commitColRename}
+            onKeyDown={e => { if (e.key === "Enter") commitColRename(); if (e.key === "Escape") setEditingColTitle(false); }}
+            className="flex-1 bg-transparent border-b-2 border-primary/50 outline-none font-semibold text-sm py-0.5"
+            autoFocus
+          />
+        ) : (
+          <span
+            className="font-semibold text-sm text-foreground cursor-pointer hover:text-primary transition-colors flex-1"
+            onDoubleClick={() => { setEditingColTitle(true); setColTitleValue(displayTitle); }}
+            title="Double-click to rename"
+          >
+            {displayTitle}
+          </span>
+        )}
+        <span className="text-xs text-muted-foreground bg-secondary/60 px-2 py-0.5 rounded-full shrink-0">{tasks.length}</span>
+        <button
+          onClick={() => { setEditingColTitle(true); setColTitleValue(displayTitle); }}
+          className="opacity-0 group-hover/colheader:opacity-100 transition-opacity p-0.5 rounded text-muted-foreground hover:text-primary"
+          title="Rename column"
+        >
+          <Pencil size={10} />
+        </button>
+        {isCustom && (
+          <button
+            onClick={() => onDeleteCol(col.id)}
+            className="opacity-0 group-hover/colheader:opacity-100 transition-opacity p-0.5 rounded text-muted-foreground hover:text-destructive"
+            title="Delete column"
+          >
+            <X size={10} />
+          </button>
+        )}
       </div>
 
-      <div className={`flux-card flex-1 p-2 min-h-[120px] transition-all duration-150 ${isOver ? "ring-2 ring-primary/30 bg-primary/[0.03]" : ""}`}>
+      {/* Drop zone */}
+      <div
+        ref={setNodeRef}
+        className={`flux-card flex-1 p-2 min-h-[120px] transition-all duration-150 ${isOver ? "ring-2 ring-primary/40 bg-primary/[0.04] scale-[1.01]" : ""}`}
+      >
         <SortableContext items={tasks.map((t: any) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8 px-4">{col.emptyMsg}</p>
+            <div className={`flex items-center justify-center py-8 px-4 rounded-xl border-2 border-dashed transition-colors ${isOver ? "border-primary/40 bg-primary/5" : "border-border/20"}`}>
+              <p className="text-xs text-muted-foreground text-center">{col.emptyMsg}</p>
+            </div>
           ) : (
             tasks.map((task: any) => (
               <SortableTaskRow
@@ -271,7 +317,28 @@ const DroppableColumn = ({
             ))
           )}
         </SortableContext>
-        {footer}
+
+        {/* Add task inline */}
+        {addingTask ? (
+          <div className="mt-2 px-1">
+            <input
+              value={newTitle}
+              onChange={e => setNewTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleAddTask(); if (e.key === "Escape") { setAddingTask(false); setNewTitle(""); } }}
+              onBlur={handleAddTask}
+              placeholder="Task title..."
+              autoFocus
+              className="w-full px-3 py-2 rounded-xl bg-background border border-primary/30 text-xs outline-none focus:ring-1 focus:ring-primary/30"
+            />
+          </div>
+        ) : (
+          <button
+            onClick={() => setAddingTask(true)}
+            className="w-full flex items-center gap-1.5 px-3 py-2 mt-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary/40 transition-colors"
+          >
+            <Plus size={11} /> Add task
+          </button>
+        )}
       </div>
     </div>
   );
@@ -288,15 +355,25 @@ const AITaskManager = () => {
   const [search, setSearch] = useState("");
   const [filterPriority, setFilterPriority] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [overColumn, setOverColumn] = useState<ColumnId | null>(null);
-  // columnOrder[colId] = ordered list of task ids in that column
-  const [columnOrder, setColumnOrder] = useState<Record<ColumnId, string[]>>({ today: [], in_progress: [], upcoming: [] });
+  const [overColumn, setOverColumn] = useState<string | null>(null);
+
+  // Dynamic columns support
+  const [customColumns, setCustomColumns] = useState<Array<{ id: string; title: string; accent: string; emptyMsg: string }>>([]);
+  const [colTitles, setColTitles] = useState<Record<string, string>>({});
+  // taskColumn: maps task id → column id (source of truth for placement)
+  const [taskColumnMap, setTaskColumnMap] = useState<Record<string, string>>({});
+  // columnOrder: maps column id → ordered list of task ids
+  const [columnOrder, setColumnOrder] = useState<Record<string, string[]>>({});
   const initialized = useRef(false);
+  const [addingColumn, setAddingColumn] = useState(false);
+  const [newColTitle, setNewColTitle] = useState("");
 
   const today = format(new Date(), "yyyy-MM-dd");
 
+  const allColumns = useMemo(() => [...DEFAULT_COLUMNS, ...customColumns], [customColumns]);
+
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
   const filteredTasks = useMemo(() => {
@@ -308,136 +385,137 @@ const AITaskManager = () => {
 
   const doneTasks = useMemo(() => tasks.filter(t => t.done).slice(0, 10), [tasks]);
 
-  // Build column task maps from filteredTasks + columnOrder for stable ordering
-  const { todayTasks, inProgressTasks, upcomingTasks } = useMemo(() => {
-    const byCol: Record<ColumnId, any[]> = { today: [], in_progress: [], upcoming: [] };
-    const taskMap = new Map(filteredTasks.map(t => [t.id, t]));
+  // Derive column for a task based on its DB state
+  const deriveColumn = useCallback((task: any): string => {
+    if (task.status === "in_progress" || task.status === "blocked") return "in_progress";
+    if (task.scheduled_date === today || task.due_date === today) return "today";
+    return "upcoming";
+  }, [today]);
 
-    filteredTasks.forEach(t => {
-      const col = getTaskColumn(t, today);
-      byCol[col].push(t);
-    });
-
-    // Sort each column by columnOrder if available, else by sort_order
-    const sortCol = (colId: ColumnId) => {
-      const order = columnOrder[colId];
-      if (!order.length) return byCol[colId].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-      const ordered: any[] = [];
-      order.forEach(id => { const t = taskMap.get(id); if (t) ordered.push(t); });
-      byCol[colId].forEach(t => { if (!order.includes(t.id)) ordered.push(t); });
-      return ordered;
-    };
-
-    return {
-      todayTasks: sortCol("today"),
-      inProgressTasks: sortCol("in_progress"),
-      upcomingTasks: sortCol("upcoming"),
-    };
-  }, [filteredTasks, columnOrder, today]);
-
-  // Initialise column order from tasks on first load
+  // Initialize column order from tasks
   React.useEffect(() => {
     if (!initialized.current && tasks.length > 0) {
       initialized.current = true;
-      const byCol: Record<ColumnId, string[]> = { today: [], in_progress: [], upcoming: [] };
+      const colMap: Record<string, string> = {};
+      const order: Record<string, string[]> = { today: [], in_progress: [], upcoming: [] };
       tasks.filter(t => !t.done).forEach(t => {
-        const col = getTaskColumn(t, today);
-        byCol[col].push(t.id);
+        const col = deriveColumn(t);
+        colMap[t.id] = col;
+        if (order[col]) order[col].push(t.id);
       });
-      setColumnOrder(byCol);
+      setTaskColumnMap(colMap);
+      setColumnOrder(order);
     }
-  }, [tasks, today]);
+  }, [tasks, deriveColumn]);
 
-  const getColumnForTask = useCallback((taskId: string): ColumnId | null => {
-    for (const col of COLUMNS) {
-      if (columnOrder[col.id].includes(taskId)) return col.id;
-    }
-    // Fallback: derive from task data
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return null;
-    return getTaskColumn(task, today);
-  }, [columnOrder, tasks, today]);
+  // Keep new tasks added elsewhere in sync
+  React.useEffect(() => {
+    if (!initialized.current) return;
+    setTaskColumnMap(prev => {
+      const next = { ...prev };
+      tasks.filter(t => !t.done && !next[t.id]).forEach(t => {
+        const col = deriveColumn(t);
+        next[t.id] = col;
+        setColumnOrder(o => ({ ...o, [col]: [t.id, ...(o[col] || [])] }));
+      });
+      return next;
+    });
+  }, [tasks, deriveColumn]);
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+  const getTasksForColumn = useCallback((colId: string) => {
+    const order = columnOrder[colId] || [];
+    const taskMap = new Map(filteredTasks.map(t => [t.id, t]));
+    const result: any[] = [];
+    order.forEach(id => { const t = taskMap.get(id); if (t) result.push(t); });
+    // append tasks not yet in order
+    filteredTasks.forEach(t => {
+      const assignedCol = taskColumnMap[t.id] || deriveColumn(t);
+      if (assignedCol === colId && !order.includes(t.id)) result.push(t);
+    });
+    return result;
+  }, [columnOrder, filteredTasks, taskColumnMap, deriveColumn]);
+
+  const handleDragStart = useCallback((e: DragStartEvent) => {
+    setActiveId(e.active.id as string);
   }, []);
 
-  const handleDragOver = useCallback((event: DragOverEvent) => {
-    const { over } = event;
+  const handleDragOver = useCallback((e: DragOverEvent) => {
+    const { active, over } = e;
     if (!over) { setOverColumn(null); return; }
-    // Check if hovering over a column directly
-    const colId = COLUMNS.find(c => c.id === over.id)?.id;
-    if (colId) { setOverColumn(colId); return; }
-    // Hovering over a task — find its column
-    const task = tasks.find(t => t.id === over.id);
-    if (task) setOverColumn(getTaskColumn(task, today) as ColumnId);
-  }, [tasks, today]);
+    // Determine target column
+    const overColId = allColumns.find(c => c.id === over.id)?.id;
+    if (overColId) { setOverColumn(overColId); return; }
+    // over a task: find which column it belongs to
+    const overTaskCol = taskColumnMap[over.id as string] || deriveColumn(tasks.find(t => t.id === over.id));
+    if (overTaskCol) setOverColumn(overTaskCol);
+  }, [allColumns, taskColumnMap, tasks, deriveColumn]);
 
-  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleDragEnd = useCallback(async (e: DragEndEvent) => {
+    const { active, over } = e;
     setActiveId(null);
     setOverColumn(null);
-
     if (!over) return;
 
     const activeTaskId = active.id as string;
     const overId = over.id as string;
 
-    const sourceCol = getColumnForTask(activeTaskId);
-    let destCol: ColumnId | null = null;
-
-    // Check if dropped on a column
-    const colMatch = COLUMNS.find(c => c.id === overId);
-    if (colMatch) {
-      destCol = colMatch.id;
-    } else {
-      // Dropped on a task — find that task's column
-      const overTask = tasks.find(t => t.id === overId);
-      if (overTask) destCol = getTaskColumn(overTask, today) as ColumnId;
+    const sourceCol = taskColumnMap[activeTaskId] || deriveColumn(tasks.find(t => t.id === activeTaskId));
+    let destCol = allColumns.find(c => c.id === overId)?.id;
+    if (!destCol) {
+      destCol = taskColumnMap[overId] || deriveColumn(tasks.find(t => t.id === overId));
     }
-
     if (!sourceCol || !destCol) return;
 
     if (sourceCol === destCol) {
-      // Reorder within same column
-      const colItems = [...(columnOrder[sourceCol] || [])];
-      const oldIdx = colItems.indexOf(activeTaskId);
-      const newIdx = colItems.indexOf(overId);
-      if (oldIdx === -1 || newIdx === -1 || oldIdx === newIdx) return;
-      const reordered = arrayMove(colItems, oldIdx, newIdx);
-      setColumnOrder(prev => ({ ...prev, [sourceCol]: reordered }));
-    } else {
-      // Move to different column — update task in DB
-      const updates: Record<ColumnId, any> = {
-        today: { scheduled_date: today, status: "todo", done: false },
-        in_progress: { status: "in_progress", done: false, scheduled_date: null },
-        upcoming: { status: "todo", done: false, scheduled_date: null },
-      };
-      await updateTask(activeTaskId, updates[destCol]);
-
-      // Update column order state
+      // Reorder within column
       setColumnOrder(prev => {
-        const src = prev[sourceCol].filter(id => id !== activeTaskId);
-        const dstItems = [...prev[destCol]];
-        const overIdx = dstItems.indexOf(overId);
-        if (overIdx !== -1) {
-          dstItems.splice(overIdx, 0, activeTaskId);
-        } else {
-          dstItems.push(activeTaskId);
-        }
-        return { ...prev, [sourceCol]: src, [destCol]: dstItems };
+        const items = [...(prev[sourceCol] || [])];
+        const oldIdx = items.indexOf(activeTaskId);
+        const newIdx = items.indexOf(overId);
+        if (oldIdx === -1) return prev;
+        const ni = newIdx === -1 ? items.length - 1 : newIdx;
+        return { ...prev, [sourceCol]: arrayMove(items, oldIdx, ni) };
+      });
+    } else {
+      // Move to different column
+      const statusMap: Record<string, any> = {
+        today:       { scheduled_date: today, status: "todo", done: false },
+        in_progress: { status: "in_progress", done: false, scheduled_date: null },
+        upcoming:    { status: "todo", done: false, scheduled_date: null },
+      };
+      const updates = statusMap[destCol] || { status: "todo", done: false };
+      await updateTask(activeTaskId, updates);
+
+      setTaskColumnMap(prev => ({ ...prev, [activeTaskId]: destCol! }));
+      setColumnOrder(prev => {
+        const src = (prev[sourceCol] || []).filter(id => id !== activeTaskId);
+        const dst = [...(prev[destCol!] || [])];
+        const overIdx = dst.indexOf(overId);
+        if (overIdx !== -1) dst.splice(overIdx, 0, activeTaskId);
+        else dst.push(activeTaskId);
+        return { ...prev, [sourceCol]: src, [destCol!]: dst };
       });
     }
-  }, [getColumnForTask, columnOrder, tasks, today, updateTask]);
+  }, [taskColumnMap, allColumns, tasks, today, updateTask, deriveColumn]);
 
-  const handleAdd = useCallback(async () => {
-    if (!newTitle.trim()) return;
-    const task = await createTask({ title: newTitle.trim(), scheduled_date: today, priority: "medium", status: "todo" });
-    setNewTitle("");
+  const handleAddTaskToColumn = useCallback(async (colId: string, title: string) => {
+    const statusMap: Record<string, any> = {
+      today:       { scheduled_date: today, status: "todo", priority: "medium" },
+      in_progress: { status: "in_progress", priority: "medium" },
+    };
+    const extra = statusMap[colId] || { status: "todo", priority: "medium" };
+    const task = await createTask({ title, ...extra });
     if (task) {
-      setColumnOrder(prev => ({ ...prev, today: [task.id, ...prev.today] }));
+      setTaskColumnMap(prev => ({ ...prev, [task.id]: colId }));
+      setColumnOrder(prev => ({ ...prev, [colId]: [task.id, ...(prev[colId] || [])] }));
     }
-  }, [newTitle, today, createTask]);
+  }, [today, createTask]);
+
+  const handleAddToday = useCallback(async () => {
+    if (!newTitle.trim()) return;
+    await handleAddTaskToColumn("today", newTitle.trim());
+    setNewTitle("");
+  }, [newTitle, handleAddTaskToColumn]);
 
   const handleToggle = useCallback(async (id: string, done: boolean) => {
     await updateTask(id, { done: !done, status: !done ? "done" : "todo" });
@@ -453,6 +531,7 @@ const AITaskManager = () => {
   }, [updateTask]);
 
   const handleAIPrioritize = async () => {
+    const todayTasks = getTasksForColumn("today");
     if (todayTasks.length < 2) { toast.info("Add more tasks to prioritize"); return; }
     setPrioritizing(true);
     try {
@@ -475,12 +554,48 @@ const AITaskManager = () => {
     finally { setPrioritizing(false); }
   };
 
+  const handleAddColumn = () => {
+    if (!newColTitle.trim()) return;
+    const id = `custom_${Date.now()}`;
+    setCustomColumns(prev => [...prev, {
+      id, title: newColTitle.trim(),
+      accent: "hsl(var(--muted-foreground))",
+      emptyMsg: "No tasks here yet",
+    }]);
+    setColumnOrder(prev => ({ ...prev, [id]: [] }));
+    setNewColTitle("");
+    setAddingColumn(false);
+  };
+
+  const handleRenameCol = (colId: string, title: string) => {
+    setColTitles(prev => ({ ...prev, [colId]: title }));
+    if (customColumns.find(c => c.id === colId)) {
+      setCustomColumns(prev => prev.map(c => c.id === colId ? { ...c, title } : c));
+    }
+  };
+
+  const handleDeleteCol = (colId: string) => {
+    setCustomColumns(prev => prev.filter(c => c.id !== colId));
+    // Move tasks back to upcoming
+    const colTaskIds = columnOrder[colId] || [];
+    colTaskIds.forEach(id => {
+      setTaskColumnMap(prev => ({ ...prev, [id]: "upcoming" }));
+    });
+    setColumnOrder(prev => {
+      const { [colId]: _, ...rest } = prev;
+      return rest;
+    });
+  };
+
   const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
   const completionPct = tasks.length > 0 ? Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) : 0;
 
   const sharedProps = {
-    editingId, editValue, expandedId, setEditingId, setEditValue, setExpandedId,
+    editingId, editValue, expandedId, colTitles,
+    setEditingId, setEditValue, setExpandedId,
     onToggle: handleToggle, onRemove: removeTask, onUpdate: updateTask, onUndone: handleUndone,
+    onRenameCol: handleRenameCol, onDeleteCol: handleDeleteCol,
+    onAddTask: handleAddTaskToColumn,
   };
 
   return (
@@ -556,21 +671,21 @@ const AITaskManager = () => {
         </div>
       </div>
 
-      {/* Add task */}
+      {/* Global add task */}
       <div className="flex gap-2">
         <input
           value={newTitle} onChange={e => setNewTitle(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handleAdd()}
-          placeholder="Add a task for today... (Press Enter)"
+          onKeyDown={e => e.key === "Enter" && handleAddToday()}
+          placeholder="Quick add task for today... (Press Enter)"
           className="flex-1 px-4 py-2.5 rounded-xl bg-secondary/40 border border-border/30 text-sm outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/40"
         />
-        <button onClick={handleAdd} disabled={!newTitle.trim()}
+        <button onClick={handleAddToday} disabled={!newTitle.trim()}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 transition-all hover:bg-primary/90 text-sm font-medium">
           <Plus size={15} /> Add
         </button>
       </div>
 
-      {/* Board columns with single DndContext */}
+      {/* Board */}
       <DndContext
         sensors={sensors}
         collisionDetection={rectIntersection}
@@ -578,52 +693,53 @@ const AITaskManager = () => {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {COLUMNS.map(col => {
-            const colTasks = col.id === "today" ? todayTasks : col.id === "in_progress" ? inProgressTasks : upcomingTasks;
-            return (
-              <DroppableColumn
-                key={col.id}
-                col={col}
-                tasks={colTasks}
-                isOver={overColumn === col.id}
-                {...sharedProps}
-                footer={
-                  col.id === "upcoming" && upcomingTasks.length > 0 ? (
-                    <button
-                      onClick={() => {
-                        const first = upcomingTasks[0];
-                        if (first) {
-                          updateTask(first.id, { scheduled_date: today });
-                          setColumnOrder(prev => ({
-                            ...prev,
-                            today: [first.id, ...prev.today],
-                            upcoming: prev.upcoming.filter(id => id !== first.id),
-                          }));
-                        }
-                      }}
-                      className="w-full text-[11px] text-muted-foreground hover:text-primary py-1.5 transition-colors mt-1 flex items-center justify-center gap-1"
-                    >
-                      <ArrowUpRight size={11} /> Move top task to today
-                    </button>
-                  ) : null
-                }
-              />
-            );
-          })}
+        <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(${allColumns.length}, minmax(0, 1fr))` }}>
+          {allColumns.map(col => (
+            <DroppableColumn
+              key={col.id}
+              col={col}
+              tasks={getTasksForColumn(col.id)}
+              isOver={overColumn === col.id}
+              isCustom={!!customColumns.find(c => c.id === col.id)}
+              {...sharedProps}
+            />
+          ))}
         </div>
 
-        {/* Drag overlay for ghost card */}
-        <DragOverlay dropAnimation={{ duration: 180, easing: "ease" }}>
+        <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
           {activeTask ? (
-            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-card border border-primary/30 shadow-2xl text-sm font-medium opacity-95 w-64">
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-card border border-primary/30 shadow-2xl text-sm font-medium opacity-95 w-64 rotate-2">
               <GripVertical size={13} className="text-muted-foreground" />
-              <Check size={14} className="text-muted-foreground shrink-0" />
               <span className="truncate">{activeTask.title}</span>
             </div>
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Add Column button */}
+      <div className="flex items-center gap-2">
+        {addingColumn ? (
+          <div className="flex gap-2 items-center">
+            <input
+              value={newColTitle}
+              onChange={e => setNewColTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleAddColumn(); if (e.key === "Escape") { setAddingColumn(false); setNewColTitle(""); } }}
+              placeholder="Column name..."
+              autoFocus
+              className="px-3 py-1.5 rounded-xl bg-secondary/40 border border-border/30 text-sm outline-none focus:ring-1 focus:ring-primary/30 w-48"
+            />
+            <button onClick={handleAddColumn} className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium">Add</button>
+            <button onClick={() => { setAddingColumn(false); setNewColTitle(""); }} className="px-3 py-1.5 rounded-xl bg-secondary text-muted-foreground text-xs">Cancel</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAddingColumn(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all text-xs font-medium border border-border/20 border-dashed"
+          >
+            <Plus size={12} /> Add Column
+          </button>
+        )}
+      </div>
 
       {/* Done */}
       {doneTasks.length > 0 && (

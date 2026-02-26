@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, Flag, ChevronDown, ChevronUp, Smile } from "lucide-react";
+import { X, Flag, ChevronDown, ChevronUp, Smile, Type } from "lucide-react";
+
+const FONT_FAMILIES = [
+  { label: "Handwritten", value: "'Caveat', cursive, sans-serif" },
+  { label: "System", value: "inherit" },
+  { label: "Serif", value: "Georgia, serif" },
+  { label: "Mono", value: "ui-monospace, monospace" },
+  { label: "Rounded", value: "'Nunito', sans-serif" },
+];
 
 const STICKY_COLORS: Record<string, { bg: string; border: string }> = {
   purple: { bg: "hsl(270 70% 92%)", border: "hsl(270 70% 75%)" },
@@ -30,6 +38,10 @@ const StickyNote = ({ id, content, color, collapsed, emojiReaction, priorityFlag
   const [text, setText] = useState(content);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showFlag, setShowFlag] = useState(false);
+  const [showFont, setShowFont] = useState(false);
+  const [fontFamily, setFontFamily] = useState("'Caveat', cursive, sans-serif");
+  const [fontSize, setFontSize] = useState(13);
+  const [fontWeight, setFontWeight] = useState(400);
   const colors = STICKY_COLORS[color] || STICKY_COLORS.yellow;
 
   const handleBlur = () => {
@@ -70,6 +82,9 @@ const StickyNote = ({ id, content, color, collapsed, emojiReaction, priorityFlag
           <button onClick={() => setShowFlag(!showFlag)} className="p-0.5 hover:bg-black/5 rounded text-muted-foreground">
             <Flag size={12} />
           </button>
+          <button onClick={() => setShowFont(!showFont)} className="p-0.5 hover:bg-black/5 rounded text-muted-foreground">
+            <Type size={12} />
+          </button>
           <button onClick={() => onUpdate(id, { collapsed: !collapsed })} className="p-0.5 hover:bg-black/5 rounded text-muted-foreground">
             {collapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
           </button>
@@ -109,6 +124,36 @@ const StickyNote = ({ id, content, color, collapsed, emojiReaction, priorityFlag
         </div>
       )}
 
+      {/* Font settings panel */}
+      {showFont && (
+        <div className="px-2 pb-1 space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] text-muted-foreground w-10 shrink-0">Font</span>
+            <select value={fontFamily} onChange={e => setFontFamily(e.target.value)}
+              className="flex-1 text-[9px] bg-black/5 border-none rounded px-1 py-0.5 outline-none">
+              {FONT_FAMILIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] text-muted-foreground w-10 shrink-0">Size</span>
+            <input type="range" min={9} max={20} value={fontSize} onChange={e => setFontSize(+e.target.value)} className="flex-1 accent-current h-1" />
+            <span className="text-[9px] w-5 text-right">{fontSize}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] text-muted-foreground w-10 shrink-0">Weight</span>
+            <div className="flex gap-0.5">
+              {[300,400,600,700].map(w => (
+                <button key={w} onClick={() => setFontWeight(w)}
+                  className={`text-[8px] px-1 py-0.5 rounded border transition-colors ${fontWeight===w ? "bg-black/15 border-black/30" : "border-transparent"}`}
+                  style={{fontWeight:w}}>
+                  {w===300?"L":w===400?"R":w===600?"S":"B"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       {!collapsed && (
         <div className="px-2 pb-2">
@@ -118,14 +163,14 @@ const StickyNote = ({ id, content, color, collapsed, emojiReaction, priorityFlag
               onChange={(e) => setText(e.target.value)}
               onBlur={handleBlur}
               autoFocus
-              className="w-full bg-transparent text-xs leading-relaxed outline-none resize-none min-h-[40px]"
-              style={{ fontFamily: "'Caveat', cursive, sans-serif" }}
+              className="w-full bg-transparent leading-relaxed outline-none resize-none min-h-[40px]"
+              style={{ fontFamily, fontSize, fontWeight }}
             />
           ) : (
             <p
               onClick={() => setEditing(true)}
-              className="text-xs leading-relaxed cursor-text whitespace-pre-wrap"
-              style={{ fontFamily: "'Caveat', cursive, sans-serif", fontSize: "13px" }}
+              className="leading-relaxed cursor-text whitespace-pre-wrap"
+              style={{ fontFamily, fontSize, fontWeight }}
             >
               {content || "Click to add a note..."}
             </p>
