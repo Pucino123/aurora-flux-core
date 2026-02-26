@@ -213,17 +213,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         </motion.div>
       </section>
 
-      {/* ── "More than just tasks" marquee banner ── */}
-      <section className="relative z-10 pb-24">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-10 px-6">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
-            More than just <em style={{ fontStyle: "italic" }}>tasks</em>
-          </h2>
-          <p className="text-white/65 text-base max-w-md mx-auto">One workspace that replaces all your productivity apps.</p>
-        </motion.div>
-        <FeatureMarquee />
-      </section>
-
       {/* ── Intro video section ── */}
       <section className="relative z-10 px-6 pb-24">
         <div className="max-w-4xl mx-auto">
@@ -237,6 +226,17 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
             <VideoSection />
           </motion.div>
         </div>
+      </section>
+
+      {/* ── "More than just tasks" marquee banner ── */}
+      <section className="relative z-10 pb-24">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-10 px-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
+            More than just <em style={{ fontStyle: "italic" }}>tasks</em>
+          </h2>
+          <p className="text-white/65 text-base max-w-md mx-auto">One workspace that replaces all your productivity apps.</p>
+        </motion.div>
+        <FeatureMarquee />
       </section>
 
       {/* ── How it works ── */}
