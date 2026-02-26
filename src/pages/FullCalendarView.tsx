@@ -28,6 +28,7 @@ const FullCalendarView = () => {
   const [newBlockTime, setNewBlockTime] = useState("09:00");
   const [newBlockType, setNewBlockType] = useState("deep");
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
 
   // ── Month grid ──
   const monthStart = startOfMonth(currentDate);
@@ -75,6 +76,12 @@ const FullCalendarView = () => {
   // Drag to reschedule task
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData("task-id", taskId);
+    setDraggingTaskId(taskId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingTaskId(null);
+    setDragOverDate(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetDate: string) => {
@@ -157,12 +164,12 @@ const FullCalendarView = () => {
                       onDragOver={(e) => { e.preventDefault(); setDragOverDate(key); }}
                       onDragLeave={() => setDragOverDate(null)}
                       onDrop={(e) => handleDrop(e, key)}
-                      className={`bg-background min-h-[80px] p-1.5 cursor-pointer transition-colors hover:bg-secondary/30 ${
-                        isSelected ? "ring-inset ring-1 ring-primary/50" : ""
-                      } ${isDragOver ? "bg-primary/5" : ""}`}
+                      className={`bg-background min-h-[80px] p-1.5 cursor-pointer transition-all duration-150 ${
+                        isSelected ? "ring-inset ring-1 ring-primary/50 bg-primary/[0.02]" : "hover:bg-secondary/30"
+                      } ${isDragOver && draggingTaskId ? "bg-primary/10 ring-inset ring-2 ring-primary/40 scale-[0.99]" : ""}`}
                     >
                       <span className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ${
-                        isToday(day) ? "bg-primary text-primary-foreground" : isSelected ? "text-primary font-bold" : isCurrentMonth ? "text-foreground" : "text-muted-foreground/40"
+                        isToday(day) ? "bg-primary text-primary-foreground" : isSelected ? "text-primary font-bold" : isCurrentMonth ? "text-foreground" : "text-muted-foreground/30"
                       }`}>
                         {format(day, "d")}
                       </span>
@@ -177,7 +184,10 @@ const FullCalendarView = () => {
                             key={t.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, t.id)}
-                            className="text-[9px] px-1 py-0.5 rounded truncate bg-secondary/60 text-muted-foreground cursor-grab flex items-center gap-0.5"
+                            onDragEnd={handleDragEnd}
+                            className={`text-[9px] px-1 py-0.5 rounded truncate bg-secondary/60 text-muted-foreground cursor-grab flex items-center gap-0.5 active:opacity-40 transition-opacity ${
+                              draggingTaskId === t.id ? "opacity-30" : ""
+                            }`}
                           >
                             <Grip size={7} className="shrink-0 opacity-50" />
                             {t.title}
@@ -317,7 +327,10 @@ const FullCalendarView = () => {
                       key={t.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, t.id)}
-                      className="flex items-start gap-2 p-2 rounded-lg bg-secondary/40 border border-border/20 cursor-grab hover:bg-secondary/60 transition-colors"
+                      onDragEnd={handleDragEnd}
+                      className={`flex items-start gap-2 p-2 rounded-lg bg-secondary/40 border border-border/20 cursor-grab hover:bg-secondary/60 transition-all active:opacity-40 ${
+                        draggingTaskId === t.id ? "opacity-30 scale-95" : ""
+                      }`}
                     >
                       <CheckCircle2 size={12} className={`mt-0.5 shrink-0 ${t.done ? "text-primary" : "text-muted-foreground/40"}`} />
                       <div className="flex-1 min-w-0">
