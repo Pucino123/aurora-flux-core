@@ -1,18 +1,19 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useFlux } from "@/context/FluxContext";
 import { format, isToday, isTomorrow, isPast, parseISO, addDays } from "date-fns";
 import {
   Check, Plus, Trash2, ArrowUpRight, Sparkles, Loader2,
   GripVertical, Calendar, Flag, ChevronDown, Circle,
   MoreHorizontal, AlignLeft, Tag, User, Clock, Filter,
-  SortAsc, Search, X, CheckCircle2, AlertCircle, Minus,
+  SortAsc, Search, X, CheckCircle2, AlertCircle, Minus, RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  DndContext, closestCenter, PointerSensor, useSensor,
-  useSensors, DragEndEvent,
+  DndContext, closestCorners, PointerSensor, useSensor,
+  useSensors, DragEndEvent, DragOverEvent, DragStartEvent,
+  DragOverlay, rectIntersection,
 } from "@dnd-kit/core";
 import {
   SortableContext, verticalListSortingStrategy,
@@ -22,19 +23,27 @@ import { CSS } from "@dnd-kit/utilities";
 
 /* ── Priority config ── */
 const PRIORITIES = [
-  { value: "critical", label: "Critical", color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/25", dot: "bg-red-400", icon: AlertCircle },
+  { value: "critical", label: "Critical", color: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-500/25",    dot: "bg-red-400",    icon: AlertCircle },
   { value: "high",     label: "High",     color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/25", dot: "bg-orange-400", icon: ArrowUpRight },
   { value: "medium",   label: "Medium",   color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/25", dot: "bg-yellow-400", icon: Minus },
   { value: "low",      label: "Low",      color: "text-green-400",  bg: "bg-green-500/10",  border: "border-green-500/25",  dot: "bg-green-400",  icon: Circle },
 ];
 const getPriority = (p: string | null) => PRIORITIES.find(x => x.value === p) || PRIORITIES[2];
 
+/* ── Column definitions ── */
+const COLUMNS = [
+  { id: "today",       title: "Today",               accent: "hsl(var(--primary))",  emptyMsg: "No tasks for today — you're crushing it 🎯" },
+  { id: "in_progress", title: "In Progress",          accent: "hsl(217 90% 62%)",    emptyMsg: "Nothing in progress right now" },
+  { id: "upcoming",    title: "Upcoming",             accent: "hsl(240 2% 45%)",     emptyMsg: "No upcoming tasks scheduled" },
+] as const;
+type ColumnId = typeof COLUMNS[number]["id"];
+
 /* ── Status ── */
 const STATUSES = [
-  { value: "todo",        label: "To Do",       color: "bg-muted text-muted-foreground" },
-  { value: "in_progress", label: "In Progress",  color: "bg-blue-500/15 text-blue-400" },
-  { value: "done",        label: "Done",         color: "bg-green-500/15 text-green-400" },
-  { value: "blocked",     label: "Blocked",      color: "bg-red-500/15 text-red-400" },
+  { value: "todo",        label: "To Do",      color: "bg-muted text-muted-foreground" },
+  { value: "in_progress", label: "In Progress", color: "bg-blue-500/15 text-blue-400" },
+  { value: "done",        label: "Done",        color: "bg-green-500/15 text-green-400" },
+  { value: "blocked",     label: "Blocked",     color: "bg-red-500/15 text-red-400" },
 ];
 const getStatus = (s: string) => STATUSES.find(x => x.value === s) || STATUSES[0];
 
@@ -49,10 +58,17 @@ function formatDue(date: string | null): { label: string; urgent: boolean } | nu
   } catch { return null; }
 }
 
+function getTaskColumn(task: any, today: string): ColumnId {
+  if (task.done) return "today";
+  if (task.status === "in_progress" || task.status === "blocked") return "in_progress";
+  if (task.scheduled_date === today || task.due_date === today) return "today";
+  return "upcoming";
+}
+
 /* ── Task Row ── */
 const SortableTaskRow = React.memo(({
   task, editingId, editValue, setEditingId, setEditValue,
-  expandedId, setExpandedId, onToggle, onRemove, onUpdate,
+  expandedId, setExpandedId, onToggle, onRemove, onUpdate, onUndone,
 }: {
   task: any; editingId: string | null; editValue: string;
   expandedId: string | null;
@@ -62,9 +78,15 @@ const SortableTaskRow = React.memo(({
   onToggle: (id: string, done: boolean) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, data: any) => void;
+  onUndone?: (id: string) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, zIndex: isDragging ? 100 : "auto" };
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? "none" : transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 999 : "auto",
+  };
 
   const isEditing = editingId === task.id;
   const isExpanded = expandedId === task.id;
@@ -73,211 +95,182 @@ const SortableTaskRow = React.memo(({
   const due = formatDue(task.due_date);
 
   return (
-    <div ref={setNodeRef} style={style as any}>
-      <motion.div layout initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}>
-        <div
-          className={`group relative flex items-start gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-150 border border-transparent hover:border-border/40 hover:bg-secondary/30 ${task.done ? "opacity-50" : ""}`}
+    <div ref={setNodeRef} style={style as any} className="touch-none">
+      <div className={`group relative flex items-start gap-2.5 px-3 py-2.5 rounded-xl transition-colors duration-100 border border-transparent hover:border-border/40 hover:bg-secondary/30 ${task.done ? "opacity-50" : ""}`}>
+        {/* Drag handle */}
+        <div {...attributes} {...listeners}
+          className="cursor-grab active:cursor-grabbing mt-0.5 text-muted-foreground/25 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 select-none">
+          <GripVertical size={13} />
+        </div>
+
+        {/* Checkbox */}
+        <button
+          onClick={() => onToggle(task.id, task.done)}
+          className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-150 ${
+            task.done ? "bg-primary border-primary" : "border-border hover:border-primary/70 hover:scale-105"
+          }`}
         >
-          {/* Drag handle */}
-          <div {...attributes} {...listeners}
-            className="cursor-grab mt-0.5 text-muted-foreground/25 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 touch-none select-none">
-            <GripVertical size={13} />
-          </div>
+          {task.done && <Check size={10} className="text-primary-foreground" strokeWidth={3} />}
+        </button>
 
-          {/* Checkbox */}
-          <button
-            onClick={() => onToggle(task.id, task.done)}
-            className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200 ${
-              task.done ? "bg-primary border-primary scale-95" : "border-border hover:border-primary/70 hover:scale-105"
-            }`}
-          >
-            {task.done && <Check size={10} className="text-primary-foreground" strokeWidth={3} />}
-          </button>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-start gap-2 flex-wrap">
-              {isEditing ? (
-                <input
-                  value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
-                  onBlur={() => { if (editValue.trim()) onUpdate(task.id, { title: editValue.trim() }); setEditingId(null); }}
-                  onKeyDown={e => {
-                    if (e.key === "Enter") { if (editValue.trim()) onUpdate(task.id, { title: editValue.trim() }); setEditingId(null); }
-                    if (e.key === "Escape") setEditingId(null);
-                  }}
-                  className="flex-1 bg-transparent border-b-2 border-primary/50 outline-none text-sm py-0.5 min-w-0"
-                  autoFocus
-                />
-              ) : (
-                <p
-                  onClick={() => { setEditingId(task.id); setEditValue(task.title); }}
-                  className={`text-sm cursor-text ${task.done ? "line-through text-muted-foreground/50" : "text-foreground"}`}
-                >
-                  {task.title}
-                </p>
-              )}
-            </div>
-
-            {/* Meta row */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Status badge */}
-              <button
-                onClick={() => {
-                  const idx = STATUSES.findIndex(s => s.value === (task.status || "todo"));
-                  const next = STATUSES[(idx + 1) % STATUSES.length];
-                  onUpdate(task.id, { status: next.value, done: next.value === "done" });
+        {/* Content */}
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-start gap-2">
+            {isEditing ? (
+              <input
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onBlur={() => { if (editValue.trim()) onUpdate(task.id, { title: editValue.trim() }); setEditingId(null); }}
+                onKeyDown={e => {
+                  if (e.key === "Enter") { if (editValue.trim()) onUpdate(task.id, { title: editValue.trim() }); setEditingId(null); }
+                  if (e.key === "Escape") setEditingId(null);
                 }}
-                className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${status.color} cursor-pointer hover:opacity-80 transition-opacity`}
+                className="flex-1 bg-transparent border-b-2 border-primary/50 outline-none text-sm py-0.5 min-w-0"
+                autoFocus
+              />
+            ) : (
+              <p
+                onDoubleClick={() => { setEditingId(task.id); setEditValue(task.title); }}
+                className={`text-sm cursor-default ${task.done ? "line-through text-muted-foreground/50" : "text-foreground"}`}
               >
-                {status.label}
-              </button>
-
-              {/* Priority dot */}
-              <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${prio.color}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-                {prio.label}
-              </span>
-
-              {/* Due date */}
-              {due && (
-                <span className={`inline-flex items-center gap-1 text-[10px] ${due.urgent ? "text-red-400" : "text-muted-foreground"}`}>
-                  <Calendar size={10} />
-                  {due.label}
-                </span>
-              )}
-            </div>
+                {task.title}
+              </p>
+            )}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
-            <button onClick={() => setExpandedId(isExpanded ? null : task.id)}
-              className="p-1 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-colors">
-              <MoreHorizontal size={13} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                const idx = STATUSES.findIndex(s => s.value === (task.status || "todo"));
+                const next = STATUSES[(idx + 1) % STATUSES.length];
+                onUpdate(task.id, { status: next.value, done: next.value === "done" });
+              }}
+              className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${status.color} cursor-pointer hover:opacity-80 transition-opacity`}
+            >
+              {status.label}
             </button>
-            <button onClick={() => onRemove(task.id)}
-              className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-              <Trash2 size={13} />
-            </button>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${prio.color}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
+              {prio.label}
+            </span>
+            {due && (
+              <span className={`inline-flex items-center gap-1 text-[10px] ${due.urgent ? "text-red-400" : "text-muted-foreground"}`}>
+                <Calendar size={10} /> {due.label}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Expanded panel */}
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="ml-9 mr-3 mb-2 px-3 py-3 rounded-xl bg-secondary/20 border border-border/30 grid grid-cols-2 md:grid-cols-4 gap-3">
-                {/* Priority */}
-                <div>
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Priority</label>
-                  <div className="flex flex-wrap gap-1">
-                    {PRIORITIES.map(p => (
-                      <button key={p.value} onClick={() => onUpdate(task.id, { priority: p.value })}
-                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${task.priority === p.value ? `${p.bg} ${p.border} ${p.color}` : "border-border/30 text-muted-foreground hover:border-border"}`}>
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+        {/* Actions */}
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
+          {task.done && onUndone && (
+            <button onClick={() => onUndone(task.id)} title="Undo complete"
+              className="p-1 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-colors">
+              <RotateCcw size={11} />
+            </button>
+          )}
+          <button onClick={() => setExpandedId(isExpanded ? null : task.id)}
+            className="p-1 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-colors">
+            <MoreHorizontal size={13} />
+          </button>
+          <button onClick={() => onRemove(task.id)}
+            className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </div>
 
-                {/* Status */}
-                <div>
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Status</label>
-                  <div className="flex flex-wrap gap-1">
-                    {STATUSES.map(s => (
-                      <button key={s.value} onClick={() => onUpdate(task.id, { status: s.value, done: s.value === "done" })}
-                        className={`text-[10px] px-2 py-0.5 rounded-full transition-all ${(task.status || "todo") === s.value ? s.color : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Due date */}
-                <div>
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Due date</label>
-                  <input
-                    type="date"
-                    defaultValue={task.due_date || ""}
-                    onChange={e => onUpdate(task.id, { due_date: e.target.value || null })}
-                    className="text-xs bg-background/60 border border-border/40 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary/30 w-full"
-                  />
-                </div>
-
-                {/* Notes */}
-                <div>
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes</label>
-                  <input
-                    defaultValue={task.content || ""}
-                    onBlur={e => onUpdate(task.id, { content: e.target.value })}
-                    placeholder="Add notes..."
-                    className="text-xs bg-background/60 border border-border/40 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary/30 w-full placeholder:text-muted-foreground/40"
-                  />
+      {/* Expanded panel */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="ml-9 mr-3 mb-2 px-3 py-3 rounded-xl bg-secondary/20 border border-border/30 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Priority</label>
+                <div className="flex flex-wrap gap-1">
+                  {PRIORITIES.map(p => (
+                    <button key={p.value} onClick={() => onUpdate(task.id, { priority: p.value })}
+                      className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${task.priority === p.value ? `${p.bg} ${p.border} ${p.color}` : "border-border/30 text-muted-foreground hover:border-border"}`}>
+                      {p.label}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+              <div>
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Status</label>
+                <div className="flex flex-wrap gap-1">
+                  {STATUSES.map(s => (
+                    <button key={s.value} onClick={() => onUpdate(task.id, { status: s.value, done: s.value === "done" })}
+                      className={`text-[10px] px-2 py-0.5 rounded-full transition-all ${(task.status || "todo") === s.value ? s.color : "bg-secondary/50 text-muted-foreground hover:bg-secondary"}`}>
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Due date</label>
+                <input
+                  type="date"
+                  defaultValue={task.due_date || ""}
+                  onChange={e => onUpdate(task.id, { due_date: e.target.value || null })}
+                  className="text-xs bg-background/60 border border-border/40 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary/30 w-full"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes</label>
+                <input
+                  defaultValue={task.content || ""}
+                  onBlur={e => onUpdate(task.id, { content: e.target.value })}
+                  placeholder="Add notes..."
+                  className="text-xs bg-background/60 border border-border/40 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary/30 w-full placeholder:text-muted-foreground/40"
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });
-
 SortableTaskRow.displayName = "SortableTaskRow";
 
-/* ── Column ── */
-const TaskColumn = ({
-  title, accent, tasks, empty, manualOrder, onDragEnd,
-  editingId, editValue, expandedId, setEditingId, setEditValue, setExpandedId,
-  onToggle, onRemove, onUpdate, footer,
+/* ── Column drop zone ── */
+const DroppableColumn = ({
+  col, tasks, isOver, editingId, editValue, expandedId,
+  setEditingId, setEditValue, setExpandedId,
+  onToggle, onRemove, onUpdate, onUndone, footer,
 }: any) => {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const ids = tasks.map((t: any) => t.id);
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIdx = ids.indexOf(active.id as string);
-    const newIdx = ids.indexOf(over.id as string);
-    onDragEnd(arrayMove(ids, oldIdx, newIdx));
-  };
-
   return (
-    <div className="flex flex-col min-w-0 flex-1">
-      {/* Column header */}
+    <div className={`flex flex-col min-w-0 flex-1 transition-all duration-150 ${isOver ? "scale-[1.01]" : ""}`}>
       <div className="flex items-center gap-2.5 mb-3 px-1">
-        <div className="w-2.5 h-2.5 rounded-sm" style={{ background: accent }} />
-        <span className="font-semibold text-sm text-foreground">{title}</span>
+        <div className="w-2.5 h-2.5 rounded-sm" style={{ background: col.accent }} />
+        <span className="font-semibold text-sm text-foreground">{col.title}</span>
         <span className="text-xs text-muted-foreground ml-auto bg-secondary/60 px-2 py-0.5 rounded-full">{tasks.length}</span>
       </div>
 
-      <div className="flux-card flex-1 p-2">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-            <AnimatePresence mode="popLayout">
-              {tasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8 px-4">{empty}</p>
-              ) : (
-                tasks.map((task: any) => (
-                  <SortableTaskRow
-                    key={task.id} task={task}
-                    editingId={editingId} editValue={editValue}
-                    expandedId={expandedId}
-                    setEditingId={setEditingId} setEditValue={setEditValue}
-                    setExpandedId={setExpandedId}
-                    onToggle={onToggle} onRemove={onRemove} onUpdate={onUpdate}
-                  />
-                ))
-              )}
-            </AnimatePresence>
-          </SortableContext>
-        </DndContext>
+      <div className={`flux-card flex-1 p-2 min-h-[120px] transition-all duration-150 ${isOver ? "ring-2 ring-primary/30 bg-primary/[0.03]" : ""}`}>
+        <SortableContext items={tasks.map((t: any) => t.id)} strategy={verticalListSortingStrategy}>
+          {tasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8 px-4">{col.emptyMsg}</p>
+          ) : (
+            tasks.map((task: any) => (
+              <SortableTaskRow
+                key={task.id} task={task}
+                editingId={editingId} editValue={editValue}
+                expandedId={expandedId}
+                setEditingId={setEditingId} setEditValue={setEditValue}
+                setExpandedId={setExpandedId}
+                onToggle={onToggle} onRemove={onRemove} onUpdate={onUpdate} onUndone={onUndone}
+              />
+            ))
+          )}
+        </SortableContext>
         {footer}
       </div>
     </div>
@@ -292,46 +285,171 @@ const AITaskManager = () => {
   const [editValue, setEditValue] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [prioritizing, setPrioritizing] = useState(false);
-  const [manualOrder, setManualOrder] = useState<string[] | null>(null);
   const [search, setSearch] = useState("");
   const [filterPriority, setFilterPriority] = useState<string | null>(null);
-  const [view, setView] = useState<"board" | "list">("board");
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overColumn, setOverColumn] = useState<ColumnId | null>(null);
+  // columnOrder[colId] = ordered list of task ids in that column
+  const [columnOrder, setColumnOrder] = useState<Record<ColumnId, string[]>>({ today: [], in_progress: [], upcoming: [] });
+  const initialized = useRef(false);
 
   const today = format(new Date(), "yyyy-MM-dd");
-  const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd");
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
 
   const filteredTasks = useMemo(() => {
-    let list = tasks;
+    let list = tasks.filter(t => !t.done);
     if (search.trim()) list = list.filter(t => t.title.toLowerCase().includes(search.toLowerCase()));
     if (filterPriority) list = list.filter(t => t.priority === filterPriority);
     return list;
   }, [tasks, search, filterPriority]);
 
-  const todayTasks = useMemo(() => {
-    const base = filteredTasks.filter(t => !t.done && (t.scheduled_date === today || t.due_date === today));
-    if (manualOrder) return [...base].sort((a, b) => manualOrder.indexOf(a.id) - manualOrder.indexOf(b.id));
-    const pMap: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-    return [...base].sort((a, b) => (pMap[a.priority ?? "medium"] ?? 2) - (pMap[b.priority ?? "medium"] ?? 2));
-  }, [filteredTasks, today, manualOrder]);
+  const doneTasks = useMemo(() => tasks.filter(t => t.done).slice(0, 10), [tasks]);
 
-  const upcomingTasks = useMemo(() =>
-    filteredTasks.filter(t => !t.done && t.scheduled_date !== today && t.due_date !== today && t.type === "task"),
-    [filteredTasks, today]);
+  // Build column task maps from filteredTasks + columnOrder for stable ordering
+  const { todayTasks, inProgressTasks, upcomingTasks } = useMemo(() => {
+    const byCol: Record<ColumnId, any[]> = { today: [], in_progress: [], upcoming: [] };
+    const taskMap = new Map(filteredTasks.map(t => [t.id, t]));
 
-  const inProgressTasks = useMemo(() =>
-    filteredTasks.filter(t => !t.done && (t.status === "in_progress" || t.status === "blocked")),
-    [filteredTasks]);
+    filteredTasks.forEach(t => {
+      const col = getTaskColumn(t, today);
+      byCol[col].push(t);
+    });
 
-  const doneTasks = useMemo(() => filteredTasks.filter(t => t.done).slice(0, 10), [filteredTasks]);
+    // Sort each column by columnOrder if available, else by sort_order
+    const sortCol = (colId: ColumnId) => {
+      const order = columnOrder[colId];
+      if (!order.length) return byCol[colId].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      const ordered: any[] = [];
+      order.forEach(id => { const t = taskMap.get(id); if (t) ordered.push(t); });
+      byCol[colId].forEach(t => { if (!order.includes(t.id)) ordered.push(t); });
+      return ordered;
+    };
+
+    return {
+      todayTasks: sortCol("today"),
+      inProgressTasks: sortCol("in_progress"),
+      upcomingTasks: sortCol("upcoming"),
+    };
+  }, [filteredTasks, columnOrder, today]);
+
+  // Initialise column order from tasks on first load
+  React.useEffect(() => {
+    if (!initialized.current && tasks.length > 0) {
+      initialized.current = true;
+      const byCol: Record<ColumnId, string[]> = { today: [], in_progress: [], upcoming: [] };
+      tasks.filter(t => !t.done).forEach(t => {
+        const col = getTaskColumn(t, today);
+        byCol[col].push(t.id);
+      });
+      setColumnOrder(byCol);
+    }
+  }, [tasks, today]);
+
+  const getColumnForTask = useCallback((taskId: string): ColumnId | null => {
+    for (const col of COLUMNS) {
+      if (columnOrder[col.id].includes(taskId)) return col.id;
+    }
+    // Fallback: derive from task data
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return null;
+    return getTaskColumn(task, today);
+  }, [columnOrder, tasks, today]);
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  }, []);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over } = event;
+    if (!over) { setOverColumn(null); return; }
+    // Check if hovering over a column directly
+    const colId = COLUMNS.find(c => c.id === over.id)?.id;
+    if (colId) { setOverColumn(colId); return; }
+    // Hovering over a task — find its column
+    const task = tasks.find(t => t.id === over.id);
+    if (task) setOverColumn(getTaskColumn(task, today) as ColumnId);
+  }, [tasks, today]);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    setOverColumn(null);
+
+    if (!over) return;
+
+    const activeTaskId = active.id as string;
+    const overId = over.id as string;
+
+    const sourceCol = getColumnForTask(activeTaskId);
+    let destCol: ColumnId | null = null;
+
+    // Check if dropped on a column
+    const colMatch = COLUMNS.find(c => c.id === overId);
+    if (colMatch) {
+      destCol = colMatch.id;
+    } else {
+      // Dropped on a task — find that task's column
+      const overTask = tasks.find(t => t.id === overId);
+      if (overTask) destCol = getTaskColumn(overTask, today) as ColumnId;
+    }
+
+    if (!sourceCol || !destCol) return;
+
+    if (sourceCol === destCol) {
+      // Reorder within same column
+      const colItems = [...(columnOrder[sourceCol] || [])];
+      const oldIdx = colItems.indexOf(activeTaskId);
+      const newIdx = colItems.indexOf(overId);
+      if (oldIdx === -1 || newIdx === -1 || oldIdx === newIdx) return;
+      const reordered = arrayMove(colItems, oldIdx, newIdx);
+      setColumnOrder(prev => ({ ...prev, [sourceCol]: reordered }));
+    } else {
+      // Move to different column — update task in DB
+      const updates: Record<ColumnId, any> = {
+        today: { scheduled_date: today, status: "todo", done: false },
+        in_progress: { status: "in_progress", done: false, scheduled_date: null },
+        upcoming: { status: "todo", done: false, scheduled_date: null },
+      };
+      await updateTask(activeTaskId, updates[destCol]);
+
+      // Update column order state
+      setColumnOrder(prev => {
+        const src = prev[sourceCol].filter(id => id !== activeTaskId);
+        const dstItems = [...prev[destCol]];
+        const overIdx = dstItems.indexOf(overId);
+        if (overIdx !== -1) {
+          dstItems.splice(overIdx, 0, activeTaskId);
+        } else {
+          dstItems.push(activeTaskId);
+        }
+        return { ...prev, [sourceCol]: src, [destCol]: dstItems };
+      });
+    }
+  }, [getColumnForTask, columnOrder, tasks, today, updateTask]);
 
   const handleAdd = useCallback(async () => {
     if (!newTitle.trim()) return;
-    await createTask({ title: newTitle.trim(), scheduled_date: today, priority: "medium", status: "todo" });
+    const task = await createTask({ title: newTitle.trim(), scheduled_date: today, priority: "medium", status: "todo" });
     setNewTitle("");
+    if (task) {
+      setColumnOrder(prev => ({ ...prev, today: [task.id, ...prev.today] }));
+    }
   }, [newTitle, today, createTask]);
 
   const handleToggle = useCallback(async (id: string, done: boolean) => {
     await updateTask(id, { done: !done, status: !done ? "done" : "todo" });
+    if (!done) toast.success("Task completed!", {
+      action: { label: "Undo", onClick: () => updateTask(id, { done: false, status: "todo" }) },
+      duration: 4000,
+    });
+  }, [updateTask]);
+
+  const handleUndone = useCallback(async (id: string) => {
+    await updateTask(id, { done: false, status: "todo" });
+    toast.success("Task restored");
   }, [updateTask]);
 
   const handleAIPrioritize = async () => {
@@ -348,14 +466,22 @@ const AITaskManager = () => {
       if (error) throw error;
       const raw = typeof data === "string" ? data : JSON.stringify(data);
       const match = raw.match(/\[[\s\S]*?\]/);
-      if (match) { setManualOrder(JSON.parse(match[0])); toast.success("Tasks AI-prioritized ✨"); }
+      if (match) {
+        const ordered: string[] = JSON.parse(match[0]);
+        setColumnOrder(prev => ({ ...prev, today: ordered }));
+        toast.success("Tasks AI-prioritized ✨");
+      }
     } catch { toast.error("Couldn't prioritize right now"); }
     finally { setPrioritizing(false); }
   };
 
-  const sharedProps = { editingId, editValue, expandedId, setEditingId, setEditValue, setExpandedId, onToggle: handleToggle, onRemove: removeTask, onUpdate: updateTask };
-
+  const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
   const completionPct = tasks.length > 0 ? Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) : 0;
+
+  const sharedProps = {
+    editingId, editValue, expandedId, setEditingId, setEditValue, setExpandedId,
+    onToggle: handleToggle, onRemove: removeTask, onUpdate: updateTask, onUndone: handleUndone,
+  };
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
@@ -368,9 +494,8 @@ const AITaskManager = () => {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Search */}
           <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <input
               value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search tasks..."
@@ -383,7 +508,6 @@ const AITaskManager = () => {
             )}
           </div>
 
-          {/* Priority filter */}
           <select
             value={filterPriority || ""}
             onChange={e => setFilterPriority(e.target.value || null)}
@@ -393,7 +517,6 @@ const AITaskManager = () => {
             {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
 
-          {/* AI Prioritize */}
           <button
             onClick={handleAIPrioritize} disabled={prioritizing}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-all text-sm font-medium disabled:opacity-50"
@@ -415,7 +538,7 @@ const AITaskManager = () => {
             className="h-full rounded-full bg-primary"
             initial={{ width: 0 }}
             animate={{ width: `${completionPct}%` }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
           />
         </div>
         <div className="flex gap-4 mt-3">
@@ -447,53 +570,60 @@ const AITaskManager = () => {
         </button>
       </div>
 
-      {/* Board columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <TaskColumn
-          title="Today"
-          accent="hsl(var(--primary))"
-          tasks={todayTasks}
-          empty="No tasks for today — you're crushing it 🎯"
-          onDragEnd={(newOrder: string[]) => setManualOrder(newOrder)}
-          {...sharedProps}
-          footer={
-            manualOrder ? (
-              <button onClick={() => setManualOrder(null)} className="w-full text-[11px] text-muted-foreground hover:text-foreground py-1.5 transition-colors mt-1">
-                Reset manual order
-              </button>
-            ) : null
-          }
-        />
-        <TaskColumn
-          title="In Progress / Blocked"
-          accent="hsl(217 90% 62%)"
-          tasks={inProgressTasks}
-          empty="Nothing in progress right now"
-          onDragEnd={() => {}}
-          {...sharedProps}
-        />
-        <TaskColumn
-          title="Upcoming"
-          accent="hsl(240 2% 45%)"
-          tasks={upcomingTasks.slice(0, 20)}
-          empty="No upcoming tasks"
-          onDragEnd={() => {}}
-          {...sharedProps}
-          footer={
-            upcomingTasks.length > 0 ? (
-              <button
-                onClick={() => {
-                  const first = upcomingTasks[0];
-                  if (first) updateTask(first.id, { scheduled_date: today });
-                }}
-                className="w-full text-[11px] text-muted-foreground hover:text-primary py-1.5 transition-colors mt-1 flex items-center justify-center gap-1"
-              >
-                <ArrowUpRight size={11} /> Move top task to today
-              </button>
-            ) : null
-          }
-        />
-      </div>
+      {/* Board columns with single DndContext */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={rectIntersection}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {COLUMNS.map(col => {
+            const colTasks = col.id === "today" ? todayTasks : col.id === "in_progress" ? inProgressTasks : upcomingTasks;
+            return (
+              <DroppableColumn
+                key={col.id}
+                col={col}
+                tasks={colTasks}
+                isOver={overColumn === col.id}
+                {...sharedProps}
+                footer={
+                  col.id === "upcoming" && upcomingTasks.length > 0 ? (
+                    <button
+                      onClick={() => {
+                        const first = upcomingTasks[0];
+                        if (first) {
+                          updateTask(first.id, { scheduled_date: today });
+                          setColumnOrder(prev => ({
+                            ...prev,
+                            today: [first.id, ...prev.today],
+                            upcoming: prev.upcoming.filter(id => id !== first.id),
+                          }));
+                        }
+                      }}
+                      className="w-full text-[11px] text-muted-foreground hover:text-primary py-1.5 transition-colors mt-1 flex items-center justify-center gap-1"
+                    >
+                      <ArrowUpRight size={11} /> Move top task to today
+                    </button>
+                  ) : null
+                }
+              />
+            );
+          })}
+        </div>
+
+        {/* Drag overlay for ghost card */}
+        <DragOverlay dropAnimation={{ duration: 180, easing: "ease" }}>
+          {activeTask ? (
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-card border border-primary/30 shadow-2xl text-sm font-medium opacity-95 w-64">
+              <GripVertical size={13} className="text-muted-foreground" />
+              <Check size={14} className="text-muted-foreground shrink-0" />
+              <span className="truncate">{activeTask.title}</span>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Done */}
       {doneTasks.length > 0 && (
@@ -505,11 +635,15 @@ const AITaskManager = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
             {doneTasks.map(task => (
-              <div key={task.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg opacity-50">
+              <div key={task.id} className="group flex items-center gap-2.5 px-2 py-1.5 rounded-lg opacity-50 hover:opacity-80 transition-opacity">
                 <div className="w-4 h-4 rounded-full bg-green-500/30 border border-green-500/40 flex items-center justify-center shrink-0">
                   <Check size={9} className="text-green-400" strokeWidth={3} />
                 </div>
-                <p className="text-xs line-through text-muted-foreground/60 truncate">{task.title}</p>
+                <p className="text-xs line-through text-muted-foreground/60 truncate flex-1">{task.title}</p>
+                <button onClick={() => handleUndone(task.id)}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-opacity text-muted-foreground hover:text-foreground">
+                  <RotateCcw size={10} />
+                </button>
               </div>
             ))}
           </div>

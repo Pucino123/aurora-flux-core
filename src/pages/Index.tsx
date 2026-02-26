@@ -24,46 +24,48 @@ const Index = () => {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // Sync user name + theme on login
+  // Show landing when NOT logged in
   useEffect(() => {
-    if (user) {
-      // Sync display name to localStorage for greeting widget
-      const displayName = user.user_metadata?.display_name;
-      if (displayName) {
-        const firstName = displayName.split(" ")[0];
-        localStorage.setItem("flux-user-name", firstName);
-      }
-
-      // Restore saved theme preference (default dark for dashboard)
-      (async () => {
-        const { data } = await supabase
-          .from("profiles")
-          .select("settings")
-          .eq("id", user.id)
-          .maybeSingle();
-        const settings = data?.settings as Record<string, any> | null;
-        const savedTheme = settings?.theme || "dark";
-        setTheme(savedTheme);
-      })();
-
-      const storedPlan = sessionStorage.getItem("flux_pending_plan");
-      const stored = sessionStorage.getItem("flux_pending_prompt");
-
-      if (storedPlan) {
-        sessionStorage.removeItem("flux_pending_plan");
-        sessionStorage.removeItem("flux_pending_prompt");
-        try {
-          const plan = JSON.parse(storedPlan);
-          setPendingPlan(plan);
-          setPrompt(plan.text);
-        } catch {}
-        setView("dashboard");
-      } else if (stored) {
-        sessionStorage.removeItem("flux_pending_prompt");
-        setPrompt(stored);
-        setView("dashboard");
-      }
+    if (!user) {
+      setView("landing");
+      return;
     }
+
+    // Sync display name to localStorage for greeting widget
+    const displayName = user.user_metadata?.display_name;
+    if (displayName) {
+      const firstName = displayName.split(" ")[0];
+      localStorage.setItem("flux-user-name", firstName);
+    }
+
+    // Restore saved theme preference
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("settings")
+        .eq("id", user.id)
+        .maybeSingle();
+      const settings = data?.settings as Record<string, any> | null;
+      const savedTheme = settings?.theme || "dark";
+      setTheme(savedTheme);
+    })();
+
+    const storedPlan = sessionStorage.getItem("flux_pending_plan");
+    const stored = sessionStorage.getItem("flux_pending_prompt");
+
+    if (storedPlan) {
+      sessionStorage.removeItem("flux_pending_plan");
+      sessionStorage.removeItem("flux_pending_prompt");
+      try {
+        const plan = JSON.parse(storedPlan);
+        setPendingPlan(plan);
+        setPrompt(plan.text);
+      } catch {}
+    } else if (stored) {
+      sessionStorage.removeItem("flux_pending_prompt");
+      setPrompt(stored);
+    }
+
     setView("dashboard");
   }, [user]);
 
