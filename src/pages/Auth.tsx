@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Navigate, useNavigate } from "react-router-dom";
 import { t } from "@/lib/i18n";
 import { Eye, EyeOff, ArrowLeft, Sparkles } from "lucide-react";
-import skyBg from "@/assets/bg-joobie-sky.jpg";
+import cherryBg from "@/assets/bg-cherry-blossom.jpg";
 
 const Auth = () => {
   const { user, loading, signIn, signUp } = useAuth();
@@ -18,7 +18,7 @@ const Auth = () => {
   const [showPass, setShowPass] = useState(false);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundImage: `url(${skyBg})`, backgroundSize: "cover", backgroundPosition: "top" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundImage: `url(${cherryBg})`, backgroundSize: "cover", backgroundPosition: "center", filter: "blur(0)" }}>
       <div className="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full" />
     </div>
   );
@@ -43,10 +43,10 @@ const Auth = () => {
       className="min-h-screen relative overflow-hidden flex items-center justify-center px-4"
       style={{ fontFamily: "system-ui, sans-serif" }}
     >
-      {/* Background */}
+      {/* Blurred cherry blossom background */}
       <div
-        className="fixed inset-0 z-0 bg-cover bg-top"
-        style={{ backgroundImage: `url(${skyBg})` }}
+        className="fixed inset-0 z-0 bg-cover bg-center scale-110"
+        style={{ backgroundImage: `url(${cherryBg})`, filter: "blur(18px)" }}
       />
       {/* Soft overlay */}
       <div className="fixed inset-0 z-0 bg-gradient-to-b from-sky-200/15 via-transparent to-sky-400/25 pointer-events-none" />
