@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut } from "lucide-react";
+import { X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut, Trash2, Smile } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTeamChat } from "@/hooks/useTeamChat";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+
+const EMOJIS = ["😀","😂","❤️","👍","🔥","🎉","✅","🚀","💡","😅","🙏","👏","💪","🤔","😎","🥳","😍","🤩","💯","⭐"];
+
 
 interface CollabMessagesModalProps {
   open: boolean;
@@ -17,7 +20,7 @@ type Tab = "chat" | "contacts";
 const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) => {
   const {
     messages, members, sendMessage, hasTeams, loading, teams, activeTeamId,
-    setActiveTeamId, createTeam, inviteMember, markAsRead, setModalOpen, leaveTeam,
+    setActiveTeamId, createTeam, inviteMember, markAsRead, setModalOpen, leaveTeam, deleteTeam,
   } = useTeamChat();
   const { user } = useAuth();
   const [text, setText] = useState("");
@@ -28,6 +31,8 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const [newTeamName, setNewTeamName] = useState("");
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [leavingTeamId, setLeavingTeamId] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -98,6 +103,26 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
       toast.success(`Left "${team.name}"`);
       if (teams.length <= 1) setTab("chat");
     }
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) return;
+    if (!window.confirm(`Delete team "${team.name}"? This cannot be undone.`)) return;
+    setDeletingTeamId(teamId);
+    const result = await deleteTeam(teamId);
+    setDeletingTeamId(null);
+    if (result?.error) {
+      toast.error("Could not delete team: " + result.error);
+    } else {
+      toast.success(`Deleted "${team.name}"`);
+    }
+  };
+
+  const isAdmin = members.some((m) => m.user_id === user?.id && m.role === "admin");
+  const insertEmoji = (emoji: string) => {
+    setText((prev) => prev + emoji);
+    setShowEmojiPicker(false);
   };
 
   const activeTeam = teams.find((t) => t.id === activeTeamId);
@@ -198,21 +223,38 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
               {/* Input */}
               {hasTeams && (
-                <div className="px-4 py-3 border-t border-white/10 flex items-center gap-2">
-                  <input
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white/90 placeholder:text-white/25 outline-none focus:border-white/20 transition-colors"
-                  />
-                  <button
-                    onClick={handleSend}
-                    disabled={!text.trim()}
-                    className="p-2 rounded-xl bg-white/10 text-white/50 hover:text-white hover:bg-white/15 transition-all disabled:opacity-30"
-                  >
-                    <Send size={14} />
-                  </button>
+                <div className="px-4 py-3 border-t border-white/10">
+                  {showEmojiPicker && (
+                    <div className="mb-2 p-2 bg-white/5 border border-white/10 rounded-xl grid grid-cols-10 gap-1">
+                      {EMOJIS.map((e) => (
+                        <button key={e} onClick={() => insertEmoji(e)} className="text-base hover:scale-125 transition-transform leading-none">
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowEmojiPicker((v) => !v)}
+                      className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all shrink-0"
+                    >
+                      <Smile size={14} />
+                    </button>
+                    <input
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                      placeholder="Type a message..."
+                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white/90 placeholder:text-white/25 outline-none focus:border-white/20 transition-colors"
+                    />
+                    <button
+                      onClick={handleSend}
+                      disabled={!text.trim()}
+                      className="p-2 rounded-xl bg-white/10 text-white/50 hover:text-white hover:bg-white/15 transition-all disabled:opacity-30 shrink-0"
+                    >
+                      <Send size={14} />
+                    </button>
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -285,7 +327,16 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
               </div>
 
               {/* Create new team */}
-              <div className="px-5 py-3 border-t border-white/10">
+              <div className="px-5 py-3 border-t border-white/10 flex flex-col gap-2">
+                {isAdmin && activeTeamId && (
+                  <button
+                    onClick={() => handleDeleteTeam(activeTeamId)}
+                    disabled={deletingTeamId === activeTeamId}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-500/10 text-red-400/70 hover:bg-red-500/20 hover:text-red-400 text-xs font-medium transition-all disabled:opacity-30"
+                  >
+                    {deletingTeamId === activeTeamId ? "Deleting..." : <><Trash2 size={11} /> Delete Team</>}
+                  </button>
+                )}
                 {showCreateTeam ? (
                   <div className="flex gap-2">
                     <input

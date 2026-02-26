@@ -261,6 +261,25 @@ export function useTeamChat() {
     [user]
   );
 
+  const deleteTeam = useCallback(
+    async (teamId: string) => {
+      if (!user) return { error: "Not authenticated" };
+      // Delete messages, members, then team
+      await (supabase as any).from("team_messages").delete().eq("team_id", teamId);
+      await (supabase as any).from("team_members").delete().eq("team_id", teamId);
+      const { error } = await (supabase as any).from("teams").delete().eq("id", teamId);
+      if (error) return { error: error.message };
+      setTeams((prev) => {
+        const updated = prev.filter((t) => t.id !== teamId);
+        setActiveTeamId(updated.length > 0 ? updated[0].id : null);
+        return updated;
+      });
+      setMessages([]);
+      return { error: null };
+    },
+    [user]
+  );
+
   const leaveTeam = useCallback(
     async (teamId: string) => {
       if (!user) return { error: "Not authenticated" };
@@ -319,6 +338,7 @@ export function useTeamChat() {
     sendMessage,
     createTeam,
     leaveTeam,
+    deleteTeam,
     inviteMember,
     hasTeams: teams.length > 0,
   };
