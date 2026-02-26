@@ -193,12 +193,23 @@ NEVER generate a "note" for structured requests like savings goals, budgets, or 
 }
 
 async function handlePlan(context: any, apiKey: string) {
+  const today = context?.today || new Date().toISOString().split("T")[0];
   const systemPrompt = `You are a world-class daily planning assistant for Flux, inspired by Motion and Notion AI.
 
 You are a Proactive Productivity Strategist. You must think before generating.
 
+TODAY'S DATE: ${today}
+
+ORDERING RULES (CRITICAL — apply in this exact order):
+1. PRIORITY 1 — Tasks with scheduled_date = "${today}" MUST appear FIRST in the schedule, starting at 08:00.
+2. PRIORITY 2 — Tasks with due_date = "${today}" are URGENT. Schedule them before 12:00.
+3. PRIORITY 3 — Tasks with priority = "high" → morning slots (08:00-12:00).
+4. PRIORITY 4 — Tasks with priority = "medium" → midday slots (12:00-14:00).
+5. PRIORITY 5 — Tasks with priority = "low" → afternoon slots (14:00-17:00).
+6. Tasks already sorted by the frontend in priority order — respect that order within each priority bucket.
+
 REASONING PHASE — Think carefully before generating blocks:
-1. SCAN all provided tasks. Categorize by: urgency (overdue/due today), priority (high > medium > low), type (creative, admin, communication).
+1. SCAN all provided tasks. Categorize by: urgency (overdue/due today via due_date), priority (high > medium > low), scheduled_date (today = highest priority).
 2. Also scan goals and notes — include relevant ones as review or action blocks.
 3. ANALYZE dependencies — which tasks should come first?
 4. OPTIMIZE for flow state — group similar tasks together, place creative/deep work in morning (8:00-12:00), meetings/calls midday (12:00-14:00), admin/light tasks afternoon (14:00-17:00).

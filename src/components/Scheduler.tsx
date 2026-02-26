@@ -342,27 +342,43 @@ const Scheduler = ({ onOpenFullCalendar }: { onOpenFullCalendar?: () => void } =
     toast.success(`${t("sched.moved_to")} ${newTime}`);
   };
 
-  const handleAIPlan = async () => {
+  const runAIPlan = async (silent = false) => {
     setAiLoading(true);
     try {
-      // Gather real user data: tasks due today/overdue/high-priority + notes/content
       const today = new Date().toISOString().split("T")[0];
-      // Gather ALL undone user items — tasks, notes, everything
+      const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+      // Sort: scheduled for today first, then by priority, then by due_date
       const relevantItems = tasks
         .filter((t) => !t.done)
+        .sort((a, b) => {
+          const aToday = a.scheduled_date === today ? 0 : 1;
+          const bToday = b.scheduled_date === today ? 0 : 1;
+          if (aToday !== bToday) return aToday - bToday;
+          const pa = priorityOrder[a.priority || "medium"] ?? 1;
+          const pb = priorityOrder[b.priority || "medium"] ?? 1;
+          if (pa !== pb) return pa - pb;
+          if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+          if (a.due_date) return -1;
+          if (b.due_date) return 1;
+          return 0;
+        })
         .map((t) => ({
           id: t.id, title: t.title, priority: t.priority,
-          due_date: t.due_date, type: t.type, content: t.content,
+          due_date: t.due_date, scheduled_date: t.scheduled_date,
+          type: t.type, content: t.content,
         }));
 
       if (relevantItems.length === 0) {
-        toast(t("sched.no_tasks"), { duration: 4000 });
+        if (!silent) toast(t("sched.no_tasks"), { duration: 4000 });
         setAiLoading(false);
         return;
       }
 
+      if (!silent) toast("✦ Planning your day...", { duration: 2000 });
+
       const { data, error } = await supabase.functions.invoke("flux-ai", {
-        body: { type: "plan", messages: [], context: { tasks: relevantItems } },
+        body: { type: "plan", messages: [], context: { tasks: relevantItems, today } },
       });
       if (error) throw error;
       if (data?.blocks && Array.isArray(data.blocks)) {
@@ -381,6 +397,18 @@ const Scheduler = ({ onOpenFullCalendar }: { onOpenFullCalendar?: () => void } =
       setAiLoading(false);
     }
   };
+
+  const handleAIPlan = () => runAIPlan(false);
+
+  // Auto-plan: fire once on mount if today has no blocks but has undone tasks
+  useEffect(() => {
+    const todayBlocks = scheduleBlocks.filter((b) => b.scheduled_date === todayStr);
+    const undoneTasks = tasks.filter((t) => !t.done);
+    if (todayBlocks.length === 0 && undoneTasks.length > 0) {
+      runAIPlan(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally runs only once on mount
 
   return (
     <div className="h-screen overflow-y-auto py-6 px-4">
