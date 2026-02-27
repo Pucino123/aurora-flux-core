@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useFlux } from "@/context/FluxContext";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek, getISOWeek } from "date-fns";
 import { ChevronLeft, ChevronRight, Clock, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -50,32 +50,41 @@ const CalendarView = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-8 gap-1">
+            {/* Header row with week number column */}
+            <div className="text-[10px] font-semibold text-muted-foreground text-center py-2">Wk</div>
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
               <div key={d} className="text-[10px] font-semibold text-muted-foreground text-center py-2">{d}</div>
             ))}
-            {days.map(day => {
+            {days.map((day, i) => {
               const key = format(day, "yyyy-MM-dd");
               const events = dayEvents.get(key);
               const hasEvents = (events?.tasks.length || 0) + (events?.blocks.length || 0) > 0;
               const isSelected = selectedDate && isSameDay(day, selectedDate);
               const inMonth = day.getMonth() === currentMonth.getMonth();
+              const isWeekStart = i % 7 === 0;
 
               return (
-                <button
-                  key={key}
-                  onClick={() => setSelectedDate(day)}
-                  className={`relative p-2 rounded-xl text-xs transition-all ${
-                    isSelected ? "bg-primary text-primary-foreground" :
-                    isToday(day) ? "bg-primary/10 text-primary font-semibold" :
-                    inMonth ? "hover:bg-secondary text-foreground" : "text-muted-foreground/40"
-                  }`}
-                >
-                  {format(day, "d")}
-                  {hasEvents && !isSelected && (
-                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                <React.Fragment key={key}>
+                  {isWeekStart && (
+                    <div className="text-[10px] text-muted-foreground/50 flex items-center justify-center font-mono">
+                      {getISOWeek(day)}
+                    </div>
                   )}
-                </button>
+                  <button
+                    onClick={() => setSelectedDate(day)}
+                    className={`relative p-2 rounded-xl text-xs transition-all ${
+                      isSelected ? "bg-primary text-primary-foreground" :
+                      isToday(day) ? "bg-primary/10 text-primary font-semibold" :
+                      inMonth ? "hover:bg-secondary text-foreground" : "text-muted-foreground/40"
+                    }`}
+                  >
+                    {format(day, "d")}
+                    {hasEvents && !isSelected && (
+                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                    )}
+                  </button>
+                </React.Fragment>
               );
             })}
           </div>

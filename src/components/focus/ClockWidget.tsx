@@ -33,8 +33,8 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
   const { style: widgetStyle } = useWidgetStyle("clock");
   const hideSubtitle = widgetStyle.hideSubtitle;
   const defaultClockPos = React.useMemo(() => ({
-    x: typeof window !== 'undefined' ? Math.round((window.innerWidth - 400) / 2) : 500,
-    y: 0,
+    x: typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.35) : 500,
+    y: typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.02) : 0,
   }), []);
   const [now, setNow] = useState(new Date());
   const {
