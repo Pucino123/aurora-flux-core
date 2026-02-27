@@ -7,8 +7,8 @@ const TodaysPlanWidget = () => {
   const { setActiveView } = useFlux();
 
   const defaultPlannerPos = React.useMemo(() => ({
-    x: typeof window !== "undefined" ? window.innerWidth - 380 : 1100,
-    y: 60,
+    x: typeof window !== "undefined" ? Math.round(window.innerWidth * 0.75) : 1100,
+    y: typeof window !== "undefined" ? Math.round(window.innerHeight * 0.06) : 60,
   }), []);
 
   return (

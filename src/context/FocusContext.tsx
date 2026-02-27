@@ -86,7 +86,7 @@ const DEFAULT_STATE: FocusState = {
   timeSlots: {},
   widgetOpacities: {},
   focusStickyNotes: [
-    { id: "default-1", text: "im a note", color: "yellow", x: 260, y: 10, rotation: 3, opacity: 1 },
+    { id: "default-1", text: "im a note", color: "yellow", x: typeof window !== "undefined" ? Math.round(window.innerWidth * 0.18) : 260, y: typeof window !== "undefined" ? Math.round(window.innerHeight * 0.02) : 10, rotation: 3, opacity: 1 },
   ],
   activeTaskId: null,
   taskTimeLog: {},
