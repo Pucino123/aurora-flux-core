@@ -39,7 +39,7 @@ import {
   FocusChatWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 
 const BuildModeGrid = () => (
@@ -59,7 +59,7 @@ const BuildModeGrid = () => (
 
 const FocusContent = () => {
   const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions } = useFocusStore();
-  const { folderTree, createFolder, moveFolder } = useFlux();
+  const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
@@ -360,6 +360,70 @@ const FocusContent = () => {
     return true;
   }, [folderTree, desktopFolderPositions, desktopDocPositions]);
 
+  // Single-click select: selects only this item, clears rest
+  const handleSingleSelect = useCallback((id: string) => {
+    const ns = new Set<string>([id]);
+    setSelectedIds(ns);
+    selectedIdsRef.current = ns;
+  }, []);
+
+  // Bulk context menu
+  const [bulkContextMenu, setBulkContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const handleBulkContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setBulkContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handleBulkDelete = useCallback(async () => {
+    setBulkContextMenu(null);
+    const ids = selectedIdsRef.current;
+    const folderIds = [...ids].filter(id => folderTree.some(f => f.id === id));
+    const docIds = [...ids].filter(id => desktopDocs.some(d => d.id === id));
+    for (const fid of folderIds) { await removeFolder(fid); }
+    for (const did of docIds) { removeDesktopDoc(did); }
+    setSelectedIds(new Set());
+    selectedIdsRef.current = new Set();
+    toast.success(`Deleted ${ids.size} item${ids.size > 1 ? "s" : ""}`);
+  }, [folderTree, desktopDocs, removeFolder, removeDesktopDoc]);
+
+  const handleBulkAddToCalendar = useCallback(async () => {
+    setBulkContextMenu(null);
+    const ids = selectedIdsRef.current;
+    const today = new Date().toISOString().split("T")[0];
+    let hour = 9;
+    for (const id of ids) {
+      const folder = folderTree.find(f => f.id === id);
+      const doc = desktopDocs.find(d => d.id === id);
+      const title = folder?.title || doc?.title || "Untitled";
+      const time = `${String(hour).padStart(2, "0")}:00`;
+      await createBlock({ title, time, scheduled_date: today, type: "deep", duration: "60m" });
+      hour++;
+    }
+    toast.success(`Added ${ids.size} item${ids.size > 1 ? "s" : ""} to calendar`);
+  }, [folderTree, desktopDocs, createBlock]);
+
+  const handleBulkAddToPlan = useCallback(() => {
+    setBulkContextMenu(null);
+    const ids = selectedIdsRef.current;
+    const items: string[] = [];
+    for (const id of ids) {
+      const folder = folderTree.find(f => f.id === id);
+      const doc = desktopDocs.find(d => d.id === id);
+      items.push(folder?.title || doc?.title || "Untitled");
+    }
+    // Add to brain dump / today's plan via localStorage signal
+    const LS_PLAN_KEY = "flux-todays-plan-tasks";
+    try {
+      const raw = localStorage.getItem(LS_PLAN_KEY);
+      const existing = raw ? JSON.parse(raw) : [];
+      const newTasks = items.map(t => ({ id: `plan-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, text: t, done: false }));
+      localStorage.setItem(LS_PLAN_KEY, JSON.stringify([...existing, ...newTasks]));
+    } catch {}
+    toast.success(`Added ${ids.size} item${ids.size > 1 ? "s" : ""} to Today's Plan`);
+  }, [folderTree, desktopDocs]);
+
   // Compute marquee rect for rendering
   const marqueeRect = marquee ? {
     left: Math.min(marquee.startX, marquee.endX),
@@ -428,6 +492,8 @@ const FocusContent = () => {
               onDocDropped={refetchDesktopDocs}
               isMarqueeSelected={selectedIds.has(folder.id)}
               onGroupDragStart={handleGroupDragStart}
+              onSingleSelect={handleSingleSelect}
+              onBulkContextMenu={handleBulkContextMenu}
             />
           ))}
 
@@ -443,14 +509,16 @@ const FocusContent = () => {
               onDragStateChange={handleDocDragStateChange}
               isMarqueeSelected={selectedIds.has(doc.id)}
               onGroupDragStart={handleGroupDragStart}
+              onSingleSelect={handleSingleSelect}
+              onBulkContextMenu={handleBulkContextMenu}
             />
           ))}
 
           {/* Marquee selection rectangle */}
           {marqueeRect && marqueeRect.width > 2 && marqueeRect.height > 2 && (
             <div
-              className="absolute pointer-events-none z-[100] border-2 border-blue-400/70 bg-blue-400/15 rounded-sm"
-              style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height }}
+              className="absolute pointer-events-none z-[100] rounded-sm"
+              style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height, border: "2px solid rgba(0,122,255,0.7)", background: "rgba(0,122,255,0.12)" }}
             />
           )}
           {openFolderId && (
@@ -517,6 +585,43 @@ const FocusContent = () => {
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"
             >
               <StickyNote size={14} className="text-muted-foreground" /> New Sticky Note
+            </button>
+          </motion.div>
+        </>
+      )}
+
+      {/* Bulk action context menu for multi-selected items */}
+      {bulkContextMenu && (
+        <>
+          <div className="fixed inset-0 z-[90]" onClick={() => setBulkContextMenu(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.12 }}
+            className="fixed z-[91] bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-xl py-1.5 min-w-[200px]"
+            style={{ left: bulkContextMenu.x, top: bulkContextMenu.y }}
+          >
+            <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              {selectedIds.size} item{selectedIds.size > 1 ? "s" : ""} selected
+            </div>
+            <div className="h-px bg-border/40 mx-2 my-0.5" />
+            <button
+              onClick={handleBulkDelete}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors rounded-lg"
+            >
+              <Trash2 size={14} /> Delete selected
+            </button>
+            <button
+              onClick={handleBulkAddToCalendar}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"
+            >
+              <CalendarPlus size={14} className="text-muted-foreground" /> Add to Calendar
+            </button>
+            <button
+              onClick={handleBulkAddToPlan}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"
+            >
+              <ListChecks size={14} className="text-muted-foreground" /> Add to Today's Plan
             </button>
           </motion.div>
         </>

@@ -21,6 +21,8 @@ interface DesktopDocumentProps {
   onDragStateChange?: (state: { id: string; x: number; y: number } | null) => void;
   isMarqueeSelected?: boolean;
   onGroupDragStart?: (e: React.PointerEvent, itemId: string) => boolean;
+  onSingleSelect?: (id: string) => void;
+  onBulkContextMenu?: (e: React.MouseEvent) => void;
 }
 
 const ICON_COLORS = [
@@ -45,7 +47,7 @@ const BG_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart }: DesktopDocumentProps) => {
+const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu }: DesktopDocumentProps) => {
   const { user } = useAuth();
   const store = useFocusStore();
   const { folders, createBlock } = useFlux();
@@ -113,7 +115,11 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
   }, [doc.id, store.updateDesktopDocPosition]);
 
-  const handleContextMenu = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY }); };
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (isMarqueeSelected && onBulkContextMenu) { onBulkContextMenu(e); return; }
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
 
   const commitRename = async () => {
     if (renameValue.trim() && renameValue.trim() !== doc.title) {
@@ -162,10 +168,20 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   return (
     <>
       <div
-        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group ${isMarqueeSelected ? "ring-2 ring-blue-400/60 bg-blue-400/10" : selected ? "ring-2 ring-primary/60" : ""}`}
-        style={{ left: pos.x, top: pos.y, width: 90, minHeight: 90, zIndex: isDraggingActive ? 9999 : selected ? 55 : 45, background: "transparent", backdropFilter: docOpacity <= 0.06 ? "none" : undefined, WebkitBackdropFilter: docOpacity <= 0.06 ? "none" : undefined, boxShadow: docOpacity <= 0.06 ? "none" : (isDraggingActive ? "0 20px 60px rgba(0,0,0,0.5)" : undefined), border: docOpacity <= 0.06 ? "none" : undefined }}
+        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group transition-shadow duration-200 ${!isMarqueeSelected && selected ? "ring-2 ring-primary/60" : ""}`}
+        style={{
+          left: pos.x, top: pos.y, width: 90, minHeight: 90,
+          zIndex: isDraggingActive ? 9999 : (selected || isMarqueeSelected) ? 55 : 45,
+          background: "transparent",
+          backdropFilter: docOpacity <= 0.06 ? "none" : undefined,
+          WebkitBackdropFilter: docOpacity <= 0.06 ? "none" : undefined,
+          boxShadow: isMarqueeSelected
+            ? "0 0 0 2px rgba(0,122,255,0.7), 0 0 16px 2px rgba(0,122,255,0.35), 0 0 30px 4px rgba(0,122,255,0.15)"
+            : (isDraggingActive ? "0 20px 60px rgba(0,0,0,0.5)" : (docOpacity <= 0.06 ? "none" : undefined)),
+          border: docOpacity <= 0.06 ? "none" : undefined,
+        }}
         onPointerDown={handlePointerDown}
-        onClick={(e) => { e.stopPropagation(); if (!didDrag.current) setSelected(s => !s); }}
+        onClick={(e) => { e.stopPropagation(); if (!didDrag.current) { if (onSingleSelect) onSingleSelect(doc.id); else setSelected(s => !s); } }}
         onDoubleClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setSelected(false); onOpen(doc); } }}
         onContextMenu={handleContextMenu}
       >
