@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, X, Settings2, GripHorizontal } from "lucide-react";
+import { Send, Mic, MicOff, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -7,7 +7,6 @@ import DraggableWidget from "./DraggableWidget";
 import AuraOrb, { type AuraState } from "./AuraOrb";
 import { useFocusStore } from "@/context/FocusContext";
 import { useFlux } from "@/context/FluxContext";
-import { useStyleEditorCallback } from "./StyleEditorContext";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -225,13 +224,8 @@ const AuraWidget: React.FC = () => {
   const historyEndRef = useRef<HTMLDivElement>(null);
   const focusStore = useFocusStore();
   const flux = useFlux();
-  const openStyleEditor = useStyleEditorCallback();
-  const isBuildMode = focusStore.systemMode === "build";
 
-  // Force widget background to fully transparent on mount
-  useEffect(() => {
-    focusStore.setWidgetOpacity("aura", 0);
-  }, []);
+  // No forced opacity override — let the style editor control it like all other widgets
 
   // --- Intermittent random hints ---
   useEffect(() => {
@@ -303,6 +297,8 @@ const AuraWidget: React.FC = () => {
     setPillMode("input");
     setCurrentTip("");
   }, []);
+
+
 
   const handleToolCall = useCallback((name: string, args: any) => {
     if (name === "add_task") {
@@ -437,36 +433,9 @@ const AuraWidget: React.FC = () => {
       defaultPosition={defaultPos}
       defaultSize={{ w: 320, h: 300 }}
       className="aura-widget"
-      hideHeader
       autoHeight
-      containerStyle={{ background: "transparent", border: "none", boxShadow: "none" }}
     >
       <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
-        {/* Build-mode header bar — matches exact same style as other widgets */}
-        {isBuildMode && (
-          <div className="absolute -top-7 left-0 right-0 flex items-center justify-between px-2 py-1 rounded-t-lg bg-white/10 backdrop-blur-sm border border-b-0 border-white/15 z-50">
-            <div className="flex items-center gap-1.5 cursor-grab">
-              <GripHorizontal size={14} className="text-white/50" />
-              <span className="text-[9px] font-semibold text-white/40 uppercase tracking-wider">Aura</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => openStyleEditor?.("aura")}
-                className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/50 transition-colors"
-                title="Widget Style"
-              >
-                <Settings2 size={14} />
-              </button>
-              <button
-                onClick={() => focusStore.toggleWidget("aura")}
-                className="p-1 rounded-lg bg-white/10 hover:bg-red-500/30 text-white/50 transition-colors"
-                title="Remove widget"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
-        )}
         {/* Orb */}
         <div className="flex items-center justify-center pt-2 pb-1" onClick={wake}>
           <AuraOrb state={auraState} size={orbSize} onClick={wake} />
