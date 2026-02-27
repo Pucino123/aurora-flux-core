@@ -7,6 +7,8 @@ import DraggableWidget from "./DraggableWidget";
 import AuraOrb, { type AuraState } from "./AuraOrb";
 import { useFocusStore } from "@/context/FocusContext";
 import { useFlux } from "@/context/FluxContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -29,6 +31,10 @@ const TIPS = [
 
 function gatherContext(focusStore: any, flux: any): string {
   const parts: string[] = [];
+
+  // Current date — critical for scheduling relative dates like "tomorrow"
+  parts.push(`Today: ${new Date().toLocaleDateString("en-CA")} (${new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })})`);
+
   if (focusStore.focusStickyNotes?.length) {
     const notes = focusStore.focusStickyNotes.map((n: any) => n.text).filter(Boolean);
     if (notes.length) parts.push(`Sticky notes: ${notes.join("; ")}`);
@@ -47,14 +53,18 @@ function gatherContext(focusStore: any, flux: any): string {
   }
   const pendingTasks = flux.tasks?.filter((t: any) => !t.done)?.slice(0, 15) || [];
   if (pendingTasks.length) {
-    parts.push(`Pending tasks (with IDs): ${pendingTasks.map((t: any) => `[${t.id}] "${t.title}" (priority: ${t.priority || 'medium'}, status: ${t.status})`).join("; ")}`);
+    parts.push(`Pending tasks (with IDs): ${pendingTasks.map((t: any) => `[${t.id}] "${t.title}" (priority: ${t.priority || 'medium'}, status: ${t.status}${t.due_date ? `, due: ${t.due_date}` : ""}${t.folder_id ? `, folder: ${t.folder_id}` : ""})`).join("; ")}`);
   }
   const doneTasks = flux.tasks?.filter((t: any) => t.done)?.slice(0, 5) || [];
   if (doneTasks.length) {
     parts.push(`Recently completed: ${doneTasks.map((t: any) => t.title).join(", ")}`);
   }
   if (flux.goals?.length) {
-    parts.push(`Goals: ${flux.goals.map((g: any) => `${g.title} (${g.current_amount}/${g.target_amount})`).join(", ")}`);
+    parts.push(`Goals: ${flux.goals.map((g: any) => `${g.title} (${g.current_amount}/${g.target_amount}${g.deadline ? `, deadline: ${g.deadline}` : ""})`).join(", ")}`);
+  }
+  // Folders — so Aura can assign tasks to the right folder
+  if (flux.folders?.length) {
+    parts.push(`Available folders: ${flux.folders.map((f: any) => `[${f.id}] "${f.title}" (type: ${f.type})`).join("; ")}`);
   }
   return parts.join("\n");
 }
@@ -224,6 +234,7 @@ const AuraWidget: React.FC = () => {
   const historyEndRef = useRef<HTMLDivElement>(null);
   const focusStore = useFocusStore();
   const flux = useFlux();
+  const { user } = useAuth();
 
   // No forced opacity override — let the style editor control it like all other widgets
 
@@ -342,8 +353,23 @@ const AuraWidget: React.FC = () => {
       const blocks = flux.scheduleBlocks.filter((b) => b.scheduled_date === date);
       blocks.forEach((b) => flux.removeBlock(b.id));
       toast.success(`Cleared ${blocks.length} blocks for ${date}`);
+    } else if (name === "create_note") {
+      if (user) {
+        (supabase as any).from("documents").insert({
+          user_id: user.id,
+          title: args.title || "Note",
+          type: "text",
+          folder_id: args.folder_id || null,
+          content: args.content ? { html: `<p>${args.content}</p>` } : { html: "" },
+        }).then(({ error }: { error: any }) => {
+          if (error) toast.error("Failed to create note");
+          else toast.success(`Note created: ${args.title}`);
+        });
+      } else {
+        toast.error("Sign in to create notes");
+      }
     }
-  }, [flux]);
+  }, [flux, user]);
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;

@@ -562,28 +562,31 @@ async function handleCouncilQuick(question: string, mode: string, personaKey: st
 }
 
 async function handleAura(messages: any[], context: string, apiKey: string) {
-  const systemPrompt = `You are Aura, a brilliant personal AI assistant embedded in the user's Flux productivity dashboard. You can see the user's current dashboard state including all their tasks (with IDs), schedule, and goals.
+  const systemPrompt = `You are Aura, a brilliant personal AI assistant embedded in the user's Flux productivity dashboard. You have full visibility into the user's tasks (with IDs), schedule, goals, folders, sticky notes, and today's date.
 
 PERSONALITY:
-- You are warm, proactive, and genuinely helpful — like the world's best executive assistant.
-- Be concise but insightful. Max 3 sentences for simple questions, more for complex analysis.
-- Match the user's language (Danish → Danish, English → English, etc.)
+- Warm, proactive, and genuinely helpful — like the world's best executive assistant.
+- Concise but insightful. Max 3 sentences for simple questions, more for complex analysis.
+- Match the user's language exactly (Danish → respond in Danish, English → English, etc.)
 - Proactively suggest improvements, flag risks, and offer feedback when relevant.
 
 CAPABILITIES:
-- Create, complete, update, and remove tasks using the tools below.
+- Create, complete, update, and remove tasks (with folder assignment).
 - Book meetings and add time blocks to the schedule.
 - Clear entire days from the schedule.
+- Create notes/documents for capturing ideas or information.
 - Give productivity feedback, analyze workload, suggest task prioritization.
-- Help plan projects by breaking them into tasks.
+- Help plan projects by breaking them into tasks across the right folders.
 
 CRITICAL RULES:
-- When removing or completing tasks, you MUST use the exact task_id from the context. NEVER guess IDs.
-- When the user says "remove" or "delete" a task, find the matching task by name in the context and use remove_task with its ID.
-- When the user says "done" or "finished" a task, use complete_task with its ID.
-- For booking meetings, use book_meeting with a specific time and duration.
+- When removing or completing tasks, use the EXACT task_id from context. NEVER guess or fabricate IDs.
+- When user says "remove"/"delete" → use remove_task with the matching ID.
+- When user says "done"/"finished" → use complete_task with the matching ID.
+- When creating tasks, if the user mentions a project or folder, use the matching folder_id from "Available folders" in context.
+- For dates: use the "Today" date in context. "Tomorrow" = today + 1 day. Always use YYYY-MM-DD format for due_date.
 - Never invent data — only reference what's in the context.
-- After performing actions, briefly confirm what you did.
+- After performing actions, briefly confirm what you did in the user's language.
+- You CAN call multiple tools in one response (e.g., add 3 tasks at once).
 
 ═══ DASHBOARD CONTEXT ═══
 ${context}
@@ -596,7 +599,7 @@ ${context}
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-2.5-pro",
       messages: [
         { role: "system", content: systemPrompt },
         ...messages,
@@ -606,12 +609,14 @@ ${context}
           type: "function",
           function: {
             name: "add_task",
-            description: "Add a new task to the user's task list",
+            description: "Add a new task to the user's task list, optionally assigned to a folder",
             parameters: {
               type: "object",
               properties: {
                 title: { type: "string", description: "Task title" },
                 priority: { type: "string", enum: ["low", "medium", "high"], description: "Task priority" },
+                folder_id: { type: "string", description: "UUID of the folder to place the task in (from Available folders in context)" },
+                due_date: { type: "string", description: "Due date in YYYY-MM-DD format" },
               },
               required: ["title"],
             },
@@ -707,6 +712,22 @@ ${context}
               properties: {
                 date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
               },
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "create_note",
+            description: "Create a new note/document to capture ideas, information, or plans. Use when user asks to note something, write something down, or create a document.",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Note/document title" },
+                content: { type: "string", description: "Initial content of the note (optional)" },
+                folder_id: { type: "string", description: "UUID of the folder to place the note in (from Available folders in context)" },
+              },
+              required: ["title"],
             },
           },
         },
