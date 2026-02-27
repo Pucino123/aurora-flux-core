@@ -1,66 +1,91 @@
 
 
-## Plan: Persistent Dashboard State, Clock Defaults & Marquee Fix
+## Plan: "Aura" AI Personal Assistant Widget
 
-### 1. Database Table for Dashboard State Persistence
+### Overview
+Build a new dashboard widget with a Siri-inspired animated orb, streaming AI chat, voice input, and screen-aware context gathering. Integrates into the existing widget system (DraggableWidget, WidgetToggleBar, FocusContext).
 
-Create a new `dashboard_state` table to sync FocusContext state to the backend:
+### 1. Create the Aura Orb Component
+**New file: `src/components/focus/AuraOrb.tsx`**
+- Pure CSS `radial-gradient` + `conic-gradient` layered orb with purple/blue/pink/cyan palette
+- 4 animation states via Framer Motion:
+  - **Idle**: slow scale pulse (1.0 → 1.05), slow gradient rotation (20s cycle)
+  - **Listening**: faster pulse, increased saturation, subtle waveform bounce on Y axis
+  - **Processing**: rapid spin + contract/expand (scale 0.85 → 1.1)
+  - **Speaking**: rhythmic pulse synced to ~200ms intervals while text streams
+- Accept `state` prop: `"idle" | "listening" | "processing" | "speaking"`
+- Multiple layered `<motion.div>` elements with different `radial-gradient` and `blur` filters for depth
 
-```sql
-CREATE TABLE public.dashboard_state (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  state jsonb NOT NULL DEFAULT '{}'::jsonb,
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(user_id)
-);
-ALTER TABLE dashboard_state ENABLE ROW LEVEL SECURITY;
--- RLS: users can only access their own state
-CREATE POLICY "Users manage own dashboard state" ON dashboard_state FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+### 2. Create the Aura Widget Component
+**New file: `src/components/focus/AuraWidget.tsx`**
+- Wraps in `DraggableWidget` (id: `"aura"`, default size ~380x480, proportional position)
+- Layout: Orb at top center → scrollable chat history → input bar at bottom
+- **Chat history**: array of `{role, content}` messages rendered with `ReactMarkdown`, fade-in animation
+- **Input bar**: text input + mic button + send button
+- **Voice input**: Browser `SpeechRecognition` API (with fallback toast if unsupported)
+- **Streaming**: reuse existing pattern from `FocusCouncilWidget` — fetch to `flux-ai` edge function with SSE parsing
+
+### 3. Context Gathering ("Screen Awareness")
+Before sending each user message to the AI, silently collect dashboard state:
+- From `useFocusStore()`: sticky notes text, active widgets, timer state, goal text, brain dump tasks
+- From `useFlux()`: today's scheduled blocks (calendar), folder titles
+- Append as a hidden system context string in the request body (not visible in chat UI)
+
+### 4. Backend: Add `"aura"` handler to `flux-ai` edge function
+**Edit: `supabase/functions/flux-ai/index.ts`**
+- New `handleAura(messages, context, apiKey)` function
+- System prompt: "You are Aura, a personal AI assistant embedded in the user's Flux dashboard. You can see the user's current dashboard state. Match the user's language. Be concise and helpful."
+- Include context block with current sticky notes, today's plan, active widgets, goals
+- Tool-calling for CRUD actions:
+  - `add_task`: creates a task/sticky note
+  - `add_to_plan`: adds a time block to today's schedule
+  - `clear_schedule`: removes blocks for a given date
+- Stream response back via SSE
+- Wire up in the main `serve()` router: `type === "aura"`
+
+### 5. Action Execution (CRUD via AI)
+In `AuraWidget.tsx`, after streaming completes, check for tool calls in the response:
+- `add_task` → push to brain dump tasks via `setBrainDumpTasks`
+- `add_to_plan` → call `createBlock` from `useFlux()`
+- `clear_schedule` → remove blocks via flux context
+- Show confirmation toast after each action
+
+### 6. Register in Widget System
+- **Edit `src/components/focus/WidgetToggleBar.tsx`**: Add `{ id: "aura", label: "Aura", icon: Sparkles }` to `OVERFLOW_WIDGETS`
+- **Edit `src/components/focus/FocusDashboardView.tsx`**: Import `AuraWidget`, render when `activeWidgets.includes("aura")`
+
+### Technical Details
+
+```text
+Widget Architecture:
+┌─────────────────────────┐
+│  DraggableWidget "aura" │
+│  ┌───────────────────┐  │
+│  │   AuraOrb (CSS)   │  │
+│  │  state-driven     │  │
+│  │  gradient anim    │  │
+│  └───────────────────┘  │
+│  ┌───────────────────┐  │
+│  │  Chat History     │  │
+│  │  (scrollable)     │  │
+│  │  ReactMarkdown    │  │
+│  └───────────────────┘  │
+│  ┌───────────────────┐  │
+│  │ [input] [🎤] [→]  │  │
+│  └───────────────────┘  │
+└─────────────────────────┘
 ```
 
-### 2. Sync Logic in FocusContext
+- Orb: 3-4 nested `<motion.div>` with `radial-gradient(circle, #a855f7, #3b82f6, #06b6d4, #ec4899)`, each layer offset and blurred differently
+- Voice: `window.SpeechRecognition || window.webkitSpeechRecognition`, `interimResults: true` for live transcription
+- No new dependencies needed — uses framer-motion, react-markdown, existing flux-ai edge function
 
-**`src/context/FocusContext.tsx`** changes:
-- Accept `user` from AuthProvider (or import `useAuth` at Provider level)
-- On mount with authenticated user: fetch `dashboard_state` row, merge with localStorage, prefer DB data
-- On state change: debounced upsert (800ms) to `dashboard_state` table, alongside existing localStorage write
-- This ensures all widget positions, folder positions, doc positions, sticky notes, clock settings, etc. persist across sessions and devices
+### Files to Create
+1. `src/components/focus/AuraOrb.tsx`
+2. `src/components/focus/AuraWidget.tsx`
 
-### 3. Default Clock Widget Configuration
-
-**`src/context/FocusContext.tsx`** — update `DEFAULT_STATE`:
-- `clockFontSize: 86` (already set)
-- `clockShowSeconds: false` (match video — clean display)
-- `clockShowGreeting: true` (already set)
-- `clockShowDate: true` (already set)
-- `clockWeight: 200` (already set — thin weight)
-- `clockDepthShadow: true` (add depth shadow for video look)
-
-**`src/components/focus/ClockWidget.tsx`** — update `defaultClockPos`:
-- Center horizontally: `Math.round((window.innerWidth - 400) / 2)` (already correct)
-- Position vertically higher: `y: 80` to match video reference where clock is upper-center
-
-### 4. Bug Fix: Marquee vs Widget Drag Conflict
-
-The root cause: `StickyNoteItem` in `FocusStickyNotes.tsx` uses `onPointerDown` with `setPointerCapture` but does NOT call `e.stopPropagation()`. The event bubbles up to the canvas `onMouseDown` handler which starts the marquee.
-
-**`src/components/focus/FocusStickyNotes.tsx`** — in `onPointerDown` callback (line ~125):
-- Add `e.stopPropagation()` before the drag logic
-
-**`src/components/focus/DraggableWidget.tsx`** — in `onPointerDownDrag` callback (line ~158):
-- Add `e.stopPropagation()` to prevent marquee when dragging any widget header
-
-**`src/components/focus/FocusDashboardView.tsx`** — strengthen the target check in `handleCanvasMouseDown`:
-- Add `[data-no-drag]` and sticky note selectors to the `.closest()` check to catch any edge cases
-
-### File Change Summary
-
-| File | Change |
-|------|--------|
-| **Migration SQL** | Create `dashboard_state` table with RLS |
-| `src/context/FocusContext.tsx` | Add DB sync (load on mount, debounced save); update clock defaults |
-| `src/components/focus/ClockWidget.tsx` | Adjust default Y position to `80` |
-| `src/components/focus/FocusStickyNotes.tsx` | Add `e.stopPropagation()` in `onPointerDown` |
-| `src/components/focus/DraggableWidget.tsx` | Add `e.stopPropagation()` in `onPointerDownDrag` |
+### Files to Edit
+1. `supabase/functions/flux-ai/index.ts` — add `handleAura` + tool definitions
+2. `src/components/focus/WidgetToggleBar.tsx` — register "aura" widget
+3. `src/components/focus/FocusDashboardView.tsx` — render AuraWidget
 
