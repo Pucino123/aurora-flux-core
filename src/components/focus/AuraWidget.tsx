@@ -290,6 +290,7 @@ const AuraWidget: React.FC = () => {
   const [responseText, setResponseText] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [memories, setMemories] = useState<Record<string, string>>({});
+  const [injectedDocContext, setInjectedDocContext] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -416,6 +417,18 @@ const AuraWidget: React.FC = () => {
     setCurrentTip("");
   }, []);
 
+  // Listen for in-document Aura summon events (fired by floating Aura button inside DocumentView)
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { content, title, prompt } = e.detail || {};
+      if (content) setInjectedDocContext(`[Open document: "${title || "Untitled"}"]\n${content}`);
+      wake();
+      if (prompt) setTimeout(() => setInput(prompt), 50);
+    };
+    window.addEventListener("aura:summon-with-doc" as any, handler);
+    return () => window.removeEventListener("aura:summon-with-doc" as any, handler);
+  }, [wake]);
+
   const handleToolCall = useCallback((name: string, args: any) => {
     if (name === "add_task") {
       const title = args.title || args.text || "New task";
@@ -523,6 +536,50 @@ const AuraWidget: React.FC = () => {
         const utt = new SpeechSynthesisUtterance(args.text);
         window.speechSynthesis.speak(utt);
       }
+    } else if (name === "create_spreadsheet") {
+      if (user) {
+        (supabase as any).from("documents").insert({
+          user_id: user.id,
+          title: args.title || "Spreadsheet",
+          type: "spreadsheet",
+          folder_id: args.folder_id || null,
+          content: { cells: {}, colWidths: {} },
+        }).then(({ error }: { error: any }) => {
+          if (error) toast.error("Failed to create spreadsheet");
+          else { toast.success(`Spreadsheet created: ${args.title}`); flux.setActiveView("documents"); }
+        });
+      }
+    } else if (name === "delete_folder") {
+      if (args.folder_id) {
+        flux.removeFolder(args.folder_id);
+        toast.success("Folder deleted");
+      }
+    } else if (name === "create_goal") {
+      if (user) {
+        flux.createGoal({
+          title: args.title || "New Goal",
+          target_amount: args.target_amount || 0,
+          current_amount: args.current_amount || 0,
+          deadline: args.deadline || null,
+          folder_id: args.folder_id || null,
+        });
+        toast.success(`Goal created: ${args.title}`);
+      }
+    } else if (name === "pin_task") {
+      if (args.task_id !== undefined) {
+        flux.updateTask(args.task_id, { pinned: args.pinned !== false });
+        toast.success(args.pinned !== false ? "Task pinned" : "Task unpinned");
+      }
+    } else if (name === "rename_item") {
+      if (args.type === "folder" && args.id) {
+        flux.updateFolder(args.id, { title: args.new_title });
+        toast.success(`Folder renamed to "${args.new_title}"`);
+      } else if (args.type === "task" && args.id) {
+        flux.updateTask(args.id, { title: args.new_title });
+        toast.success(`Task renamed to "${args.new_title}"`);
+      }
+    } else if (name === "summarize_context") {
+      // No-op — Aura will produce a text response using the context already injected in system prompt
     }
   }, [flux, user, setTheme, focusStore]);
 
@@ -545,7 +602,10 @@ const AuraWidget: React.FC = () => {
     setResponseText("");
 
     let assistantText = "";
-    const context = gatherContext(focusStore, flux, memories);
+    const baseContext = gatherContext(focusStore, flux, memories);
+    const context = injectedDocContext
+      ? `${baseContext}\n\n═══ CURRENTLY OPEN DOCUMENT (user is asking about this) ═══\n${injectedDocContext}\n═══ END DOCUMENT ═══`
+      : baseContext;
 
     try {
       await streamAura(
@@ -575,7 +635,7 @@ const AuraWidget: React.FC = () => {
       setAuraState("idle");
       toast.error("Failed to reach Aura");
     }
-  }, [messages, isLoading, focusStore, flux, memories, handleToolCall]);
+  }, [messages, isLoading, focusStore, flux, memories, handleToolCall, injectedDocContext]);
 
   const { listening, toggle: toggleVoice, stop: stopVoice, start: startVoice, audioLevelRef: voiceAudioLevelRef } = useVoiceInput((text) => {
     send(text);
@@ -668,40 +728,48 @@ const AuraWidget: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 rounded-full px-3 py-2 border border-white/[0.08] relative" style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)" }}>
-                    <button
-                      onClick={toggleVoice}
-                      className={`p-1 rounded-full transition-all shrink-0 ${listening ? "bg-purple-500/30 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.4)]" : "text-white/40 hover:text-white/70"}`}
-                      title={listening ? "Stop listening" : "Start voice (⌘/Ctrl)"}
-                    >
-                      {listening ? <MicOff size={13} /> : <Mic size={13} />}
-                    </button>
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && send(input)}
-                      placeholder={listening ? "Listening..." : "Ask Aura anything..."}
-                      className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/30 outline-none min-w-0"
-                    />
-                    {messages.length > 0 ? (
-                      <button
-                        onClick={revertToIdle}
-                        className="p-1 rounded-full text-white/30 hover:text-red-400 hover:bg-white/10 transition-all shrink-0"
-                        title="End conversation"
-                      >
-                        <X size={13} />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => send(input)}
-                        disabled={isLoading || !input.trim()}
-                        className="p-1 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all shrink-0"
-                      >
-                        <Send size={13} />
-                      </button>
+                  <div className="flex flex-col gap-1 w-full">
+                    {injectedDocContext && (
+                      <div className="flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1 mx-1" style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                        <span className="text-[10px] text-purple-300/80 truncate">📄 Reading document…</span>
+                        <button onClick={() => setInjectedDocContext(null)} className="text-purple-300/50 hover:text-purple-300 text-[10px] shrink-0">✕</button>
+                      </div>
                     )}
+                    <div className="flex items-center gap-1.5 rounded-full px-3 py-2 border border-white/[0.08] relative" style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)" }}>
+                      <button
+                        onClick={toggleVoice}
+                        className={`p-1 rounded-full transition-all shrink-0 ${listening ? "bg-purple-500/30 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.4)]" : "text-white/40 hover:text-white/70"}`}
+                        title={listening ? "Stop listening" : "Start voice (⌘/Ctrl)"}
+                      >
+                        {listening ? <MicOff size={13} /> : <Mic size={13} />}
+                      </button>
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && send(input)}
+                        placeholder={injectedDocContext ? "Ask about this document..." : listening ? "Listening..." : "Ask Aura anything..."}
+                        className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/30 outline-none min-w-0"
+                      />
+                      {messages.length > 0 ? (
+                        <button
+                          onClick={revertToIdle}
+                          className="p-1 rounded-full text-white/30 hover:text-red-400 hover:bg-white/10 transition-all shrink-0"
+                          title="End conversation"
+                        >
+                          <X size={13} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => send(input)}
+                          disabled={isLoading || !input.trim()}
+                          className="p-1 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all shrink-0"
+                        >
+                          <Send size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </motion.div>
