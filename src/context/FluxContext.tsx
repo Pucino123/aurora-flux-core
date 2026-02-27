@@ -138,6 +138,8 @@ interface FluxContextValue {
   setActiveFolder: (id: string | null) => void;
   activeView: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks";
   setActiveView: (v: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks") => void;
+  pendingDocumentId: string | null;
+  setPendingDocumentId: (id: string | null) => void;
   filterPersona: string | null;
   setFilterPersona: (p: string | null) => void;
 
@@ -199,6 +201,7 @@ export function FluxProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks">("stream");
+  const [pendingDocumentId, setPendingDocumentId] = useState<string | null>(null);
   const [filterPersona, setFilterPersona] = useState<string | null>(null);
 
   // Wrap setters to persist to localStorage when no user
@@ -569,6 +572,7 @@ export function FluxProvider({ children }: { children: ReactNode }) {
       value={{
         folders, folderTree, tasks, goals, workouts, scheduleBlocks, inboxTasks, loading,
         activeFolder, setActiveFolder, activeView, setActiveView,
+        pendingDocumentId, setPendingDocumentId,
         filterPersona, setFilterPersona,
         createFolder, updateFolder, removeFolder, moveFolder,
         createTask, updateTask, removeTask,
