@@ -826,7 +826,7 @@ const AuraWidget: React.FC = () => {
       className="aura-widget"
       autoHeight
       overflowVisible
-      containerStyle={{ zIndex: 200 }}
+      containerStyle={{ zIndex: injectedDocContext ? 9000 : 200 }}
     >
       <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
         {/* Orb */}
