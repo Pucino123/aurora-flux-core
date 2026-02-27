@@ -281,13 +281,35 @@ const FocusContent = () => {
   }, [toCanvasCoords]);
 
   useEffect(() => {
+    const computeIntersectedIds = (m: { startX: number; startY: number; endX: number; endY: number }) => {
+      const l = Math.min(m.startX, m.endX);
+      const r = Math.max(m.startX, m.endX);
+      const t = Math.min(m.startY, m.endY);
+      const b = Math.max(m.startY, m.endY);
+      if (r - l < 5 && b - t < 5) return new Set<string>();
+      const ns = new Set<string>();
+      folderTree.forEach(folder => {
+        const fPos = desktopFolderPositions[folder.id] || { x: 40, y: 40 };
+        if (fPos.x < r && fPos.x + 90 > l && fPos.y < b && fPos.y + 90 > t) ns.add(folder.id);
+      });
+      desktopDocs.forEach(doc => {
+        const dPos = desktopDocPositions[doc.id] || { x: 0, y: 0 };
+        if (dPos.x < r && dPos.x + 90 > l && dPos.y < b && dPos.y + 90 > t) ns.add(doc.id);
+      });
+      return ns;
+    };
+
     const onMouseMove = (e: MouseEvent) => {
-      // Marquee drawing
+      // Marquee drawing — compute intersections live
       if (marqueeActive.current && marqueeRef.current) {
         const coords = toCanvasCoords(e.clientX, e.clientY);
         const updated = { ...marqueeRef.current, endX: coords.x, endY: coords.y };
         marqueeRef.current = updated;
         setMarquee(updated);
+        // Real-time intersection detection
+        const live = computeIntersectedIds(updated);
+        selectedIdsRef.current = live;
+        setSelectedIds(live);
         return;
       }
       // Group drag
@@ -306,41 +328,59 @@ const FocusContent = () => {
         });
       }
     };
-    const onMouseUp = () => {
-      // Finalize marquee selection
+    const onMouseUp = (e: MouseEvent) => {
+      // Finalize marquee — selection already applied live, just clean up
       if (marqueeActive.current && marqueeRef.current) {
         marqueeActive.current = false;
-        const m = marqueeRef.current;
-        const l = Math.min(m.startX, m.endX);
-        const r = Math.max(m.startX, m.endX);
-        const t = Math.min(m.startY, m.endY);
-        const b = Math.max(m.startY, m.endY);
-        if (r - l > 5 || b - t > 5) {
-          const ns = new Set<string>();
-          folderTree.forEach(folder => {
-            const fPos = desktopFolderPositions[folder.id] || { x: 40, y: 40 };
-            if (fPos.x < r && fPos.x + 90 > l && fPos.y < b && fPos.y + 90 > t) ns.add(folder.id);
-          });
-          desktopDocs.forEach(doc => {
-            const dPos = desktopDocPositions[doc.id] || { x: 0, y: 0 };
-            if (dPos.x < r && dPos.x + 90 > l && dPos.y < b && dPos.y + 90 > t) ns.add(doc.id);
-          });
-          setSelectedIds(ns);
-          selectedIdsRef.current = ns;
-        }
         marqueeRef.current = null;
         setMarquee(null);
       }
-      // End group drag
+      // End group drag — check folder dropzone
       if (groupDraggingRef.current) {
         groupDraggingRef.current = false;
         groupDragOrigin.current = null;
+        // Check if dropped on a folder
+        const ids = selectedIdsRef.current;
+        if (ids.size > 0) {
+          const allFolderEls = document.querySelectorAll('.desktop-folder[data-folder-id]');
+          for (const el of allFolderEls) {
+            const targetId = (el as HTMLElement).dataset.folderId;
+            if (!targetId || ids.has(targetId)) continue; // skip self
+            const rect = el.getBoundingClientRect();
+            if (e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom) {
+              // Move all selected items into this folder
+              const triggerAbsorb = (el as any).__triggerAbsorb;
+              if (triggerAbsorb) triggerAbsorb();
+              const folderIds = [...ids].filter(id => folderTree.some(f => f.id === id));
+              const docIds = [...ids].filter(id => desktopDocs.some(d => d.id === id));
+              for (const fid of folderIds) { moveFolder(fid, targetId); }
+              for (const did of docIds) {
+                if (user) {
+                  (supabase as any).from("documents").update({ folder_id: targetId, updated_at: new Date().toISOString() }).eq("id", did).then(() => refetchDesktopDocs());
+                } else {
+                  const LS_KEY = "flux_local_documents";
+                  try {
+                    const raw = localStorage.getItem(LS_KEY);
+                    const docs = raw ? JSON.parse(raw) : [];
+                    localStorage.setItem(LS_KEY, JSON.stringify(docs.map((d: any) => d.id === did ? { ...d, folder_id: targetId } : d)));
+                    refetchDesktopDocs();
+                  } catch {}
+                }
+              }
+              const targetFolder = folderTree.find(f => f.id === targetId);
+              toast.success(`Moved ${ids.size} item${ids.size > 1 ? "s" : ""} to ${targetFolder?.title || "folder"}`);
+              setSelectedIds(new Set());
+              selectedIdsRef.current = new Set();
+              break;
+            }
+          }
+        }
       }
     };
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
     return () => { window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", onMouseUp); };
-  }, [folderTree, desktopDocs, desktopFolderPositions, desktopDocPositions, toCanvasCoords, updateDesktopFolderPosition, updateDesktopDocPosition]);
+  }, [folderTree, desktopDocs, desktopFolderPositions, desktopDocPositions, toCanvasCoords, updateDesktopFolderPosition, updateDesktopDocPosition, moveFolder, user, refetchDesktopDocs]);
 
   const handleGroupDragStart = useCallback((e: React.PointerEvent, itemId: string) => {
     if (!selectedIdsRef.current.has(itemId) || selectedIdsRef.current.size < 2) return false;
