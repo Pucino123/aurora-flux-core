@@ -24,6 +24,7 @@ import QuoteOfDay from "./QuoteOfDay";
 import ToolDrawer from "./ToolDrawer";
 import BreathingWidget from "./BreathingWidget";
 import FocusCouncilWidget from "./FocusCouncilWidget";
+import AuraWidget from "./AuraWidget";
 import RoutineBuilderWidget from "./RoutineBuilderWidget";
 import ClockEditor from "./ClockEditor";
 import WidgetStyleEditor from "./WidgetStyleEditor";
@@ -517,6 +518,7 @@ const FocusContent = () => {
             {activeWidgets.includes("quote") && <QuoteOfDay key="quote" />}
             {activeWidgets.includes("breathing") && <BreathingWidget key="breathing" />}
             {activeWidgets.includes("council") && <FocusCouncilWidget key="council" />}
+            {activeWidgets.includes("aura") && <AuraWidget key="aura" />}
             {activeWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
             {activeWidgets.includes("budget-preview") && <FocusBudgetWidget key="budget-preview" />}
             {activeWidgets.includes("savings-ring") && <FocusSavingsWidget key="savings-ring" />}
