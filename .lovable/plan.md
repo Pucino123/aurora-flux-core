@@ -1,40 +1,66 @@
 
 
-## Issues Found & Fix Plan
+## Plan: Persistent Dashboard State, Clock Defaults & Marquee Fix
 
-### 1. Sidebar Folders: Remove Default Kanban + Remove Budget Item
+### 1. Database Table for Dashboard State Persistence
 
-**Problem:** `FolderNodeComponent` in `BrainTree.tsx` shows `folder.tasks.length` as a badge, and clicking a folder runs `setActiveView("canvas")` which opens the kanban board. The user wants folders to only display their actual nested contents (sub-folders and documents) — not tasks/kanban.
+Create a new `dashboard_state` table to sync FocusContext state to the backend:
 
-Additionally, the task count badge (`folder.tasks.length`) implies kanban-style content. The "følg mit månedlige budget" item appears because tasks are associated with folders.
+```sql
+CREATE TABLE public.dashboard_state (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  state jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(user_id)
+);
+ALTER TABLE dashboard_state ENABLE ROW LEVEL SECURITY;
+-- RLS: users can only access their own state
+CREATE POLICY "Users manage own dashboard state" ON dashboard_state FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+```
 
-**Fix in `BrainTree.tsx`:**
-- Remove the `folder.tasks.length` badge from `FolderNodeComponent` (line 145-147)
-- Change `handleClick` to only toggle the folder open/closed (expand tree) instead of switching to canvas/kanban view. Double-click can still open the folder modal on the desktop.
-- Only show documents and child folders in the expanded tree — no tasks
+### 2. Sync Logic in FocusContext
 
-### 2. Group Drag Broken After Marquee Selection
+**`src/context/FocusContext.tsx`** changes:
+- Accept `user` from AuthProvider (or import `useAuth` at Provider level)
+- On mount with authenticated user: fetch `dashboard_state` row, merge with localStorage, prefer DB data
+- On state change: debounced upsert (800ms) to `dashboard_state` table, alongside existing localStorage write
+- This ensures all widget positions, folder positions, doc positions, sticky notes, clock settings, etc. persist across sessions and devices
 
-**Root cause:** `handleGroupDragStart` calls `e.preventDefault()` on the PointerEvent (line 392). This suppresses the subsequent mouse events. But the group drag movement listener (`onMouseMove` at line 304) listens on `window.addEventListener("mousemove", ...)`. Since `preventDefault()` on pointerdown suppresses mousedown → mousemove chain, the group drag never gets movement data.
+### 3. Default Clock Widget Configuration
 
-**Fix in `FocusDashboardView.tsx`:**
-- Change `window.addEventListener("mousemove", onMouseMove)` and `window.addEventListener("mouseup", onMouseUp)` to use `pointermove` and `pointerup` instead. This ensures compatibility with the PointerEvent-based drag initiation.
-- Remove `e.preventDefault()` from `handleGroupDragStart` or ensure pointer events are used throughout.
+**`src/context/FocusContext.tsx`** — update `DEFAULT_STATE`:
+- `clockFontSize: 86` (already set)
+- `clockShowSeconds: false` (match video — clean display)
+- `clockShowGreeting: true` (already set)
+- `clockShowDate: true` (already set)
+- `clockWeight: 200` (already set — thin weight)
+- `clockDepthShadow: true` (add depth shadow for video look)
 
-### 3. Right-Click Should Not Move Items
+**`src/components/focus/ClockWidget.tsx`** — update `defaultClockPos`:
+- Center horizontally: `Math.round((window.innerWidth - 400) / 2)` (already correct)
+- Position vertically higher: `y: 80` to match video reference where clock is upper-center
 
-**Problem:** Right-clicking a selected item triggers `handlePointerDown` which can start group drag, then the context menu opens, but the group drag state is now active.
+### 4. Bug Fix: Marquee vs Widget Drag Conflict
 
-**Fix in `DesktopFolder.tsx` and `DesktopDocument.tsx`:**
-- In `handlePointerDown`, check `if (e.button !== 0) return;` at the very top — only start drag on left-click. Right-click (button 2) should be ignored by the drag handler.
-- Same check needed in `handleGroupDragStart` in `FocusDashboardView.tsx`
+The root cause: `StickyNoteItem` in `FocusStickyNotes.tsx` uses `onPointerDown` with `setPointerCapture` but does NOT call `e.stopPropagation()`. The event bubbles up to the canvas `onMouseDown` handler which starts the marquee.
 
-### Summary of File Changes
+**`src/components/focus/FocusStickyNotes.tsx`** — in `onPointerDown` callback (line ~125):
+- Add `e.stopPropagation()` before the drag logic
+
+**`src/components/focus/DraggableWidget.tsx`** — in `onPointerDownDrag` callback (line ~158):
+- Add `e.stopPropagation()` to prevent marquee when dragging any widget header
+
+**`src/components/focus/FocusDashboardView.tsx`** — strengthen the target check in `handleCanvasMouseDown`:
+- Add `[data-no-drag]` and sticky note selectors to the `.closest()` check to catch any edge cases
+
+### File Change Summary
 
 | File | Change |
 |------|--------|
-| `BrainTree.tsx` | Remove task count badge; change folder click to toggle expand instead of opening kanban |
-| `FocusDashboardView.tsx` | Switch mousemove/mouseup listeners to pointermove/pointerup; add button check in handleGroupDragStart |
-| `DesktopFolder.tsx` | Add `if (e.button !== 0) return;` guard in handlePointerDown |
-| `DesktopDocument.tsx` | Same button guard |
+| **Migration SQL** | Create `dashboard_state` table with RLS |
+| `src/context/FocusContext.tsx` | Add DB sync (load on mount, debounced save); update clock defaults |
+| `src/components/focus/ClockWidget.tsx` | Adjust default Y position to `80` |
+| `src/components/focus/FocusStickyNotes.tsx` | Add `e.stopPropagation()` in `onPointerDown` |
+| `src/components/focus/DraggableWidget.tsx` | Add `e.stopPropagation()` in `onPointerDownDrag` |
 
