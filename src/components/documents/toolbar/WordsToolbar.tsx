@@ -68,7 +68,7 @@ const WordsToolbar = ({
     structure: <StructureTools exec={exec} editorRef={editorRef} lightMode={lm} />,
     insert: <InsertMenu exec={exec} lightMode={lm} />,
     emoji: <EmojiTouchbar onInsert={(emoji) => exec("insertText", emoji)} lightMode={lm} />,
-    ai: <AiToolsPanel editorRef={editorRef} onContentChange={onContentChange} lightMode={lm} />,
+    ai: <AiToolsPanel editorRef={editorRef} onContentChange={onContentChange} lightMode={lm} documentTitle={documentTitle} />,
     view: (
       <ViewModeToggle
         studioMode={studioMode} onToggleStudio={onToggleStudio}
