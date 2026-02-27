@@ -501,6 +501,11 @@ const AuraWidget: React.FC = () => {
       toast.success(`Cleared ${blocks.length} blocks for ${date}`);
     } else if (name === "create_note") {
       if (user) {
+        const noteTitle = args.title || "Note";
+        const dedupKey = `aura-create-note-${noteTitle}`;
+        if ((window as any)[dedupKey]) return;
+        (window as any)[dedupKey] = true;
+        setTimeout(() => { delete (window as any)[dedupKey]; }, 10000);
         (supabase as any).from("documents").insert({
           user_id: user.id,
           title: args.title || "Note",
