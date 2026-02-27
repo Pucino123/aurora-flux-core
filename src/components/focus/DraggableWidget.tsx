@@ -30,6 +30,7 @@ interface DraggableWidgetProps {
   onEditAction?: () => void;
   containerStyle?: React.CSSProperties;
   headerActions?: React.ReactNode;
+  overflowVisible?: boolean;
 }
 
 const GRID = 40;
@@ -105,7 +106,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 const DraggableWidget = ({
-  id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle, headerActions,
+  id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle, headerActions, overflowVisible = false,
 }: DraggableWidgetProps) => {
   const { widgetPositions, updateWidgetPosition, toggleWidget, getWidgetOpacity, setWidgetOpacity, widgetMinimalMode, systemMode } = useFocusStore();
   const openStyleEditor = useStyleEditorCallback();
@@ -313,7 +314,7 @@ const DraggableWidget = ({
       </AnimatePresence>
 
       <div
-        className={`w-full h-full flex flex-col ${widgetMinimalMode || isFullyTransparent || (isGlass && !hasCustomBg) ? "" : (isFocusMode ? "shadow-lg" : "shadow-2xl")} overflow-hidden`}
+        className={`w-full h-full flex flex-col ${widgetMinimalMode || isFullyTransparent || (isGlass && !hasCustomBg) ? "" : (isFocusMode ? "shadow-lg" : "shadow-2xl")} ${overflowVisible ? "overflow-visible" : "overflow-hidden"}`}
         style={{
           background: widgetMinimalMode ? "transparent" : effectiveBg,
           borderWidth: widgetMinimalMode ? 0 : (widgetStyle.borderWidth || (isGlass && !hasCustomBg ? 0 : 1)),
@@ -471,7 +472,7 @@ const DraggableWidget = ({
         )}
 
         <div
-          className={`flex-1 ${scrollable ? "overflow-auto council-hidden-scrollbar" : "overflow-hidden"} px-3 ${isFocusMode ? "py-3" : "py-2"} ${widgetMinimalMode || isFocusMode ? "cursor-grab active:cursor-grabbing" : ""} ${widgetStyle.glassEffect ? "widget-glass-text" : ""} ${widgetStyle.depthShadow ? "widget-depth-shadow" : ""}`}
+          className={`flex-1 ${scrollable ? "overflow-auto council-hidden-scrollbar" : overflowVisible ? "overflow-visible" : "overflow-hidden"} px-3 ${isFocusMode ? "py-3" : "py-2"} ${widgetMinimalMode || isFocusMode ? "cursor-grab active:cursor-grabbing" : ""} ${widgetStyle.glassEffect ? "widget-glass-text" : ""} ${widgetStyle.depthShadow ? "widget-depth-shadow" : ""}`}
           style={{
             color: widgetStyle.textColor || "inherit",
             opacity: (widgetStyle.textOpacity ?? 100) / 100,

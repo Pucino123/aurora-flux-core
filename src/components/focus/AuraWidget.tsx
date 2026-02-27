@@ -683,6 +683,7 @@ const AuraWidget: React.FC = () => {
       defaultSize={{ w: 320, h: 300 }}
       className="aura-widget"
       autoHeight
+      overflowVisible
       containerStyle={isActive ? { zIndex: 200 } : undefined}
     >
       <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
