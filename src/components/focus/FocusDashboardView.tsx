@@ -76,13 +76,17 @@ const FocusContent = () => {
 
   // Marquee selection state
   const [marquee, setMarquee] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
+  const marqueeRef = useRef<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set<string>());
+  const selectedIdsRef = useRef<Set<string>>(new Set<string>());
   const marqueeActive = useRef(false);
-  const marqueeStart = useRef({ x: 0, y: 0 });
   // Group drag state
-  const [groupDragging, setGroupDragging] = useState(false);
+  const groupDraggingRef = useRef(false);
   const groupDragOrigin = useRef<{ x: number; y: number } | null>(null);
-  const groupDragStartPositions = useRef<any>({});
+  const groupDragStartPositions = useRef<Record<string, { x: number; y: number }>>({});
+
+  // Keep refs in sync
+  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
 
   /** Convert viewport clientX/Y to canvas-relative coordinates */
   const toCanvasCoords = useCallback((clientX: number, clientY: number) => {
@@ -143,7 +147,6 @@ const FocusContent = () => {
     e.preventDefault();
     const canvasPos = toCanvasCoords(e.clientX, e.clientY);
     contextMenuPosRef.current = canvasPos;
-    // Store viewport coords for the menu popup positioning
     setContextMenu({ x: e.clientX, y: e.clientY });
   }, [toCanvasCoords]);
 
@@ -212,14 +215,12 @@ const FocusContent = () => {
         ) {
           const triggerAbsorb = (el as any).__triggerAbsorb;
           if (triggerAbsorb) triggerAbsorb();
-          // Move document into folder
           const folder = folderTree.find(f => f.id === targetId);
           if (user) {
             (supabase as any).from("documents").update({ folder_id: targetId, updated_at: new Date().toISOString() }).eq("id", docId).then(() => {
               refetchDesktopDocs();
             });
           } else {
-            // Local storage update
             const LS_KEY = "flux_local_documents";
             try {
               const raw = localStorage.getItem(LS_KEY);
@@ -263,49 +264,57 @@ const FocusContent = () => {
     }
   }, [moveFolder, refetchDesktopDocs]);
 
-  // Marquee selection handlers
+  // Marquee + group drag: single effect with refs to avoid stale closures
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
-    // Only start marquee on left click on empty canvas
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea, [data-widget-id]')) return;
-    // If clicking empty canvas, clear selection
-    if (selectedIds.size > 0) {
+    // Clear selection on empty canvas click
+    if (selectedIdsRef.current.size > 0) {
       setSelectedIds(new Set());
+      selectedIdsRef.current = new Set();
     }
     const coords = toCanvasCoords(e.clientX, e.clientY);
-    marqueeStart.current = coords;
     marqueeActive.current = true;
-    setMarquee({ startX: coords.x, startY: coords.y, endX: coords.x, endY: coords.y });
-  }, [toCanvasCoords, selectedIds]);
+    const m = { startX: coords.x, startY: coords.y, endX: coords.x, endY: coords.y };
+    marqueeRef.current = m;
+    setMarquee(m);
+  }, [toCanvasCoords]);
 
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
-      if (!marqueeActive.current) {
-        if (groupDragging && groupDragOrigin.current) {
-          const dx = e.clientX - groupDragOrigin.current.x;
-          const dy = e.clientY - groupDragOrigin.current.y;
-          selectedIds.forEach((id) => {
-            const startPos = groupDragStartPositions.current[id];
-            if (!startPos) return;
-            if (folderTree.some(f => f.id === id)) {
-              updateDesktopFolderPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
-            } else {
-              updateDesktopDocPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
-            }
-          });
-        }
+      // Marquee drawing
+      if (marqueeActive.current && marqueeRef.current) {
+        const coords = toCanvasCoords(e.clientX, e.clientY);
+        const updated = { ...marqueeRef.current, endX: coords.x, endY: coords.y };
+        marqueeRef.current = updated;
+        setMarquee(updated);
         return;
       }
-      const coords = toCanvasCoords(e.clientX, e.clientY);
-      setMarquee(prev => prev ? { ...prev, endX: coords.x, endY: coords.y } : null);
+      // Group drag
+      if (groupDraggingRef.current && groupDragOrigin.current) {
+        const dx = e.clientX - groupDragOrigin.current.x;
+        const dy = e.clientY - groupDragOrigin.current.y;
+        const ids = selectedIdsRef.current;
+        ids.forEach((id) => {
+          const startPos = groupDragStartPositions.current[id];
+          if (!startPos) return;
+          if (folderTree.some(f => f.id === id)) {
+            updateDesktopFolderPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
+          } else {
+            updateDesktopDocPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
+          }
+        });
+      }
     };
     const onMouseUp = () => {
-      if (marqueeActive.current && marquee) {
+      // Finalize marquee selection
+      if (marqueeActive.current && marqueeRef.current) {
         marqueeActive.current = false;
-        const l = Math.min(marquee.startX, marquee.endX);
-        const r = Math.max(marquee.startX, marquee.endX);
-        const t = Math.min(marquee.startY, marquee.endY);
-        const b = Math.max(marquee.startY, marquee.endY);
+        const m = marqueeRef.current;
+        const l = Math.min(m.startX, m.endX);
+        const r = Math.max(m.startX, m.endX);
+        const t = Math.min(m.startY, m.endY);
+        const b = Math.max(m.startY, m.endY);
         if (r - l > 5 || b - t > 5) {
           const ns = new Set<string>();
           folderTree.forEach(folder => {
@@ -317,26 +326,30 @@ const FocusContent = () => {
             if (dPos.x < r && dPos.x + 90 > l && dPos.y < b && dPos.y + 90 > t) ns.add(doc.id);
           });
           setSelectedIds(ns);
+          selectedIdsRef.current = ns;
         }
+        marqueeRef.current = null;
         setMarquee(null);
       }
-      if (groupDragging) {
-        setGroupDragging(false);
+      // End group drag
+      if (groupDraggingRef.current) {
+        groupDraggingRef.current = false;
         groupDragOrigin.current = null;
       }
     };
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
     return () => { window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", onMouseUp); };
-  }, [marquee, groupDragging, selectedIds, folderTree, desktopDocs, desktopFolderPositions, desktopDocPositions, toCanvasCoords, updateDesktopFolderPosition, updateDesktopDocPosition]);
+  }, [folderTree, desktopDocs, desktopFolderPositions, desktopDocPositions, toCanvasCoords, updateDesktopFolderPosition, updateDesktopDocPosition]);
 
   const handleGroupDragStart = useCallback((e: React.PointerEvent, itemId: string) => {
-    if (!selectedIds.has(itemId) || selectedIds.size < 2) return false;
+    if (!selectedIdsRef.current.has(itemId) || selectedIdsRef.current.size < 2) return false;
+    e.preventDefault();
     e.stopPropagation();
-    setGroupDragging(true);
+    groupDraggingRef.current = true;
     groupDragOrigin.current = { x: e.clientX, y: e.clientY };
-    const positions: any = {};
-    selectedIds.forEach((id) => {
+    const positions: Record<string, { x: number; y: number }> = {};
+    selectedIdsRef.current.forEach((id) => {
       if (folderTree.some(f => f.id === id)) {
         positions[id] = desktopFolderPositions[id] || { x: 40, y: 40 };
       } else {
@@ -345,7 +358,7 @@ const FocusContent = () => {
     });
     groupDragStartPositions.current = positions;
     return true;
-  }, [selectedIds, folderTree, desktopFolderPositions, desktopDocPositions]);
+  }, [folderTree, desktopFolderPositions, desktopDocPositions]);
 
   // Compute marquee rect for rendering
   const marqueeRect = marquee ? {
