@@ -7,8 +7,8 @@ interface AuraOrbProps {
   state: AuraState;
   size?: number;
   onClick?: () => void;
-  /** 0–1 real-time audio amplitude; drives blob speed when listening */
-  audioLevel?: number;
+  /** Direct ref to audio amplitude 0–1 — bypasses React renders for true real-time reactivity */
+  audioLevelRef?: React.MutableRefObject<number>;
 }
 
 const stateConfig = {
@@ -45,37 +45,17 @@ const BLOBS = [
   { hue: 210, sat: 82,  light: 72, ox: 0.0, oy: 0.0, rad: 0.50, spd: -0.12, ph: 3.2,  orbitR: 0.28 },
 ];
 
-const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLevel = 0 }) => {
+const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLevelRef: externalAudioRef }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const timeRef = useRef(0);
   const configRef = useRef({ ...stateConfig[state] });
   const animRef = useRef<number>(0);
-  const audioLevelRef = useRef(0);
-  // Unique IDs to avoid conflicts when multiple orbs exist
+  // Internal fallback ref — used when no external ref provided
+  const internalAudioRef = useRef(0);
+  const audioLevelRef = externalAudioRef ?? internalAudioRef;
+
   const uid = useRef(`aura-${Math.random().toString(36).slice(2, 8)}`);
-
-  // Keep audioLevel in a ref so the canvas loop can read it without re-render
-  useEffect(() => {
-    audioLevelRef.current = audioLevel;
-  }, [audioLevel]);
-
-  // Update SVG displacement scale in real-time based on audio level
-  useEffect(() => {
-    if (state !== "listening") return;
-    const svg = svgRef.current;
-    if (!svg) return;
-    const baseCfg = svgStateConfig[state];
-    const displacement = svg.querySelector("feDisplacementMap");
-    if (displacement) {
-      const reactiveScale = baseCfg.scale + audioLevel * 40;
-      displacement.setAttribute("scale", String(Math.round(reactiveScale)));
-    }
-    const blobGroup = svg.querySelector(".aura-blob-group") as SVGGElement | null;
-    if (blobGroup) {
-      blobGroup.style.opacity = String(Math.min(baseCfg.opacity + audioLevel * 0.3, 1));
-    }
-  }, [audioLevel, state]);
 
   // Smooth transition between canvas states
   useEffect(() => {
