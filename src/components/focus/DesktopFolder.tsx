@@ -248,7 +248,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
         }}
         onPointerDown={handlePointerDown}
         onDoubleClick={handleDoubleClick}
-        onClick={(e) => { e.stopPropagation(); if (!didDrag.current) { if (onSingleSelect) onSingleSelect(folder.id); else setSelected(true); } }}
+        onClick={(e) => { e.stopPropagation(); if (!didDrag.current && !isMarqueeSelected) { if (onSingleSelect) onSingleSelect(folder.id); else setSelected(true); } }}
         onContextMenu={handleContextMenu}
       >
         {/* Background layer */}
