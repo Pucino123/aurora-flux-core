@@ -171,7 +171,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
         className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group transition-shadow duration-200 ${!isMarqueeSelected && selected ? "ring-2 ring-primary/60" : ""}`}
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,
-          zIndex: isDraggingActive ? 9999 : (selected || isMarqueeSelected) ? 55 : 45,
+          zIndex: isDraggingActive ? 10000 : isMarqueeSelected ? 9000 : (selected ? 55 : 45),
           background: "transparent",
           backdropFilter: docOpacity <= 0.06 ? "none" : undefined,
           WebkitBackdropFilter: docOpacity <= 0.06 ? "none" : undefined,

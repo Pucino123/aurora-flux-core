@@ -84,6 +84,8 @@ const FocusContent = () => {
   const groupDraggingRef = useRef(false);
   const groupDragOrigin = useRef<{ x: number; y: number } | null>(null);
   const groupDragStartPositions = useRef<Record<string, { x: number; y: number }>>({});
+  // Drag badge state (cursor-following pill)
+  const [dragBadge, setDragBadge] = useState<{ x: number; y: number; count: number } | null>(null);
 
   // Keep refs in sync
   useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
@@ -326,6 +328,8 @@ const FocusContent = () => {
             updateDesktopDocPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
           }
         });
+        // Update drag badge position
+        setDragBadge({ x: e.clientX, y: e.clientY, count: ids.size });
       }
     };
     const onMouseUp = (e: MouseEvent) => {
@@ -339,6 +343,7 @@ const FocusContent = () => {
       if (groupDraggingRef.current) {
         groupDraggingRef.current = false;
         groupDragOrigin.current = null;
+        setDragBadge(null);
         // Check if dropped on a folder
         const ids = selectedIdsRef.current;
         if (ids.size > 0) {
@@ -517,7 +522,7 @@ const FocusContent = () => {
             {activeWidgets.includes("top-tasks") && <FocusTopTasksWidget key="top-tasks" />}
             {activeWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
             {activeWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
-            {activeWidgets.includes("chat") && <FocusChatWidget key="chat" />}
+            {/* Chat widget removed for clean desktop */}
           </AnimatePresence>
 
           {/* Desktop Folders */}
@@ -560,6 +565,23 @@ const FocusContent = () => {
               className="absolute pointer-events-none z-[100] rounded-sm"
               style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height, border: "2px solid rgba(0,122,255,0.7)", background: "rgba(0,122,255,0.12)" }}
             />
+          )}
+
+          {/* Group drag badge — cursor pill */}
+          {dragBadge && createPortal(
+            <div
+              className="fixed pointer-events-none z-[10000] flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold text-white"
+              style={{
+                left: dragBadge.x + 16,
+                top: dragBadge.y + 16,
+                background: "rgba(0,122,255,0.85)",
+                backdropFilter: "blur(12px)",
+                boxShadow: "0 4px 20px rgba(0,122,255,0.4), 0 1px 4px rgba(0,0,0,0.3)",
+              }}
+            >
+              {dragBadge.count} selected
+            </div>,
+            document.body
           )}
           {openFolderId && (
             <FolderModal folderId={openFolderId} onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }} />
