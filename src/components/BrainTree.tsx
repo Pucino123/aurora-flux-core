@@ -45,6 +45,7 @@ const FolderNodeComponent = ({
   onDrop,
   dragOverId,
   allDocs,
+  onDocClick,
 }: {
   folder: FolderNode;
   depth?: number;
@@ -54,6 +55,7 @@ const FolderNodeComponent = ({
   onDrop: (e: React.DragEvent, id: string) => void;
   dragOverId: string | null;
   allDocs: FolderDoc[];
+  onDocClick?: (docId: string) => void;
 }) => {
   const [open, setOpen] = useState(depth < 1);
   const [renaming, setRenaming] = useState(false);
@@ -170,12 +172,14 @@ const FolderNodeComponent = ({
                 onDrop={onDrop}
                 dragOverId={dragOverId}
                 allDocs={allDocs}
+                onDocClick={onDocClick}
               />
             ))}
             {/* Documents inside this folder */}
             {folderDocs.map((doc) => (
               <button
                 key={doc.id}
+                onClick={() => onDocClick?.(doc.id)}
                 className="sidebar-item w-full group text-muted-foreground hover:text-foreground"
                 style={{ paddingLeft: `${8 + (depth + 1) * 16}px` }}
               >
@@ -198,7 +202,7 @@ const FolderNodeComponent = ({
 const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => void }) => {
   const {
     folderTree, inboxTasks, activeFolder, setActiveFolder, activeView, setActiveView,
-    removeFolder, updateFolder, moveFolder, getAllFoldersFlat,
+    removeFolder, updateFolder, moveFolder, getAllFoldersFlat, setPendingDocumentId,
   } = useFlux();
   const { user } = useAuth();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -365,6 +369,10 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
             onDrop={handleDrop}
             dragOverId={dragOverId}
             allDocs={allDocs}
+            onDocClick={(docId) => {
+              setPendingDocumentId(docId);
+              setActiveView("documents");
+            }}
           />
         ))}
       </div>

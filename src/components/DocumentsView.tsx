@@ -1,13 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDocuments } from "@/hooks/useDocuments";
 import { FileText, Plus, Trash2, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DocumentView from "./documents/DocumentView";
+import { useFlux } from "@/context/FluxContext";
 
 const DocumentsView = () => {
   const { documents, createDocument, updateDocument, removeDocument, loading } = useDocuments();
+  const { pendingDocumentId, setPendingDocumentId } = useFlux();
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
+  // Open pending document from sidebar click
+  useEffect(() => {
+    if (pendingDocumentId && documents.length > 0) {
+      const found = documents.find(d => d.id === pendingDocumentId);
+      if (found) setSelectedDoc(found.id);
+      setPendingDocumentId(null);
+    }
+  }, [pendingDocumentId, documents, setPendingDocumentId]);
 
   const filtered = documents.filter(d => d.title.toLowerCase().includes(search.toLowerCase()));
   const activeDoc = documents.find(d => d.id === selectedDoc);
