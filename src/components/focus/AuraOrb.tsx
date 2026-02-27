@@ -7,6 +7,8 @@ interface AuraOrbProps {
   state: AuraState;
   size?: number;
   onClick?: () => void;
+  /** 0–1 real-time audio amplitude; drives blob speed when listening */
+  audioLevel?: number;
 }
 
 const stateConfig = {
@@ -43,14 +45,20 @@ const BLOBS = [
   { hue: 210, sat: 82,  light: 72, ox: 0.0, oy: 0.0, rad: 0.50, spd: -0.12, ph: 3.2,  orbitR: 0.28 },
 ];
 
-const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
+const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLevel = 0 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const timeRef = useRef(0);
   const configRef = useRef({ ...stateConfig[state] });
   const animRef = useRef<number>(0);
+  const audioLevelRef = useRef(0);
   // Unique IDs to avoid conflicts when multiple orbs exist
   const uid = useRef(`aura-${Math.random().toString(36).slice(2, 8)}`);
+
+  // Keep audioLevel in a ref so the canvas loop can read it without re-render
+  useEffect(() => {
+    audioLevelRef.current = audioLevel;
+  }, [audioLevel]);
 
   // Smooth transition between canvas states
   useEffect(() => {
@@ -119,8 +127,14 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       const dt = (now - lastTime) / 1000;
       lastTime = now;
       const cfg = configRef.current;
-      timeRef.current += dt * cfg.speedMul;
+      // Audio-reactive: when listening, blend base speed with audio amplitude
+      const mic = audioLevelRef.current; // 0–1
+      const audioBoost = state === "listening" ? mic * 2.5 : 0;
+      const effectiveSpeed = cfg.speedMul + audioBoost;
+      timeRef.current += dt * effectiveSpeed;
       const t = timeRef.current;
+      // Amplitude also swells the blob spread slightly
+      const ampBoost = state === "listening" ? 1 + mic * 0.5 : 1;
 
       ctx.clearRect(0, 0, size, size);
 
@@ -146,9 +160,9 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
         const orbitAngle = t * blob.spd * Math.PI * 2 + blob.ph;
         // breathe size slightly so blobs pulse
         const breathe = 0.88 + 0.14 * Math.sin(t * Math.abs(blob.spd) * 1.8 + blob.ph * 0.9);
-        const bx = cx + Math.cos(orbitAngle) * blob.orbitR * r * cfg.ampMul;
-        const by = cy + Math.sin(orbitAngle * 0.80) * blob.orbitR * r * 0.85 * cfg.ampMul;
-        const br = blob.rad * r * breathe;
+        const bx = cx + Math.cos(orbitAngle) * blob.orbitR * r * cfg.ampMul * ampBoost;
+        const by = cy + Math.sin(orbitAngle * 0.80) * blob.orbitR * r * 0.85 * cfg.ampMul * ampBoost;
+        const br = blob.rad * r * breathe * (state === "listening" ? 1 + mic * 0.35 : 1);
 
         const l = Math.min(blob.light * cfg.brightness, 100);
         const op = cfg.opacity;
