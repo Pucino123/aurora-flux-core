@@ -168,7 +168,8 @@ async function streamAura(
 
 function useVoiceInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
+  // Use a ref (not state) for audioLevel — canvas reads it directly every frame with zero React overhead
+  const audioLevelRef = useRef(0);
   const recRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -182,8 +183,9 @@ function useVoiceInput(onResult: (text: string) => void) {
     analyserRef.current = null;
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
-    setAudioLevel(0);
+    audioLevelRef.current = 0;
   }, []);
+
 
   const stop = useCallback(() => {
     if (recRef.current) {
@@ -215,7 +217,7 @@ function useVoiceInput(onResult: (text: string) => void) {
         let sumSq = 0;
         for (let i = 1; i < buf.length; i++) sumSq += buf[i] * buf[i];
         const rms = Math.sqrt(sumSq / buf.length);
-        setAudioLevel(Math.min(rms / 30, 1)); // 30 = loud talking ≈ 1.0
+        audioLevelRef.current = Math.min(rms / 30, 1); // direct ref write — zero React overhead
         levelRafRef.current = requestAnimationFrame(tick);
       };
       levelRafRef.current = requestAnimationFrame(tick);
@@ -261,7 +263,7 @@ function useVoiceInput(onResult: (text: string) => void) {
 
   useEffect(() => () => stop(), [stop]);
 
-  return { listening, toggle, stop, start, audioLevel };
+  return { listening, toggle, stop, start, audioLevelRef };
 }
 
 
@@ -465,7 +467,7 @@ const AuraWidget: React.FC = () => {
     }
   }, [messages, isLoading, focusStore, flux, handleToolCall]);
 
-  const { listening, toggle: toggleVoice, stop: stopVoice, start: startVoice, audioLevel } = useVoiceInput((text) => {
+  const { listening, toggle: toggleVoice, stop: stopVoice, start: startVoice, audioLevelRef: voiceAudioLevelRef } = useVoiceInput((text) => {
     send(text);
   });
 
@@ -514,7 +516,7 @@ const AuraWidget: React.FC = () => {
       <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
         {/* Orb */}
         <div className="flex items-center justify-center pt-2 pb-1" onClick={wake}>
-          <AuraOrb state={auraState} size={orbSize} onClick={wake} audioLevel={audioLevel} />
+          <AuraOrb state={auraState} size={orbSize} onClick={wake} audioLevelRef={voiceAudioLevelRef} />
         </div>
 
         {/* Dynamic Pill */}
