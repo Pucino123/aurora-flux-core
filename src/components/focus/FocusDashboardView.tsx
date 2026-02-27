@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FocusProvider, useFocusStore } from "@/context/FocusContext";
@@ -58,13 +58,13 @@ const BuildModeGrid = () => (
 );
 
 const FocusContent = () => {
-  const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition } = useFocusStore();
+  const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions } = useFocusStore();
   const { folderTree, createFolder, moveFolder } = useFlux();
   const { user } = useAuth();
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
-  const [openDesktopDoc, setOpenDesktopDoc] = useState<import("@/hooks/useDocuments").DbDocument | null>(null);
+  const [openDesktopDoc, setOpenDesktopDoc] = useState<any>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showDocPicker, setShowDocPicker] = useState(false);
@@ -72,6 +72,24 @@ const FocusContent = () => {
   const [docDragState, setDocDragState] = useState<{ id: string; x: number; y: number } | null>(null);
   const dragStateRef = useRef<{ id: string; x: number; y: number } | null>(null);
   const docDragStateRef = useRef<{ id: string; x: number; y: number } | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Marquee selection state
+  const [marquee, setMarquee] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set<string>());
+  const marqueeActive = useRef(false);
+  const marqueeStart = useRef({ x: 0, y: 0 });
+  // Group drag state
+  const [groupDragging, setGroupDragging] = useState(false);
+  const groupDragOrigin = useRef<{ x: number; y: number } | null>(null);
+  const groupDragStartPositions = useRef<any>({});
+
+  /** Convert viewport clientX/Y to canvas-relative coordinates */
+  const toCanvasCoords = useCallback((clientX: number, clientY: number) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return { x: clientX, y: clientY };
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }, []);
 
   // Style editor focus mode state
   const [styleEditorTarget, setStyleEditorTarget] = useState<string | null>(null);
@@ -108,25 +126,29 @@ const FocusContent = () => {
   const contextMenuPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleCreateDocument = useCallback(async (type: "text" | "spreadsheet") => {
-    const pos = contextMenu;
+    const pos = contextMenuPosRef.current;
     setShowDocPicker(false);
     setContextMenu(null);
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
     const doc = await createDocument(title, type, null);
     if (doc && pos) {
-      updateDesktopDocPosition(doc.id, { x: pos.x, y: pos.y });
+      updateDesktopDocPosition(doc.id, pos);
     }
+    contextMenuPosRef.current = null;
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-  }, [createDocument, contextMenu, updateDesktopDocPosition]);
+  }, [createDocument, updateDesktopDocPosition]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
     e.preventDefault();
+    const canvasPos = toCanvasCoords(e.clientX, e.clientY);
+    contextMenuPosRef.current = canvasPos;
+    // Store viewport coords for the menu popup positioning
     setContextMenu({ x: e.clientX, y: e.clientY });
-  }, []);
+  }, [toCanvasCoords]);
 
   const handleAddStickyNote = useCallback(() => {
-    const pos = contextMenu;
+    const pos = contextMenuPosRef.current;
     setContextMenu(null);
     const COLORS = [
       { key: "yellow" }, { key: "purple" }, { key: "green" }, { key: "blue" },
@@ -140,10 +162,11 @@ const FocusContent = () => {
       ...focusStickyNotes,
       { id: `fn-${Date.now()}`, text: "", color: color.key, x: baseX, y: baseY, rotation, opacity: 1 },
     ]);
+    contextMenuPosRef.current = null;
     if (!activeWidgets.includes("notes")) {
       // Toggle it on via the store if possible
     }
-  }, [focusStickyNotes, setFocusStickyNotes, activeWidgets, contextMenu]);
+  }, [focusStickyNotes, setFocusStickyNotes, activeWidgets]);
 
   const handleDragStateChange = useCallback((state: { id: string; x: number; y: number } | null) => {
     if (state === null && dragStateRef.current) {
@@ -240,11 +263,105 @@ const FocusContent = () => {
     }
   }, [moveFolder, refetchDesktopDocs]);
 
+  // Marquee selection handlers
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only start marquee on left click on empty canvas
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea, [data-widget-id]')) return;
+    // If clicking empty canvas, clear selection
+    if (selectedIds.size > 0) {
+      setSelectedIds(new Set());
+    }
+    const coords = toCanvasCoords(e.clientX, e.clientY);
+    marqueeStart.current = coords;
+    marqueeActive.current = true;
+    setMarquee({ startX: coords.x, startY: coords.y, endX: coords.x, endY: coords.y });
+  }, [toCanvasCoords, selectedIds]);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!marqueeActive.current) {
+        if (groupDragging && groupDragOrigin.current) {
+          const dx = e.clientX - groupDragOrigin.current.x;
+          const dy = e.clientY - groupDragOrigin.current.y;
+          selectedIds.forEach((id) => {
+            const startPos = groupDragStartPositions.current[id];
+            if (!startPos) return;
+            if (folderTree.some(f => f.id === id)) {
+              updateDesktopFolderPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
+            } else {
+              updateDesktopDocPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
+            }
+          });
+        }
+        return;
+      }
+      const coords = toCanvasCoords(e.clientX, e.clientY);
+      setMarquee(prev => prev ? { ...prev, endX: coords.x, endY: coords.y } : null);
+    };
+    const onMouseUp = () => {
+      if (marqueeActive.current && marquee) {
+        marqueeActive.current = false;
+        const l = Math.min(marquee.startX, marquee.endX);
+        const r = Math.max(marquee.startX, marquee.endX);
+        const t = Math.min(marquee.startY, marquee.endY);
+        const b = Math.max(marquee.startY, marquee.endY);
+        if (r - l > 5 || b - t > 5) {
+          const ns = new Set<string>();
+          folderTree.forEach(folder => {
+            const fPos = desktopFolderPositions[folder.id] || { x: 40, y: 40 };
+            if (fPos.x < r && fPos.x + 90 > l && fPos.y < b && fPos.y + 90 > t) ns.add(folder.id);
+          });
+          desktopDocs.forEach(doc => {
+            const dPos = desktopDocPositions[doc.id] || { x: 0, y: 0 };
+            if (dPos.x < r && dPos.x + 90 > l && dPos.y < b && dPos.y + 90 > t) ns.add(doc.id);
+          });
+          setSelectedIds(ns);
+        }
+        setMarquee(null);
+      }
+      if (groupDragging) {
+        setGroupDragging(false);
+        groupDragOrigin.current = null;
+      }
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => { window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", onMouseUp); };
+  }, [marquee, groupDragging, selectedIds, folderTree, desktopDocs, desktopFolderPositions, desktopDocPositions, toCanvasCoords, updateDesktopFolderPosition, updateDesktopDocPosition]);
+
+  const handleGroupDragStart = useCallback((e: React.PointerEvent, itemId: string) => {
+    if (!selectedIds.has(itemId) || selectedIds.size < 2) return false;
+    e.stopPropagation();
+    setGroupDragging(true);
+    groupDragOrigin.current = { x: e.clientX, y: e.clientY };
+    const positions: any = {};
+    selectedIds.forEach((id) => {
+      if (folderTree.some(f => f.id === id)) {
+        positions[id] = desktopFolderPositions[id] || { x: 40, y: 40 };
+      } else {
+        positions[id] = desktopDocPositions[id] || { x: 0, y: 0 };
+      }
+    });
+    groupDragStartPositions.current = positions;
+    return true;
+  }, [selectedIds, folderTree, desktopFolderPositions, desktopDocPositions]);
+
+  // Compute marquee rect for rendering
+  const marqueeRect = marquee ? {
+    left: Math.min(marquee.startX, marquee.endX),
+    top: Math.min(marquee.startY, marquee.endY),
+    width: Math.abs(marquee.endX - marquee.startX),
+    height: Math.abs(marquee.endY - marquee.startY),
+  } : null;
+
   return (
     <StyleEditorProvider value={{ openEditor: handleOpenStyleEditor, activeWidgetId: styleEditorTarget }}>
     <div
+      ref={canvasRef}
       className="relative w-full h-[100dvh] overflow-hidden bg-black"
       onContextMenu={handleContextMenu}
+      onMouseDown={handleCanvasMouseDown}
       onDragOver={handleCanvasDragOver}
       onDrop={handleCanvasDrop}
     >
@@ -296,6 +413,8 @@ const FocusContent = () => {
               docDragState={docDragState}
               onDragStateChange={handleDragStateChange}
               onDocDropped={refetchDesktopDocs}
+              isMarqueeSelected={selectedIds.has(folder.id)}
+              onGroupDragStart={handleGroupDragStart}
             />
           ))}
 
@@ -309,8 +428,18 @@ const FocusContent = () => {
               onRefetch={refetchDesktopDocs}
               dragState={docDragState}
               onDragStateChange={handleDocDragStateChange}
+              isMarqueeSelected={selectedIds.has(doc.id)}
+              onGroupDragStart={handleGroupDragStart}
             />
           ))}
+
+          {/* Marquee selection rectangle */}
+          {marqueeRect && marqueeRect.width > 2 && marqueeRect.height > 2 && (
+            <div
+              className="absolute pointer-events-none z-[100] border-2 border-blue-400/70 bg-blue-400/15 rounded-sm"
+              style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height }}
+            />
+          )}
           {openFolderId && (
             <FolderModal folderId={openFolderId} onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }} />
           )}
@@ -343,7 +472,7 @@ const FocusContent = () => {
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button
-              onClick={() => { contextMenuPosRef.current = contextMenu; setContextMenu(null); setShowCreateFolder(true); }}
+              onClick={() => { setContextMenu(null); setShowCreateFolder(true); }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"
             >
               <FolderPlus size={14} className="text-muted-foreground" /> New Folder
