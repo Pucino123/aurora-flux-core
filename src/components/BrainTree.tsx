@@ -1,8 +1,10 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ChevronRight, FolderOpen, Folder, Plus, Inbox, Brain, Pencil, Palette, Trash2, GripVertical, Image, Search } from "lucide-react";
+import { ChevronRight, FolderOpen, Folder, Plus, Inbox, Brain, Pencil, Palette, Trash2, GripVertical, Image, Search, FileText, Table } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFlux, FolderNode } from "@/context/FluxContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { t } from "@/lib/i18n";
 import { FOLDER_ICONS } from "./CreateFolderModal";
@@ -27,6 +29,13 @@ interface ContextMenuState {
   subMenu?: "color" | "icon" | "rename" | null;
 }
 
+interface FolderDoc {
+  id: string;
+  title: string;
+  type: string;
+  folder_id: string | null;
+}
+
 const FolderNodeComponent = ({
   folder,
   depth = 0,
@@ -35,6 +44,7 @@ const FolderNodeComponent = ({
   onDragOver,
   onDrop,
   dragOverId,
+  allDocs,
 }: {
   folder: FolderNode;
   depth?: number;
@@ -43,12 +53,15 @@ const FolderNodeComponent = ({
   onDragOver: (e: React.DragEvent, id: string) => void;
   onDrop: (e: React.DragEvent, id: string) => void;
   dragOverId: string | null;
+  allDocs: FolderDoc[];
 }) => {
   const [open, setOpen] = useState(depth < 1);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const { activeFolder, setActiveFolder, setActiveView, updateFolder } = useFlux();
   const hasChildren = folder.children.length > 0;
+  const folderDocs = allDocs.filter(d => d.folder_id === folder.id);
+  const hasContent = hasChildren || folderDocs.length > 0;
   const isActive = activeFolder === folder.id;
   const isDragOver = dragOverId === folder.id;
 
@@ -90,7 +103,7 @@ const FolderNodeComponent = ({
           style={{ paddingLeft: `${8 + depth * 16}px` }}
         >
           <GripVertical size={10} className="opacity-0 group-hover:opacity-40 transition-opacity cursor-grab shrink-0" />
-          {hasChildren ? (
+          {hasContent ? (
             <button
               onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
               className="p-0.5 -ml-1"
@@ -136,7 +149,7 @@ const FolderNodeComponent = ({
       </div>
 
       <AnimatePresence>
-        {open && hasChildren && (
+        {open && hasContent && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -154,7 +167,24 @@ const FolderNodeComponent = ({
                 onDragOver={onDragOver}
                 onDrop={onDrop}
                 dragOverId={dragOverId}
+                allDocs={allDocs}
               />
+            ))}
+            {/* Documents inside this folder */}
+            {folderDocs.map((doc) => (
+              <button
+                key={doc.id}
+                className="sidebar-item w-full group text-muted-foreground hover:text-foreground"
+                style={{ paddingLeft: `${8 + (depth + 1) * 16}px` }}
+              >
+                <span className="w-4" />
+                {doc.type === "spreadsheet" ? (
+                  <Table size={14} className="shrink-0 text-emerald-500" />
+                ) : (
+                  <FileText size={14} className="shrink-0 text-blue-400" />
+                )}
+                <span className="truncate flex-1 text-left text-[12px]">{doc.title}</span>
+              </button>
             ))}
           </motion.div>
         )}
@@ -168,6 +198,7 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
     folderTree, inboxTasks, activeFolder, setActiveFolder, activeView, setActiveView,
     removeFolder, updateFolder, moveFolder, getAllFoldersFlat,
   } = useFlux();
+  const { user } = useAuth();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [iconSearch, setIconSearch] = useState("");
@@ -175,6 +206,24 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [allDocs, setAllDocs] = useState<(FolderDoc & { folder_id: string | null })[]>([]);
+
+  // Fetch all documents for sidebar tree
+  useEffect(() => {
+    const fetchDocs = async () => {
+      if (!user) {
+        try {
+          const raw = localStorage.getItem("flux_local_documents");
+          const docs = raw ? JSON.parse(raw) : [];
+          setAllDocs(docs.map((d: any) => ({ id: d.id, title: d.title, type: d.type, folder_id: d.folder_id })));
+        } catch {}
+        return;
+      }
+      const { data } = await (supabase as any).from("documents").select("id, title, type, folder_id").eq("user_id", user.id);
+      if (data) setAllDocs(data);
+    };
+    fetchDocs();
+  }, [user, folderTree]);
 
   const handleInboxClick = () => {
     setActiveFolder(null);
@@ -313,6 +362,7 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             dragOverId={dragOverId}
+            allDocs={allDocs}
           />
         ))}
       </div>

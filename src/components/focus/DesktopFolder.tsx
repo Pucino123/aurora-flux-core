@@ -235,7 +235,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
         }`}
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,
-          zIndex: isDragging ? 9999 : (selected || isMarqueeSelected) ? 55 : 45,
+          zIndex: isDragging ? 10000 : isMarqueeSelected ? 9000 : (selected ? 55 : 45),
           filter: isDragging ? "drop-shadow(0 20px 40px rgba(0,0,0,0.5))" : undefined,
           background: "transparent",
           backdropFilter: folderOpacity <= 0.06 ? "none" : undefined,
