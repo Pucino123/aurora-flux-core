@@ -16,6 +16,16 @@ interface ChatMessage {
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Floating tip suggestions
+const TIPS = [
+  "You can click me to ask anything...",
+  "Did you know I can see your screen and help you right away?",
+  "Need help organizing your day?",
+  "Click here to add a task...",
+  "I can help you plan your schedule",
+  "Ask me to summarize your day",
+];
+
 function gatherContext(focusStore: any, flux: any): string {
   const parts: string[] = [];
 
@@ -124,7 +134,6 @@ async function streamAura(
     }
   }
 
-  // Flush
   for (const raw of buf.split("\n")) {
     if (!raw.startsWith("data: ")) continue;
     const json = raw.slice(6).trim();
@@ -172,18 +181,81 @@ function useVoiceInput(onResult: (text: string) => void) {
   return { listening, toggle };
 }
 
+// Floating tip component
+const FloatingTip: React.FC = () => {
+  const [tipIdx, setTipIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setTipIdx((i) => (i + 1) % TIPS.length);
+        setVisible(true);
+      }, 500);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <AnimatePresence mode="wait">
+      {visible && (
+        <motion.p
+          key={tipIdx}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.4 }}
+          className="text-[11px] text-white/40 text-center px-6 pointer-events-none select-none"
+        >
+          {TIPS[tipIdx]}
+        </motion.p>
+      )}
+    </AnimatePresence>
+  );
+};
+
 const AuraWidget: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [auraState, setAuraState] = useState<AuraState>("idle");
   const [isLoading, setIsLoading] = useState(false);
+  const [awake, setAwake] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const widgetRef = useRef<HTMLDivElement>(null);
   const focusStore = useFocusStore();
   const flux = useFlux();
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }, []);
+
+  // Click outside to revert to idle
+  useEffect(() => {
+    if (!awake) return;
+    const handler = (e: MouseEvent) => {
+      if (widgetRef.current && !widgetRef.current.contains(e.target as Node)) {
+        // Only revert if nothing typed and no messages
+        if (!input.trim() && messages.length === 0) {
+          setAwake(false);
+        }
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [awake, input, messages.length]);
+
+  // Focus input when waking
+  useEffect(() => {
+    if (awake) {
+      setTimeout(() => inputRef.current?.focus(), 300);
+    }
+  }, [awake]);
+
+  const wake = useCallback(() => {
+    if (!awake) setAwake(true);
+  }, [awake]);
 
   // Handle tool calls from AI
   const handleToolCall = useCallback((name: string, args: any) => {
@@ -214,6 +286,7 @@ const AuraWidget: React.FC = () => {
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
+    setAwake(true);
     const userMsg: ChatMessage = { role: "user", content: text.trim() };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
@@ -270,94 +343,121 @@ const AuraWidget: React.FC = () => {
     y: Math.round(window.innerHeight * 0.08),
   };
 
+  const hasChat = messages.length > 0 || awake;
+
   return (
     <DraggableWidget
       id="aura"
       title="Aura"
       defaultPosition={defaultPos}
-      defaultSize={{ w: 380, h: 500 }}
+      defaultSize={{ w: 380, h: hasChat ? 500 : 260 }}
       className="aura-widget"
     >
-      <div className="flex flex-col h-full">
-        {/* Orb area */}
-        <div className="flex items-center justify-center pt-4 pb-2 shrink-0">
-          <AuraOrb state={auraState} size={messages.length > 0 ? 80 : 120} />
+      <div ref={widgetRef} className="flex flex-col h-full">
+        {/* Orb area — always visible */}
+        <div
+          className="flex items-center justify-center pt-4 pb-2 shrink-0"
+          onClick={wake}
+        >
+          <AuraOrb state={auraState} size={hasChat ? 80 : 120} onClick={wake} />
         </div>
 
-        {/* Title when no messages */}
-        {messages.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center px-4 pb-2"
-          >
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <Sparkles size={14} className="text-purple-400" />
-              <span className="text-sm font-semibold text-white/80">Aura</span>
-            </div>
-            <p className="text-[11px] text-white/40">Your AI assistant. I can see your dashboard.</p>
-          </motion.div>
-        )}
-
-        {/* Chat history */}
-        <div className="flex-1 overflow-y-auto px-3 space-y-2 min-h-0 scrollbar-thin scrollbar-thumb-white/10">
-          <AnimatePresence initial={false}>
-            {messages.map((msg, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className={`text-xs leading-relaxed ${
-                  msg.role === "user"
-                    ? "text-white/90 bg-white/10 rounded-2xl rounded-br-md px-3 py-2 ml-8"
-                    : "text-white/75 px-1 py-1"
-                }`}
-              >
-                {msg.role === "assistant" ? (
-                  <div className="prose prose-invert prose-xs max-w-none [&>*]:my-1 [&_p]:text-xs [&_li]:text-xs">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  </div>
-                ) : (
-                  msg.content
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={chatEndRef} />
-        </div>
-
-        {/* Input bar */}
-        <div className="shrink-0 p-2.5">
-          <div className="flex items-center gap-1.5 bg-white/8 rounded-full px-3 py-1.5 border border-white/10">
-            <button
-              onClick={toggleVoice}
-              className={`p-1.5 rounded-full transition-all ${
-                listening
-                  ? "bg-purple-500/30 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.4)]"
-                  : "text-white/40 hover:text-white/70"
-              }`}
-              title={listening ? "Stop listening" : "Voice input"}
+        {/* Idle state: floating tips */}
+        <AnimatePresence>
+          {!hasChat && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.2 } }}
+              className="text-center px-4 pb-2"
             >
-              {listening ? <MicOff size={14} /> : <Mic size={14} />}
-            </button>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send(input)}
-              placeholder="Ask Aura anything..."
-              className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/30 outline-none"
-            />
-            <button
-              onClick={() => send(input)}
-              disabled={isLoading || !input.trim()}
-              className="p-1.5 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all"
+              <div className="flex items-center justify-center gap-1.5 mb-2">
+                <Sparkles size={14} className="text-purple-400" />
+                <span className="text-sm font-semibold text-white/80">Aura</span>
+              </div>
+              <FloatingTip />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Chat history — only when awake */}
+        <AnimatePresence>
+          {hasChat && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 overflow-y-auto px-3 space-y-2 min-h-0 scrollbar-thin scrollbar-thumb-white/10"
             >
-              <Send size={14} />
-            </button>
-          </div>
-        </div>
+              {messages.map((msg, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`text-xs leading-relaxed ${
+                    msg.role === "user"
+                      ? "text-white/90 bg-white/10 rounded-2xl rounded-br-md px-3 py-2 ml-8"
+                      : "text-white/75 px-1 py-1"
+                  }`}
+                >
+                  {msg.role === "assistant" ? (
+                    <div className="prose prose-invert prose-xs max-w-none [&>*]:my-1 [&_p]:text-xs [&_li]:text-xs">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    msg.content
+                  )}
+                </motion.div>
+              ))}
+              <div ref={chatEndRef} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Input bar — only when awake */}
+        <AnimatePresence>
+          {hasChat && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.25 }}
+              className="shrink-0 p-2.5"
+            >
+              <div className="flex items-center gap-1.5 bg-white/8 rounded-full px-3 py-1.5 border border-white/10">
+                <button
+                  onClick={toggleVoice}
+                  className={`p-1.5 rounded-full transition-all ${
+                    listening
+                      ? "bg-purple-500/30 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.4)]"
+                      : "text-white/40 hover:text-white/70"
+                  }`}
+                  title={listening ? "Stop listening" : "Voice input"}
+                >
+                  {listening ? <MicOff size={14} /> : <Mic size={14} />}
+                </button>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && send(input)}
+                  placeholder="Ask Aura anything..."
+                  className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/30 outline-none"
+                />
+                <button
+                  onClick={() => send(input)}
+                  disabled={isLoading || !input.trim()}
+                  className="p-1.5 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all"
+                >
+                  <Send size={14} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </DraggableWidget>
   );
