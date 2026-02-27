@@ -72,6 +72,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const initialized = useRef(false);
   const [studioMode, setStudioMode] = useState(false);
   const [zoom, setZoom] = useState(100);
+  const [ghostText, setGhostText] = useState<string | null>(null);
   const lm = lightMode;
 
   useEffect(() => {
@@ -83,6 +84,33 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
       bindCheckboxes(editorRef.current);
     }
   }, [doc.content]);
+
+  // Ghost text: suggest meeting notes if doc is blank and matches a recent calendar event
+  useEffect(() => {
+    const isEmpty = !((doc.content as any)?.html?.replace(/<[^>]*>/g, "").trim());
+    if (!isEmpty) return;
+
+    // Try to find a matching calendar event from localStorage / flux context via custom event
+    const stored = localStorage.getItem("flux_schedule_blocks");
+    if (!stored) return;
+    try {
+      const blocks: any[] = JSON.parse(stored);
+      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      // Find a block that started within the last 90 minutes today
+      const match = blocks.find((b: any) => {
+        if (b.scheduled_date !== today) return false;
+        const [h, m] = (b.time || "00:00").split(":").map(Number);
+        const blockMinutes = h * 60 + m;
+        return nowMinutes - blockMinutes >= 0 && nowMinutes - blockMinutes <= 90;
+      });
+      if (match) {
+        const ghost = `📅 Meeting Notes — ${match.title}\nDate: ${new Date().toLocaleDateString()}\nAttendees: \n\nAgenda:\n• \n\nDiscussion:\n• \n\nAction Items:\n• \n\nNext Steps:\n• `;
+        setGhostText(ghost);
+      }
+    } catch {}
+  }, [doc.id, doc.content]);
 
   const handleInput = useCallback(() => {
     if (editorRef.current) {
@@ -96,7 +124,24 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     handleInput();
   }, [handleInput]);
 
+  const acceptGhost = useCallback(() => {
+    if (!ghostText || !editorRef.current) return;
+    const html = ghostText.replace(/\n/g, "<br/>");
+    editorRef.current.innerHTML = html;
+    setGhostText(null);
+    onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+    const range = window.document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(editorRef.current);
+    range.collapse(false);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    editorRef.current.focus();
+  }, [ghostText, doc.id, onUpdate]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Tab" && ghostText) { e.preventDefault(); acceptGhost(); return; }
+    if (ghostText && !e.metaKey && !e.ctrlKey && e.key.length === 1) setGhostText(null);
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
     const key = e.key.toLowerCase();
@@ -115,16 +160,9 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     if (e.shiftKey && key === "7") { e.preventDefault(); exec("insertOrderedList"); return; }
     if (e.shiftKey && key === "8") { e.preventDefault(); exec("insertUnorderedList"); return; }
     if (e.shiftKey && key === "9") { e.preventDefault(); exec("formatBlock", "blockquote"); return; }
-    if (e.altKey && ["1", "2", "3"].includes(key)) {
-      e.preventDefault();
-      exec("formatBlock", `h${key}`);
-      return;
-    }
-    if (shortcuts[key]) {
-      e.preventDefault();
-      shortcuts[key]();
-    }
-  }, [exec]);
+    if (e.altKey && ["1", "2", "3"].includes(key)) { e.preventDefault(); exec("formatBlock", `h${key}`); return; }
+    if (shortcuts[key]) { e.preventDefault(); shortcuts[key](); }
+  }, [exec, ghostText, acceptGhost]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -160,64 +198,78 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
         lightMode={lm}
         onToggleLightMode={onToggleLightMode}
       />
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInput}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        style={{ zoom: `${zoom}%` }}
-        className={`flex-1 min-h-[300px] outline-none text-sm leading-relaxed prose max-w-none px-6 py-4 bg-transparent
-          ${lm ? "prose-neutral text-gray-800" : "prose-invert text-foreground/90"}
-          ${lm
-            ? "[&_h1]:text-gray-900 [&_h2]:text-gray-800 [&_h3]:text-gray-700 [&_p]:text-gray-600 [&_li]:text-gray-600 [&_blockquote]:text-gray-500 [&_strong]:text-gray-900 [&_em]:text-gray-500"
-            : "[&_h1]:text-foreground [&_h2]:text-foreground/90 [&_h3]:text-foreground/80 [&_p]:text-foreground/75 [&_li]:text-foreground/75 [&_blockquote]:text-foreground/60 [&_strong]:text-foreground [&_em]:text-foreground/60"
-          }
-          [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:border-b [&_h1]:pb-2
-          ${lm ? "[&_h1]:border-gray-200" : "[&_h1]:border-border/15"}
-          [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4
-          [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1.5 [&_h3]:mt-3
-          [&_p]:mb-2
-          [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_ul]:space-y-1
-          [&_ol]:list-decimal [&_ol]:ml-5 [&_ol]:mb-3 [&_ol]:space-y-1
-          [&_li]:mb-0.5
-          [&_blockquote]:border-l-2 [&_blockquote]:pl-4 [&_blockquote]:py-1 [&_blockquote]:my-3 [&_blockquote]:italic [&_blockquote]:rounded-r-lg [&_blockquote]:pr-3
-          ${lm ? "[&_blockquote]:border-primary/40 [&_blockquote]:bg-primary/5" : "[&_blockquote]:border-primary/30 [&_blockquote]:bg-primary/5"}
-          ${lm ? "[&_hr]:border-gray-200" : "[&_hr]:border-border/15"} [&_hr]:my-4
-          [&_pre]:bg-secondary/20 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-3 [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto
-          [&_table]:w-full [&_table]:border-collapse [&_table]:my-3 [&_table]:text-xs
-          ${lm
-            ? "[&_td]:border [&_td]:border-gray-200 [&_td]:px-3 [&_td]:py-1.5 [&_th]:border [&_th]:border-gray-200 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-gray-100 [&_th]:font-semibold [&_th]:text-gray-700"
-            : "[&_td]:border [&_td]:border-border/15 [&_td]:px-3 [&_td]:py-1.5 [&_th]:border [&_th]:border-border/15 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-secondary/30 [&_th]:font-semibold [&_th]:text-foreground/80"
-          }
-          [&_.doc-checkbox]:cursor-pointer [&_.doc-checkbox]:select-none [&_.doc-checkbox]:text-primary [&_.doc-checkbox]:mr-1.5 [&_.doc-checkbox]:text-base [&_.doc-checkbox]:transition-transform [&_.doc-checkbox]:duration-200 [&_.doc-checkbox]:hover:scale-125
-          ${studioMode ? (lm ? "bg-white shadow-xl rounded-xl border border-gray-200" : "bg-card/80 shadow-xl rounded-xl border border-border/20") : ""}
-          ${lm ? "selection:bg-primary/20" : "selection:bg-primary/20"}`}
-        data-placeholder="Start typing..."
-      />
-      <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
-      <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
-      {/* Floating Aura summon button */}
-      <button
-        onClick={() => {
-          const content = editorRef.current?.innerText?.trim() || "";
-          window.dispatchEvent(new CustomEvent("aura:summon-with-doc", {
-            detail: { content, title: doc.title, prompt: "" },
-          }));
-        }}
-        title="Ask Aura about this document"
-        className="absolute bottom-12 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all hover:scale-105 active:scale-95 shadow-lg"
-        style={{
-          background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.2))",
-          border: "1px solid rgba(139,92,246,0.3)",
-          backdropFilter: "blur(12px)",
-          color: "rgba(196,181,253,0.9)",
-        }}
-      >
-        <Sparkles size={11} />
-        Ask Aura
-      </button>
+      <div className="relative flex-1 flex flex-col min-h-0">
+        {ghostText && (
+          <div
+            className="absolute inset-0 px-6 py-4 pointer-events-none z-10 text-sm leading-relaxed whitespace-pre-wrap font-mono select-none"
+            style={{ color: lm ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.18)", zoom: `${zoom}%` }}
+          >
+            {ghostText}
+            <span
+              className="ml-2 text-[10px] px-1.5 py-0.5 rounded border pointer-events-auto cursor-pointer"
+              style={{ borderColor: "currentColor", opacity: 0.6 }}
+              onClick={acceptGhost}
+            >Tab to accept</span>
+          </div>
+        )}
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={handleInput}
+          onClick={(e) => { handleClick(e); editorRef.current?.focus(); }}
+          onKeyDown={handleKeyDown}
+          style={{ zoom: `${zoom}%` }}
+          className={`flex-1 min-h-[300px] outline-none text-sm leading-relaxed prose max-w-none px-6 py-4 bg-transparent
+            ${lm ? "prose-neutral text-gray-800" : "prose-invert text-foreground/90"}
+            ${lm
+              ? "[&_h1]:text-gray-900 [&_h2]:text-gray-800 [&_h3]:text-gray-700 [&_p]:text-gray-600 [&_li]:text-gray-600 [&_blockquote]:text-gray-500 [&_strong]:text-gray-900 [&_em]:text-gray-500"
+              : "[&_h1]:text-foreground [&_h2]:text-foreground/90 [&_h3]:text-foreground/80 [&_p]:text-foreground/75 [&_li]:text-foreground/75 [&_blockquote]:text-foreground/60 [&_strong]:text-foreground [&_em]:text-foreground/60"
+            }
+            [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:border-b [&_h1]:pb-2
+            ${lm ? "[&_h1]:border-gray-200" : "[&_h1]:border-border/15"}
+            [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4
+            [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1.5 [&_h3]:mt-3
+            [&_p]:mb-2
+            [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_ul]:space-y-1
+            [&_ol]:list-decimal [&_ol]:ml-5 [&_ol]:mb-3 [&_ol]:space-y-1
+            [&_li]:mb-0.5
+            [&_blockquote]:border-l-2 [&_blockquote]:pl-4 [&_blockquote]:py-1 [&_blockquote]:my-3 [&_blockquote]:italic [&_blockquote]:rounded-r-lg [&_blockquote]:pr-3
+            ${lm ? "[&_blockquote]:border-primary/40 [&_blockquote]:bg-primary/5" : "[&_blockquote]:border-primary/30 [&_blockquote]:bg-primary/5"}
+            ${lm ? "[&_hr]:border-gray-200" : "[&_hr]:border-border/15"} [&_hr]:my-4
+            [&_pre]:bg-secondary/20 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-3 [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto
+            [&_table]:w-full [&_table]:border-collapse [&_table]:my-3 [&_table]:text-xs
+            ${lm
+              ? "[&_td]:border [&_td]:border-gray-200 [&_td]:px-3 [&_td]:py-1.5 [&_th]:border [&_th]:border-gray-200 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-gray-100 [&_th]:font-semibold [&_th]:text-gray-700"
+              : "[&_td]:border [&_td]:border-border/15 [&_td]:px-3 [&_td]:py-1.5 [&_th]:border [&_th]:border-border/15 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-secondary/30 [&_th]:font-semibold [&_th]:text-foreground/80"
+            }
+            [&_.doc-checkbox]:cursor-pointer [&_.doc-checkbox]:select-none [&_.doc-checkbox]:text-primary [&_.doc-checkbox]:mr-1.5 [&_.doc-checkbox]:text-base [&_.doc-checkbox]:transition-transform [&_.doc-checkbox]:duration-200 [&_.doc-checkbox]:hover:scale-125
+            ${studioMode ? (lm ? "bg-white shadow-xl rounded-xl border border-gray-200" : "bg-card/80 shadow-xl rounded-xl border border-border/20") : ""}
+            ${lm ? "selection:bg-primary/20" : "selection:bg-primary/20"}`}
+          data-placeholder="Start typing..."
+        />
+        <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
+        <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
+        <button
+          onClick={() => {
+            const content = editorRef.current?.innerText?.trim() || "";
+            window.dispatchEvent(new CustomEvent("aura:summon-with-doc", {
+              detail: { content, title: doc.title, prompt: "" },
+            }));
+          }}
+          title="Ask Aura about this document"
+          className="absolute bottom-12 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all hover:scale-105 active:scale-95 shadow-lg"
+          style={{
+            background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.2))",
+            border: "1px solid rgba(139,92,246,0.3)",
+            backdropFilter: "blur(12px)",
+            color: "rgba(196,181,253,0.9)",
+          }}
+        >
+          <Sparkles size={11} />
+          Ask Aura
+        </button>
+      </div>
     </div>
   );
 };
