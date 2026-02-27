@@ -6,7 +6,6 @@ import SheetsToolbar from "./toolbar/SheetsToolbar";
 import StatusBar from "./toolbar/StatusBar";
 import StudioModeOverlay from "./toolbar/StudioModeToggle";
 import { getCellDisplayValue, colIndexToLetter } from "@/lib/formulaEngine";
-import { Sparkles } from "lucide-react";
 
 interface DocumentViewProps {
   document: DbDocument;
@@ -250,25 +249,6 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
         />
         <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
         <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
-        <button
-          onClick={() => {
-            const content = editorRef.current?.innerText?.trim() || "";
-            window.dispatchEvent(new CustomEvent("aura:summon-with-doc", {
-              detail: { content, title: doc.title, prompt: "" },
-            }));
-          }}
-          title="Ask Aura about this document"
-          className="absolute bottom-12 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all hover:scale-105 active:scale-95 shadow-lg"
-          style={{
-            background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.2))",
-            border: "1px solid rgba(139,92,246,0.3)",
-            backdropFilter: "blur(12px)",
-            color: "rgba(196,181,253,0.9)",
-          }}
-        >
-          <Sparkles size={11} />
-          Ask Aura
-        </button>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Sparkles, RefreshCw, Maximize2, Minimize2, Languages, Loader2 } from "lucide-react";
+import { Sparkles, RefreshCw, Maximize2, Minimize2, Languages, Loader2, Wand2 } from "lucide-react";
 import ToolbarButton from "./ToolbarButton";
 import { toast } from "sonner";
 
@@ -7,6 +7,7 @@ interface AiToolsPanelProps {
   editorRef: React.RefObject<HTMLDivElement>;
   onContentChange: () => void;
   lightMode?: boolean;
+  documentTitle?: string;
 }
 
 const AI_ACTIONS = [
@@ -20,7 +21,7 @@ const AI_ACTIONS = [
 
 const FLUX_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flux-ai`;
 
-const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false }: AiToolsPanelProps) => {
+const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentTitle = "" }: AiToolsPanelProps) => {
   const lm = lightMode;
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -66,8 +67,23 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false }: AiTools
     }
   };
 
+  const askAura = () => {
+    const content = editorRef.current?.innerText?.trim() || "";
+    window.dispatchEvent(new CustomEvent("aura:summon-with-doc", {
+      detail: { content, title: documentTitle, prompt: "" },
+    }));
+  };
+
   return (
     <>
+      <ToolbarButton
+        icon={<Wand2 size={13} />}
+        label="Ask Aura"
+        onClick={askAura}
+        lightMode={lm}
+        active={false}
+      />
+      <div className={`w-px h-4 mx-0.5 ${lm ? "bg-gray-200" : "bg-white/[0.08]"}`} />
       {AI_ACTIONS.map(a => (
         <ToolbarButton
           key={a.key}
