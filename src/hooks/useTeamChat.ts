@@ -97,6 +97,7 @@ export function useTeamChat() {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [lastReadMap, setLastReadMapState] = useState<Record<string, number>>(getLastReadMap);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<Array<{ id: string; token: string; created_by: string; created_at: string; team_id: string }>>([]);
 
   // Fetch teams the user belongs to
   useEffect(() => {
@@ -132,6 +133,19 @@ export function useTeamChat() {
       setLoading(false);
     })();
   }, [user]);
+
+  // Fetch pending invites for active team
+  useEffect(() => {
+    if (!activeTeamId || !user) { setPendingInvites([]); return; }
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("team_invites")
+        .select("*")
+        .eq("team_id", activeTeamId)
+        .gte("expires_at", new Date().toISOString());
+      setPendingInvites((data || []) as any[]);
+    })();
+  }, [activeTeamId, user]);
 
   // Fetch messages, members & reactions when active team changes
   useEffect(() => {
@@ -532,5 +546,6 @@ export function useTeamChat() {
     toggleReaction,
     generateInviteLink,
     acceptInvite,
+    pendingInvites,
   };
 }
