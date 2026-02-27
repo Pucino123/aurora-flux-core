@@ -426,18 +426,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
           onChange={handleFileSelect}
         />
 
-        {/* macOS-style close button — top-left of sidebar */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute top-2.5 left-2.5 z-[60] group w-3.5 h-3.5 rounded-full flex items-center justify-center transition-colors duration-150"
-          style={{
-            background: "#ff5f57",
-            border: "0.5px solid rgba(0,0,0,0.12)",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-          }}
-        >
-          <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100" style={{ color: "rgba(80,0,0,0.7)" }} />
-        </button>
 
         <div className="flex h-full overflow-hidden" style={{ borderRadius: "14px" }}>
           {/* ── LEFT SIDEBAR ── */}
@@ -451,10 +439,20 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
             }}>
             {/* Sidebar top bar */}
             <div className="flex items-center justify-between px-3 pt-3 pb-2" style={{ borderBottom: `1px solid ${T.divider}` }}>
-              <button onClick={() => setDark(d => !d)} style={{ color: T.textTertiary }}
-                className="p-1.5 rounded-full transition-all hover:opacity-70">
-                {dark ? <Sun size={14} /> : <Moon size={14} />}
-              </button>
+              <div className="flex items-center gap-1.5">
+                {/* macOS close button */}
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="group w-3 h-3 rounded-full flex items-center justify-center transition-colors duration-150"
+                  style={{ background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.12)", boxShadow: "0 0.5px 1px rgba(0,0,0,0.15)" }}
+                >
+                  <X size={6} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100" style={{ color: "rgba(80,0,0,0.7)" }} />
+                </button>
+                <button onClick={() => setDark(d => !d)} style={{ color: T.textTertiary }}
+                  className="p-1 rounded-full transition-all hover:opacity-70">
+                  {dark ? <Sun size={13} /> : <Moon size={13} />}
+                </button>
+              </div>
               <span style={{ color: T.textPrimary, fontSize: "15px", fontWeight: 600 }}>Messages</span>
               <div className="flex items-center gap-1">
                 <button onClick={() => setShowInvitePopover(v => !v)} style={{ color: T.accent }}
