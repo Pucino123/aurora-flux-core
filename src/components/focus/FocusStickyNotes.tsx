@@ -209,6 +209,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
         height: noteH,
         pointerEvents: "auto",
       }}
+      onMouseDown={(e) => { if (!(e.target as HTMLElement).closest("button, textarea, [data-no-drag]")) e.stopPropagation(); }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

@@ -286,6 +286,7 @@ const DraggableWidget = ({
         <div
           className="absolute -top-0.5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1 px-3 py-1 rounded-b-lg bg-white/10 backdrop-blur-sm cursor-grab active:cursor-grabbing select-none border border-t-0 border-white/15"
           style={{ pointerEvents: "auto" }}
+          onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={onPointerDownDrag}
         >
           <GripHorizontal size={14} className="text-white/50" />
@@ -337,6 +338,7 @@ const DraggableWidget = ({
               <div
                 className="flex items-center justify-between px-4 py-2.5 cursor-grab active:cursor-grabbing select-none"
                 style={{ borderBottom: `1px solid rgba(${textDark ? "0,0,0" : "255,255,255"},0.1)` }}
+                onMouseDown={(e) => e.stopPropagation()}
                 onPointerDown={onPointerDownDrag}
               >
                 <div className="flex items-center gap-2">
