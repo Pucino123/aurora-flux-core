@@ -25,17 +25,17 @@ const svgStateConfig: Record<AuraState, { baseFreq: string; scale: number; seedD
 };
 
 const BLOBS = [
-  // Cyan cluster
-  { hue: 185, sat: 100, light: 72, ox: 0.3,  oy: -0.3, rad: 0.70, spd: 0.041, ph: 0.0,  orbitR: 0.28 },
-  { hue: 195, sat: 90,  light: 78, ox: -0.2, oy: -0.4, rad: 0.55, spd: 0.057, ph: 1.1,  orbitR: 0.22 },
+  // Cyan cluster — bigger radius, wider orbit
+  { hue: 185, sat: 100, light: 80, ox: 0.10, oy: -0.10, rad: 0.85, spd: 0.10, ph: 0.0,  orbitR: 0.52 },
+  { hue: 195, sat: 90,  light: 82, ox: -0.05,oy: -0.05, rad: 0.70, spd: 0.14, ph: 1.1,  orbitR: 0.40 },
   // Purple cluster
-  { hue: 275, sat: 88,  light: 65, ox: -0.35,oy: 0.25, rad: 0.65, spd: 0.033, ph: 2.4,  orbitR: 0.32 },
-  { hue: 260, sat: 80,  light: 60, ox: 0.15, oy: 0.4,  rad: 0.50, spd: 0.068, ph: 3.8,  orbitR: 0.20 },
+  { hue: 275, sat: 88,  light: 72, ox: -0.08,oy: 0.08,  rad: 0.80, spd: 0.08, ph: 2.4,  orbitR: 0.55 },
+  { hue: 260, sat: 80,  light: 68, ox: 0.05, oy: 0.05,  rad: 0.65, spd: 0.17, ph: 3.8,  orbitR: 0.38 },
   // Pink / magenta cluster
-  { hue: 320, sat: 95,  light: 68, ox: 0.40, oy: 0.20, rad: 0.60, spd: 0.050, ph: 5.0,  orbitR: 0.26 },
-  { hue: 340, sat: 85,  light: 72, ox: -0.1, oy: 0.35, rad: 0.45, spd: 0.044, ph: 1.7,  orbitR: 0.18 },
-  // Accent warm teal (blends cyan+purple center)
-  { hue: 210, sat: 80,  light: 62, ox: 0.0,  oy: -0.1, rad: 0.42, spd: 0.025, ph: 4.2,  orbitR: 0.15 },
+  { hue: 320, sat: 95,  light: 75, ox: 0.06, oy: 0.06,  rad: 0.75, spd: 0.12, ph: 5.0,  orbitR: 0.48 },
+  { hue: 340, sat: 85,  light: 78, ox: -0.04,oy: 0.04,  rad: 0.60, spd: 0.11, ph: 1.7,  orbitR: 0.35 },
+  // Accent teal center anchor — slow wide orbit to blend colors
+  { hue: 210, sat: 80,  light: 70, ox: 0.0,  oy: 0.0,   rad: 0.55, spd: 0.06, ph: 4.2,  orbitR: 0.30 },
 ];
 
 const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
@@ -147,10 +147,10 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
         const op = cfg.opacity;
 
         const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-        g.addColorStop(0,    `hsla(${blob.hue},${blob.sat}%,${l}%,${(op * 0.50).toFixed(2)})`);
-        g.addColorStop(0.25, `hsla(${blob.hue},${blob.sat}%,${l * 0.88}%,${(op * 0.30).toFixed(2)})`);
-        g.addColorStop(0.55, `hsla(${blob.hue},${blob.sat}%,${l * 0.72}%,${(op * 0.12).toFixed(2)})`);
-        g.addColorStop(0.80, `hsla(${blob.hue},${blob.sat}%,${l * 0.55}%,${(op * 0.03).toFixed(2)})`);
+        g.addColorStop(0,    `hsla(${blob.hue},${blob.sat}%,${l}%,${(op * 0.72).toFixed(2)})`);
+        g.addColorStop(0.30, `hsla(${blob.hue},${blob.sat}%,${l * 0.90}%,${(op * 0.50).toFixed(2)})`);
+        g.addColorStop(0.60, `hsla(${blob.hue},${blob.sat}%,${l * 0.75}%,${(op * 0.22).toFixed(2)})`);
+        g.addColorStop(0.85, `hsla(${blob.hue},${blob.sat}%,${l * 0.55}%,${(op * 0.06).toFixed(2)})`);
         g.addColorStop(1,    `hsla(${blob.hue},${blob.sat}%,${l * 0.4}%,0)`);
         ctx.fillStyle = g;
         ctx.beginPath();
@@ -327,14 +327,14 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
           clipPath={`url(#${id}-clip)`}
           style={{ mixBlendMode: "screen", opacity: initCfg.opacity }}
         >
-          {/* Cyan blob — top-left area */}
-          <circle cx={size * 0.38} cy={size * 0.33} r={size * 0.38} fill={`url(#${id}-g-cyan)`} />
-          {/* Purple blob — bottom-right area */}
-          <circle cx={size * 0.62} cy={size * 0.65} r={size * 0.35} fill={`url(#${id}-g-purple)`} />
-          {/* Pink blob — center-right, slightly up */}
-          <circle cx={size * 0.57} cy={size * 0.38} r={size * 0.32} fill={`url(#${id}-g-pink)`} />
-          {/* Teal accent — center */}
-          <circle cx={size * 0.45} cy={size * 0.52} r={size * 0.25} fill={`url(#${id}-g-teal)`} />
+          {/* Cyan blob — top-left area, wide */}
+          <circle cx={size * 0.35} cy={size * 0.30} r={size * 0.50} fill={`url(#${id}-g-cyan)`} />
+          {/* Purple blob — bottom-right area, wide */}
+          <circle cx={size * 0.65} cy={size * 0.68} r={size * 0.48} fill={`url(#${id}-g-purple)`} />
+          {/* Pink blob — center-right */}
+          <circle cx={size * 0.60} cy={size * 0.35} r={size * 0.44} fill={`url(#${id}-g-pink)`} />
+          {/* Teal accent — center anchor */}
+          <circle cx={size * 0.45} cy={size * 0.55} r={size * 0.38} fill={`url(#${id}-g-teal)`} />
         </g>
       </svg>
     </div>
