@@ -468,24 +468,28 @@ const AuraWidget: React.FC = () => {
   }, [wake]);
 
   // Listen for aura:toggle — summon or close from document toolbar orb
+  const pillModeRef = useRef(pillMode);
+  useEffect(() => { pillModeRef.current = pillMode; }, [pillMode]);
+
   useEffect(() => {
     const handler = (e: CustomEvent) => {
       const { content, title, docId, prompt } = e.detail || {};
-      if (pillMode !== "idle" && pillMode !== "hint") {
-        // Already open — close it
+      const currentMode = pillModeRef.current;
+      if (currentMode !== "idle" && currentMode !== "hint") {
+        // Already open — close it, do NOT re-open
         revertToIdle();
-      } else {
-        if (content) {
-          setInjectedDocContext(`[Open document: "${title || "Untitled"}"]\n${content}`);
-          setInjectedDocId(docId || null);
-        }
-        wake();
-        if (prompt) setTimeout(() => setInput(prompt), 50);
+        return;
       }
+      if (content) {
+        setInjectedDocContext(`[Open document: "${title || "Untitled"}"]\n${content}`);
+        setInjectedDocId(docId || null);
+      }
+      wake();
+      if (prompt) setTimeout(() => setInput(prompt), 50);
     };
     window.addEventListener("aura:toggle" as any, handler);
     return () => window.removeEventListener("aura:toggle" as any, handler);
-  }, [pillMode, wake, revertToIdle]);
+  }, [wake, revertToIdle]);
 
   const handleToolCall = useCallback((name: string, args: any) => {
     if (name === "add_task") {
