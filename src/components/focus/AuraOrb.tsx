@@ -16,8 +16,14 @@ const stateConfig = {
   speaking:   { speedMul: 0.45, ampMul: 1.0,  opacity: 0.58, brightness: 1.2 },
 };
 
-// Fluid "gas pocket" blobs — overlapping, varied sizes, swirling at DIFFERENT rates
-// to create organic fluid mixing. Each has a primary hue and swirl parameters.
+// SVG turbulence config per state
+const svgStateConfig: Record<AuraState, { baseFreq: string; scale: number; seedDur: string; opacity: number }> = {
+  idle:       { baseFreq: "0.006 0.006", scale: 8,  seedDur: "18s", opacity: 0.48 },
+  listening:  { baseFreq: "0.010 0.010", scale: 18, seedDur: "5s",  opacity: 0.62 },
+  processing: { baseFreq: "0.014 0.014", scale: 24, seedDur: "4s",  opacity: 0.68 },
+  speaking:   { baseFreq: "0.008 0.008", scale: 12, seedDur: "7s",  opacity: 0.55 },
+};
+
 const BLOBS = [
   // Cyan cluster
   { hue: 185, sat: 100, light: 72, ox: 0.3,  oy: -0.3, rad: 0.70, spd: 0.041, ph: 0.0,  orbitR: 0.28 },
@@ -34,11 +40,14 @@ const BLOBS = [
 
 const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const timeRef = useRef(0);
   const configRef = useRef({ ...stateConfig[state] });
   const animRef = useRef<number>(0);
+  // Unique IDs to avoid conflicts when multiple orbs exist
+  const uid = useRef(`aura-${Math.random().toString(36).slice(2, 8)}`);
 
-  // Smooth transition between states
+  // Smooth transition between canvas states
   useEffect(() => {
     const target = stateConfig[state];
     const start = { ...configRef.current };
@@ -47,7 +56,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
     const tick = () => {
       const t = Math.min((performance.now() - startTime) / dur, 1);
-      const e = t * t * (3 - 2 * t); // smoothstep
+      const e = t * t * (3 - 2 * t);
       configRef.current = {
         speedMul:   lerp(start.speedMul,   target.speedMul,   e),
         ampMul:     lerp(start.ampMul,     target.ampMul,     e),
@@ -59,6 +68,31 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
     requestAnimationFrame(tick);
   }, [state]);
 
+  // Update SVG filter attributes on state change (no re-render needed)
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const cfg = svgStateConfig[state];
+
+    const turbulence = svg.querySelector("feTurbulence");
+    const displacement = svg.querySelector("feDisplacementMap");
+    const blobGroup = svg.querySelector(".aura-blob-group") as SVGGElement | null;
+
+    if (turbulence) {
+      turbulence.setAttribute("baseFrequency", cfg.baseFreq);
+      // Update seed animation duration
+      const anim = turbulence.querySelector("animate");
+      if (anim) anim.setAttribute("dur", cfg.seedDur);
+    }
+    if (displacement) {
+      displacement.setAttribute("scale", String(cfg.scale));
+    }
+    if (blobGroup) {
+      blobGroup.style.opacity = String(cfg.opacity);
+    }
+  }, [state]);
+
+  // Canvas animation loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -91,20 +125,18 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.clip();
 
-      // ── Background: very subtle dark void (not solid) ──
+      // ── Background: very subtle dark void ──
       const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      bgGrad.addColorStop(0,   "rgba(8,4,18,0.12)");
-      bgGrad.addColorStop(0.6, "rgba(4,2,12,0.08)");
-      bgGrad.addColorStop(1,   "rgba(0,0,0,0.04)");
+      bgGrad.addColorStop(0,   "rgba(8,4,18,0.10)");
+      bgGrad.addColorStop(0.6, "rgba(4,2,12,0.06)");
+      bgGrad.addColorStop(1,   "rgba(0,0,0,0.03)");
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, size, size);
 
-      // ── Fluid gas blobs — each orbits and breathes ──
-      // Use "screen" blend for colour mixing (gas/light blending)
+      // ── Fluid gas blobs — screen blend for colour mixing ──
       ctx.globalCompositeOperation = "screen";
 
       for (const blob of BLOBS) {
-        // Orbital position: elliptical paths at different speeds give fluid swirling
         const orbitAngle = t * blob.spd * 6.28 + blob.ph;
         const breathe = 0.85 + 0.15 * Math.sin(t * blob.spd * 1.3 + blob.ph * 0.7);
         const bx = cx + (blob.ox * r + Math.cos(orbitAngle) * blob.orbitR * r) * cfg.ampMul;
@@ -114,12 +146,11 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
         const l = Math.min(blob.light * cfg.brightness, 100);
         const op = cfg.opacity;
 
-        // Multi-stop radial gradient for soft "gas cloud" falloff
         const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-        g.addColorStop(0,    `hsla(${blob.hue},${blob.sat}%,${l}%,${(op * 0.55).toFixed(2)})`);
-        g.addColorStop(0.25, `hsla(${blob.hue},${blob.sat}%,${l * 0.88}%,${(op * 0.35).toFixed(2)})`);
-        g.addColorStop(0.55, `hsla(${blob.hue},${blob.sat}%,${l * 0.72}%,${(op * 0.15).toFixed(2)})`);
-        g.addColorStop(0.80, `hsla(${blob.hue},${blob.sat}%,${l * 0.55}%,${(op * 0.04).toFixed(2)})`);
+        g.addColorStop(0,    `hsla(${blob.hue},${blob.sat}%,${l}%,${(op * 0.50).toFixed(2)})`);
+        g.addColorStop(0.25, `hsla(${blob.hue},${blob.sat}%,${l * 0.88}%,${(op * 0.30).toFixed(2)})`);
+        g.addColorStop(0.55, `hsla(${blob.hue},${blob.sat}%,${l * 0.72}%,${(op * 0.12).toFixed(2)})`);
+        g.addColorStop(0.80, `hsla(${blob.hue},${blob.sat}%,${l * 0.55}%,${(op * 0.03).toFixed(2)})`);
         g.addColorStop(1,    `hsla(${blob.hue},${blob.sat}%,${l * 0.4}%,0)`);
         ctx.fillStyle = g;
         ctx.beginPath();
@@ -129,7 +160,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
 
       ctx.globalCompositeOperation = "source-over";
 
-      // ── Very subtle hollow center brightening (glass lensing effect) ──
+      // ── Very subtle hollow center brightening ──
       const hollow = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.55);
       hollow.addColorStop(0,   "rgba(210,240,255,0.04)");
       hollow.addColorStop(0.5, "rgba(210,240,255,0.02)");
@@ -141,8 +172,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
 
       ctx.restore();
 
-      // ── Iridescent soap-bubble ring — SMOOTH continuous conic approach ──
-      // Draw a single thin arc with a rotating conic-like gradient via multiple strokes
+      // ── Iridescent soap-bubble ring — smooth continuous ──
       const ringSteps = 120;
       ctx.save();
       ctx.lineWidth = 1.6;
@@ -170,10 +200,10 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       const specR = r * 0.30;
       const spec = ctx.createRadialGradient(specX, specY, 0, specX, specY, specR);
       const specOpacity = 0.50 * cfg.brightness;
-      spec.addColorStop(0,   `rgba(255,255,255,${Math.min(specOpacity, 0.9).toFixed(2)})`);
+      spec.addColorStop(0,    `rgba(255,255,255,${Math.min(specOpacity, 0.9).toFixed(2)})`);
       spec.addColorStop(0.18, `rgba(255,255,255,0.14)`);
       spec.addColorStop(0.50, `rgba(255,255,255,0.04)`);
-      spec.addColorStop(1,   `rgba(255,255,255,0)`);
+      spec.addColorStop(1,    `rgba(255,255,255,0)`);
       ctx.fillStyle = spec;
       ctx.beginPath();
       ctx.arc(specX, specY, specR, 0, Math.PI * 2);
@@ -198,13 +228,16 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
     return () => cancelAnimationFrame(animRef.current);
   }, [size]);
 
+  const id = uid.current;
+  const initCfg = svgStateConfig[state];
+
   return (
     <div
       className="relative flex items-center justify-center cursor-pointer"
       style={{ width: size, height: size }}
       onClick={onClick}
     >
-      {/* Ambient outer glow — very subtle, state-reactive */}
+      {/* Ambient outer glow */}
       <motion.div
         className="absolute inset-0 rounded-full pointer-events-none"
         animate={{
@@ -217,11 +250,93 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
           filter: "blur(14px)",
         }}
       />
+
+      {/* Canvas — soap bubble base with iridescent ring + specular */}
       <canvas
         ref={canvasRef}
-        className="relative z-10"
-        style={{ borderRadius: "50%" }}
+        className="absolute z-10"
+        style={{ borderRadius: "50%", top: 0, left: 0 }}
       />
+
+      {/* SVG turbulence layer — organic gas displacement on top of canvas */}
+      <svg
+        ref={svgRef}
+        width={size}
+        height={size}
+        className="absolute z-20 pointer-events-none"
+        style={{ top: 0, left: 0, mixBlendMode: "screen" }}
+      >
+        <defs>
+          {/* Radial gradient fills for the gas blobs */}
+          <radialGradient id={`${id}-g-cyan`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor="hsl(188,100%,70%)" stopOpacity="0.70" />
+            <stop offset="45%"  stopColor="hsl(195,90%,60%)"  stopOpacity="0.35" />
+            <stop offset="100%" stopColor="hsl(200,80%,50%)"  stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={`${id}-g-purple`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor="hsl(270,90%,68%)" stopOpacity="0.65" />
+            <stop offset="45%"  stopColor="hsl(255,80%,58%)" stopOpacity="0.30" />
+            <stop offset="100%" stopColor="hsl(245,70%,48%)" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={`${id}-g-pink`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor="hsl(322,95%,70%)" stopOpacity="0.60" />
+            <stop offset="45%"  stopColor="hsl(335,85%,60%)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="hsl(345,75%,50%)" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={`${id}-g-teal`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor="hsl(210,80%,65%)" stopOpacity="0.45" />
+            <stop offset="50%"  stopColor="hsl(220,70%,55%)" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="hsl(230,60%,45%)" stopOpacity="0" />
+          </radialGradient>
+
+          {/* Turbulence displacement filter */}
+          <filter id={`${id}-turbulence`} x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency={initCfg.baseFreq}
+              numOctaves={4}
+              seed={0}
+              result="noise"
+            >
+              <animate
+                attributeName="seed"
+                values="0;8;16;24;16;8;0"
+                dur={initCfg.seedDur}
+                repeatCount="indefinite"
+              />
+            </feTurbulence>
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="noise"
+              scale={initCfg.scale}
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+
+          {/* Clip to sphere */}
+          <clipPath id={`${id}-clip`}>
+            <circle cx={size / 2} cy={size / 2} r={size * 0.46} />
+          </clipPath>
+        </defs>
+
+        {/* Gas blobs displaced by turbulence — clipped to sphere */}
+        <g
+          className="aura-blob-group"
+          filter={`url(#${id}-turbulence)`}
+          clipPath={`url(#${id}-clip)`}
+          style={{ mixBlendMode: "screen", opacity: initCfg.opacity }}
+        >
+          {/* Cyan blob — top-left area */}
+          <circle cx={size * 0.38} cy={size * 0.33} r={size * 0.38} fill={`url(#${id}-g-cyan)`} />
+          {/* Purple blob — bottom-right area */}
+          <circle cx={size * 0.62} cy={size * 0.65} r={size * 0.35} fill={`url(#${id}-g-purple)`} />
+          {/* Pink blob — center-right, slightly up */}
+          <circle cx={size * 0.57} cy={size * 0.38} r={size * 0.32} fill={`url(#${id}-g-pink)`} />
+          {/* Teal accent — center */}
+          <circle cx={size * 0.45} cy={size * 0.52} r={size * 0.25} fill={`url(#${id}-g-teal)`} />
+        </g>
+      </svg>
     </div>
   );
 };
