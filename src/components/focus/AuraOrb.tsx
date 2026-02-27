@@ -60,6 +60,23 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
     audioLevelRef.current = audioLevel;
   }, [audioLevel]);
 
+  // Update SVG displacement scale in real-time based on audio level
+  useEffect(() => {
+    if (state !== "listening") return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const baseCfg = svgStateConfig[state];
+    const displacement = svg.querySelector("feDisplacementMap");
+    if (displacement) {
+      const reactiveScale = baseCfg.scale + audioLevel * 40;
+      displacement.setAttribute("scale", String(Math.round(reactiveScale)));
+    }
+    const blobGroup = svg.querySelector(".aura-blob-group") as SVGGElement | null;
+    if (blobGroup) {
+      blobGroup.style.opacity = String(Math.min(baseCfg.opacity + audioLevel * 0.3, 1));
+    }
+  }, [audioLevel, state]);
+
   // Smooth transition between canvas states
   useEffect(() => {
     const target = stateConfig[state];
@@ -130,7 +147,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
       const mic = audioLevelRef.current; // 0–1
       // When listening: mic IS the speed — silence = nearly still, loud = fast spin
       const effectiveSpeed = state === "listening"
-        ? cfg.speedMul + mic * 3.5
+        ? cfg.speedMul + mic * 6.0
         : cfg.speedMul;
       timeRef.current += dt * effectiveSpeed;
       const t = timeRef.current;

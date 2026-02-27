@@ -211,11 +211,11 @@ function useVoiceInput(onResult: (text: string) => void) {
       const tick = () => {
         if (!analyserRef.current) return;
         analyserRef.current.getByteFrequencyData(buf);
-        // Focus on voice frequency range (roughly bins 2-20 for 44.1kHz)
-        let sum = 0;
-        for (let i = 2; i < 30; i++) sum += buf[i];
-        const avg = sum / 28;
-        setAudioLevel(Math.min(avg / 90, 1));
+        // Use full spectrum RMS for better sensitivity
+        let sumSq = 0;
+        for (let i = 1; i < buf.length; i++) sumSq += buf[i] * buf[i];
+        const rms = Math.sqrt(sumSq / buf.length);
+        setAudioLevel(Math.min(rms / 30, 1)); // 30 = loud talking ≈ 1.0
         levelRafRef.current = requestAnimationFrame(tick);
       };
       levelRafRef.current = requestAnimationFrame(tick);
