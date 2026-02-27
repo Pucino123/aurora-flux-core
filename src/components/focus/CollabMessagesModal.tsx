@@ -73,11 +73,6 @@ function TypingBubble({ dark }: { dark: boolean }) {
   );
 }
 
-// Mock pending invites for UI demonstration
-const MOCK_PENDING = [
-  { id: "pending-1", email: "partner@company.com", name: "Acme Corp", since: "2 days ago" },
-  { id: "pending-2", email: "collab@studio.io", name: "Studio IO", since: "1 hour ago" },
-];
 
 const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) => {
   const {
@@ -105,28 +100,26 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const [showInvitePopover, setShowInvitePopover] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Theme tokens — macOS Messages fidelity
+  // Theme tokens — glassmorphism
   const T = {
-    bg: dark ? "#000000" : "#ffffff",
-    sidebar: dark ? "rgba(28,28,30,0.97)" : "rgba(242,242,247,0.97)",
-    sidebarHover: dark ? "rgba(44,44,46,0.8)" : "rgba(229,229,234,0.8)",
-    sidebarActive: dark ? "rgba(10,132,255,0.22)" : "rgba(0,122,255,0.12)",
-    header: dark ? "rgba(28,28,30,0.95)" : "rgba(242,242,247,0.95)",
-    divider: dark ? "rgba(56,56,58,1)" : "rgba(198,198,200,1)",
-    fieldBg: dark ? "rgba(44,44,46,1)" : "rgba(255,255,255,1)",
-    fieldBorder: dark ? "rgba(58,58,60,1)" : "rgba(209,209,214,1)",
-    chatBg: dark ? "#000000" : "#ffffff",
-    myBubble: "#0a84ff",
-    theirBubble: dark ? "#3a3a3c" : "#e9e9eb",
-    textPrimary: dark ? "#ffffff" : "#1c1c1e",
-    textSecondary: dark ? "rgba(235,235,245,0.6)" : "rgba(60,60,67,0.6)",
-    textTertiary: dark ? "rgba(235,235,245,0.3)" : "rgba(60,60,67,0.3)",
-    sectionLabel: dark ? "#636366" : "#8e8e93",
+    sidebar: dark ? "rgba(12,12,16,0.45)" : "rgba(255,255,255,0.35)",
+    sidebarActive: dark ? "rgba(10,132,255,0.20)" : "rgba(0,122,255,0.12)",
+    header: dark ? "rgba(10,10,14,0.55)" : "rgba(248,248,255,0.55)",
+    divider: dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)",
+    fieldBg: dark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.55)",
+    fieldBorder: dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.10)",
+    chatBg: "transparent",
+    myBubble: dark ? "rgba(10,132,255,0.92)" : "rgba(0,122,255,0.92)",
+    theirBubble: dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+    textPrimary: dark ? "rgba(255,255,255,0.95)" : "rgba(10,10,20,0.92)",
+    textSecondary: dark ? "rgba(255,255,255,0.55)" : "rgba(10,10,20,0.50)",
+    textTertiary: dark ? "rgba(255,255,255,0.28)" : "rgba(10,10,20,0.28)",
+    sectionLabel: dark ? "rgba(255,255,255,0.35)" : "rgba(10,10,20,0.35)",
     accent: dark ? "#0a84ff" : "#007aff",
-    searchBg: dark ? "rgba(44,44,46,0.8)" : "rgba(209,209,214,0.4)",
-    inputBar: dark ? "rgba(28,28,30,0.98)" : "rgba(242,242,247,0.98)",
-    reactionBg: dark ? "#2c2c2e" : "#ffffff",
-    reactionBorder: dark ? "#48484a" : "#d1d1d6",
+    searchBg: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+    inputBar: dark ? "rgba(10,10,14,0.50)" : "rgba(248,248,255,0.50)",
+    reactionBg: dark ? "rgba(30,30,40,0.75)" : "rgba(255,255,255,0.75)",
+    reactionBorder: dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)",
     green: dark ? "#32d74b" : "#34c759",
     red: dark ? "#ff453a" : "#ff3b30",
   };
@@ -238,18 +231,28 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="border-0 p-0 gap-0 overflow-hidden shadow-2xl"
+        className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden"
         style={{
           fontFamily: "-apple-system, 'SF Pro Text', 'SF Pro Display', BlinkMacSystemFont, sans-serif",
           maxWidth: "780px",
           width: "100%",
           height: "580px",
-          borderRadius: "14px",
-          background: T.bg,
+          borderRadius: "16px",
+          background: dark
+            ? "rgba(18,18,22,0.82)"
+            : "rgba(240,240,248,0.80)",
+          backdropFilter: "blur(40px) saturate(180%)",
+          WebkitBackdropFilter: "blur(40px) saturate(180%)",
+          border: dark
+            ? "1px solid rgba(255,255,255,0.08)"
+            : "1px solid rgba(255,255,255,0.55)",
+          boxShadow: dark
+            ? "0 32px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)"
+            : "0 32px 80px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.9)",
         }}>
         <DialogTitle className="sr-only">Messages</DialogTitle>
 
-        <div className="flex h-full overflow-hidden" style={{ borderRadius: "14px" }}>
+        <div className="flex h-full overflow-hidden" style={{ borderRadius: "16px" }}>
           {/* ── LEFT SIDEBAR ─────────────────────────────────────── */}
           <div
             className="flex flex-col shrink-0 overflow-hidden"
@@ -476,25 +479,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 );
               })}
 
-              {/* Pending invites section */}
-              {!searchQuery && MOCK_PENDING.length > 0 && (
-                <>
-                  <div className="px-4 pt-3 pb-1">
-                    <p style={{ color: T.sectionLabel, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                      Pending Invites
-                    </p>
-                  </div>
-                  {MOCK_PENDING.map(p => (
-                    <div key={p.id} className="flex items-center gap-2.5 px-3 py-2.5">
-                      <UserAvatar userId={p.id} displayName={p.name} pending size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p style={{ color: T.textPrimary, fontSize: "14px", fontWeight: 500 }} className="truncate">{p.name}</p>
-                        <p style={{ color: "#f5a623", fontSize: "11px" }}>Pending · {p.since}</p>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
             </div>
           </div>
 
@@ -518,11 +502,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                   style={{ background: T.accent, color: "#fff" }}>
                   New Team
                 </button>
-                <button onClick={() => onOpenChange(false)}
-                  className="absolute top-3 right-3 p-1.5 rounded-full transition-all"
-                  style={{ color: T.textTertiary }}>
-                  <X size={16} />
-                </button>
               </div>
             ) : showInfo ? (
               /* Info panel */
@@ -535,9 +514,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     <ChevronLeft size={18} />
                   </button>
                   <p style={{ color: T.textPrimary, fontSize: "16px", fontWeight: 600 }}>Details</p>
-                  <button onClick={() => onOpenChange(false)} className="ml-auto" style={{ color: T.textTertiary }}>
-                    <X size={16} />
-                  </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ scrollbarWidth: "none" }}>
@@ -632,9 +608,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                   <div className="flex items-center gap-1">
                     <button onClick={() => setShowInfo(true)} style={{ color: T.accent }} className="p-1.5 rounded-full transition-all hover:opacity-70">
                       <Info size={17} />
-                    </button>
-                    <button onClick={() => onOpenChange(false)} style={{ color: T.textTertiary }} className="p-1.5 rounded-full transition-all hover:opacity-70">
-                      <X size={17} />
                     </button>
                   </div>
                 </div>
