@@ -270,6 +270,7 @@ const FocusContent = () => {
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea, [data-widget-id]')) return;
+    e.preventDefault(); // prevent text selection during marquee
     // Clear selection on empty canvas click
     if (selectedIdsRef.current.size > 0) {
       setSelectedIds(new Set());
@@ -277,6 +278,7 @@ const FocusContent = () => {
     }
     const coords = toCanvasCoords(e.clientX, e.clientY);
     marqueeActive.current = true;
+    document.body.style.userSelect = "none";
     const m = { startX: coords.x, startY: coords.y, endX: coords.x, endY: coords.y };
     marqueeRef.current = m;
     setMarquee(m);
@@ -338,6 +340,7 @@ const FocusContent = () => {
         marqueeActive.current = false;
         marqueeRef.current = null;
         setMarquee(null);
+        document.body.style.userSelect = "";
       }
       // End group drag — check folder dropzone
       if (groupDraggingRef.current) {
