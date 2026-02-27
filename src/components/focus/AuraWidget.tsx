@@ -276,7 +276,6 @@ const AuraWidget: React.FC = () => {
       title="Aura"
       defaultPosition={defaultPos}
       defaultSize={{ w: 380, h: 500 }}
-      hideHeader
       className="aura-widget"
     >
       <div className="flex flex-col h-full">
