@@ -18,11 +18,12 @@ const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 const TIPS = [
   "Hi, my name is Aura...",
-  "I am Aura, your personal assistant.",
-  "You can click me to ask anything...",
-  "Need help organizing your day?",
-  "Click here to add a task...",
+  "Did you know I can see your screen?",
+  "Press Space to talk to me...",
   "I can help you plan your schedule",
+  "Ask me to add a task for you",
+  "Need help organizing your day?",
+  "I can clear your schedule too",
 ];
 
 function gatherContext(focusStore: any, flux: any): string {
@@ -128,7 +129,7 @@ async function streamAura(
   onDone();
 }
 
-// Continuous voice recognition hook — stays on until manually stopped
+// Continuous voice recognition hook
 function useVoiceInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const recRef = useRef<any>(null);
@@ -145,13 +146,11 @@ function useVoiceInput(onResult: (text: string) => void) {
   const start = useCallback(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) { toast.error("Speech recognition not supported"); return; }
-
     stop();
-
     const rec = new SR();
     rec.lang = navigator.language || "en-US";
     rec.interimResults = false;
-    rec.continuous = true; // Keep listening continuously
+    rec.continuous = true;
     rec.onresult = (e: any) => {
       const last = e.results[e.results.length - 1];
       if (last?.isFinal) {
@@ -160,11 +159,8 @@ function useVoiceInput(onResult: (text: string) => void) {
       }
     };
     rec.onerror = (e: any) => {
-      if (e.error !== "no-speech") {
-        stop();
-      }
+      if (e.error !== "no-speech") stop();
     };
-    // Auto-restart if it ends unexpectedly (browser timeout)
     rec.onend = () => {
       if (recRef.current === rec) {
         try { rec.start(); } catch { stop(); }
@@ -180,10 +176,9 @@ function useVoiceInput(onResult: (text: string) => void) {
     else start();
   }, [listening, start, stop]);
 
-  // Cleanup on unmount
   useEffect(() => () => stop(), [stop]);
 
-  return { listening, toggle, stop };
+  return { listening, toggle, stop, start };
 }
 
 type PillMode = "idle" | "hint" | "input" | "processing" | "response";
@@ -208,7 +203,7 @@ const AuraWidget: React.FC = () => {
   useEffect(() => {
     if (pillMode !== "idle") return;
     const scheduleHint = () => {
-      const silence = 8000 + Math.random() * 12000;
+      const silence = 10000 + Math.random() * 15000;
       hintTimerRef.current = setTimeout(() => {
         if (pillMode !== "idle") return;
         setCurrentTip(TIPS[Math.floor(Math.random() * TIPS.length)]);
@@ -228,7 +223,7 @@ const AuraWidget: React.FC = () => {
         setCurrentTip("");
         scheduleHint();
       }, 4000);
-    }, 2500);
+    }, 3000);
     return () => { if (hintTimerRef.current) clearTimeout(hintTimerRef.current); };
   }, [pillMode === "idle"]);
 
@@ -269,6 +264,7 @@ const AuraWidget: React.FC = () => {
     setAuraState("idle");
     setShowHistory(false);
     setMessages([]);
+    stopVoice();
   }, []);
 
   const wake = useCallback(() => {
@@ -325,7 +321,6 @@ const AuraWidget: React.FC = () => {
             setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);
             setResponseText("");
           }
-          // Go back to input mode for continued conversation
           setPillMode("input");
           setAuraState("idle");
           setTimeout(() => inputRef.current?.focus(), 100);
@@ -339,9 +334,30 @@ const AuraWidget: React.FC = () => {
     }
   }, [messages, isLoading, focusStore, flux, handleToolCall]);
 
-  const { listening, toggle: toggleVoice, stop: stopVoice } = useVoiceInput((text) => {
+  const { listening, toggle: toggleVoice, stop: stopVoice, start: startVoice } = useVoiceInput((text) => {
     send(text);
   });
+
+  // Global spacebar shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      // Don't intercept if user is typing in an input/textarea/contenteditable
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isEditable = tag === "input" || tag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
+      if (isEditable) return;
+
+      e.preventDefault();
+      if (listening) {
+        stopVoice();
+      } else {
+        if (pillMode === "idle" || pillMode === "hint") wake();
+        startVoice();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [listening, pillMode, wake, startVoice, stopVoice]);
 
   useEffect(() => {
     if (listening) setAuraState("listening");
@@ -360,7 +376,7 @@ const AuraWidget: React.FC = () => {
       id="aura"
       title=""
       defaultPosition={defaultPos}
-      defaultSize={{ w: 310, h: 280 }}
+      defaultSize={{ w: 320, h: 300 }}
       className="aura-widget"
       hideHeader
       autoHeight
@@ -395,12 +411,11 @@ const AuraWidget: React.FC = () => {
               <motion.div
                 key="active-pill"
                 initial={{ opacity: 0, scale: 0.85, width: 160 }}
-                animate={{ opacity: 1, scale: 1, width: 280 }}
+                animate={{ opacity: 1, scale: 1, width: 300 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.35 }}
                 className="absolute"
               >
-                {/* Input / processing indicator */}
                 {pillMode === "processing" ? (
                   <div className="flex items-center justify-center gap-1.5 rounded-full px-6 py-2.5 border border-white/[0.08]" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
                     {[0, 1, 2].map((i) => (
@@ -408,17 +423,17 @@ const AuraWidget: React.FC = () => {
                     ))}
                   </div>
                 ) : pillMode === "response" && responseText ? (
-                  <div className="rounded-2xl px-4 py-2.5 border border-white/[0.08] max-h-[120px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
-                    <div className="prose prose-invert prose-xs max-w-none [&>*]:my-0.5 [&_p]:text-[11px] [&_p]:leading-relaxed [&_li]:text-[11px] [&_p]:text-white/70">
+                  <div className="relative rounded-2xl px-4 py-3 border border-white/[0.08] max-h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
+                    <div className="prose prose-invert prose-sm max-w-none [&>*]:my-0.5 [&_p]:text-[12px] [&_p]:leading-relaxed [&_li]:text-[12px] [&_p]:text-white/70">
                       <ReactMarkdown>{responseText}</ReactMarkdown>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 rounded-full px-3 py-2 border border-white/[0.08]" style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)" }}>
+                  <div className="flex items-center gap-1.5 rounded-full px-3 py-2 border border-white/[0.08] relative" style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)" }}>
                     <button
                       onClick={toggleVoice}
                       className={`p-1 rounded-full transition-all shrink-0 ${listening ? "bg-purple-500/30 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.4)]" : "text-white/40 hover:text-white/70"}`}
-                      title={listening ? "Stop continuous listening" : "Start voice (continuous)"}
+                      title={listening ? "Stop listening (Space)" : "Start voice (Space)"}
                     >
                       {listening ? <MicOff size={13} /> : <Mic size={13} />}
                     </button>
@@ -431,13 +446,23 @@ const AuraWidget: React.FC = () => {
                       placeholder={listening ? "Listening..." : "Ask Aura anything..."}
                       className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/30 outline-none min-w-0"
                     />
-                    <button
-                      onClick={() => send(input)}
-                      disabled={isLoading || !input.trim()}
-                      className="p-1 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all shrink-0"
-                    >
-                      <Send size={13} />
-                    </button>
+                    {messages.length > 0 ? (
+                      <button
+                        onClick={revertToIdle}
+                        className="p-1 rounded-full text-white/30 hover:text-red-400 hover:bg-white/10 transition-all shrink-0"
+                        title="End conversation"
+                      >
+                        <X size={13} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => send(input)}
+                        disabled={isLoading || !input.trim()}
+                        className="p-1 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all shrink-0"
+                      >
+                        <Send size={13} />
+                      </button>
+                    )}
                   </div>
                 )}
               </motion.div>
@@ -445,7 +470,7 @@ const AuraWidget: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* Chat history box — visible when there are messages */}
+        {/* Chat history box */}
         <AnimatePresence>
           {showHistory && messages.length > 0 && (
             <motion.div
@@ -456,30 +481,30 @@ const AuraWidget: React.FC = () => {
               className="w-full overflow-hidden"
             >
               <div
-                className="rounded-2xl border border-white/[0.08] max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 relative"
+                className="rounded-2xl border border-white/[0.08] max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 relative"
                 style={{ background: "rgba(255,255,255,0.05)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
               >
                 {/* Close button */}
                 <button
                   onClick={revertToIdle}
-                  className="absolute top-1.5 right-1.5 p-1 rounded-full text-white/30 hover:text-white/60 hover:bg-white/10 transition-all z-10"
+                  className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded-full bg-white/10 text-white/40 hover:bg-red-500/60 hover:text-white transition-all z-10"
                   title="Close conversation"
                 >
-                  <X size={12} />
+                  <X size={10} />
                 </button>
 
-                <div className="px-3 py-2.5 space-y-2">
+                <div className="px-3 py-3 space-y-2.5">
                   {messages.map((msg, i) => (
                     <div
                       key={i}
-                      className={`text-[11px] leading-relaxed ${
+                      className={`text-[12px] leading-relaxed ${
                         msg.role === "user"
-                          ? "text-white/80 bg-white/[0.08] rounded-2xl rounded-br-md px-3 py-1.5 ml-6"
+                          ? "text-white/80 bg-white/[0.08] rounded-2xl rounded-br-md px-3 py-2 ml-6"
                           : "text-white/60 px-1"
                       }`}
                     >
                       {msg.role === "assistant" ? (
-                        <div className="prose prose-invert prose-xs max-w-none [&>*]:my-0.5 [&_p]:text-[11px] [&_p]:leading-relaxed [&_li]:text-[11px] [&_p]:text-white/60">
+                        <div className="prose prose-invert prose-sm max-w-none [&>*]:my-0.5 [&_p]:text-[12px] [&_p]:leading-relaxed [&_li]:text-[12px] [&_p]:text-white/60">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                       ) : msg.content}
