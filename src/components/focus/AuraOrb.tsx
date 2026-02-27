@@ -9,17 +9,11 @@ interface AuraOrbProps {
   onClick?: () => void;
 }
 
-/**
- * 3D frosted glass sphere with colorful liquid interior.
- * Colors: deep indigo, purple, cyan, pink + orange/pink rim glow.
- * Matching the Apple Siri reference image.
- */
-
 const stateConfig = {
-  idle:       { speedMul: 0.4, ampMul: 1.0, glow: 0.5, brightness: 0.9, spread: 1.0 },
-  listening:  { speedMul: 1.6, ampMul: 1.4, glow: 0.9, brightness: 1.3, spread: 1.2 },
-  processing: { speedMul: 4.0, ampMul: 0.6, glow: 1.0, brightness: 1.5, spread: 0.7 },
-  speaking:   { speedMul: 1.2, ampMul: 1.1, glow: 0.7, brightness: 1.1, spread: 1.1 },
+  idle:       { speedMul: 0.3, ampMul: 1.0, glow: 0.5, brightness: 0.85 },
+  listening:  { speedMul: 1.4, ampMul: 1.4, glow: 0.9, brightness: 1.2 },
+  processing: { speedMul: 3.5, ampMul: 0.7, glow: 1.0, brightness: 1.4 },
+  speaking:   { speedMul: 1.0, ampMul: 1.1, glow: 0.7, brightness: 1.0 },
 };
 
 const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
@@ -28,23 +22,20 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
   const configRef = useRef(stateConfig[state]);
   const animRef = useRef<number>(0);
 
-  // Smooth config interpolation
   useEffect(() => {
     const target = stateConfig[state];
     const start = { ...configRef.current };
     const startTime = performance.now();
     const duration = 600;
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-
     const animate = () => {
       const t = Math.min((performance.now() - startTime) / duration, 1);
-      const e = t * t * (3 - 2 * t); // smoothstep
+      const e = t * t * (3 - 2 * t);
       configRef.current = {
         speedMul: lerp(start.speedMul, target.speedMul, e),
         ampMul: lerp(start.ampMul, target.ampMul, e),
         glow: lerp(start.glow, target.glow, e),
         brightness: lerp(start.brightness, target.brightness, e),
-        spread: lerp(start.spread, target.spread, e),
       };
       if (t < 1) requestAnimationFrame(animate);
     };
@@ -70,22 +61,24 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
 
     let lastTime = performance.now();
 
-    // Blob definitions — large, soft, overlapping colored masses
+    // Aurora blobs — large, soft, heavily blurred colored masses
     const blobs = [
-      { hue: 240, sat: 85, light: 35, x: -0.2, y: -0.15, radius: 0.55, speed: 0.3, phase: 0 },      // deep indigo
-      { hue: 275, sat: 80, light: 40, x: 0.15, y: 0.2, radius: 0.5, speed: 0.25, phase: 1.5 },       // purple
-      { hue: 190, sat: 95, light: 50, x: 0.0, y: -0.05, radius: 0.45, speed: 0.35, phase: 3.0 },     // cyan
-      { hue: 320, sat: 90, light: 45, x: -0.1, y: 0.15, radius: 0.4, speed: 0.4, phase: 4.5 },       // pink/magenta
-      { hue: 210, sat: 100, light: 55, x: 0.2, y: -0.2, radius: 0.35, speed: 0.28, phase: 2.0 },     // bright blue
-      { hue: 160, sat: 80, light: 45, x: -0.15, y: 0.0, radius: 0.3, speed: 0.32, phase: 5.5 },      // teal-green
+      { hue: 235, sat: 80, light: 30, ox: -0.25, oy: -0.2, rad: 0.7,  spd: 0.18, ph: 0 },
+      { hue: 280, sat: 75, light: 35, ox: 0.2,   oy: 0.15, rad: 0.65, spd: 0.15, ph: 1.8 },
+      { hue: 190, sat: 90, light: 40, ox: 0.0,   oy: -0.1, rad: 0.6,  spd: 0.22, ph: 3.2 },
+      { hue: 320, sat: 85, light: 38, ox: -0.15,  oy: 0.2,  rad: 0.55, spd: 0.2,  ph: 4.8 },
+      { hue: 210, sat: 95, light: 45, ox: 0.25,  oy: -0.15, rad: 0.5,  spd: 0.17, ph: 2.4 },
+      { hue: 260, sat: 70, light: 28, ox: 0.0,   oy: 0.0,  rad: 0.8,  spd: 0.12, ph: 6.0 },
+      { hue: 170, sat: 75, light: 35, ox: 0.1,   oy: 0.1,  rad: 0.45, spd: 0.25, ph: 1.0 },
+      { hue: 340, sat: 80, light: 40, ox: -0.2,  oy: -0.05, rad: 0.4,  spd: 0.19, ph: 5.2 },
     ];
 
-    // Flowing wave/ribbon definitions
-    const waves = [
-      { hue: 180, sat: 90, light: 60, yOff: -0.05, amp: 0.12, speed: 0.4, phase: 0, width: 0.08 },    // cyan wave
-      { hue: 40,  sat: 80, light: 55, yOff: 0.03,  amp: 0.10, speed: 0.35, phase: 2.0, width: 0.06 }, // warm gold wave
-      { hue: 300, sat: 70, light: 55, yOff: -0.02, amp: 0.08, speed: 0.45, phase: 4.0, width: 0.05 }, // pink wave
-    ];
+    // Offscreen canvas for blur
+    const offCanvas = document.createElement("canvas");
+    offCanvas.width = canvas.width;
+    offCanvas.height = canvas.height;
+    const offCtx = offCanvas.getContext("2d")!;
+    offCtx.scale(dpr, dpr);
 
     const draw = (now: number) => {
       const dt = (now - lastTime) / 1000;
@@ -95,140 +88,116 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       const t = timeRef.current;
 
       ctx.clearRect(0, 0, size, size);
+      offCtx.clearRect(0, 0, size, size);
 
-      // === Clip to sphere ===
+      // Draw aurora blobs on offscreen (will be blurred)
+      offCtx.save();
+      offCtx.beginPath();
+      offCtx.arc(cx, cy, r, 0, Math.PI * 2);
+      offCtx.clip();
+
+      // Dark base
+      offCtx.fillStyle = "#050215";
+      offCtx.fillRect(0, 0, size, size);
+
+      // Blobs with screen blending
+      offCtx.globalCompositeOperation = "screen";
+
+      for (const blob of blobs) {
+        // Organic orbiting motion
+        const bx = cx + (blob.ox + Math.sin(t * blob.spd + blob.ph) * 0.2 + Math.sin(t * blob.spd * 0.6 + blob.ph * 2) * 0.1) * r * cfg.ampMul;
+        const by = cy + (blob.oy + Math.cos(t * blob.spd * 0.9 + blob.ph) * 0.18 + Math.cos(t * blob.spd * 0.5 + blob.ph * 1.5) * 0.08) * r * cfg.ampMul;
+        const br = blob.rad * r * (0.85 + Math.sin(t * blob.spd * 0.4 + blob.ph) * 0.15);
+
+        const grad = offCtx.createRadialGradient(bx, by, 0, bx, by, br);
+        const l = Math.min(blob.light * cfg.brightness, 100);
+        grad.addColorStop(0, `hsla(${blob.hue}, ${blob.sat}%, ${l}%, 0.85)`);
+        grad.addColorStop(0.25, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.85}%, 0.55)`);
+        grad.addColorStop(0.5, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.7}%, 0.25)`);
+        grad.addColorStop(0.75, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.5}%, 0.08)`);
+        grad.addColorStop(1, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.3}%, 0)`);
+        offCtx.fillStyle = grad;
+        offCtx.fillRect(0, 0, size, size);
+      }
+
+      offCtx.restore();
+
+      // === Draw blurred aurora onto main canvas ===
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.clip();
 
-      // === Deep dark background ===
-      const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      bgGrad.addColorStop(0, "#0a0520");
-      bgGrad.addColorStop(0.5, "#060318");
-      bgGrad.addColorStop(1, "#020110");
-      ctx.fillStyle = bgGrad;
+      // Draw blurred blobs
+      ctx.filter = `blur(${r * 0.18}px)`;
+      ctx.drawImage(offCanvas, 0, 0, size, size);
+      ctx.filter = "none";
+
+      // === Frosted glass overlay — multiple layers for heavy frost ===
+      // Semi-transparent white mist
+      const frostGrad1 = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r);
+      frostGrad1.addColorStop(0, "rgba(255,255,255,0.12)");
+      frostGrad1.addColorStop(0.4, "rgba(255,255,255,0.07)");
+      frostGrad1.addColorStop(0.7, "rgba(200,210,230,0.05)");
+      frostGrad1.addColorStop(1, "rgba(180,190,210,0.03)");
+      ctx.fillStyle = frostGrad1;
       ctx.fillRect(0, 0, size, size);
 
-      // === Colorful liquid blobs ===
-      ctx.globalCompositeOperation = "screen";
-
-      for (const blob of blobs) {
-        const bx = cx + (blob.x + Math.sin(t * blob.speed + blob.phase) * 0.15 * cfg.ampMul) * r * cfg.spread;
-        const by = cy + (blob.y + Math.cos(t * blob.speed * 0.8 + blob.phase) * 0.12 * cfg.ampMul) * r * cfg.spread;
-        const br = blob.radius * r * (0.9 + Math.sin(t * blob.speed * 0.5 + blob.phase) * 0.1 * cfg.ampMul);
-
-        const grad = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-        const l = Math.min(blob.light * cfg.brightness, 100);
-        grad.addColorStop(0, `hsla(${blob.hue}, ${blob.sat}%, ${l}%, 0.7)`);
-        grad.addColorStop(0.3, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.8}%, 0.4)`);
-        grad.addColorStop(0.6, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.6}%, 0.15)`);
-        grad.addColorStop(1, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.4}%, 0)`);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, size, size);
-      }
-
-      // === Flowing wave ribbons across the sphere ===
-      for (const wave of waves) {
-        const numPts = 50;
-        const points: { x: number; y: number }[] = [];
-        for (let i = 0; i <= numPts; i++) {
-          const frac = i / numPts;
-          const wx = cx - r + frac * r * 2;
-          const w1 = Math.sin(frac * Math.PI * 2.5 + t * wave.speed + wave.phase) * wave.amp * r * cfg.ampMul;
-          const w2 = Math.sin(frac * Math.PI * 4 + t * wave.speed * 0.7 + wave.phase * 1.3) * wave.amp * r * 0.4 * cfg.ampMul;
-          const wy = cy + wave.yOff * r + w1 + w2;
-          points.push({ x: wx, y: wy });
-        }
-
-        // Draw wave with glow layers
-        const layers = [
-          { widthMul: 4.0, alpha: 0.08 },
-          { widthMul: 2.0, alpha: 0.2 },
-          { widthMul: 1.0, alpha: 0.5 },
-          { widthMul: 0.3, alpha: 0.9 },
-        ];
-
-        for (const layer of layers) {
-          ctx.beginPath();
-          ctx.moveTo(points[0].x, points[0].y);
-          for (let i = 1; i < points.length - 1; i++) {
-            const xc = (points[i].x + points[i + 1].x) / 2;
-            const yc = (points[i].y + points[i + 1].y) / 2;
-            ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-          }
-          const l = Math.min(wave.light * cfg.brightness, 100);
-          ctx.strokeStyle = `hsla(${wave.hue}, ${wave.sat}%, ${l}%, ${layer.alpha * cfg.brightness * 0.7})`;
-          ctx.lineWidth = wave.width * r * layer.widthMul;
-          ctx.lineCap = "round";
-          ctx.lineJoin = "round";
-          ctx.stroke();
-        }
-      }
-
+      // Secondary frost — slight desaturation overlay
+      ctx.globalCompositeOperation = "soft-light";
+      const frostGrad2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      frostGrad2.addColorStop(0, "rgba(220,225,240,0.15)");
+      frostGrad2.addColorStop(0.5, "rgba(200,210,230,0.08)");
+      frostGrad2.addColorStop(1, "rgba(180,190,210,0.03)");
+      ctx.fillStyle = frostGrad2;
+      ctx.fillRect(0, 0, size, size);
       ctx.globalCompositeOperation = "source-over";
 
-      // === Center white glow ===
-      const glowR = r * 0.6;
-      const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
-      glowGrad.addColorStop(0, `rgba(255,255,255,${0.25 * cfg.glow})`);
-      glowGrad.addColorStop(0.2, `rgba(255,255,255,${0.1 * cfg.glow})`);
-      glowGrad.addColorStop(0.5, `rgba(200,200,255,${0.03 * cfg.glow})`);
-      glowGrad.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = glowGrad;
-      ctx.fillRect(0, 0, size, size);
-
-      // === Frosted glass specular highlight (top-left) ===
-      const specX = cx - r * 0.28;
-      const specY = cy - r * 0.32;
-      const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, r * 0.45);
-      specGrad.addColorStop(0, "rgba(255,255,255,0.18)");
-      specGrad.addColorStop(0.3, "rgba(255,255,255,0.06)");
+      // === Specular highlights for 3D glass look ===
+      // Top-left main specular
+      const specX = cx - r * 0.3;
+      const specY = cy - r * 0.35;
+      const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, r * 0.5);
+      specGrad.addColorStop(0, "rgba(255,255,255,0.28)");
+      specGrad.addColorStop(0.2, "rgba(255,255,255,0.12)");
+      specGrad.addColorStop(0.5, "rgba(255,255,255,0.03)");
       specGrad.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = specGrad;
       ctx.fillRect(0, 0, size, size);
 
-      // === Secondary specular (bottom-right, warm) ===
-      const spec2X = cx + r * 0.2;
-      const spec2Y = cy + r * 0.25;
-      const spec2Grad = ctx.createRadialGradient(spec2X, spec2Y, 0, spec2X, spec2Y, r * 0.3);
-      spec2Grad.addColorStop(0, "rgba(255,200,150,0.08)");
-      spec2Grad.addColorStop(1, "rgba(255,200,150,0)");
+      // Bottom-right warm reflection
+      const spec2X = cx + r * 0.25;
+      const spec2Y = cy + r * 0.3;
+      const spec2Grad = ctx.createRadialGradient(spec2X, spec2Y, 0, spec2X, spec2Y, r * 0.35);
+      spec2Grad.addColorStop(0, "rgba(255,200,160,0.06)");
+      spec2Grad.addColorStop(1, "rgba(255,200,160,0)");
       ctx.fillStyle = spec2Grad;
       ctx.fillRect(0, 0, size, size);
 
       ctx.restore();
 
-      // === 3D glass rim with orange/pink edge glow ===
-      // Outer glow ring
+      // === 3D rim highlights ===
+      // Orange/pink arc (right side)
       ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, r + 1, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(100,180,255,0.12)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.restore();
-
-      // Orange/pink rim highlight (top-right arc)
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, -0.8, 0.6);
-      const rimGrad = ctx.createLinearGradient(cx + r * 0.5, cy - r * 0.8, cx + r * 0.3, cy + r * 0.5);
-      rimGrad.addColorStop(0, "rgba(255,140,60,0.25)");
-      rimGrad.addColorStop(0.5, "rgba(255,100,120,0.15)");
-      rimGrad.addColorStop(1, "rgba(255,60,180,0.05)");
+      ctx.arc(cx, cy, r, -0.9, 0.7);
+      const rimGrad = ctx.createLinearGradient(cx + r * 0.6, cy - r * 0.8, cx + r * 0.2, cy + r * 0.6);
+      rimGrad.addColorStop(0, "rgba(255,150,80,0.3)");
+      rimGrad.addColorStop(0.5, "rgba(255,100,130,0.18)");
+      rimGrad.addColorStop(1, "rgba(255,80,180,0.05)");
       ctx.strokeStyle = rimGrad;
       ctx.lineWidth = 2.5;
       ctx.stroke();
       ctx.restore();
 
-      // Cyan rim highlight (left arc)
+      // Cyan/blue arc (left side)
       ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 2.2, 4.2);
-      const rimGrad2 = ctx.createLinearGradient(cx - r, cy - r * 0.5, cx - r * 0.5, cy + r * 0.5);
-      rimGrad2.addColorStop(0, "rgba(0,200,255,0.2)");
-      rimGrad2.addColorStop(1, "rgba(100,100,255,0.05)");
+      ctx.arc(cx, cy, r, 2.0, 4.3);
+      const rimGrad2 = ctx.createLinearGradient(cx - r, cy - r * 0.4, cx - r * 0.3, cy + r * 0.5);
+      rimGrad2.addColorStop(0, "rgba(0,200,255,0.25)");
+      rimGrad2.addColorStop(0.5, "rgba(80,140,255,0.12)");
+      rimGrad2.addColorStop(1, "rgba(120,100,255,0.04)");
       ctx.strokeStyle = rimGrad2;
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -237,7 +206,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       // Subtle full rim
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(180,160,255,0.06)";
+      ctx.strokeStyle = "rgba(200,200,240,0.08)";
       ctx.lineWidth = 1;
       ctx.stroke();
 
@@ -254,17 +223,16 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       style={{ width: size, height: size }}
       onClick={onClick}
     >
-      {/* Outer ambient glow — colorful, matching sphere palette */}
       <motion.div
         className="absolute inset-0 rounded-full pointer-events-none"
         animate={{
-          opacity: state === "idle" ? [0.15, 0.3, 0.15] : [0.35, 0.6, 0.35],
-          scale: state === "idle" ? [1.05, 1.12, 1.05] : [1.1, 1.25, 1.1],
+          opacity: state === "idle" ? [0.12, 0.25, 0.12] : [0.3, 0.55, 0.3],
+          scale: state === "idle" ? [1.04, 1.1, 1.04] : [1.08, 1.22, 1.08],
         }}
-        transition={{ duration: state === "idle" ? 6 : 2.5, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: state === "idle" ? 7 : 2.5, repeat: Infinity, ease: "easeInOut" }}
         style={{
-          background: "radial-gradient(circle, rgba(100,60,255,0.25) 0%, rgba(0,180,220,0.12) 30%, rgba(255,100,150,0.08) 50%, transparent 70%)",
-          filter: "blur(18px)",
+          background: "radial-gradient(circle, rgba(100,60,255,0.2) 0%, rgba(0,180,220,0.1) 30%, rgba(255,100,150,0.06) 50%, transparent 70%)",
+          filter: "blur(20px)",
         }}
       />
       <canvas
