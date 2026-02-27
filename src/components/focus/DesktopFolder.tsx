@@ -116,6 +116,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   };
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return; // only left-click drags
     e.stopPropagation();
     // If this item is part of a marquee group selection, start group drag
     if (isMarqueeSelected && onGroupDragStart && onGroupDragStart(e, folder.id)) return;

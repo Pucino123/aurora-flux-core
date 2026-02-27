@@ -382,14 +382,14 @@ const FocusContent = () => {
         }
       }
     };
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => { window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", onMouseUp); };
+    window.addEventListener("pointermove", onMouseMove);
+    window.addEventListener("pointerup", onMouseUp);
+    return () => { window.removeEventListener("pointermove", onMouseMove); window.removeEventListener("pointerup", onMouseUp); };
   }, [folderTree, desktopDocs, desktopFolderPositions, desktopDocPositions, toCanvasCoords, updateDesktopFolderPosition, updateDesktopDocPosition, moveFolder, user, refetchDesktopDocs]);
 
   const handleGroupDragStart = useCallback((e: React.PointerEvent, itemId: string) => {
+    if (e.button !== 0) return false;
     if (!selectedIdsRef.current.has(itemId) || selectedIdsRef.current.size < 2) return false;
-    e.preventDefault();
     e.stopPropagation();
     groupDraggingRef.current = true;
     groupDragOrigin.current = { x: e.clientX, y: e.clientY };

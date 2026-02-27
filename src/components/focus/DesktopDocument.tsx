@@ -87,6 +87,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const [isDraggingActive, setIsDraggingActive] = useState(false);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return; // only left-click drags
     e.stopPropagation();
     if (isMarqueeSelected && onGroupDragStart && onGroupDragStart(e, doc.id)) return;
     dragging.current = true;
