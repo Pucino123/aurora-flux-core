@@ -1,118 +1,62 @@
 
 
-## Implementation Plan: Core Fixes, Layout, Tasks, and Collaboration
+## Plan: Dashboard Interactions, UI Standardization, Defaults & Reactive Today's Plan
 
-This is a large set of features. Here is the breakdown into implementation steps, grouped by area.
+### 1. Context Menu — Place items at click coordinates
+**File:** `src/components/focus/FocusDashboardView.tsx`
+- Store the context menu `{x, y}` coordinates when right-clicking.
+- Pass these coordinates to `CreateFolderModal` and to `createDocument` so newly created folders/documents spawn at the exact click position.
+- For folders: after creation, immediately set `desktopFolderPositions[folder.id] = { x: contextMenu.x, y: contextMenu.y }` in the FocusStore.
+- For documents: same pattern with `desktopDocPositions`.
+- For sticky notes: use the context menu coordinates instead of random placement.
 
----
+### 2. Folder Modal — "Create folder" button text
+**File:** `src/lib/i18n.ts`, `src/components/CreateFolderModal.tsx`
+- Add `"folder.create_button": "Create folder"` to both `da` and `en` dictionaries.
+- The button already uses `t("folder.create_button")` — just needs the i18n key defined.
 
-### 1. Rename "Hjem" to "Dashboard" in Navigation
+### 3. Standardize all close buttons (red, top-right)
+**Files:** All modals/popups across the app (~10 files)
+- Define a shared close button style: small circle with `background: #ff5f57`, positioned `absolute top-3 right-3`.
+- X icon appears on hover (matching Colab modal pattern).
+- Apply to: `CreateFolderModal`, `PlanModal`, `FolderModal`, `DesktopDocumentViewer`, `ToolDrawer`, `ClockEditor`, `WidgetStyleEditor`, `CollabMessagesModal` (move from left to right), `FocusReportModal`, `WorkoutModal`, `AddToCalendarModal`, `KeyboardShortcutsSheet`.
 
-**Files:** `src/lib/i18n.ts`
-- Change `sidebar.home` from `"Hjem"` (da) → `"Dashboard"` and `"Home"` (en) → `"Dashboard"`.
+### 4. Default Spaces settings (match screenshot 3)
+**File:** `src/components/focus/BackgroundEngine.tsx`
+- Change default `bgBlur` from `0` → `4`.
+- Change default `vignette` from `0` → `0.22`.
+- Brightness (dimming=0.15 = 85%) is already correct.
+- Video Audio (0%) is already correct.
 
----
+### 5. Default clock settings
+**File:** `src/context/FocusContext.tsx`
+- Already set to `clockFontSize: 86`, `clockWeight: 200`, `clockShowSeconds: true`, `clockShowDate: true`, `clockShowGreeting: true`. Verify these match the screenshot — they do.
 
-### 2. Default Dashboard Layout for First-Time Users
+### 6. Reactive Today's Plan
+**File:** `src/components/Scheduler.tsx`, `src/components/focus/TodaysPlanWidget.tsx`
+- Add a `useEffect` that listens for changes to tasks and schedule blocks (via FluxContext) and auto-refreshes the plan view.
+- Subscribe to FluxContext's `tasks` and `scheduleBlocks` arrays as dependencies so the widget re-renders immediately when a task or event is created/updated anywhere.
+- Add a simple AI sorting heuristic: sort today's items by priority (high → medium → low), then by scheduled time, grouping calendar events and tasks into a logical timeline.
 
-**Files:** `src/context/FocusContext.tsx`, `src/components/focus/FocusDashboardView.tsx`, `src/components/focus/ClockWidget.tsx`
+### Technical Details
 
-- Set `DEFAULT_STATE.currentBackground` to the background matching the user's screenshot (the forest/waterfall — `"cozy-fireplace"` which maps to "Rainforest" video).
-- Set `DEFAULT_STATE.activeWidgets` to `["clock", "notes", "planner"]` (already correct).
-- Set `DEFAULT_STATE.clockFontSize` to match the large clock visible in the screenshot (~80–90px).
-- Ensure the vignette effect is always present on the focus view (currently only shows in "focus" systemMode — change to show by default).
-
----
-
-### 3. Frosted Glass Default for New Widgets
-
-**Files:** `src/components/focus/DraggableWidget.tsx`, `src/hooks/useWidgetStyle.ts`
-
-- In `useWidgetStyle`, set default style values for any widget that hasn't been customized to include `backdrop-blur` and translucent background (frosted glass).
-- In `DraggableWidget`, apply these defaults when rendering the widget container so new widgets instantiate with the glass effect.
-
----
-
-### 4. Calendar Drag & Drop Fix
-
-**Files:** `src/pages/FullCalendarView.tsx`
-
-- The current drag-and-drop uses native HTML drag events. The issue is that `onDragOver` needs `e.preventDefault()` to allow drops, which is present but may not fire correctly for schedule blocks.
-- Add drag support for schedule blocks (currently only tasks are draggable).
-- Add ability to drag blocks between time slots in week view.
-- Ensure `handleDrop` also handles block rescheduling (currently only handles task-id).
-
----
-
-### 5. Task Team Assignments
-
-**Files:** `src/pages/AITaskManager.tsx`, `src/context/FluxContext.tsx`
-
-- Add an `assigned_to` field to tasks (database migration for the `tasks` table).
-- In the expanded task row panel, add an avatar/dropdown selector showing team members.
-- Display assigned user avatar badge on each task row.
-
----
-
-### 6. Undo Task Completion
-
-**Files:** `src/pages/AITaskManager.tsx`
-
-- Already partially implemented — `onUndone` prop exists on `SortableTaskRow` and the `RotateCcw` button shows on hover for done tasks.
-- Verify the `onUndone` handler is wired correctly in the main component. Wire `onUndone` to call `updateTask(id, { done: false, status: "todo" })`.
-
----
-
-### 7. AI "Today's Plan" Auto-Push
-
-**Files:** `src/components/Scheduler.tsx`, new edge function `supabase/functions/ai-daily-plan/index.ts`
-
-- On mount, check if the user has schedule blocks for today. If not, call an AI edge function that reads the user's tasks and generates a prioritized daily plan.
-- The edge function uses Lovable AI (Gemini Flash) with tool calling to return structured task suggestions.
-- Auto-create schedule blocks from the AI response and display in Today's Plan widget.
-
----
-
-### 8. Mini Colab Widget Upgrade
-
-**Files:** `src/components/chat/TeamChatWidget.tsx`, `src/components/focus/CollabMessagesModal.tsx`
-
-- Replace the current simple floating chat panel with a scaled-down version of the Colab Modal.
-- Reuse the same sidebar (contacts, conversations) + message area from `CollabMessagesModal` but in a compact 380×500 container.
-- Retain all functionality: chat, contacts, pending invites, reactions, file attachments.
-
----
-
-### 9. AI Contextual Action: Message → Task/Calendar
-
-**Files:** `src/components/focus/CollabMessagesModal.tsx`, `src/components/chat/TeamChatWidget.tsx`, new edge function `supabase/functions/message-to-action/index.ts`
-
-- Extend the existing right-click context menu on messages to include "Add to Task" and "Add to Calendar" options (alongside existing emoji reactions and Reply).
-- On click, call a new edge function that takes the raw message text and uses AI to rewrite it as an actionable task title (e.g., "Fix the header (Requested by Alex)").
-- For "Add to Task": create a task via FluxContext's `createTask`.
-- For "Add to Calendar": create a schedule block via `createBlock` with today's date.
-- Show a toast confirming the action.
-
----
-
-### Database Migration Required
-
-Add `assigned_to` column to the `tasks` table:
-```sql
-ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS assigned_to UUID REFERENCES public.profiles(id);
+**Context menu coordinate passing:**
+```text
+contextMenu {x, y} → CreateFolderModal.onCreate callback 
+  → setDesktopFolderPositions(prev => ({...prev, [folder.id]: {x, y}}))
 ```
 
-### New Edge Functions
+**Red close button pattern (reusable):**
+```text
+<button className="absolute top-3 right-3 z-50 group">
+  <div style={{ width: 13, height: 13, borderRadius: "50%", 
+    background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.12)" }}>
+    <X size={7} className="opacity-0 group-hover:opacity-100" />
+  </div>
+</button>
+```
 
-1. **`ai-daily-plan`** — Reads user tasks, returns structured daily plan via Lovable AI.
-2. **`message-to-action`** — Rewrites a chat message into an actionable task/event title via Lovable AI.
-
----
-
-### Technical Notes
-
-- The i18n system uses a simple key-value map with Danish/English fallback. The rename is a single string change.
-- The `DraggableWidget` already supports custom styles via `useWidgetStyle` — the frosted glass default is a change to the hook's fallback values.
-- Calendar D&D currently handles tasks but not schedule blocks — extending `handleDragStart`/`handleDrop` to support block IDs will fix this.
-- The Colab modal is ~1100 lines. The mini widget will import and compose the same internal components rather than duplicating code.
+**Spaces defaults localStorage:**
+- On first load (no localStorage key), `bgBlur` initializes to `4` and `vignette` to `0.22`.
+- Existing users who already have saved values will keep their settings.
 
