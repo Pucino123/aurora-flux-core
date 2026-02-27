@@ -10,10 +10,10 @@ interface AuraOrbProps {
 }
 
 const stateConfig = {
-  idle:       { speedMul: 0.3, ampMul: 1.0, glow: 0.5, brightness: 0.9 },
-  listening:  { speedMul: 1.4, ampMul: 1.4, glow: 0.9, brightness: 1.2 },
-  processing: { speedMul: 3.5, ampMul: 0.7, glow: 1.0, brightness: 1.4 },
-  speaking:   { speedMul: 1.0, ampMul: 1.1, glow: 0.7, brightness: 1.0 },
+  idle:       { speedMul: 0.15, ampMul: 0.8, glow: 0.5, brightness: 1.0 },
+  listening:  { speedMul: 0.6,  ampMul: 1.2, glow: 0.9, brightness: 1.3 },
+  processing: { speedMul: 2.0,  ampMul: 0.6, glow: 1.0, brightness: 1.4 },
+  speaking:   { speedMul: 0.5,  ampMul: 1.0, glow: 0.7, brightness: 1.1 },
 };
 
 const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
@@ -26,7 +26,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
     const target = stateConfig[state];
     const start = { ...configRef.current };
     const startTime = performance.now();
-    const duration = 600;
+    const duration = 800;
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
     const animate = () => {
       const t = Math.min((performance.now() - startTime) / duration, 1);
@@ -61,16 +61,15 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
 
     let lastTime = performance.now();
 
-    // Large soft aurora blobs
+    // Very large, slow blobs that overlap and merge like lava
     const blobs = [
-      { hue: 235, sat: 80, light: 32, ox: -0.22, oy: -0.18, rad: 0.75, spd: 0.18, ph: 0 },
-      { hue: 280, sat: 75, light: 36, ox: 0.18,  oy: 0.15,  rad: 0.7,  spd: 0.15, ph: 1.8 },
-      { hue: 190, sat: 90, light: 42, ox: 0.05,  oy: -0.1,  rad: 0.65, spd: 0.22, ph: 3.2 },
-      { hue: 320, sat: 85, light: 38, ox: -0.12, oy: 0.2,   rad: 0.6,  spd: 0.2,  ph: 4.8 },
-      { hue: 210, sat: 95, light: 45, ox: 0.22,  oy: -0.12, rad: 0.55, spd: 0.17, ph: 2.4 },
-      { hue: 260, sat: 70, light: 30, ox: 0.0,   oy: 0.0,   rad: 0.85, spd: 0.12, ph: 6.0 },
-      { hue: 170, sat: 75, light: 36, ox: 0.08,  oy: 0.08,  rad: 0.5,  spd: 0.25, ph: 1.0 },
-      { hue: 340, sat: 80, light: 40, ox: -0.18, oy: -0.05, rad: 0.45, spd: 0.19, ph: 5.2 },
+      { hue: 240, sat: 70, light: 45, ox: -0.15, oy: -0.1,  rad: 1.1,  spd: 0.08, ph: 0 },
+      { hue: 280, sat: 65, light: 48, ox: 0.12,  oy: 0.1,   rad: 1.0,  spd: 0.07, ph: 1.8 },
+      { hue: 195, sat: 85, light: 50, ox: 0.0,   oy: -0.05, rad: 0.95, spd: 0.1,  ph: 3.2 },
+      { hue: 320, sat: 75, light: 45, ox: -0.08, oy: 0.12,  rad: 0.9,  spd: 0.09, ph: 4.8 },
+      { hue: 215, sat: 80, light: 52, ox: 0.15,  oy: -0.08, rad: 0.85, spd: 0.075, ph: 2.4 },
+      { hue: 260, sat: 60, light: 40, ox: 0.0,   oy: 0.0,   rad: 1.2,  spd: 0.05, ph: 6.0 },
+      { hue: 175, sat: 70, light: 46, ox: 0.05,  oy: 0.05,  rad: 0.8,  spd: 0.11, ph: 1.0 },
     ];
 
     const offCanvas = document.createElement("canvas");
@@ -95,93 +94,90 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       offCtx.arc(cx, cy, r, 0, Math.PI * 2);
       offCtx.clip();
 
-      offCtx.fillStyle = "#040212";
+      // Lighter dark base — NOT pure black, more like deep indigo
+      const bgGrad = offCtx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      bgGrad.addColorStop(0, "#1a1035");
+      bgGrad.addColorStop(0.5, "#120a28");
+      bgGrad.addColorStop(1, "#0d0820");
+      offCtx.fillStyle = bgGrad;
       offCtx.fillRect(0, 0, size, size);
 
       offCtx.globalCompositeOperation = "screen";
 
       for (const blob of blobs) {
-        // Smooth orbiting with multiple sine layers
+        // Very slow, smooth orbiting
         const bx = cx + (blob.ox
-          + Math.sin(t * blob.spd + blob.ph) * 0.22
-          + Math.sin(t * blob.spd * 0.6 + blob.ph * 2.3) * 0.12
-          + Math.cos(t * blob.spd * 0.35 + blob.ph * 0.7) * 0.08
+          + Math.sin(t * blob.spd + blob.ph) * 0.18
+          + Math.sin(t * blob.spd * 0.4 + blob.ph * 2.1) * 0.1
         ) * r * cfg.ampMul;
         const by = cy + (blob.oy
-          + Math.cos(t * blob.spd * 0.85 + blob.ph) * 0.2
-          + Math.cos(t * blob.spd * 0.5 + blob.ph * 1.6) * 0.1
-          + Math.sin(t * blob.spd * 0.3 + blob.ph * 1.2) * 0.06
+          + Math.cos(t * blob.spd * 0.7 + blob.ph) * 0.16
+          + Math.cos(t * blob.spd * 0.3 + blob.ph * 1.4) * 0.08
         ) * r * cfg.ampMul;
-        const br = blob.rad * r * (0.85 + Math.sin(t * blob.spd * 0.4 + blob.ph) * 0.15);
+        const br = blob.rad * r * (0.9 + Math.sin(t * blob.spd * 0.3 + blob.ph) * 0.1);
 
         const grad = offCtx.createRadialGradient(bx, by, 0, bx, by, br);
         const l = Math.min(blob.light * cfg.brightness, 100);
-        grad.addColorStop(0, `hsla(${blob.hue}, ${blob.sat}%, ${l}%, 0.9)`);
-        grad.addColorStop(0.2, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.85}%, 0.6)`);
-        grad.addColorStop(0.45, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.7}%, 0.3)`);
-        grad.addColorStop(0.7, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.5}%, 0.1)`);
-        grad.addColorStop(1, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.3}%, 0)`);
+        grad.addColorStop(0, `hsla(${blob.hue}, ${blob.sat}%, ${l}%, 0.85)`);
+        grad.addColorStop(0.2, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.9}%, 0.6)`);
+        grad.addColorStop(0.45, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.8}%, 0.3)`);
+        grad.addColorStop(0.7, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.6}%, 0.1)`);
+        grad.addColorStop(1, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.4}%, 0)`);
         offCtx.fillStyle = grad;
         offCtx.fillRect(0, 0, size, size);
       }
 
       offCtx.restore();
 
-      // === Main canvas: clip to circle and draw blurred aurora ===
+      // === Main canvas ===
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.clip();
 
-      // Draw heavily blurred blobs
-      ctx.filter = `blur(${r * 0.22}px)`;
+      // Heavy blur for lava-like merging
+      ctx.filter = `blur(${r * 0.28}px)`;
       ctx.drawImage(offCanvas, 0, 0, size, size);
       ctx.filter = "none";
 
-      // === Frosted glass overlay ===
+      // Frosted glass overlay
       const frostGrad = ctx.createRadialGradient(cx, cy, r * 0.05, cx, cy, r);
-      frostGrad.addColorStop(0, "rgba(255,255,255,0.1)");
-      frostGrad.addColorStop(0.3, "rgba(255,255,255,0.06)");
-      frostGrad.addColorStop(0.6, "rgba(220,225,240,0.04)");
-      frostGrad.addColorStop(1, "rgba(200,210,230,0.02)");
+      frostGrad.addColorStop(0, "rgba(255,255,255,0.08)");
+      frostGrad.addColorStop(0.4, "rgba(255,255,255,0.04)");
+      frostGrad.addColorStop(1, "rgba(220,225,240,0.02)");
       ctx.fillStyle = frostGrad;
       ctx.fillRect(0, 0, size, size);
 
-      // Soft-light frost desaturation
       ctx.globalCompositeOperation = "soft-light";
-      const frostGrad2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      frostGrad2.addColorStop(0, "rgba(220,225,240,0.12)");
-      frostGrad2.addColorStop(0.5, "rgba(200,210,230,0.06)");
-      frostGrad2.addColorStop(1, "rgba(180,190,210,0.02)");
-      ctx.fillStyle = frostGrad2;
+      const frost2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      frost2.addColorStop(0, "rgba(220,225,240,0.1)");
+      frost2.addColorStop(0.5, "rgba(200,210,230,0.05)");
+      frost2.addColorStop(1, "rgba(180,190,210,0.02)");
+      ctx.fillStyle = frost2;
       ctx.fillRect(0, 0, size, size);
       ctx.globalCompositeOperation = "source-over";
 
-      // === Frosted edge fade (no hard border) ===
-      // Soft radial fade at the edges to make it look frosted/diffused
-      const edgeFade = ctx.createRadialGradient(cx, cy, r * 0.7, cx, cy, r);
+      // Frosted edge fade
+      const edgeFade = ctx.createRadialGradient(cx, cy, r * 0.65, cx, cy, r);
       edgeFade.addColorStop(0, "rgba(0,0,0,0)");
-      edgeFade.addColorStop(0.6, "rgba(0,0,0,0)");
-      edgeFade.addColorStop(0.85, "rgba(10,5,20,0.3)");
-      edgeFade.addColorStop(0.95, "rgba(10,5,20,0.7)");
-      edgeFade.addColorStop(1, "rgba(10,5,20,0.95)");
+      edgeFade.addColorStop(0.7, "rgba(13,8,32,0.15)");
+      edgeFade.addColorStop(0.9, "rgba(13,8,32,0.5)");
+      edgeFade.addColorStop(1, "rgba(13,8,32,0.85)");
       ctx.fillStyle = edgeFade;
       ctx.fillRect(0, 0, size, size);
 
-      // === Specular highlight (top-left) ===
+      // Specular highlight
       const specX = cx - r * 0.3;
       const specY = cy - r * 0.35;
       const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, r * 0.5);
-      specGrad.addColorStop(0, "rgba(255,255,255,0.22)");
-      specGrad.addColorStop(0.15, "rgba(255,255,255,0.08)");
+      specGrad.addColorStop(0, "rgba(255,255,255,0.2)");
+      specGrad.addColorStop(0.15, "rgba(255,255,255,0.07)");
       specGrad.addColorStop(0.4, "rgba(255,255,255,0.02)");
       specGrad.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = specGrad;
       ctx.fillRect(0, 0, size, size);
 
       ctx.restore();
-
-      // NO border/rim strokes — purely frosted edge
 
       animRef.current = requestAnimationFrame(draw);
     };
@@ -199,12 +195,12 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       <motion.div
         className="absolute inset-0 rounded-full pointer-events-none"
         animate={{
-          opacity: state === "idle" ? [0.1, 0.2, 0.1] : [0.25, 0.5, 0.25],
-          scale: state === "idle" ? [1.03, 1.08, 1.03] : [1.06, 1.18, 1.06],
+          opacity: state === "idle" ? [0.08, 0.18, 0.08] : [0.2, 0.45, 0.2],
+          scale: state === "idle" ? [1.02, 1.07, 1.02] : [1.05, 1.16, 1.05],
         }}
-        transition={{ duration: state === "idle" ? 7 : 2.5, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: state === "idle" ? 8 : 2.5, repeat: Infinity, ease: "easeInOut" }}
         style={{
-          background: "radial-gradient(circle, rgba(100,60,255,0.15) 0%, rgba(0,180,220,0.08) 35%, rgba(255,100,150,0.04) 55%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(100,60,255,0.12) 0%, rgba(0,180,220,0.06) 35%, rgba(255,100,150,0.03) 55%, transparent 70%)",
           filter: "blur(22px)",
         }}
       />
