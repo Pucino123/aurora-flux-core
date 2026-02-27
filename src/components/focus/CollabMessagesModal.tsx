@@ -1017,13 +1017,18 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
           const left = Math.max(8, Math.min(contextMenuPos.x - 120, window.innerWidth - menuWidth - 8));
 
           return createPortal(
-            <div
+            <motion.div
               ref={contextMenuRef}
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.7 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.5 }}
               className="fixed flex flex-col gap-1 rounded-2xl overflow-hidden"
               style={{
                 zIndex: 99999,
                 top,
                 left,
+                transformOrigin: "center top",
                 background: T.reactionBg,
                 border: `1px solid ${T.reactionBorder}`,
                 boxShadow: "0 16px 48px rgba(0,0,0,0.4)",
@@ -1073,7 +1078,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 <Copy size={16} style={{ color: T.textSecondary }} />
                 Copy
               </button>
-            </div>,
+            </motion.div>,
             document.body
           );
         })()}
