@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut,
   Trash2, Smile, Link, Copy, Moon, Sun, ChevronLeft, Search,
   Video, Phone, Info, Hash, MoreHorizontal, Clock, Paperclip,
-  FileText, Image as ImageIcon
+  FileText, Image as ImageIcon, Reply, CornerUpLeft
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTeamChat, getUserColor } from "@/hooks/useTeamChat";
@@ -122,6 +123,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const [showInvitePopover, setShowInvitePopover] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ url: string; type: string; name: string } | null>(null);
+  const [replyTo, setReplyTo] = useState<{ id: string; content: string; userName: string } | null>(null);
+  const [swipingMsgId, setSwipingMsgId] = useState<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const swipeStartRef = useRef<{ x: number; y: number; msgId: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,15 +177,25 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     }
   }, [open]);
 
+  // Close context menu on any click outside
+  useEffect(() => {
+    if (!contextMenuMsgId) return;
+    const handler = () => { setContextMenuMsgId(null); setContextMenuPos(null); };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [contextMenuMsgId]);
+
   useEffect(() => {
     if (open && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages.length, typingUsers.length, open]);
 
   const handleSend = async () => {
     if (!text.trim() && !pendingFile) return;
-    await sendMessage(text, pendingFile || undefined);
+    const replyContent = replyTo ? `↩ ${replyTo.userName}: ${replyTo.content.slice(0, 60)}${replyTo.content.length > 60 ? "…" : ""}\n${text}` : text;
+    await sendMessage(replyContent, pendingFile || undefined);
     setText("");
     setPendingFile(null);
+    setReplyTo(null);
   };
 
   const getMemberName = (userId: string) => {
@@ -269,6 +284,37 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     setContextMenuMsgId(null);
     setContextMenuPos(null);
   }, []);
+
+  // Swipe-to-reply handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent, msgId: string) => {
+    swipeStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, msgId };
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!swipeStartRef.current) return;
+    const dx = e.touches[0].clientX - swipeStartRef.current.x;
+    const dy = Math.abs(e.touches[0].clientY - swipeStartRef.current.y);
+    if (dy > 30) { swipeStartRef.current = null; setSwipeOffset(0); setSwipingMsgId(null); return; }
+    // Only allow right swipe (positive dx)
+    const offset = Math.max(0, Math.min(dx, 80));
+    if (offset > 10) {
+      setSwipingMsgId(swipeStartRef.current.msgId);
+      setSwipeOffset(offset);
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (swipeOffset > 50 && swipingMsgId) {
+      // Trigger reply
+      const msg = messages.find(m => m.id === swipingMsgId);
+      if (msg) {
+        setReplyTo({ id: msg.id, content: msg.content, userName: getMemberName(msg.user_id) });
+      }
+    }
+    setSwipeOffset(0);
+    setSwipingMsgId(null);
+    swipeStartRef.current = null;
+  }, [swipeOffset, swipingMsgId, messages]);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -731,7 +777,17 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                           </div>
                         )}
                         <div
-                          className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"} ${isLast ? "mb-1" : "mb-[2px]"}`}>
+                          className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"} ${isLast ? "mb-1" : "mb-[2px]"}`}
+                          onTouchStart={(e) => handleTouchStart(e, msg.id)}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                          style={{ transform: swipingMsgId === msg.id ? `translateX(${swipeOffset}px)` : undefined, transition: swipingMsgId === msg.id ? "none" : "transform 0.2s ease" }}>
+                          {/* Swipe reply icon */}
+                          {swipingMsgId === msg.id && swipeOffset > 20 && (
+                            <div className="absolute left-0 flex items-center" style={{ opacity: Math.min(1, swipeOffset / 60) }}>
+                              <CornerUpLeft size={16} style={{ color: T.accent }} />
+                            </div>
+                          )}
                           <div className="w-8 shrink-0 flex justify-center">
                             {!isMe && isLast && <UserAvatar userId={msg.user_id} displayName={name} avatarUrl={avatar} size="sm" />}
                           </div>
@@ -752,27 +808,80 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                                   cursor: "default",
                                   userSelect: "text",
                                 }}>
-                                {msg.content}
+                                {/* Quoted reply rendering */}
+                                {msg.content.startsWith("↩ ") && msg.content.includes("\n") && (() => {
+                                  const nlIdx = msg.content.indexOf("\n");
+                                  const quoteLine = msg.content.slice(2, nlIdx);
+                                  const actualText = msg.content.slice(nlIdx + 1);
+                                  return (
+                                    <>
+                                      <div className="mb-1.5 px-2 py-1 rounded-lg text-[12px] leading-snug border-l-2"
+                                        style={{
+                                          background: isMe ? "rgba(255,255,255,0.15)" : (dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"),
+                                          borderColor: T.accent,
+                                          color: isMe ? "rgba(255,255,255,0.7)" : T.textSecondary,
+                                        }}>
+                                        {quoteLine}
+                                      </div>
+                                      <span>{actualText}</span>
+                                    </>
+                                  );
+                                })()}
+                                {!(msg.content.startsWith("↩ ") && msg.content.includes("\n")) && msg.content}
                                 {msg.file_url && msg.file_type && msg.file_name && (
                                   <FilePreview url={msg.file_url} type={msg.file_type} name={msg.file_name} dark={dark} />
                                 )}
                               </div>
 
-                              {/* Right-click reaction popover rendered at cursor position via portal */}
-                              {contextMenuMsgId === msg.id && contextMenuPos && (
+                              {/* Right-click context menu via portal to ensure it renders above modal */}
+                              {contextMenuMsgId === msg.id && contextMenuPos && createPortal(
                                 <div
-                                  className="fixed z-[999] flex items-center gap-1 px-2.5 py-2 rounded-full"
+                                  className="fixed flex flex-col gap-1 rounded-2xl overflow-hidden"
                                   style={{
-                                    top: contextMenuPos.y - 48,
-                                    left: contextMenuPos.x - 100,
+                                    zIndex: 99999,
+                                    top: Math.max(8, contextMenuPos.y - 100),
+                                    left: Math.max(8, Math.min(contextMenuPos.x - 120, window.innerWidth - 280)),
                                     background: T.reactionBg, border: `1px solid ${T.reactionBorder}`,
-                                    boxShadow: "0 8px 32px rgba(0,0,0,0.3)", backdropFilter: "blur(24px)",
-                                  }}>
-                                  {REACTION_EMOJIS.map(e => (
-                                    <button key={e} onClick={() => { toggleReaction(msg.id, e); closeContextMenu(); }}
-                                      className="text-[18px] hover:scale-125 transition-transform leading-none p-0.5">{e}</button>
-                                  ))}
-                                </div>
+                                    boxShadow: "0 16px 48px rgba(0,0,0,0.4)", backdropFilter: "blur(30px)",
+                                    width: "260px",
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}>
+                                  {/* Emoji row */}
+                                  <div className="flex items-center justify-between px-3 py-2.5">
+                                    {REACTION_EMOJIS.slice(0, 6).map(e => (
+                                      <button key={e} onClick={() => { toggleReaction(msg.id, e); closeContextMenu(); }}
+                                        className="text-[22px] hover:scale-125 transition-transform leading-none p-1 rounded-full"
+                                        style={{ background: "transparent" }}
+                                        onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)")}
+                                        onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>{e}</button>
+                                    ))}
+                                  </div>
+                                  <div style={{ height: 1, background: T.divider }} />
+                                  {/* Reply action */}
+                                  <button
+                                    onClick={() => {
+                                      setReplyTo({ id: msg.id, content: msg.content, userName: getMemberName(msg.user_id) });
+                                      closeContextMenu();
+                                    }}
+                                    className="flex items-center gap-3 px-4 py-2.5 text-[14px] transition-all text-left"
+                                    style={{ color: T.textPrimary }}
+                                    onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)")}
+                                    onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>
+                                    <Reply size={16} style={{ color: T.textSecondary }} />
+                                    Reply
+                                  </button>
+                                  {/* Copy action */}
+                                  <button
+                                    onClick={() => { navigator.clipboard.writeText(msg.content); closeContextMenu(); toast.success("Copied"); }}
+                                    className="flex items-center gap-3 px-4 py-2.5 text-[14px] transition-all text-left"
+                                    style={{ color: T.textPrimary }}
+                                    onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)")}
+                                    onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>
+                                    <Copy size={16} style={{ color: T.textSecondary }} />
+                                    Copy
+                                  </button>
+                                </div>,
+                                document.body
                               )}
                             </div>
 
@@ -822,13 +931,22 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                   <AnimatePresence>
                     {typingNames.length > 0 && (
                       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                        className="flex items-end gap-1.5">
-                        <div className="w-8">
+                        className="flex items-end gap-2 py-1">
+                        <div className="w-8 flex justify-center">
                           {typingUsers.filter(uid => uid !== user?.id).slice(0, 1).map(uid => (
                             <UserAvatar key={uid} userId={uid} displayName={getMemberName(uid)} avatarUrl={avatarMap[uid]} size="sm" />
                           ))}
                         </div>
-                        <TypingBubble dark={dark} />
+                        <div className="flex items-center gap-2">
+                          <TypingBubble dark={dark} />
+                          <span style={{ color: T.textTertiary, fontSize: "11px", fontStyle: "italic" }}>
+                            {typingNames.length === 1
+                              ? `${typingNames[0]} is typing…`
+                              : typingNames.length === 2
+                                ? `${typingNames[0]} and ${typingNames[1]} are typing…`
+                                : `${typingNames[0]} and ${typingNames.length - 1} others are typing…`}
+                          </span>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -836,6 +954,22 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
                 {/* Input bar */}
                 <div className="px-3 py-2.5 shrink-0" style={{ borderTop: `1px solid ${T.divider}`, background: T.inputBar, backdropFilter: "blur(20px)" }}>
+                  {/* Reply preview */}
+                  {replyTo && (
+                    <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-lg border-l-2"
+                      style={{
+                        background: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                        borderColor: T.accent,
+                      }}>
+                      <Reply size={14} style={{ color: T.accent }} />
+                      <div className="flex-1 min-w-0">
+                        <p style={{ color: T.accent, fontSize: "11px", fontWeight: 600 }}>{replyTo.userName}</p>
+                        <p style={{ color: T.textSecondary, fontSize: "12px" }} className="truncate">{replyTo.content}</p>
+                      </div>
+                      <button onClick={() => setReplyTo(null)} style={{ color: T.textTertiary }}><X size={14} /></button>
+                    </div>
+                  )}
+
                   {/* Pending file preview */}
                   {pendingFile && (
                     <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-lg"
