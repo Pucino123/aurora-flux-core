@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Send, Mic, MicOff, X, Volume2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -672,7 +673,9 @@ const AuraWidget: React.FC = () => {
 
   const orbSize = 110;
 
-  return (
+  const isActive = pillMode !== "idle" && pillMode !== "hint";
+
+  const widget = (
     <DraggableWidget
       id="aura"
       title="Aura"
@@ -680,6 +683,7 @@ const AuraWidget: React.FC = () => {
       defaultSize={{ w: 320, h: 300 }}
       className="aura-widget"
       autoHeight
+      containerStyle={isActive ? { zIndex: 200 } : undefined}
     >
       <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
         {/* Orb */}
@@ -826,6 +830,8 @@ const AuraWidget: React.FC = () => {
       </div>
     </DraggableWidget>
   );
+
+  return isActive ? createPortal(widget, document.body) : widget;
 };
 
 export default AuraWidget;
