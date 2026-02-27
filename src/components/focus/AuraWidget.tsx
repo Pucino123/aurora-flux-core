@@ -19,11 +19,11 @@ const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const TIPS = [
   "Hi, my name is Aura...",
   "Did you know I can see your screen?",
-  "Press Space to talk to me...",
+  "Hold Alt to talk to me...",
   "I can help you plan your schedule",
-  "Ask me to add a task for you",
-  "Need help organizing your day?",
-  "I can clear your schedule too",
+  "Ask me to add or remove tasks",
+  "I can book meetings for you",
+  "Need feedback on your progress?",
 ];
 
 function gatherContext(focusStore: any, flux: any): string {
@@ -44,9 +44,13 @@ function gatherContext(focusStore: any, flux: any): string {
   if (todayBlocks.length) {
     parts.push(`Today's schedule: ${todayBlocks.map((b: any) => `${b.time} - ${b.title} (${b.duration})`).join("; ")}`);
   }
-  const pendingTasks = flux.tasks?.filter((t: any) => !t.done)?.slice(0, 10) || [];
+  const pendingTasks = flux.tasks?.filter((t: any) => !t.done)?.slice(0, 15) || [];
   if (pendingTasks.length) {
-    parts.push(`Pending tasks: ${pendingTasks.map((t: any) => t.title).join(", ")}`);
+    parts.push(`Pending tasks (with IDs): ${pendingTasks.map((t: any) => `[${t.id}] "${t.title}" (priority: ${t.priority || 'medium'}, status: ${t.status})`).join("; ")}`);
+  }
+  const doneTasks = flux.tasks?.filter((t: any) => t.done)?.slice(0, 5) || [];
+  if (doneTasks.length) {
+    parts.push(`Recently completed: ${doneTasks.map((t: any) => t.title).join(", ")}`);
   }
   if (flux.goals?.length) {
     parts.push(`Goals: ${flux.goals.map((g: any) => `${g.title} (${g.current_amount}/${g.target_amount})`).join(", ")}`);
@@ -85,6 +89,8 @@ async function streamAura(
   const decoder = new TextDecoder();
   let buf = "";
   let done = false;
+  // Accumulate tool call arguments across multiple chunks
+  const toolCallAccum: Record<number, { name: string; args: string }> = {};
 
   while (!done) {
     const { done: rd, value } = await reader.read();
@@ -104,8 +110,20 @@ async function streamAura(
         if (delta?.content) onDelta(delta.content);
         if (delta?.tool_calls) {
           for (const tc of delta.tool_calls) {
-            if (tc.function?.name && tc.function?.arguments) {
-              try { onToolCall(tc.function.name, JSON.parse(tc.function.arguments)); } catch {}
+            const tcIdx = tc.index ?? 0;
+            if (!toolCallAccum[tcIdx]) {
+              toolCallAccum[tcIdx] = { name: tc.function?.name || "", args: "" };
+            }
+            if (tc.function?.name) toolCallAccum[tcIdx].name = tc.function.name;
+            if (tc.function?.arguments) toolCallAccum[tcIdx].args += tc.function.arguments;
+          }
+        }
+        // Check finish_reason for tool_calls
+        if (parsed.choices?.[0]?.finish_reason === "tool_calls" || parsed.choices?.[0]?.finish_reason === "stop") {
+          for (const key of Object.keys(toolCallAccum)) {
+            const tc = toolCallAccum[Number(key)];
+            if (tc.name && tc.args) {
+              try { onToolCall(tc.name, JSON.parse(tc.args)); } catch {}
             }
           }
         }
@@ -113,6 +131,14 @@ async function streamAura(
         buf = line + "\n" + buf;
         break;
       }
+    }
+  }
+
+  // Final flush - process any remaining tool calls
+  for (const key of Object.keys(toolCallAccum)) {
+    const tc = toolCallAccum[Number(key)];
+    if (tc.name && tc.args) {
+      try { onToolCall(tc.name, JSON.parse(tc.args)); } catch {}
     }
   }
 
@@ -129,7 +155,6 @@ async function streamAura(
   onDone();
 }
 
-// Continuous voice recognition hook
 function useVoiceInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const recRef = useRef<any>(null);
@@ -227,7 +252,6 @@ const AuraWidget: React.FC = () => {
     return () => { if (hintTimerRef.current) clearTimeout(hintTimerRef.current); };
   }, [pillMode === "idle"]);
 
-  // Click outside to close
   useEffect(() => {
     if (pillMode === "idle" || pillMode === "hint") return;
     const handler = (e: MouseEvent) => {
@@ -241,7 +265,6 @@ const AuraWidget: React.FC = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, [pillMode, input, messages.length]);
 
-  // Scroll history to bottom
   useEffect(() => {
     if (showHistory) {
       setTimeout(() => historyEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
@@ -252,7 +275,6 @@ const AuraWidget: React.FC = () => {
     if (pillMode === "input") setTimeout(() => inputRef.current?.focus(), 100);
   }, [pillMode]);
 
-  // Show history whenever there are messages or a response
   useEffect(() => {
     if (messages.length > 0 || responseText) setShowHistory(true);
   }, [messages.length, responseText]);
@@ -276,19 +298,47 @@ const AuraWidget: React.FC = () => {
   const handleToolCall = useCallback((name: string, args: any) => {
     if (name === "add_task") {
       const title = args.title || args.text || "New task";
-      focusStore.setBrainDumpTasks([...focusStore.brainDumpTasks, { id: `bd-${Date.now()}`, text: title }]);
+      flux.createTask({ title, priority: args.priority || "medium", folder_id: args.folder_id || null });
       toast.success(`Task added: ${title}`);
-    } else if (name === "add_to_plan") {
+    } else if (name === "remove_task") {
+      const taskId = args.task_id;
+      if (taskId) {
+        flux.removeTask(taskId);
+        toast.success("Task removed");
+      }
+    } else if (name === "complete_task") {
+      const taskId = args.task_id;
+      if (taskId) {
+        flux.updateTask(taskId, { done: true, status: "done" });
+        toast.success("Task completed ✓");
+      }
+    } else if (name === "update_task") {
+      const taskId = args.task_id;
+      if (taskId) {
+        const updates: any = {};
+        if (args.title) updates.title = args.title;
+        if (args.priority) updates.priority = args.priority;
+        if (args.due_date) updates.due_date = args.due_date;
+        flux.updateTask(taskId, updates);
+        toast.success("Task updated");
+      }
+    } else if (name === "add_to_plan" || name === "book_meeting") {
       const today = new Date().toISOString().split("T")[0];
-      flux.createBlock({ title: args.title || "New block", time: args.time || "09:00", duration: args.duration || "30m", type: args.type || "custom", scheduled_date: args.date || today });
-      toast.success(`Added to plan: ${args.title}`);
+      flux.createBlock({
+        title: args.title || "Meeting",
+        time: args.time || "09:00",
+        duration: args.duration || "30m",
+        type: name === "book_meeting" ? "meeting" : (args.type || "custom"),
+        scheduled_date: args.date || today,
+      });
+      toast.success(`${name === "book_meeting" ? "Meeting booked" : "Added to plan"}: ${args.title}`);
     } else if (name === "clear_schedule") {
       const date = args.date || new Date().toISOString().split("T")[0];
       const blocks = flux.scheduleBlocks.filter((b) => b.scheduled_date === date);
       blocks.forEach((b) => flux.removeBlock(b.id));
       toast.success(`Cleared ${blocks.length} blocks for ${date}`);
     }
-  }, [focusStore, flux]);
+  }, [flux]);
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -338,10 +388,10 @@ const AuraWidget: React.FC = () => {
     send(text);
   });
 
-  // Global spacebar shortcut
+  // Global Alt key shortcut for voice
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
+      if (e.key !== "Alt") return;
       // Don't intercept if user is typing in an input/textarea/contenteditable
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
       const isEditable = tag === "input" || tag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
@@ -433,7 +483,7 @@ const AuraWidget: React.FC = () => {
                     <button
                       onClick={toggleVoice}
                       className={`p-1 rounded-full transition-all shrink-0 ${listening ? "bg-purple-500/30 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.4)]" : "text-white/40 hover:text-white/70"}`}
-                      title={listening ? "Stop listening (Space)" : "Start voice (Space)"}
+                      title={listening ? "Stop listening (Alt)" : "Start voice (Alt)"}
                     >
                       {listening ? <MicOff size={13} /> : <Mic size={13} />}
                     </button>
@@ -470,7 +520,7 @@ const AuraWidget: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* Chat history box */}
+        {/* Chat history box — NO close button here, only in pill */}
         <AnimatePresence>
           {showHistory && messages.length > 0 && (
             <motion.div
@@ -481,18 +531,9 @@ const AuraWidget: React.FC = () => {
               className="w-full overflow-hidden"
             >
               <div
-                className="rounded-2xl border border-white/[0.08] max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 relative"
+                className="rounded-2xl border border-white/[0.08] max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10"
                 style={{ background: "rgba(255,255,255,0.05)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
               >
-                {/* Close button */}
-                <button
-                  onClick={revertToIdle}
-                  className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded-full bg-white/10 text-white/40 hover:bg-red-500/60 hover:text-white transition-all z-10"
-                  title="Close conversation"
-                >
-                  <X size={10} />
-                </button>
-
                 <div className="px-3 py-3 space-y-2.5">
                   {messages.map((msg, i) => (
                     <div

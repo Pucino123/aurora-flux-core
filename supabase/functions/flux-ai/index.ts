@@ -562,14 +562,28 @@ async function handleCouncilQuick(question: string, mode: string, personaKey: st
 }
 
 async function handleAura(messages: any[], context: string, apiKey: string) {
-  const systemPrompt = `You are Aura, a personal AI assistant embedded in the user's Flux productivity dashboard. You can see the user's current dashboard state.
+  const systemPrompt = `You are Aura, a brilliant personal AI assistant embedded in the user's Flux productivity dashboard. You can see the user's current dashboard state including all their tasks (with IDs), schedule, and goals.
 
-RULES:
-- Be concise, warm, and helpful. Max 3 sentences for simple questions.
+PERSONALITY:
+- You are warm, proactive, and genuinely helpful — like the world's best executive assistant.
+- Be concise but insightful. Max 3 sentences for simple questions, more for complex analysis.
 - Match the user's language (Danish → Danish, English → English, etc.)
-- You have access to the user's real-time dashboard data provided below.
-- When the user asks to create tasks, add schedule blocks, or clear their schedule, use the provided tools.
+- Proactively suggest improvements, flag risks, and offer feedback when relevant.
+
+CAPABILITIES:
+- Create, complete, update, and remove tasks using the tools below.
+- Book meetings and add time blocks to the schedule.
+- Clear entire days from the schedule.
+- Give productivity feedback, analyze workload, suggest task prioritization.
+- Help plan projects by breaking them into tasks.
+
+CRITICAL RULES:
+- When removing or completing tasks, you MUST use the exact task_id from the context. NEVER guess IDs.
+- When the user says "remove" or "delete" a task, find the matching task by name in the context and use remove_task with its ID.
+- When the user says "done" or "finished" a task, use complete_task with its ID.
+- For booking meetings, use book_meeting with a specific time and duration.
 - Never invent data — only reference what's in the context.
+- After performing actions, briefly confirm what you did.
 
 ═══ DASHBOARD CONTEXT ═══
 ${context}
@@ -592,11 +606,12 @@ ${context}
           type: "function",
           function: {
             name: "add_task",
-            description: "Add a new task to the user's brain dump / task list",
+            description: "Add a new task to the user's task list",
             parameters: {
               type: "object",
               properties: {
                 title: { type: "string", description: "Task title" },
+                priority: { type: "string", enum: ["low", "medium", "high"], description: "Task priority" },
               },
               required: ["title"],
             },
@@ -605,8 +620,70 @@ ${context}
         {
           type: "function",
           function: {
+            name: "remove_task",
+            description: "Remove/delete a task by its ID. Use the exact task_id from the dashboard context.",
+            parameters: {
+              type: "object",
+              properties: {
+                task_id: { type: "string", description: "The exact UUID of the task to remove" },
+              },
+              required: ["task_id"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "complete_task",
+            description: "Mark a task as completed/done by its ID.",
+            parameters: {
+              type: "object",
+              properties: {
+                task_id: { type: "string", description: "The exact UUID of the task to complete" },
+              },
+              required: ["task_id"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "update_task",
+            description: "Update a task's title, priority, or due date.",
+            parameters: {
+              type: "object",
+              properties: {
+                task_id: { type: "string", description: "The exact UUID of the task to update" },
+                title: { type: "string", description: "New title (optional)" },
+                priority: { type: "string", enum: ["low", "medium", "high"] },
+                due_date: { type: "string", description: "YYYY-MM-DD format" },
+              },
+              required: ["task_id"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "book_meeting",
+            description: "Book a meeting or appointment in the user's schedule",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Meeting title, e.g. 'Call with John'" },
+                time: { type: "string", description: "Start time, e.g. 09:00, 14:30" },
+                duration: { type: "string", description: "Duration, e.g. 30m, 60m, 90m" },
+                date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
+              },
+              required: ["title", "time"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
             name: "add_to_plan",
-            description: "Add a time block to the user's daily schedule",
+            description: "Add a generic time block to the user's daily schedule",
             parameters: {
               type: "object",
               properties: {
