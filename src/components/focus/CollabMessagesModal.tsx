@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut,
   Trash2, Smile, Link, Copy, Moon, Sun, ChevronLeft, Search,
-  Video, Phone, Info, Hash, MoreHorizontal
+  Video, Phone, Info, Hash, MoreHorizontal, Clock
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTeamChat, getUserColor } from "@/hooks/useTeamChat";
@@ -49,12 +49,12 @@ function UserAvatar({
         <img src={avatarUrl} alt={displayName || userId}
           className={`${cls} rounded-full object-cover`} />
       ) : (
-        <div className={`${cls} ${pending ? "bg-gray-400/50" : colorClass} rounded-full flex items-center justify-center font-semibold text-white`}>
-          {pending ? "?" : initial}
+        <div className={`${cls} ${pending ? "bg-muted" : colorClass} rounded-full flex items-center justify-center font-semibold text-white`}>
+          {pending ? <Clock size={14} className="text-muted-foreground" /> : initial}
         </div>
       )}
       {pending && (
-        <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-white flex items-center justify-center">
+        <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-background flex items-center justify-center">
           <span className="text-[7px] font-bold text-yellow-900">!</span>
         </span>
       )}
@@ -64,10 +64,11 @@ function UserAvatar({
 
 function TypingBubble({ dark }: { dark: boolean }) {
   return (
-    <div className={`flex items-center gap-1.5 px-4 py-3 rounded-[18px] rounded-bl-[4px] w-fit ${dark ? "bg-[#3a3a3c]" : "bg-[#e9e9eb]"}`}>
+    <div className={`flex items-center gap-1.5 px-4 py-3 rounded-[18px] rounded-bl-[4px] w-fit`}
+      style={{ background: dark ? "#3a3a3c" : "#e9e9eb" }}>
       {[0, 1, 2].map((i) => (
-        <span key={i} className={`w-2 h-2 rounded-full animate-bounce ${dark ? "bg-white/40" : "bg-black/30"}`}
-          style={{ animationDelay: `${i * 150}ms`, animationDuration: "900ms" }} />
+        <span key={i} className="w-2 h-2 rounded-full animate-bounce"
+          style={{ background: dark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)", animationDelay: `${i * 150}ms`, animationDuration: "900ms" }} />
       ))}
     </div>
   );
@@ -79,6 +80,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     messages, members, sendMessage, hasTeams, loading, teams, activeTeamId,
     setActiveTeamId, createTeam, inviteMember, markAsRead, setModalOpen, leaveTeam, deleteTeam,
     typingUsers, unreadPerTeam, handleTypingChange, reactionsMap, toggleReaction, generateInviteLink,
+    pendingInvites,
   } = useTeamChat();
   const { user } = useAuth();
 
@@ -93,35 +95,39 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const [newTeamName, setNewTeamName] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [longPressedMsgId, setLongPressedMsgId] = useState<string | null>(null);
   const [inviteLinkLoading, setInviteLinkLoading] = useState(false);
   const [avatarMap, setAvatarMap] = useState<Record<string, string>>({});
   const [leavingTeamId, setLeavingTeamId] = useState<string | null>(null);
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
   const [showInvitePopover, setShowInvitePopover] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Theme tokens — glassmorphism
+  // Theme tokens — deep glassmorphism matching Apple HIG
   const T = {
-    sidebar: dark ? "rgba(12,12,16,0.45)" : "rgba(255,255,255,0.35)",
-    sidebarActive: dark ? "rgba(10,132,255,0.20)" : "rgba(0,122,255,0.12)",
-    header: dark ? "rgba(10,10,14,0.55)" : "rgba(248,248,255,0.55)",
-    divider: dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)",
-    fieldBg: dark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.55)",
-    fieldBorder: dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.10)",
+    sidebar: dark ? "rgba(28,28,30,0.60)" : "rgba(242,242,247,0.50)",
+    sidebarActive: dark ? "rgba(10,132,255,0.22)" : "rgba(0,122,255,0.14)",
+    header: dark ? "rgba(28,28,30,0.70)" : "rgba(246,246,248,0.65)",
+    divider: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.09)",
+    fieldBg: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.60)",
+    fieldBorder: dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
     chatBg: "transparent",
-    myBubble: dark ? "rgba(10,132,255,0.92)" : "rgba(0,122,255,0.92)",
-    theirBubble: dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
-    textPrimary: dark ? "rgba(255,255,255,0.95)" : "rgba(10,10,20,0.92)",
-    textSecondary: dark ? "rgba(255,255,255,0.55)" : "rgba(10,10,20,0.50)",
-    textTertiary: dark ? "rgba(255,255,255,0.28)" : "rgba(10,10,20,0.28)",
-    sectionLabel: dark ? "rgba(255,255,255,0.35)" : "rgba(10,10,20,0.35)",
+    myBubble: dark ? "#0a84ff" : "#007aff",
+    theirBubble: dark ? "#3a3a3c" : "#e9e9eb",
+    textPrimary: dark ? "rgba(255,255,255,0.95)" : "rgba(0,0,0,0.88)",
+    textSecondary: dark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.50)",
+    textTertiary: dark ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.28)",
+    sectionLabel: dark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)",
     accent: dark ? "#0a84ff" : "#007aff",
-    searchBg: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-    inputBar: dark ? "rgba(10,10,14,0.50)" : "rgba(248,248,255,0.50)",
-    reactionBg: dark ? "rgba(30,30,40,0.75)" : "rgba(255,255,255,0.75)",
-    reactionBorder: dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)",
+    searchBg: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+    inputBar: dark ? "rgba(28,28,30,0.60)" : "rgba(246,246,248,0.60)",
+    reactionBg: dark ? "rgba(44,44,46,0.90)" : "rgba(255,255,255,0.90)",
+    reactionBorder: dark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.12)",
     green: dark ? "#32d74b" : "#34c759",
     red: dark ? "#ff453a" : "#ff3b30",
+    pendingBadge: dark ? "rgba(255,214,10,0.20)" : "rgba(255,204,0,0.18)",
+    pendingText: dark ? "#ffd60a" : "#c79900",
   };
 
   useEffect(() => {
@@ -216,6 +222,20 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     toast.success("Invite link copied! Expires in 7 days.");
   };
 
+  // Long-press handlers for Tapback reactions
+  const startLongPress = useCallback((msgId: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setLongPressedMsgId(msgId);
+    }, 500);
+  }, []);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
   const isAdmin = members.some(m => m.user_id === user?.id && m.role === "admin");
   const insertEmoji = (emoji: string) => { setText(p => p + emoji); setShowEmojiPicker(false); };
   const activeTeam = teams.find(t => t.id === activeTeamId);
@@ -225,8 +245,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     t.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Pinned = first 3 teams (or we can just show top teams)
-  const pinnedTeams = teams.slice(0, 3);
+  const pinnedTeams = teams.slice(0, 4);
+
+  // Determine which reaction bar to show (hover or long-press)
+  const showReactionFor = (msgId: string) => hoveredMsgId === msgId || longPressedMsgId === msgId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -234,30 +256,43 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
         className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden"
         style={{
           fontFamily: "-apple-system, 'SF Pro Text', 'SF Pro Display', BlinkMacSystemFont, sans-serif",
-          maxWidth: "780px",
+          maxWidth: "820px",
           width: "100%",
-          height: "580px",
-          borderRadius: "16px",
+          height: "600px",
+          borderRadius: "14px",
           background: dark
-            ? "rgba(18,18,22,0.82)"
-            : "rgba(240,240,248,0.80)",
-          backdropFilter: "blur(40px) saturate(180%)",
-          WebkitBackdropFilter: "blur(40px) saturate(180%)",
+            ? "rgba(28,28,30,0.92)"
+            : "rgba(246,246,248,0.85)",
+          backdropFilter: dark
+            ? "blur(60px) saturate(200%)"
+            : "blur(40px) saturate(180%)",
+          WebkitBackdropFilter: dark
+            ? "blur(60px) saturate(200%)"
+            : "blur(40px) saturate(180%)",
           border: dark
-            ? "1px solid rgba(255,255,255,0.08)"
-            : "1px solid rgba(255,255,255,0.55)",
+            ? "1px solid rgba(255,255,255,0.10)"
+            : "1px solid rgba(255,255,255,0.60)",
           boxShadow: dark
-            ? "0 32px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)"
-            : "0 32px 80px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.9)",
+            ? "0 40px 100px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06)"
+            : "0 40px 100px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.95)",
         }}>
         <DialogTitle className="sr-only">Messages</DialogTitle>
 
-        <div className="flex h-full overflow-hidden" style={{ borderRadius: "16px" }}>
+        {/* Single minimalist X close button — top-right */}
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute top-3 right-3 z-50 p-1.5 rounded-full transition-all hover:opacity-70"
+          style={{ color: dark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)" }}
+        >
+          <X size={16} strokeWidth={2.5} />
+        </button>
+
+        <div className="flex h-full overflow-hidden" style={{ borderRadius: "14px" }}>
           {/* ── LEFT SIDEBAR ─────────────────────────────────────── */}
           <div
             className="flex flex-col shrink-0 overflow-hidden"
             style={{
-              width: "260px",
+              width: "270px",
               background: T.sidebar,
               borderRight: `1px solid ${T.divider}`,
               backdropFilter: "blur(20px)",
@@ -329,10 +364,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                       onClick={handleCopyInviteLink}
                       disabled={inviteLinkLoading}
                       className="w-full flex items-center gap-2 px-3 py-2 text-[12px] font-medium transition-all"
-                      style={{
-                        color: T.accent,
-                        borderTop: `1px solid ${T.divider}`,
-                      }}>
+                      style={{ color: T.accent, borderTop: `1px solid ${T.divider}` }}>
                       {inviteLinkLoading
                         ? <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
                         : <><Link size={11} /> Copy invite link <Copy size={10} className="opacity-50 ml-auto" /></>}
@@ -388,7 +420,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
               </div>
             </div>
 
-            {/* Pinned avatars (top 3 teams) */}
+            {/* Pinned avatars */}
             {pinnedTeams.length > 0 && !searchQuery && (
               <div className="px-3 pb-2">
                 <div className="flex gap-3">
@@ -408,6 +440,33 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Pending Invites Section */}
+            {pendingInvites.length > 0 && !searchQuery && (
+              <div className="px-3 pb-1">
+                <p style={{ color: T.sectionLabel, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
+                  Pending Invites
+                </p>
+                {pendingInvites.map(inv => (
+                  <div key={inv.id} className="flex items-center gap-2.5 px-2 py-2 rounded-lg mb-0.5"
+                    style={{ background: T.pendingBadge }}>
+                    <UserAvatar userId={inv.created_by} displayName="Invited" pending size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p style={{ color: T.textPrimary, fontSize: "13px", fontWeight: 500 }} className="truncate">
+                        Invite #{inv.token.slice(0, 6)}…
+                      </p>
+                      <p style={{ color: T.textTertiary, fontSize: "11px" }}>
+                        {formatConversationTime(inv.created_at)}
+                      </p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                      style={{ background: T.pendingBadge, color: T.pendingText, border: `1px solid ${T.pendingText}40` }}>
+                      Pending
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -478,14 +537,12 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                   </button>
                 );
               })}
-
             </div>
           </div>
 
           {/* ── RIGHT MAIN AREA ──────────────────────────────────── */}
           <div className="flex-1 flex flex-col overflow-hidden" style={{ background: T.chatBg }}>
             {!activeTeam ? (
-              /* No team selected */
               <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
                 <div className="w-16 h-16 rounded-full flex items-center justify-center"
                   style={{ background: dark ? "rgba(44,44,46,1)" : "rgba(229,229,234,1)" }}>
@@ -504,10 +561,8 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 </button>
               </div>
             ) : showInfo ? (
-              /* Info panel */
               <motion.div key="info" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
                 className="flex flex-col h-full">
-                {/* Info header */}
                 <div className="flex items-center gap-3 px-4 py-3"
                   style={{ borderBottom: `1px solid ${T.divider}`, background: T.header, backdropFilter: "blur(20px)" }}>
                   <button onClick={() => setShowInfo(false)} style={{ color: T.accent }} className="flex items-center gap-0.5 text-[14px]">
@@ -517,7 +572,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ scrollbarWidth: "none" }}>
-                  {/* Team avatar */}
                   <div className="flex flex-col items-center gap-2 py-2">
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white ${getUserColor(activeTeam.id)}`}>
                       {activeTeam.name[0]?.toUpperCase()}
@@ -526,7 +580,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     <p style={{ color: T.textSecondary, fontSize: "13px" }}>{members.length} member{members.length !== 1 ? "s" : ""}</p>
                   </div>
 
-                  {/* Invite */}
+                  {/* Invite section */}
                   <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${T.divider}` }}>
                     <p style={{ color: T.sectionLabel, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", padding: "10px 14px 6px" }}>
                       Add People
@@ -577,7 +631,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     ))}
                   </div>
 
-                  {/* Danger */}
                   {isAdmin && activeTeamId && (
                     <button onClick={() => handleDeleteTeam(activeTeamId)} disabled={deletingTeamId === activeTeamId}
                       className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[14px] font-medium disabled:opacity-30 transition-all"
@@ -588,32 +641,29 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 </div>
               </motion.div>
             ) : (
-              /* Chat view */
               <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
-                {/* Chat header */}
+                {/* Chat header — centered avatar + name */}
                 <div
-                  className="flex items-center gap-3 px-4 py-2.5 shrink-0"
+                  className="flex items-center justify-center px-4 py-2.5 shrink-0 relative"
                   style={{ borderBottom: `1px solid ${T.divider}`, background: T.header, backdropFilter: "blur(20px)" }}>
                   <div className="flex flex-col items-center cursor-pointer" onClick={() => setShowInfo(true)}>
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white ${getUserColor(activeTeam.id)}`}>
                       {activeTeam.name[0]?.toUpperCase()}
                     </div>
-                  </div>
-                  <div className="flex-1 cursor-pointer" onClick={() => setShowInfo(true)}>
-                    <p style={{ color: T.textPrimary, fontSize: "15px", fontWeight: 600, lineHeight: 1.2 }}>{activeTeam.name}</p>
-                    <p style={{ color: T.textSecondary, fontSize: "11px" }}>
+                    <p style={{ color: T.textPrimary, fontSize: "13px", fontWeight: 600, lineHeight: 1.2, marginTop: 2 }}>{activeTeam.name}</p>
+                    <p style={{ color: T.textSecondary, fontSize: "10px" }}>
                       {typingNames.length > 0 ? `${typingNames[0]} is typing…` : `${members.length} member${members.length !== 1 ? "s" : ""}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => setShowInfo(true)} style={{ color: T.accent }} className="p-1.5 rounded-full transition-all hover:opacity-70">
-                      <Info size={17} />
-                    </button>
-                  </div>
+                  <button onClick={() => setShowInfo(true)} style={{ color: T.accent }}
+                    className="absolute right-12 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all hover:opacity-70">
+                    <Info size={17} />
+                  </button>
                 </div>
 
                 {/* Messages area */}
-                <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ scrollbarWidth: "none" }}>
+                <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ scrollbarWidth: "none" }}
+                  onClick={() => setLongPressedMsgId(null)}>
                   {loading && <p style={{ color: T.textTertiary, fontSize: "13px", textAlign: "center", paddingTop: 40 }}>Loading…</p>}
 
                   {!loading && messages.length === 0 && (
@@ -638,8 +688,9 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     const isLast = !nextMsg || nextMsg.user_id !== msg.user_id;
                     const showTime = !prevMsg || (new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime()) > 5 * 60 * 1000;
 
-                    const myRadius = `18px ${isFirst ? "6px" : "18px"} ${isLast ? "18px" : "6px"} 18px`;
-                    const theirRadius = `${isFirst ? "6px" : "18px"} 18px 18px ${isLast ? "18px" : "6px"}`;
+                    // iMessage-style tail radius
+                    const myRadius = `18px ${isFirst ? "4px" : "18px"} ${isLast ? "18px" : "4px"} 18px`;
+                    const theirRadius = `${isFirst ? "4px" : "18px"} 18px 18px ${isLast ? "18px" : "4px"}`;
 
                     return (
                       <React.Fragment key={msg.id}>
@@ -653,7 +704,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                         <div
                           className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"} ${isLast ? "mb-1" : "mb-[2px]"}`}
                           onMouseEnter={() => setHoveredMsgId(msg.id)}
-                          onMouseLeave={() => setHoveredMsgId(null)}>
+                          onMouseLeave={() => { setHoveredMsgId(null); cancelLongPress(); }}>
                           {/* Avatar */}
                           <div className="w-8 shrink-0 flex justify-center">
                             {!isMe && isLast && (
@@ -667,6 +718,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                             )}
                             <div className="relative">
                               <div
+                                onMouseDown={() => startLongPress(msg.id)}
+                                onMouseUp={cancelLongPress}
+                                onTouchStart={() => startLongPress(msg.id)}
+                                onTouchEnd={cancelLongPress}
                                 style={{
                                   background: isMe ? T.myBubble : T.theirBubble,
                                   color: isMe ? "#fff" : T.textPrimary,
@@ -674,13 +729,15 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                                   padding: "8px 14px",
                                   fontSize: "15px",
                                   lineHeight: 1.4,
+                                  cursor: "default",
+                                  userSelect: "text",
                                 }}>
                                 {msg.content}
                               </div>
 
-                              {/* Reaction picker on hover */}
+                              {/* Reaction picker — hover or long-press */}
                               <AnimatePresence>
-                                {hoveredMsgId === msg.id && (
+                                {showReactionFor(msg.id) && (
                                   <motion.div
                                     initial={{ opacity: 0, scale: 0.85, y: 4 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -690,9 +747,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                                       background: T.reactionBg,
                                       border: `1px solid ${T.reactionBorder}`,
                                       boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+                                      backdropFilter: "blur(20px)",
                                     }}>
                                     {REACTION_EMOJIS.map(e => (
-                                      <button key={e} onClick={() => toggleReaction(msg.id, e)}
+                                      <button key={e} onClick={() => { toggleReaction(msg.id, e); setLongPressedMsgId(null); }}
                                         className="text-[16px] hover:scale-125 transition-transform leading-none">
                                         {e}
                                       </button>
@@ -723,7 +781,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                               </div>
                             )}
 
-                            {/* Delivered (last own message) */}
+                            {/* Delivered */}
                             {isMe && isLast && idx === messages.length - 1 && (
                               <span style={{ color: T.textTertiary, fontSize: "10px", marginTop: 2, paddingRight: 2 }}>Delivered</span>
                             )}
@@ -750,10 +808,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 </div>
 
                 {/* Input bar */}
-                <div className="px-3 py-2.5 shrink-0" style={{ borderTop: `1px solid ${T.divider}`, background: T.inputBar }}>
+                <div className="px-3 py-2.5 shrink-0" style={{ borderTop: `1px solid ${T.divider}`, background: T.inputBar, backdropFilter: "blur(20px)" }}>
                   {showEmojiPicker && (
                     <div className="mb-2 p-2 rounded-xl grid grid-cols-10 gap-1"
-                      style={{ background: dark ? "#1c1c1e" : "#e5e5ea" }}>
+                      style={{ background: dark ? "rgba(28,28,30,0.95)" : "rgba(229,229,234,0.95)" }}>
                       {INSERT_EMOJIS.map(e => (
                         <button key={e} onClick={() => insertEmoji(e)}
                           className="text-[18px] hover:scale-125 transition-transform leading-none">{e}</button>
@@ -761,11 +819,9 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    {user && <UserAvatar userId={user.id} displayName={getMemberName(user.id)} avatarUrl={avatarMap[user.id]} size="sm" />}
-                    <button onClick={() => setShowEmojiPicker(v => !v)}
-                      className="p-1.5 rounded-full transition-all shrink-0"
-                      style={{ color: showEmojiPicker ? T.accent : T.textTertiary }}>
-                      <Smile size={18} />
+                    <button className="p-1.5 rounded-full transition-all shrink-0"
+                      style={{ color: T.textTertiary }}>
+                      <Plus size={18} />
                     </button>
                     <div className="flex-1 flex items-center gap-2 rounded-full px-3 py-2 border transition-all"
                       style={{ background: T.fieldBg, borderColor: T.fieldBorder }}>
@@ -777,11 +833,16 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                         className="flex-1 bg-transparent outline-none text-[15px]"
                         style={{ color: T.textPrimary }}
                       />
+                      <button onClick={() => setShowEmojiPicker(v => !v)}
+                        className="p-0.5 rounded-full transition-all shrink-0"
+                        style={{ color: showEmojiPicker ? T.accent : T.textTertiary }}>
+                        <Smile size={16} />
+                      </button>
                     </div>
                     <button onClick={handleSend} disabled={!text.trim()}
                       className="w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0"
                       style={{
-                        background: text.trim() ? T.accent : (dark ? "#2c2c2e" : "#e5e5ea"),
+                        background: text.trim() ? T.accent : (dark ? "rgba(44,44,46,1)" : "rgba(229,229,234,1)"),
                         color: text.trim() ? "#fff" : T.textTertiary,
                       }}>
                       <Send size={14} />
