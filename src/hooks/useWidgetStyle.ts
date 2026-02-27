@@ -67,9 +67,12 @@ export function getWidgetStyle(id: string): WidgetStyle {
 }
 
 export function setWidgetStyle(id: string, updates: Partial<WidgetStyle>) {
+  // Only persist the per-widget overrides, NOT the merged result with global.
+  // This prevents one widget's changes from bleeding into others via the global merge.
+  const existingPerWidget: Partial<WidgetStyle> = cachedStyles[id] || {};
   cachedStyles = {
     ...cachedStyles,
-    [id]: { ...getWidgetStyle(id), ...updates },
+    [id]: { ...DEFAULT_WIDGET_STYLE, ...existingPerWidget, ...updates },
   };
   persist();
 }
