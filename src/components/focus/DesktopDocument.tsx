@@ -19,6 +19,8 @@ interface DesktopDocumentProps {
   onRefetch?: () => void;
   dragState?: { id: string; x: number; y: number } | null;
   onDragStateChange?: (state: { id: string; x: number; y: number } | null) => void;
+  isMarqueeSelected?: boolean;
+  onGroupDragStart?: (e: React.PointerEvent, itemId: string) => boolean;
 }
 
 const ICON_COLORS = [
@@ -43,7 +45,7 @@ const BG_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange }: DesktopDocumentProps) => {
+const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart }: DesktopDocumentProps) => {
   const { user } = useAuth();
   const store = useFocusStore();
   const { folders, createBlock } = useFlux();
@@ -84,11 +86,12 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
+    if (isMarqueeSelected && onGroupDragStart && onGroupDragStart(e, doc.id)) return;
     dragging.current = true;
     didDrag.current = false;
     setIsDraggingActive(true);
     offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-  }, [pos.x, pos.y]);
+  }, [pos.x, pos.y, isMarqueeSelected, onGroupDragStart, doc.id]);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
@@ -159,7 +162,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   return (
     <>
       <div
-        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group ${selected ? "ring-2 ring-primary/60" : ""}`}
+        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group ${isMarqueeSelected ? "ring-2 ring-blue-400/60 bg-blue-400/10" : selected ? "ring-2 ring-primary/60" : ""}`}
         style={{ left: pos.x, top: pos.y, width: 90, minHeight: 90, zIndex: isDraggingActive ? 9999 : selected ? 55 : 45, background: "transparent", backdropFilter: docOpacity <= 0.06 ? "none" : undefined, WebkitBackdropFilter: docOpacity <= 0.06 ? "none" : undefined, boxShadow: docOpacity <= 0.06 ? "none" : (isDraggingActive ? "0 20px 60px rgba(0,0,0,0.5)" : undefined), border: docOpacity <= 0.06 ? "none" : undefined }}
         onPointerDown={handlePointerDown}
         onClick={(e) => { e.stopPropagation(); if (!didDrag.current) setSelected(s => !s); }}

@@ -16,6 +16,8 @@ interface DesktopFolderProps {
   docDragState?: { id: string; x: number; y: number } | null;
   onDragStateChange?: (state: { id: string; x: number; y: number } | null) => void;
   onDocDropped?: () => void;
+  isMarqueeSelected?: boolean;
+  onGroupDragStart?: (e: React.PointerEvent, itemId: string) => boolean;
 }
 
 const FOLDER_COLORS = [
@@ -29,7 +31,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
@@ -113,11 +115,13 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
+    // If this item is part of a marquee group selection, start group drag
+    if (isMarqueeSelected && onGroupDragStart && onGroupDragStart(e, folder.id)) return;
     setSelected(true);
     dragging.current = true;
     didDrag.current = false;
     offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-  }, [pos.x, pos.y]);
+  }, [pos.x, pos.y, isMarqueeSelected, onGroupDragStart, folder.id]);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
@@ -221,7 +225,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
         }}
         transition={justAbsorbed ? { duration: 0.4, ease: "easeOut" } : { duration: 0.2 }}
         className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl ${
-          isDropTarget ? "ring-2 ring-blue-400/60 shadow-[0_0_28px_rgba(59,130,246,0.35)]" : (selected && !isDragging ? "ring-2 ring-primary/50" : "")
+          isDropTarget ? "ring-2 ring-blue-400/60 shadow-[0_0_28px_rgba(59,130,246,0.35)]" : isMarqueeSelected ? "ring-2 ring-blue-400/60 bg-blue-400/10" : (selected && !isDragging ? "ring-2 ring-primary/50" : "")
         }`}
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,
