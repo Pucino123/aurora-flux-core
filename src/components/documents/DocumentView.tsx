@@ -84,6 +84,19 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     }
   }, [doc.content]);
 
+  // Listen for Aura image insertion events
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { url } = e.detail || {};
+      if (!url || !editorRef.current) return;
+      const img = `<img src="${url}" style="max-width:100%;border-radius:8px;margin:8px 0;" alt="Aura generated image" />`;
+      editorRef.current.innerHTML += img;
+      onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+    };
+    window.addEventListener("aura:insert-image" as any, handler);
+    return () => window.removeEventListener("aura:insert-image" as any, handler);
+  }, [doc.id, onUpdate]);
+
   // Ghost text: suggest meeting notes if doc is blank and matches a recent calendar event
   useEffect(() => {
     const isEmpty = !((doc.content as any)?.html?.replace(/<[^>]*>/g, "").trim());
@@ -330,6 +343,28 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
     const rh = newRowH ?? rowHeaders;
     onUpdate(doc.id, { content: { rows: newRows, cellFormats: fmts, colHeaders: ch, rowHeaders: rh } });
   }, [doc.id, onUpdate, cellFormats, colHeaders, rowHeaders]);
+
+  // Listen for Aura formula injection events
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { cell, formula } = e.detail || {};
+      if (!cell || !formula) return;
+      // Parse cell ref e.g. "B3" → col=1, row=2
+      const match = cell.match(/^([A-Z]+)(\d+)$/i);
+      if (!match) return;
+      let col = 0;
+      for (let i = 0; i < match[1].length; i++) col = col * 26 + (match[1].toUpperCase().charCodeAt(i) - 64);
+      col -= 1; // 0-indexed
+      const row = parseInt(match[2], 10) - 1; // 0-indexed
+      setRows(prev => {
+        const updated = prev.map((r, ri) => ri === row ? r.map((c, ci) => ci === col ? formula : c) : r);
+        saveContent(updated);
+        return updated;
+      });
+    };
+    window.addEventListener("aura:inject-formula" as any, handler);
+    return () => window.removeEventListener("aura:inject-formula" as any, handler);
+  }, [saveContent]);
 
   const resolveCell = useCallback((col: number, row: number): number => {
     const val = rows[row]?.[col];

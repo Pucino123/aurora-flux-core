@@ -586,6 +586,9 @@ CAPABILITIES:
 - Summarize the user's context (tasks, schedule, goals).
 - Give productivity feedback, analyze workload, suggest task prioritization.
 - Chain multiple tool calls in a single response to complete multi-step workflows.
+- Generate images and place them on the dashboard as a widget OR insert into an open document.
+- Inject formulas directly into spreadsheet cells when a spreadsheet document is open.
+- When generating images, write a rich, detailed visual prompt. Target "dashboard" unless the user is asking to insert into a document.
 
 SMART DEFAULTS — NEVER ASK FOR CLARIFICATION ON SIMPLE REQUESTS:
 - "Book a meeting" → title="Meeting", time = next clean hour slot (e.g. 10:00), duration="30m", date=today
@@ -934,6 +937,37 @@ ${context}
             },
           },
         },
+        {
+          type: "function",
+          function: {
+            name: "generate_image",
+            description: "Generate an image using AI. Use when the user asks to 'generate', 'create', 'draw', or 'make' an image, illustration, concept art, or any visual. Always include enough visual detail in the prompt.",
+            parameters: {
+              type: "object",
+              properties: {
+                prompt: { type: "string", description: "Detailed image generation prompt describing the visual content, style, mood, and composition" },
+                target: { type: "string", enum: ["dashboard", "document"], description: "Where to place the image: 'dashboard' spawns a floating image widget, 'document' inserts into the currently open document" },
+              },
+              required: ["prompt", "target"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "inject_formula",
+            description: "Inject a formula or value directly into a spreadsheet cell. Only use when a spreadsheet document is open (context says 'Open document' with a spreadsheet). The cell reference must be in A1 notation (e.g. B3, C10).",
+            parameters: {
+              type: "object",
+              properties: {
+                cell: { type: "string", description: "Cell reference in A1 notation, e.g. 'B3', 'C10'" },
+                formula: { type: "string", description: "The formula or value to inject, e.g. '=SUM(A1:A10)' or '=A2*B2'" },
+                note: { type: "string", description: "Brief explanation of what the formula does (optional)" },
+              },
+              required: ["cell", "formula"],
+            },
+          },
+        },
       ],
       stream: true,
     }),
@@ -949,6 +983,34 @@ ${context}
 
   return new Response(response.body, {
     headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+  });
+}
+
+async function handleImageGenerate(prompt: string, apiKey: string) {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-3-pro-image-preview",
+      messages: [{ role: "user", content: prompt }],
+      modalities: ["image", "text"],
+    }),
+  });
+  const errResp = handleAIError(response);
+  if (errResp) return errResp;
+  if (!response.ok) {
+    const t = await response.text();
+    console.error("Image gen error:", response.status, t);
+    throw new Error("Image generation failed");
+  }
+  const data = await response.json();
+  const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (!imageData) throw new Error("No image returned");
+  // Extract base64 and mime type
+  const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid image format");
+  return new Response(JSON.stringify({ imageBase64: match[2], mimeType: match[1] }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
@@ -982,8 +1044,13 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
+    const { type, messages, context, action, text, question, mode, persona_key, sender_name, prompt } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
     if (type === "classify") return await handleClassify(messages, context, LOVABLE_API_KEY);
     if (type === "plan") return await handlePlan(context, LOVABLE_API_KEY);
+    if (type === "generate-image") return await handleImageGenerate(prompt || "", LOVABLE_API_KEY);
     if (type === "aura") return await handleAura(messages || [], context || "", LOVABLE_API_KEY);
     if (type === "council") return await handleCouncil(messages ?? [{ role: "user", content: question || "" }], LOVABLE_API_KEY);
     if (type === "council-quick") return await handleCouncilQuick(question, mode, persona_key, LOVABLE_API_KEY);
