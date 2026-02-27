@@ -426,13 +426,18 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
           onChange={handleFileSelect}
         />
 
-        {/* Single minimalist X close */}
+        {/* macOS-style close button */}
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute top-3 right-3 z-50 p-1.5 rounded-full transition-all hover:opacity-70"
-          style={{ color: dark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)" }}
+          className="absolute top-3 left-3 z-50 group w-[13px] h-[13px] rounded-full flex items-center justify-center transition-all"
+          style={{
+            background: dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)",
+            border: `0.5px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#ff5f57"; e.currentTarget.style.borderColor = "#e0443e"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)"; e.currentTarget.style.borderColor = dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"; }}
         >
-          <X size={16} strokeWidth={2.5} />
+          <X size={8} strokeWidth={2.5} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "rgba(80,0,0,0.8)" }} />
         </button>
 
         <div className="flex h-full overflow-hidden" style={{ borderRadius: "14px" }}>
