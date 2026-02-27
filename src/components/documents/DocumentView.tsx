@@ -97,7 +97,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     return () => window.removeEventListener("aura:insert-image" as any, handler);
   }, [doc.id, onUpdate]);
 
-  // Listen for Aura write-to-document events
+  // Listen for Aura write-to-document events (instant injection)
   useEffect(() => {
     const handler = (e: CustomEvent) => {
       const { html, append } = e.detail || {};
@@ -111,6 +111,69 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     };
     window.addEventListener("aura:write-to-document" as any, handler);
     return () => window.removeEventListener("aura:write-to-document" as any, handler);
+  }, [doc.id, onUpdate]);
+
+  // Listen for Aura stream-to-document (typewriter word-by-word)
+  useEffect(() => {
+    let rafId: number;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const handler = (e: CustomEvent) => {
+      const { text, append } = e.detail || {};
+      if (!text || !editorRef.current) return;
+
+      // Split into words (preserve spaces/punctuation)
+      const words = text.match(/\S+|\s+/g) || [];
+      let wordIdx = 0;
+
+      // Base HTML to start from
+      const baseHtml = append ? (editorRef.current.innerHTML || "") : "";
+
+      // Build a streaming paragraph container
+      const streamId = `aura-stream-${Date.now()}`;
+      editorRef.current.innerHTML =
+        baseHtml + `<p id="${streamId}" style="white-space:pre-wrap;"></p>`;
+
+      let accumulated = "";
+      const saveTimer = { current: null as ReturnType<typeof setTimeout> | null };
+
+      const typeNextWord = () => {
+        if (wordIdx >= words.length) {
+          // Final save
+          if (saveTimer.current) clearTimeout(saveTimer.current);
+          onUpdate(doc.id, { content: { html: editorRef.current!.innerHTML } });
+          return;
+        }
+        accumulated += words[wordIdx];
+        wordIdx++;
+
+        const el = editorRef.current?.querySelector(`#${streamId}`);
+        if (el) el.textContent = accumulated;
+
+        // Scroll into view
+        editorRef.current?.scrollTo({ top: editorRef.current.scrollHeight, behavior: "smooth" });
+
+        // Debounced save every ~30 words
+        if (wordIdx % 30 === 0) {
+          if (saveTimer.current) clearTimeout(saveTimer.current);
+          saveTimer.current = setTimeout(() => {
+            onUpdate(doc.id, { content: { html: editorRef.current!.innerHTML } });
+          }, 300);
+        }
+
+        // Speed: 30ms base, slight jitter for natural feel
+        const delay = 28 + Math.random() * 18;
+        timeoutId = setTimeout(typeNextWord, delay);
+      };
+
+      typeNextWord();
+    };
+
+    window.addEventListener("aura:stream-to-document" as any, handler);
+    return () => {
+      window.removeEventListener("aura:stream-to-document" as any, handler);
+      cancelAnimationFrame(rafId);
+      clearTimeout(timeoutId);
+    };
   }, [doc.id, onUpdate]);
 
 

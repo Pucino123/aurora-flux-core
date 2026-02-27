@@ -662,16 +662,12 @@ const AuraWidget: React.FC = () => {
     } else if (name === "write_to_document") {
       const { title, content, target, folder_id } = args;
       if (!content) return;
-      const htmlContent = content
-        .split(/\n{2,}/)
-        .map((p: string) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
-        .join("");
       if (target === "current") {
-        // Dispatch to currently open document
-        window.dispatchEvent(new CustomEvent("aura:write-to-document", { detail: { html: htmlContent, append: true } }));
-        toast.success("Content written to document ✓");
+        // Stream word-by-word into the currently open document
+        window.dispatchEvent(new CustomEvent("aura:stream-to-document", { detail: { text: content, append: true } }));
+        toast.success("Aura is writing into the document…");
       } else {
-        // Create new document and inject content
+        // Create new empty document, navigate to it, then stream content in
         if (!user) { toast.error("Sign in to create documents"); return; }
         const noteTitle = title || "Document";
         const dedupKey = `aura-create-note-${noteTitle}`;
@@ -683,15 +679,18 @@ const AuraWidget: React.FC = () => {
           title: noteTitle,
           type: "text",
           folder_id: folder_id || null,
-          content: { html: htmlContent },
+          content: { html: "" },
         }).select().single().then(({ data, error }: { data: any; error: any }) => {
           if (error) { toast.error("Failed to create document"); return; }
-          toast.success(`Document created: ${noteTitle}`);
-          // Navigate to documents and open the new doc
+          toast.success(`Aura is writing "${noteTitle}"…`);
           flux.setActiveView("documents");
+          // Wait for doc to open, then stream
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent("aura:open-document", { detail: { docId: data.id } }));
-          }, 300);
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent("aura:stream-to-document", { detail: { text: content, append: false } }));
+            }, 400);
+          }, 350);
         });
       }
     } else if (name === "inject_formula") {
@@ -943,20 +942,15 @@ const AuraWidget: React.FC = () => {
                             {msg.content.length > 300 && (
                               <button
                                 onClick={() => {
-                                  const html = msg.content
-                                    .split(/\n{2,}/)
-                                    .map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
-                                    .join("");
                                   if (injectedDocContext) {
-                                    window.dispatchEvent(new CustomEvent("aura:write-to-document", { detail: { html, append: true } }));
-                                    toast.success("Inserted into document ✓");
+                                    window.dispatchEvent(new CustomEvent("aura:stream-to-document", { detail: { text: msg.content, append: true } }));
+                                    toast.success("Streaming into document…");
                                   } else {
-                                    window.dispatchEvent(new CustomEvent("aura:write-to-document", { detail: { html, append: false, createNew: true } }));
-                                    toast.success("Opening in new document…");
+                                    toast.info("Open a document first, then use this button to stream text into it.");
                                   }
                                 }}
                                 className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-white/40 hover:text-white/70 hover:bg-white/10"
-                                title="Insert into document"
+                                title="Stream into open document"
                               >
                                 📄 Insert into document
                               </button>
