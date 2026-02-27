@@ -404,9 +404,9 @@ const WidgetStyleEditor = ({ style, onUpdate, onReset, onClose, initialPosition 
         <button
           onClick={(e) => { e.stopPropagation(); (onClose ?? onReset)(); }}
           onPointerDown={(e) => e.stopPropagation()}
-          className="p-1 rounded-full hover:bg-white/10 text-white/35 hover:text-white/60 transition-colors"
-        >
-          <X size={14} />
+          className="group flex items-center justify-center"
+          style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.12)", boxShadow: "0 0.5px 1px rgba(0,0,0,0.15)" }}>
+          <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100" style={{ color: "rgba(80,0,0,0.7)" }} />
         </button>
       </div>
 

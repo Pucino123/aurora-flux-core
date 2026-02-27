@@ -104,13 +104,17 @@ const FocusContent = () => {
   // Widget style for active editor target
   const activeStyle = useWidgetStyle(styleEditorTarget ?? "__none__");
 
+  // Store context menu position for coordinate-based placement
+  const contextMenuPosRef = useRef<{ x: number; y: number } | null>(null);
+
   const handleCreateDocument = useCallback(async (type: "text" | "spreadsheet") => {
+    contextMenuPosRef.current = contextMenu;
     setShowDocPicker(false);
     setContextMenu(null);
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
     await createDocument(title, type, null);
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-  }, [createDocument]);
+  }, [createDocument, contextMenu]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
@@ -119,6 +123,7 @@ const FocusContent = () => {
   }, []);
 
   const handleAddStickyNote = useCallback(() => {
+    const pos = contextMenu;
     setContextMenu(null);
     const COLORS = [
       { key: "yellow" }, { key: "purple" }, { key: "green" }, { key: "blue" },
@@ -126,10 +131,8 @@ const FocusContent = () => {
     ];
     const color = COLORS[focusStickyNotes.length % COLORS.length];
     const rotation = Math.round((Math.random() - 0.5) * 8);
-    const vw = Math.min(window.innerWidth - 200, 500);
-    const vh = Math.min(window.innerHeight - 250, 400);
-    const baseX = 40 + Math.random() * Math.max(vw, 60);
-    const baseY = 60 + Math.random() * Math.max(vh, 60);
+    const baseX = pos ? pos.x : 40 + Math.random() * Math.min(window.innerWidth - 200, 500);
+    const baseY = pos ? pos.y : 60 + Math.random() * Math.min(window.innerHeight - 250, 400);
     setFocusStickyNotes([
       ...focusStickyNotes,
       { id: `fn-${Date.now()}`, text: "", color: color.key, x: baseX, y: baseY, rotation, opacity: 1 },
@@ -137,7 +140,7 @@ const FocusContent = () => {
     if (!activeWidgets.includes("notes")) {
       // Toggle it on via the store if possible
     }
-  }, [focusStickyNotes, setFocusStickyNotes, activeWidgets]);
+  }, [focusStickyNotes, setFocusStickyNotes, activeWidgets, contextMenu]);
 
   const handleDragStateChange = useCallback((state: { id: string; x: number; y: number } | null) => {
     if (state === null && dragStateRef.current) {
@@ -337,7 +340,7 @@ const FocusContent = () => {
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button
-              onClick={() => { setContextMenu(null); setShowCreateFolder(true); }}
+              onClick={() => { contextMenuPosRef.current = contextMenu; setContextMenu(null); setShowCreateFolder(true); }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"
             >
               <FolderPlus size={14} className="text-muted-foreground" /> New Folder

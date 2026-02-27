@@ -331,11 +331,9 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
                 </button>
               </PopoverContent>
             </Popover>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <X size={16} />
+            <button onClick={onClose} className="group flex items-center justify-center"
+              style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.12)", boxShadow: "0 0.5px 1px rgba(0,0,0,0.15)" }}>
+              <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100" style={{ color: "rgba(80,0,0,0.7)" }} />
             </button>
           </div>
 

@@ -80,8 +80,9 @@ const KeyboardShortcutsSheet = ({ open, onClose }: KeyboardShortcutsSheetProps) 
                     {isDanish ? "Tastaturgenveje" : "Keyboard Shortcuts"}
                   </h2>
                 </div>
-                <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary/60 transition-colors">
-                  <X size={14} className="text-muted-foreground" />
+                <button onClick={onClose} className="group flex items-center justify-center"
+                  style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.12)", boxShadow: "0 0.5px 1px rgba(0,0,0,0.15)" }}>
+                  <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100" style={{ color: "rgba(80,0,0,0.7)" }} />
                 </button>
               </div>
               <div className="p-5 space-y-5 max-h-[60vh] overflow-y-auto">

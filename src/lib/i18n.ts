@@ -228,6 +228,7 @@ const da: Record<string, string> = {
 
   "folder.create_title": "New folder",
   "folder.create_desc": "Enter folder description",
+  "folder.create_button": "Opret mappe",
   // Folders
   "folder.finance": "Økonomi",
   "folder.fitness": "Træning",
@@ -507,6 +508,7 @@ const en: Record<string, string> = {
   "budget.remaining": "Remaining",
   "budget.category_placeholder": "e.g. Food, Transport...",
   "budget.interactive": "Interactive Table",
+  "folder.create_button": "Create folder",
   "folder.finance": "Finances",
   "folder.fitness": "Fitness",
   "folder.notes": "Notes",

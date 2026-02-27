@@ -39,7 +39,10 @@ const WorkoutModal = ({ open, onClose }: WorkoutModalProps) => {
           <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative glass-panel rounded-2xl p-6 w-full max-w-md z-10">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold font-display">{t("wm.title")}</h3>
-              <button onClick={onClose} className="p-1 rounded-lg hover:bg-secondary transition-colors"><X size={18} className="text-muted-foreground" /></button>
+              <button onClick={onClose} className="group flex items-center justify-center"
+                style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.12)", boxShadow: "0 0.5px 1px rgba(0,0,0,0.15)" }}>
+                <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100" style={{ color: "rgba(80,0,0,0.7)" }} />
+              </button>
             </div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">{t("wm.what")}</label>
             <input value={activity} onChange={(e) => setActivity(e.target.value)} placeholder={t("wm.placeholder")} className="w-full px-4 py-2.5 rounded-xl bg-white/60 backdrop-blur border border-white/50 text-sm outline-none focus:border-primary/30 transition-colors mb-4" />
