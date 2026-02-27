@@ -168,28 +168,60 @@ async function streamAura(
 
 function useVoiceInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const recRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const levelRafRef = useRef<number>(0);
-  const [audioLevel, setAudioLevel] = useState(0);
 
-  const stop = useCallback(() => {
-    if (recRef.current) {
-      recRef.current.onend = null;
-      recRef.current.stop();
-      recRef.current = null;
-    }
-    // Tear down audio analyser
+  const stopAnalyser = useCallback(() => {
     cancelAnimationFrame(levelRafRef.current);
-    audioCtxRef.current?.close();
+    try { audioCtxRef.current?.close(); } catch {}
     audioCtxRef.current = null;
     analyserRef.current = null;
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
     setAudioLevel(0);
+  }, []);
+
+  const stop = useCallback(() => {
+    if (recRef.current) {
+      recRef.current.onend = null;
+      try { recRef.current.stop(); } catch {}
+      recRef.current = null;
+    }
+    stopAnalyser();
     setListening(false);
+  }, [stopAnalyser]);
+
+  // Start real-time amplitude tracking via Web Audio API
+  const startAnalyser = useCallback(() => {
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then((stream) => {
+      streamRef.current = stream;
+      const ctx = new AudioContext();
+      audioCtxRef.current = ctx;
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.5;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+      const buf = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        if (!analyserRef.current) return;
+        analyserRef.current.getByteFrequencyData(buf);
+        // Focus on voice frequency range (roughly bins 2-20 for 44.1kHz)
+        let sum = 0;
+        for (let i = 2; i < 30; i++) sum += buf[i];
+        const avg = sum / 28;
+        setAudioLevel(Math.min(avg / 90, 1));
+        levelRafRef.current = requestAnimationFrame(tick);
+      };
+      levelRafRef.current = requestAnimationFrame(tick);
+    }).catch(() => {
+      // Graceful fallback — orb still animates but without mic data
+    });
   }, []);
 
   const start = useCallback(() => {
@@ -210,31 +242,6 @@ function useVoiceInput(onResult: (text: string) => void) {
     rec.onerror = (e: any) => {
       if (e.error !== "no-speech") stop();
     };
-
-    // Start Web Audio API analyser for real-time amplitude
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      .then((stream) => {
-        streamRef.current = stream;
-        const ctx = new AudioContext();
-        audioCtxRef.current = ctx;
-        const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.6;
-        source.connect(analyser);
-        analyserRef.current = analyser;
-        const buf = new Uint8Array(analyser.frequencyBinCount);
-        const tick = () => {
-          if (!analyserRef.current) return;
-          analyserRef.current.getByteFrequencyData(buf);
-          const avg = buf.reduce((a, b) => a + b, 0) / buf.length;
-          setAudioLevel(Math.min(avg / 80, 1)); // normalise 0-1
-          levelRafRef.current = requestAnimationFrame(tick);
-        };
-        levelRafRef.current = requestAnimationFrame(tick);
-      })
-      .catch(() => {}); // mic permission denied — animation falls back gracefully
-
     rec.onend = () => {
       if (recRef.current === rec) {
         try { rec.start(); } catch { stop(); }
@@ -243,7 +250,9 @@ function useVoiceInput(onResult: (text: string) => void) {
     recRef.current = rec;
     rec.start();
     setListening(true);
-  }, [onResult, stop]);
+    // Start amplitude analyser in parallel — independent of SpeechRecognition
+    startAnalyser();
+  }, [onResult, stop, startAnalyser]);
 
   const toggle = useCallback(() => {
     if (listening) stop();
@@ -254,6 +263,9 @@ function useVoiceInput(onResult: (text: string) => void) {
 
   return { listening, toggle, stop, start, audioLevel };
 }
+
+
+
 
 type PillMode = "idle" | "hint" | "input" | "processing" | "response";
 
