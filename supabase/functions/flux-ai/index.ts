@@ -561,6 +561,96 @@ async function handleCouncilQuick(question: string, mode: string, personaKey: st
   return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
 }
 
+async function handleAura(messages: any[], context: string, apiKey: string) {
+  const systemPrompt = `You are Aura, a personal AI assistant embedded in the user's Flux productivity dashboard. You can see the user's current dashboard state.
+
+RULES:
+- Be concise, warm, and helpful. Max 3 sentences for simple questions.
+- Match the user's language (Danish → Danish, English → English, etc.)
+- You have access to the user's real-time dashboard data provided below.
+- When the user asks to create tasks, add schedule blocks, or clear their schedule, use the provided tools.
+- Never invent data — only reference what's in the context.
+
+═══ DASHBOARD CONTEXT ═══
+${context}
+═══ END CONTEXT ═══`;
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages,
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "add_task",
+            description: "Add a new task to the user's brain dump / task list",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Task title" },
+              },
+              required: ["title"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "add_to_plan",
+            description: "Add a time block to the user's daily schedule",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                time: { type: "string", description: "e.g. 09:00, 14:30" },
+                duration: { type: "string", description: "e.g. 30m, 60m" },
+                type: { type: "string", enum: ["deep", "meeting", "break", "workout", "custom"] },
+                date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
+              },
+              required: ["title", "time"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "clear_schedule",
+            description: "Clear all schedule blocks for a given date",
+            parameters: {
+              type: "object",
+              properties: {
+                date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
+              },
+            },
+          },
+        },
+      ],
+      stream: true,
+    }),
+  });
+
+  const errResp = handleAIError(response);
+  if (errResp) return errResp;
+  if (!response.ok) {
+    const t = await response.text();
+    console.error("Aura AI error:", response.status, t);
+    throw new Error("AI gateway error");
+  }
+
+  return new Response(response.body, {
+    headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+  });
+}
+
 async function handleMessageToAction(messageText: string, senderName: string, apiKey: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -593,6 +683,7 @@ serve(async (req) => {
 
     if (type === "classify") return await handleClassify(messages, context, LOVABLE_API_KEY);
     if (type === "plan") return await handlePlan(context, LOVABLE_API_KEY);
+    if (type === "aura") return await handleAura(messages || [], context || "", LOVABLE_API_KEY);
     if (type === "council") return await handleCouncil(messages ?? [{ role: "user", content: question || "" }], LOVABLE_API_KEY);
     if (type === "council-quick") return await handleCouncilQuick(question, mode, persona_key, LOVABLE_API_KEY);
     if (type === "document-chat") return await handleDocumentChat(messages, context, LOVABLE_API_KEY);

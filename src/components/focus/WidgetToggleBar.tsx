@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Timer, Music, CalendarClock, StickyNote, RotateCcw, Clock, BarChart3, FileText, Plus, MessageSquareQuote, Eye, EyeOff, Wind, Users } from "lucide-react";
+import { Timer, Music, CalendarClock, StickyNote, RotateCcw, Clock, BarChart3, FileText, Plus, MessageSquareQuote, Eye, EyeOff, Wind, Users, Sparkles } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
 import { AnimatePresence, motion } from "framer-motion";
 import FocusReportModal from "./FocusReportModal";
@@ -18,6 +18,7 @@ const OVERFLOW_WIDGETS = [
   { id: "stats", label: "Stats", icon: BarChart3 },
   { id: "scratchpad", label: "Scratch", icon: FileText },
   { id: "council", label: "Council", icon: Users },
+  { id: "aura", label: "Aura", icon: Sparkles },
 ];
 
 const WidgetToggleBar = () => {
