@@ -10,32 +10,37 @@ interface AuraOrbProps {
 }
 
 const stateConfig = {
-  idle:       { speedMul: 0.08, ampMul: 0.7,  opacity: 0.40, brightness: 1.0 },
-  listening:  { speedMul: 0.80, ampMul: 1.3,  opacity: 0.72, brightness: 1.4 },
-  processing: { speedMul: 2.2,  ampMul: 1.1,  opacity: 0.80, brightness: 1.6 },
-  speaking:   { speedMul: 0.45, ampMul: 1.0,  opacity: 0.58, brightness: 1.2 },
+  // idle: slow dreamy rotation — clearly visible color swirl
+  idle:       { speedMul: 0.30, ampMul: 0.85, opacity: 0.62, brightness: 1.05 },
+  // listening: fast energetic spin
+  listening:  { speedMul: 1.80, ampMul: 1.40, opacity: 0.85, brightness: 1.5  },
+  // processing: rapid chaotic churn
+  processing: { speedMul: 3.50, ampMul: 1.20, opacity: 0.90, brightness: 1.8  },
+  // speaking: smooth flowing pulse
+  speaking:   { speedMul: 0.90, ampMul: 1.10, opacity: 0.75, brightness: 1.3  },
 };
 
 // SVG turbulence config per state
 const svgStateConfig: Record<AuraState, { baseFreq: string; scale: number; seedDur: string; opacity: number }> = {
-  idle:       { baseFreq: "0.006 0.006", scale: 8,  seedDur: "18s", opacity: 0.48 },
-  listening:  { baseFreq: "0.010 0.010", scale: 18, seedDur: "5s",  opacity: 0.62 },
-  processing: { baseFreq: "0.014 0.014", scale: 24, seedDur: "4s",  opacity: 0.68 },
-  speaking:   { baseFreq: "0.008 0.008", scale: 12, seedDur: "7s",  opacity: 0.55 },
+  idle:       { baseFreq: "0.007 0.005", scale: 14, seedDur: "12s", opacity: 0.58 },
+  listening:  { baseFreq: "0.012 0.010", scale: 28, seedDur: "3s",  opacity: 0.72 },
+  processing: { baseFreq: "0.018 0.014", scale: 38, seedDur: "2s",  opacity: 0.80 },
+  speaking:   { baseFreq: "0.009 0.007", scale: 20, seedDur: "5s",  opacity: 0.65 },
 };
 
+// Each blob: hue, different speeds & opposite orbit directions (negative spd = counter-clockwise)
 const BLOBS = [
-  // Cyan cluster — bigger radius, wider orbit
-  { hue: 185, sat: 100, light: 80, ox: 0.10, oy: -0.10, rad: 0.85, spd: 0.10, ph: 0.0,  orbitR: 0.52 },
-  { hue: 195, sat: 90,  light: 82, ox: -0.05,oy: -0.05, rad: 0.70, spd: 0.14, ph: 1.1,  orbitR: 0.40 },
-  // Purple cluster
-  { hue: 275, sat: 88,  light: 72, ox: -0.08,oy: 0.08,  rad: 0.80, spd: 0.08, ph: 2.4,  orbitR: 0.55 },
-  { hue: 260, sat: 80,  light: 68, ox: 0.05, oy: 0.05,  rad: 0.65, spd: 0.17, ph: 3.8,  orbitR: 0.38 },
-  // Pink / magenta cluster
-  { hue: 320, sat: 95,  light: 75, ox: 0.06, oy: 0.06,  rad: 0.75, spd: 0.12, ph: 5.0,  orbitR: 0.48 },
-  { hue: 340, sat: 85,  light: 78, ox: -0.04,oy: 0.04,  rad: 0.60, spd: 0.11, ph: 1.7,  orbitR: 0.35 },
-  // Accent teal center anchor — slow wide orbit to blend colors
-  { hue: 210, sat: 80,  light: 70, ox: 0.0,  oy: 0.0,   rad: 0.55, spd: 0.06, ph: 4.2,  orbitR: 0.30 },
+  // Cyan — orbits clockwise, wide
+  { hue: 188, sat: 100, light: 80, ox: 0.0, oy: 0.0, rad: 0.80, spd:  0.28, ph: 0.0,  orbitR: 0.54 },
+  { hue: 198, sat: 90,  light: 84, ox: 0.0, oy: 0.0, rad: 0.62, spd:  0.19, ph: 1.0,  orbitR: 0.38 },
+  // Purple — counter-clockwise for contrast
+  { hue: 272, sat: 90,  light: 72, ox: 0.0, oy: 0.0, rad: 0.78, spd: -0.22, ph: 2.1,  orbitR: 0.56 },
+  { hue: 258, sat: 82,  light: 68, ox: 0.0, oy: 0.0, rad: 0.60, spd: -0.35, ph: 3.5,  orbitR: 0.40 },
+  // Pink/Magenta — clockwise, medium orbit
+  { hue: 322, sat: 96,  light: 76, ox: 0.0, oy: 0.0, rad: 0.72, spd:  0.17, ph: 4.8,  orbitR: 0.50 },
+  { hue: 338, sat: 88,  light: 80, ox: 0.0, oy: 0.0, rad: 0.55, spd:  0.26, ph: 1.6,  orbitR: 0.32 },
+  // Warm teal — slow counter-clockwise anchor
+  { hue: 210, sat: 82,  light: 72, ox: 0.0, oy: 0.0, rad: 0.50, spd: -0.12, ph: 3.2,  orbitR: 0.28 },
 ];
 
 const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
@@ -137,11 +142,13 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       ctx.globalCompositeOperation = "screen";
 
       for (const blob of BLOBS) {
-        const orbitAngle = t * blob.spd * 6.28 + blob.ph;
-        const breathe = 0.85 + 0.15 * Math.sin(t * blob.spd * 1.3 + blob.ph * 0.7);
-        const bx = cx + (blob.ox * r + Math.cos(orbitAngle) * blob.orbitR * r) * cfg.ampMul;
-        const by = cy + (blob.oy * r + Math.sin(orbitAngle * 0.73) * blob.orbitR * r * 0.8) * cfg.ampMul;
-        const br = blob.rad * r * breathe * (0.9 + 0.1 * Math.sin(t * blob.spd * 2.1 + blob.ph));
+        // true orbit angle — negative spd = counter-clockwise
+        const orbitAngle = t * blob.spd * Math.PI * 2 + blob.ph;
+        // breathe size slightly so blobs pulse
+        const breathe = 0.88 + 0.14 * Math.sin(t * Math.abs(blob.spd) * 1.8 + blob.ph * 0.9);
+        const bx = cx + Math.cos(orbitAngle) * blob.orbitR * r * cfg.ampMul;
+        const by = cy + Math.sin(orbitAngle * 0.80) * blob.orbitR * r * 0.85 * cfg.ampMul;
+        const br = blob.rad * r * breathe;
 
         const l = Math.min(blob.light * cfg.brightness, 100);
         const op = cfg.opacity;
