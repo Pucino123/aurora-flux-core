@@ -7,8 +7,8 @@ const TodaysPlanWidget = () => {
   const { setActiveView } = useFlux();
 
   const defaultPlannerPos = React.useMemo(() => ({
-    x: typeof window !== "undefined" ? window.innerWidth - 360 : 1100,
-    y: 20,
+    x: typeof window !== "undefined" ? window.innerWidth - 380 : 1100,
+    y: 60,
   }), []);
 
   return (
@@ -16,7 +16,7 @@ const TodaysPlanWidget = () => {
       id="planner"
       title="Today's Plan"
       defaultPosition={defaultPlannerPos}
-      defaultSize={{ w: 340, h: 520 }}
+      defaultSize={{ w: 340, h: 620 }}
       scrollable
     >
       <div className="focus-planner-dark -mx-4 -mt-4 -mb-4 h-[calc(100%+2rem)] council-hidden-scrollbar overflow-auto flex flex-col">
