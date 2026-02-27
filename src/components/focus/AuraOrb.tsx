@@ -14,8 +14,8 @@ interface AuraOrbProps {
 const stateConfig = {
   // idle: slow dreamy rotation — clearly visible color swirl
   idle:       { speedMul: 0.30, ampMul: 0.85, opacity: 0.62, brightness: 1.05 },
-  // listening: fast energetic spin
-  listening:  { speedMul: 1.80, ampMul: 1.40, opacity: 0.85, brightness: 1.5  },
+  // listening: nearly stopped — only moves when voice is detected
+  listening:  { speedMul: 0.04, ampMul: 1.20, opacity: 0.80, brightness: 1.4  },
   // processing: rapid chaotic churn
   processing: { speedMul: 3.50, ampMul: 1.20, opacity: 0.90, brightness: 1.8  },
   // speaking: smooth flowing pulse
@@ -127,14 +127,15 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
       const dt = (now - lastTime) / 1000;
       lastTime = now;
       const cfg = configRef.current;
-      // Audio-reactive: when listening, blend base speed with audio amplitude
       const mic = audioLevelRef.current; // 0–1
-      const audioBoost = state === "listening" ? mic * 2.5 : 0;
-      const effectiveSpeed = cfg.speedMul + audioBoost;
+      // When listening: mic IS the speed — silence = nearly still, loud = fast spin
+      const effectiveSpeed = state === "listening"
+        ? cfg.speedMul + mic * 3.5
+        : cfg.speedMul;
       timeRef.current += dt * effectiveSpeed;
       const t = timeRef.current;
-      // Amplitude also swells the blob spread slightly
-      const ampBoost = state === "listening" ? 1 + mic * 0.5 : 1;
+      // Amplitude also swells blob size when speaking
+      const ampBoost = state === "listening" ? 1 + mic * 0.6 : 1;
 
       ctx.clearRect(0, 0, size, size);
 
