@@ -9,17 +9,17 @@ interface AuraOrbProps {
   onClick?: () => void;
 }
 
-/*
- * Siri-style orb — Canvas-based wide luminous aurora bands
- * that flow and blend with screen-mode compositing, plus
- * a bright white center glow. Inspired by Apple Siri.
+/**
+ * 3D frosted glass sphere with colorful liquid interior.
+ * Colors: deep indigo, purple, cyan, pink + orange/pink rim glow.
+ * Matching the Apple Siri reference image.
  */
 
 const stateConfig = {
-  idle:       { speedMul: 0.6,  ampMul: 1.0, glow: 0.5, brightness: 0.85, bandWidth: 1.0 },
-  listening:  { speedMul: 1.8,  ampMul: 1.5, glow: 0.85, brightness: 1.2, bandWidth: 1.3 },
-  processing: { speedMul: 3.5,  ampMul: 0.5, glow: 1.0,  brightness: 1.4, bandWidth: 0.7 },
-  speaking:   { speedMul: 1.4,  ampMul: 1.2, glow: 0.7,  brightness: 1.0, bandWidth: 1.1 },
+  idle:       { speedMul: 0.4, ampMul: 1.0, glow: 0.5, brightness: 0.9, spread: 1.0 },
+  listening:  { speedMul: 1.6, ampMul: 1.4, glow: 0.9, brightness: 1.3, spread: 1.2 },
+  processing: { speedMul: 4.0, ampMul: 0.6, glow: 1.0, brightness: 1.5, spread: 0.7 },
+  speaking:   { speedMul: 1.2, ampMul: 1.1, glow: 0.7, brightness: 1.1, spread: 1.1 },
 };
 
 const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
@@ -28,7 +28,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
   const configRef = useRef(stateConfig[state]);
   const animRef = useRef<number>(0);
 
-  // Smoothly interpolate config on state change
+  // Smooth config interpolation
   useEffect(() => {
     const target = stateConfig[state];
     const start = { ...configRef.current };
@@ -38,13 +38,13 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
 
     const animate = () => {
       const t = Math.min((performance.now() - startTime) / duration, 1);
-      const e = t * t * (3 - 2 * t);
+      const e = t * t * (3 - 2 * t); // smoothstep
       configRef.current = {
         speedMul: lerp(start.speedMul, target.speedMul, e),
         ampMul: lerp(start.ampMul, target.ampMul, e),
         glow: lerp(start.glow, target.glow, e),
         brightness: lerp(start.brightness, target.brightness, e),
-        bandWidth: lerp(start.bandWidth, target.bandWidth, e),
+        spread: lerp(start.spread, target.spread, e),
       };
       if (t < 1) requestAnimationFrame(animate);
     };
@@ -56,30 +56,35 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
     if (!canvas) return;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = size;
-    const h = size;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
 
     const ctx = canvas.getContext("2d")!;
     ctx.scale(dpr, dpr);
 
-    const cx = w / 2;
-    const cy = h / 2;
-    const radius = w * 0.44;
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = size * 0.44;
 
     let lastTime = performance.now();
 
-    // Define aurora bands — wide, luminous, flowing
-    const bands = [
-      { hue: 280, sat: 100, light: 60, phase: 0,    speed: 0.35, yOff: -0.15, amp: 0.18 },  // purple
-      { hue: 320, sat: 100, light: 55, phase: 1.2,  speed: 0.28, yOff: 0.05,  amp: 0.22 },  // pink/magenta
-      { hue: 200, sat: 100, light: 60, phase: 2.5,  speed: 0.42, yOff: -0.08, amp: 0.16 },  // cyan/blue
-      { hue: 240, sat: 90,  light: 50, phase: 3.8,  speed: 0.32, yOff: 0.12,  amp: 0.20 },  // deep blue
-      { hue: 170, sat: 90,  light: 55, phase: 5.0,  speed: 0.38, yOff: -0.02, amp: 0.14 },  // teal
-      { hue: 300, sat: 80,  light: 65, phase: 0.8,  speed: 0.25, yOff: 0.18,  amp: 0.15 },  // violet-pink
+    // Blob definitions — large, soft, overlapping colored masses
+    const blobs = [
+      { hue: 240, sat: 85, light: 35, x: -0.2, y: -0.15, radius: 0.55, speed: 0.3, phase: 0 },      // deep indigo
+      { hue: 275, sat: 80, light: 40, x: 0.15, y: 0.2, radius: 0.5, speed: 0.25, phase: 1.5 },       // purple
+      { hue: 190, sat: 95, light: 50, x: 0.0, y: -0.05, radius: 0.45, speed: 0.35, phase: 3.0 },     // cyan
+      { hue: 320, sat: 90, light: 45, x: -0.1, y: 0.15, radius: 0.4, speed: 0.4, phase: 4.5 },       // pink/magenta
+      { hue: 210, sat: 100, light: 55, x: 0.2, y: -0.2, radius: 0.35, speed: 0.28, phase: 2.0 },     // bright blue
+      { hue: 160, sat: 80, light: 45, x: -0.15, y: 0.0, radius: 0.3, speed: 0.32, phase: 5.5 },      // teal-green
+    ];
+
+    // Flowing wave/ribbon definitions
+    const waves = [
+      { hue: 180, sat: 90, light: 60, yOff: -0.05, amp: 0.12, speed: 0.4, phase: 0, width: 0.08 },    // cyan wave
+      { hue: 40,  sat: 80, light: 55, yOff: 0.03,  amp: 0.10, speed: 0.35, phase: 2.0, width: 0.06 }, // warm gold wave
+      { hue: 300, sat: 70, light: 55, yOff: -0.02, amp: 0.08, speed: 0.45, phase: 4.0, width: 0.05 }, // pink wave
     ];
 
     const draw = (now: number) => {
@@ -89,54 +94,59 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       timeRef.current += dt * cfg.speedMul;
       const t = timeRef.current;
 
-      ctx.clearRect(0, 0, w, h);
+      ctx.clearRect(0, 0, size, size);
 
-      // === Dark sphere background ===
+      // === Clip to sphere ===
       ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.clip();
 
-      const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-      bgGrad.addColorStop(0, "#1a0a2e");
-      bgGrad.addColorStop(0.4, "#0d0520");
-      bgGrad.addColorStop(0.7, "#080318");
-      bgGrad.addColorStop(1, "#030108");
+      // === Deep dark background ===
+      const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      bgGrad.addColorStop(0, "#0a0520");
+      bgGrad.addColorStop(0.5, "#060318");
+      bgGrad.addColorStop(1, "#020110");
       ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, size, size);
 
-      // === Draw luminous aurora bands ===
-      const numPts = 60;
+      // === Colorful liquid blobs ===
+      ctx.globalCompositeOperation = "screen";
 
-      for (const band of bands) {
-        const amp = band.amp * cfg.ampMul * radius;
-        const bandW = radius * 0.35 * cfg.bandWidth; // Wide bands
+      for (const blob of blobs) {
+        const bx = cx + (blob.x + Math.sin(t * blob.speed + blob.phase) * 0.15 * cfg.ampMul) * r * cfg.spread;
+        const by = cy + (blob.y + Math.cos(t * blob.speed * 0.8 + blob.phase) * 0.12 * cfg.ampMul) * r * cfg.spread;
+        const br = blob.radius * r * (0.9 + Math.sin(t * blob.speed * 0.5 + blob.phase) * 0.1 * cfg.ampMul);
 
-        // Build wave path
+        const grad = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+        const l = Math.min(blob.light * cfg.brightness, 100);
+        grad.addColorStop(0, `hsla(${blob.hue}, ${blob.sat}%, ${l}%, 0.7)`);
+        grad.addColorStop(0.3, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.8}%, 0.4)`);
+        grad.addColorStop(0.6, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.6}%, 0.15)`);
+        grad.addColorStop(1, `hsla(${blob.hue}, ${blob.sat}%, ${l * 0.4}%, 0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+      }
+
+      // === Flowing wave ribbons across the sphere ===
+      for (const wave of waves) {
+        const numPts = 50;
         const points: { x: number; y: number }[] = [];
         for (let i = 0; i <= numPts; i++) {
           const frac = i / numPts;
-          const x = cx - radius + frac * radius * 2;
-
-          // Layered sine waves for organic, flowing motion
-          const w1 = Math.sin(frac * Math.PI * 2.0 + t * band.speed + band.phase) * amp;
-          const w2 = Math.sin(frac * Math.PI * 3.5 + t * band.speed * 0.6 + band.phase * 1.5) * amp * 0.5;
-          const w3 = Math.sin(frac * Math.PI * 1.2 + t * band.speed * 1.4 + band.phase * 0.6) * amp * 0.35;
-
-          const y = cy + band.yOff * radius + w1 + w2 + w3;
-          points.push({ x, y });
+          const wx = cx - r + frac * r * 2;
+          const w1 = Math.sin(frac * Math.PI * 2.5 + t * wave.speed + wave.phase) * wave.amp * r * cfg.ampMul;
+          const w2 = Math.sin(frac * Math.PI * 4 + t * wave.speed * 0.7 + wave.phase * 1.3) * wave.amp * r * 0.4 * cfg.ampMul;
+          const wy = cy + wave.yOff * r + w1 + w2;
+          points.push({ x: wx, y: wy });
         }
 
-        // Draw multiple layers for each band (glow → core → bright center)
-        ctx.save();
-        ctx.globalCompositeOperation = "screen";
-
+        // Draw wave with glow layers
         const layers = [
-          { widthMul: 3.0, alpha: 0.06 },  // wide outer glow
-          { widthMul: 2.0, alpha: 0.12 },  // mid glow
-          { widthMul: 1.2, alpha: 0.25 },  // main band
-          { widthMul: 0.5, alpha: 0.45 },  // bright core
-          { widthMul: 0.15, alpha: 0.7 },  // hot center line
+          { widthMul: 4.0, alpha: 0.08 },
+          { widthMul: 2.0, alpha: 0.2 },
+          { widthMul: 1.0, alpha: 0.5 },
+          { widthMul: 0.3, alpha: 0.9 },
         ];
 
         for (const layer of layers) {
@@ -147,43 +157,87 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
             const yc = (points[i].y + points[i + 1].y) / 2;
             ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
           }
-
-          const l = Math.min(band.light * cfg.brightness, 100);
-          ctx.strokeStyle = `hsla(${band.hue}, ${band.sat}%, ${l}%, ${layer.alpha * cfg.brightness})`;
-          ctx.lineWidth = bandW * layer.widthMul;
+          const l = Math.min(wave.light * cfg.brightness, 100);
+          ctx.strokeStyle = `hsla(${wave.hue}, ${wave.sat}%, ${l}%, ${layer.alpha * cfg.brightness * 0.7})`;
+          ctx.lineWidth = wave.width * r * layer.widthMul;
           ctx.lineCap = "round";
           ctx.lineJoin = "round";
           ctx.stroke();
         }
-
-        ctx.restore();
       }
 
-      // === Bright white center glow (convergence point) ===
-      const glowR = radius * 0.55;
+      ctx.globalCompositeOperation = "source-over";
+
+      // === Center white glow ===
+      const glowR = r * 0.6;
       const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
-      glowGrad.addColorStop(0, `rgba(255,255,255,${0.5 * cfg.glow})`);
-      glowGrad.addColorStop(0.15, `rgba(255,255,255,${0.25 * cfg.glow})`);
-      glowGrad.addColorStop(0.4, `rgba(200,180,255,${0.08 * cfg.glow})`);
+      glowGrad.addColorStop(0, `rgba(255,255,255,${0.25 * cfg.glow})`);
+      glowGrad.addColorStop(0.2, `rgba(255,255,255,${0.1 * cfg.glow})`);
+      glowGrad.addColorStop(0.5, `rgba(200,200,255,${0.03 * cfg.glow})`);
       glowGrad.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = glowGrad;
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, size, size);
 
-      // === Specular highlight (top-left) ===
-      const specX = cx - radius * 0.25;
-      const specY = cy - radius * 0.3;
-      const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, radius * 0.3);
-      specGrad.addColorStop(0, "rgba(255,255,255,0.1)");
+      // === Frosted glass specular highlight (top-left) ===
+      const specX = cx - r * 0.28;
+      const specY = cy - r * 0.32;
+      const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, r * 0.45);
+      specGrad.addColorStop(0, "rgba(255,255,255,0.18)");
+      specGrad.addColorStop(0.3, "rgba(255,255,255,0.06)");
       specGrad.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = specGrad;
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, size, size);
+
+      // === Secondary specular (bottom-right, warm) ===
+      const spec2X = cx + r * 0.2;
+      const spec2Y = cy + r * 0.25;
+      const spec2Grad = ctx.createRadialGradient(spec2X, spec2Y, 0, spec2X, spec2Y, r * 0.3);
+      spec2Grad.addColorStop(0, "rgba(255,200,150,0.08)");
+      spec2Grad.addColorStop(1, "rgba(255,200,150,0)");
+      ctx.fillStyle = spec2Grad;
+      ctx.fillRect(0, 0, size, size);
 
       ctx.restore();
 
-      // === Subtle rim ===
+      // === 3D glass rim with orange/pink edge glow ===
+      // Outer glow ring
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(180,140,255,0.08)";
+      ctx.arc(cx, cy, r + 1, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(100,180,255,0.12)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      // Orange/pink rim highlight (top-right arc)
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, -0.8, 0.6);
+      const rimGrad = ctx.createLinearGradient(cx + r * 0.5, cy - r * 0.8, cx + r * 0.3, cy + r * 0.5);
+      rimGrad.addColorStop(0, "rgba(255,140,60,0.25)");
+      rimGrad.addColorStop(0.5, "rgba(255,100,120,0.15)");
+      rimGrad.addColorStop(1, "rgba(255,60,180,0.05)");
+      ctx.strokeStyle = rimGrad;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.restore();
+
+      // Cyan rim highlight (left arc)
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 2.2, 4.2);
+      const rimGrad2 = ctx.createLinearGradient(cx - r, cy - r * 0.5, cx - r * 0.5, cy + r * 0.5);
+      rimGrad2.addColorStop(0, "rgba(0,200,255,0.2)");
+      rimGrad2.addColorStop(1, "rgba(100,100,255,0.05)");
+      ctx.strokeStyle = rimGrad2;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      // Subtle full rim
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(180,160,255,0.06)";
       ctx.lineWidth = 1;
       ctx.stroke();
 
@@ -200,17 +254,17 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       style={{ width: size, height: size }}
       onClick={onClick}
     >
-      {/* Outer ambient glow */}
+      {/* Outer ambient glow — colorful, matching sphere palette */}
       <motion.div
         className="absolute inset-0 rounded-full pointer-events-none"
         animate={{
-          opacity: state === "idle" ? [0.2, 0.35, 0.2] : [0.4, 0.65, 0.4],
-          scale: state === "idle" ? [1.05, 1.15, 1.05] : [1.1, 1.3, 1.1],
+          opacity: state === "idle" ? [0.15, 0.3, 0.15] : [0.35, 0.6, 0.35],
+          scale: state === "idle" ? [1.05, 1.12, 1.05] : [1.1, 1.25, 1.1],
         }}
-        transition={{ duration: state === "idle" ? 5 : 2.5, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: state === "idle" ? 6 : 2.5, repeat: Infinity, ease: "easeInOut" }}
         style={{
-          background: "radial-gradient(circle, rgba(140,60,255,0.3) 0%, rgba(200,80,200,0.15) 30%, rgba(80,180,255,0.08) 50%, transparent 70%)",
-          filter: "blur(20px)",
+          background: "radial-gradient(circle, rgba(100,60,255,0.25) 0%, rgba(0,180,220,0.12) 30%, rgba(255,100,150,0.08) 50%, transparent 70%)",
+          filter: "blur(18px)",
         }}
       />
       <canvas
