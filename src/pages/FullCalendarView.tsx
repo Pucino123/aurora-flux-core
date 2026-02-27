@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useFlux } from "@/context/FluxContext";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday,
-  addMonths, subMonths, startOfWeek, endOfWeek, addDays, isSameMonth,
+  addMonths, subMonths, startOfWeek, endOfWeek, addDays, isSameMonth, getISOWeek,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Clock, CheckCircle2, Plus, CalendarDays, Grip, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -189,13 +189,24 @@ const FullCalendarView = () => {
           {viewMode === "month" ? (
             /* ── Month view ── */
             <div>
-              <div className="grid grid-cols-7 gap-px bg-border/30 rounded-t-xl overflow-hidden">
+              <div className="grid grid-cols-8 gap-px bg-border/30 rounded-t-xl overflow-hidden">
+                <div className="bg-background text-[10px] font-semibold text-muted-foreground text-center py-2">Wk</div>
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
                   <div key={d} className="bg-background text-[10px] font-semibold text-muted-foreground text-center py-2">{d}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-px bg-border/20 border border-border/20 rounded-b-xl overflow-hidden">
-                {monthDays.map(day => {
+              <div className="grid grid-cols-8 gap-px bg-border/20 border border-border/20 rounded-b-xl overflow-hidden">
+                {monthDays.map((day, idx) => {
+                  const isFirstDayOfWeek = idx % 7 === 0;
+                  const weekNum = isFirstDayOfWeek ? getISOWeek(day) : null;
+                  return (
+                    <React.Fragment key={format(day, "yyyy-MM-dd") + "-frag"}>
+                      {isFirstDayOfWeek && (
+                        <div className="bg-background flex items-start justify-center pt-2 text-[10px] font-medium text-muted-foreground/50">
+                          {weekNum}
+                        </div>
+                      )}
+                      {(() => {
                   const key = format(day, "yyyy-MM-dd");
                   const events = dayEvents.get(key);
                   const totalCount = (events?.tasks.length || 0) + (events?.blocks.length || 0) + (events?.googleEvents.length || 0);
@@ -258,6 +269,9 @@ const FullCalendarView = () => {
                         )}
                       </div>
                     </div>
+                  );
+                      })()}
+                    </React.Fragment>
                   );
                 })}
               </div>
