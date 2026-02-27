@@ -604,6 +604,45 @@ export type Database = {
           },
         ]
       }
+      message_read_receipts: {
+        Row: {
+          id: string
+          last_read_message_id: string | null
+          read_at: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          last_read_message_id?: string | null
+          read_at?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          last_read_message_id?: string | null
+          read_at?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_read_receipts_last_read_message_id_fkey"
+            columns: ["last_read_message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_read_receipts_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -820,6 +859,9 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
           id: string
           team_id: string
           user_id: string
@@ -827,6 +869,9 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           team_id: string
           user_id: string
@@ -834,6 +879,9 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           team_id?: string
           user_id?: string

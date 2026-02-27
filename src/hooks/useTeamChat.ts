@@ -15,6 +15,17 @@ export interface TeamMessage {
   content: string;
   created_at: string;
   sender_name?: string;
+  file_url?: string | null;
+  file_type?: string | null;
+  file_name?: string | null;
+}
+
+export interface ReadReceipt {
+  id: string;
+  team_id: string;
+  user_id: string;
+  last_read_message_id: string | null;
+  read_at: string;
 }
 
 export interface TeamMember {
@@ -98,6 +109,7 @@ export function useTeamChat() {
   const [lastReadMap, setLastReadMapState] = useState<Record<string, number>>(getLastReadMap);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
   const [pendingInvites, setPendingInvites] = useState<Array<{ id: string; token: string; created_by: string; created_at: string; team_id: string }>>([]);
+  const [readReceipts, setReadReceipts] = useState<ReadReceipt[]>([]);
 
   // Fetch teams the user belongs to
   useEffect(() => {
@@ -154,7 +166,7 @@ export function useTeamChat() {
     setTypingUsers([]);
 
     (async () => {
-      const [msgRes, memRes, reactRes] = await Promise.all([
+      const [msgRes, memRes, reactRes, receiptRes] = await Promise.all([
         (supabase as any)
           .from("team_messages")
           .select("*")
@@ -169,10 +181,15 @@ export function useTeamChat() {
           .from("message_reactions")
           .select("*")
           .eq("team_id", activeTeamId),
+        (supabase as any)
+          .from("message_read_receipts")
+          .select("*")
+          .eq("team_id", activeTeamId),
       ]);
       setMessages((msgRes.data || []) as TeamMessage[]);
       setMembers((memRes.data || []) as TeamMember[]);
       setReactions((reactRes.data || []) as MessageReaction[]);
+      setReadReceipts((receiptRes.data || []) as ReadReceipt[]);
       setTimeout(() => { initialLoadRef.current = false; }, 500);
     })();
 
@@ -315,7 +332,23 @@ export function useTeamChat() {
     const updated = { ...getLastReadMap(), [activeTeamId]: Date.now() };
     setLastReadMap(updated);
     setLastReadMapState(updated);
-  }, [activeTeamId]);
+    // Also persist to DB for read receipts
+    if (user && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      (supabase as any).from("message_read_receipts").upsert({
+        team_id: activeTeamId,
+        user_id: user.id,
+        last_read_message_id: lastMsg.id,
+        read_at: new Date().toISOString(),
+      }, { onConflict: "team_id,user_id" }).then(() => {
+        setReadReceipts(prev => {
+          const existing = prev.find(r => r.team_id === activeTeamId && r.user_id === user.id);
+          if (existing) return prev.map(r => r.id === existing.id ? { ...r, last_read_message_id: lastMsg.id, read_at: new Date().toISOString() } : r);
+          return [...prev, { id: crypto.randomUUID(), team_id: activeTeamId, user_id: user.id, last_read_message_id: lastMsg.id, read_at: new Date().toISOString() }];
+        });
+      });
+    }
+  }, [activeTeamId, user, messages]);
 
   const setModalOpen = useCallback((open: boolean) => {
     modalOpenRef.current = open;
@@ -323,18 +356,57 @@ export function useTeamChat() {
   }, []);
 
   const sendMessage = useCallback(
-    async (content: string) => {
-      if (!user || !activeTeamId || !content.trim()) return;
+    async (content: string, fileData?: { url: string; type: string; name: string }) => {
+      if (!user || !activeTeamId || (!content.trim() && !fileData)) return;
       isTypingRef.current = false;
       broadcastTyping(false);
-      const { error } = await (supabase as any).from("team_messages").insert({
+      
+      // Optimistic insert
+      const optimisticId = crypto.randomUUID();
+      const optimisticMsg: TeamMessage = {
+        id: optimisticId,
         team_id: activeTeamId,
         user_id: user.id,
         content: content.trim(),
-      });
-      if (error) console.error("Failed to send message:", error);
+        created_at: new Date().toISOString(),
+        file_url: fileData?.url || null,
+        file_type: fileData?.type || null,
+        file_name: fileData?.name || null,
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+
+      const { data, error } = await (supabase as any).from("team_messages").insert({
+        team_id: activeTeamId,
+        user_id: user.id,
+        content: content.trim(),
+        file_url: fileData?.url || null,
+        file_type: fileData?.type || null,
+        file_name: fileData?.name || null,
+      }).select().single();
+      
+      if (error) {
+        console.error("Failed to send message:", error);
+        // Remove optimistic message on failure
+        setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      } else if (data) {
+        // Replace optimistic with real
+        setMessages(prev => prev.map(m => m.id === optimisticId ? (data as TeamMessage) : m));
+      }
     },
     [user, activeTeamId, broadcastTyping]
+  );
+
+  const uploadFile = useCallback(
+    async (file: File): Promise<{ url: string; type: string; name: string } | null> => {
+      if (!user) return null;
+      const ext = file.name.split('.').pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("chat-attachments").upload(path, file);
+      if (error) { console.error("Upload failed:", error); return null; }
+      const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(path);
+      return { url: urlData.publicUrl, type: file.type, name: file.name };
+    },
+    [user]
   );
 
   const toggleReaction = useCallback(
@@ -547,5 +619,7 @@ export function useTeamChat() {
     generateInviteLink,
     acceptInvite,
     pendingInvites,
+    readReceipts,
+    uploadFile,
   };
 }

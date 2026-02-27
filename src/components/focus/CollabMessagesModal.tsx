@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut,
   Trash2, Smile, Link, Copy, Moon, Sun, ChevronLeft, Search,
-  Video, Phone, Info, Hash, MoreHorizontal, Clock
+  Video, Phone, Info, Hash, MoreHorizontal, Clock, Paperclip,
+  FileText, Image as ImageIcon
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTeamChat, getUserColor } from "@/hooks/useTeamChat";
@@ -36,7 +37,7 @@ function UserAvatar({
   const colorClass = getUserColor(userId);
   const initial = (displayName || userId)[0]?.toUpperCase() || "?";
   const sizeMap = {
-    xs: "w-6 h-6 text-[10px]",
+    xs: "w-5 h-5 text-[8px]",
     sm: "w-8 h-8 text-xs",
     md: "w-10 h-10 text-sm",
     lg: "w-12 h-12 text-base",
@@ -53,18 +54,13 @@ function UserAvatar({
           {pending ? <Clock size={14} className="text-muted-foreground" /> : initial}
         </div>
       )}
-      {pending && (
-        <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-background flex items-center justify-center">
-          <span className="text-[7px] font-bold text-yellow-900">!</span>
-        </span>
-      )}
     </div>
   );
 }
 
 function TypingBubble({ dark }: { dark: boolean }) {
   return (
-    <div className={`flex items-center gap-1.5 px-4 py-3 rounded-[18px] rounded-bl-[4px] w-fit`}
+    <div className="flex items-center gap-1.5 px-4 py-3 rounded-[18px] rounded-bl-[4px] w-fit"
       style={{ background: dark ? "#3a3a3c" : "#e9e9eb" }}>
       {[0, 1, 2].map((i) => (
         <span key={i} className="w-2 h-2 rounded-full animate-bounce"
@@ -74,13 +70,34 @@ function TypingBubble({ dark }: { dark: boolean }) {
   );
 }
 
+function FilePreview({ url, type, name, dark }: { url: string; type: string; name: string; dark: boolean }) {
+  const isImage = type?.startsWith("image/");
+  if (isImage) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-1">
+        <img src={url} alt={name} className="max-w-[240px] max-h-[180px] rounded-lg object-cover" />
+      </a>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+      className="flex items-center gap-2 mt-1 px-3 py-2 rounded-lg transition-all hover:opacity-80"
+      style={{ background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }}>
+      <FileText size={16} style={{ color: dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)" }} />
+      <span className="text-[13px] truncate max-w-[180px]" style={{ color: dark ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.7)" }}>
+        {name}
+      </span>
+    </a>
+  );
+}
+
 
 const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) => {
   const {
     messages, members, sendMessage, hasTeams, loading, teams, activeTeamId,
     setActiveTeamId, createTeam, inviteMember, markAsRead, setModalOpen, leaveTeam, deleteTeam,
     typingUsers, unreadPerTeam, handleTypingChange, reactionsMap, toggleReaction, generateInviteLink,
-    pendingInvites,
+    pendingInvites, readReceipts, uploadFile,
   } = useTeamChat();
   const { user } = useAuth();
 
@@ -101,10 +118,13 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const [leavingTeamId, setLeavingTeamId] = useState<string | null>(null);
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
   const [showInvitePopover, setShowInvitePopover] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [pendingFile, setPendingFile] = useState<{ url: string; type: string; name: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Theme tokens — deep glassmorphism matching Apple HIG
+  // Theme tokens — deep glassmorphism
   const T = {
     sidebar: dark ? "rgba(28,28,30,0.60)" : "rgba(242,242,247,0.50)",
     sidebarActive: dark ? "rgba(10,132,255,0.22)" : "rgba(0,122,255,0.14)",
@@ -156,9 +176,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   }, [messages.length, typingUsers.length, open]);
 
   const handleSend = async () => {
-    if (!text.trim()) return;
-    await sendMessage(text);
+    if (!text.trim() && !pendingFile) return;
+    await sendMessage(text, pendingFile || undefined);
     setText("");
+    setPendingFile(null);
   };
 
   const getMemberName = (userId: string) => {
@@ -222,7 +243,21 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     toast.success("Invite link copied! Expires in 7 days.");
   };
 
-  // Long-press handlers for Tapback reactions
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { toast.error("File too large (max 20MB)"); return; }
+    setUploading(true);
+    const result = await uploadFile(file);
+    setUploading(false);
+    if (result) {
+      setPendingFile(result);
+    } else {
+      toast.error("Upload failed");
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const startLongPress = useCallback((msgId: string) => {
     longPressTimerRef.current = setTimeout(() => {
       setLongPressedMsgId(msgId);
@@ -246,14 +281,25 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   );
 
   const pinnedTeams = teams.slice(0, 4);
-
-  // Determine which reaction bar to show (hover or long-press)
   const showReactionFor = (msgId: string) => hoveredMsgId === msgId || longPressedMsgId === msgId;
+
+  // Read receipts: find which members have read which messages
+  const getReadByForMessage = (msgId: string) => {
+    return readReceipts
+      .filter(r => r.last_read_message_id === msgId && r.user_id !== user?.id)
+      .map(r => r.user_id);
+  };
+
+  // Find the last own message id
+  const lastOwnMsgId = [...messages].reverse().find(m => m.user_id === user?.id)?.id;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* Lighten default overlay so frosted glass effect is visible */}
+      <style dangerouslySetInnerHTML={{ __html: `[data-state="open"][class*="bg-black"] { background: rgba(0,0,0,0.35) !important; backdrop-filter: blur(4px); }` }} />
       <DialogContent
         className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden"
+        onOpenAutoFocus={e => e.preventDefault()}
         style={{
           fontFamily: "-apple-system, 'SF Pro Text', 'SF Pro Display', BlinkMacSystemFont, sans-serif",
           maxWidth: "820px",
@@ -261,8 +307,8 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
           height: "600px",
           borderRadius: "14px",
           background: dark
-            ? "rgba(28,28,30,0.92)"
-            : "rgba(246,246,248,0.85)",
+            ? "rgba(28,28,30,0.88)"
+            : "rgba(246,246,248,0.82)",
           backdropFilter: dark
             ? "blur(60px) saturate(200%)"
             : "blur(40px) saturate(180%)",
@@ -278,7 +324,16 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
         }}>
         <DialogTitle className="sr-only">Messages</DialogTitle>
 
-        {/* Single minimalist X close button — top-right */}
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.txt,.zip"
+          onChange={handleFileSelect}
+        />
+
+        {/* Single minimalist X close */}
         <button
           onClick={() => onOpenChange(false)}
           className="absolute top-3 right-3 z-50 p-1.5 rounded-full transition-all hover:opacity-70"
@@ -288,7 +343,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
         </button>
 
         <div className="flex h-full overflow-hidden" style={{ borderRadius: "14px" }}>
-          {/* ── LEFT SIDEBAR ─────────────────────────────────────── */}
+          {/* ── LEFT SIDEBAR ── */}
           <div
             className="flex flex-col shrink-0 overflow-hidden"
             style={{
@@ -299,26 +354,18 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
             }}>
             {/* Sidebar top bar */}
             <div className="flex items-center justify-between px-3 pt-3 pb-2" style={{ borderBottom: `1px solid ${T.divider}` }}>
-              <button
-                onClick={() => setDark(d => !d)}
-                style={{ color: T.textTertiary }}
+              <button onClick={() => setDark(d => !d)} style={{ color: T.textTertiary }}
                 className="p-1.5 rounded-full transition-all hover:opacity-70">
                 {dark ? <Sun size={14} /> : <Moon size={14} />}
               </button>
               <span style={{ color: T.textPrimary, fontSize: "15px", fontWeight: 600 }}>Messages</span>
               <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setShowInvitePopover(v => !v)}
-                  style={{ color: T.accent }}
-                  className="p-1.5 rounded-full transition-all hover:opacity-70"
-                  title="Invite Partner / Company">
+                <button onClick={() => setShowInvitePopover(v => !v)} style={{ color: T.accent }}
+                  className="p-1.5 rounded-full transition-all hover:opacity-70" title="Invite">
                   <UserPlus size={15} />
                 </button>
-                <button
-                  onClick={() => setSidebarView("new-team")}
-                  style={{ color: T.accent }}
-                  className="p-1.5 rounded-full transition-all hover:opacity-70"
-                  title="New Team">
+                <button onClick={() => setSidebarView("new-team")} style={{ color: T.accent }}
+                  className="p-1.5 rounded-full transition-all hover:opacity-70" title="New Team">
                   <Plus size={15} />
                 </button>
               </div>
@@ -327,30 +374,16 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
             {/* Invite popover */}
             <AnimatePresence>
               {showInvitePopover && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
+                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                   className="mx-2 mb-0 mt-2 rounded-xl overflow-hidden"
                   style={{ background: T.fieldBg, border: `1px solid ${T.fieldBorder}` }}>
                   <div className="px-3 pt-3 pb-2">
-                    <p style={{ color: T.textPrimary, fontSize: "12px", fontWeight: 600, marginBottom: 8 }}>
-                      Invite Partner / Company
-                    </p>
+                    <p style={{ color: T.textPrimary, fontSize: "12px", fontWeight: 600, marginBottom: 8 }}>Invite Partner / Company</p>
                     <div className="flex gap-1.5">
-                      <input
-                        value={inviteEmail}
-                        onChange={e => { setInviteEmail(e.target.value); setInviteStatus("idle"); }}
-                        onKeyDown={e => e.key === "Enter" && handleInvite()}
-                        placeholder="Email address"
-                        type="email"
-                        className="flex-1 outline-none text-[13px] bg-transparent"
-                        style={{ color: T.textPrimary }}
-                        autoFocus
-                      />
-                      <button
-                        onClick={handleInvite}
-                        disabled={!inviteEmail.trim() || inviteStatus === "sending"}
+                      <input value={inviteEmail} onChange={e => { setInviteEmail(e.target.value); setInviteStatus("idle"); }}
+                        onKeyDown={e => e.key === "Enter" && handleInvite()} placeholder="Email address" type="email"
+                        className="flex-1 outline-none text-[13px] bg-transparent" style={{ color: T.textPrimary }} autoFocus />
+                      <button onClick={handleInvite} disabled={!inviteEmail.trim() || inviteStatus === "sending"}
                         className="px-2.5 py-1 rounded-lg text-[12px] font-semibold disabled:opacity-40"
                         style={{ background: T.accent, color: "#fff" }}>
                         {inviteStatus === "ok" ? <Check size={12} /> : inviteStatus === "sending" ? "…" : "Send"}
@@ -360,9 +393,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     {inviteStatus === "error" && <p style={{ color: T.red, fontSize: "11px", marginTop: 4 }}>⚠ {inviteError || "User not found"}</p>}
                   </div>
                   {activeTeamId && (
-                    <button
-                      onClick={handleCopyInviteLink}
-                      disabled={inviteLinkLoading}
+                    <button onClick={handleCopyInviteLink} disabled={inviteLinkLoading}
                       className="w-full flex items-center gap-2 px-3 py-2 text-[12px] font-medium transition-all"
                       style={{ color: T.accent, borderTop: `1px solid ${T.divider}` }}>
                       {inviteLinkLoading
@@ -377,29 +408,17 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
             {/* New Team form */}
             <AnimatePresence>
               {sidebarView === "new-team" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden mx-2 mt-2 rounded-xl"
                   style={{ background: T.fieldBg, border: `1px solid ${T.fieldBorder}` }}>
                   <div className="px-3 py-2.5 flex gap-1.5">
-                    <input
-                      value={newTeamName}
-                      onChange={e => setNewTeamName(e.target.value)}
+                    <input value={newTeamName} onChange={e => setNewTeamName(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") handleCreateTeam(); if (e.key === "Escape") setSidebarView("conversations"); }}
-                      placeholder="New team name…"
-                      className="flex-1 bg-transparent outline-none text-[13px]"
-                      style={{ color: T.textPrimary }}
-                      autoFocus
-                    />
+                      placeholder="New team name…" className="flex-1 bg-transparent outline-none text-[13px]"
+                      style={{ color: T.textPrimary }} autoFocus />
                     <button onClick={handleCreateTeam} className="px-2.5 py-1 rounded-lg text-[12px] font-semibold"
-                      style={{ background: T.accent, color: "#fff" }}>
-                      Create
-                    </button>
-                    <button onClick={() => setSidebarView("conversations")} style={{ color: T.textTertiary }}>
-                      <X size={13} />
-                    </button>
+                      style={{ background: T.accent, color: "#fff" }}>Create</button>
+                    <button onClick={() => setSidebarView("conversations")} style={{ color: T.textTertiary }}><X size={13} /></button>
                   </div>
                 </motion.div>
               )}
@@ -407,16 +426,11 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
             {/* Search */}
             <div className="px-3 pt-2 pb-1.5">
-              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-[9px]"
-                style={{ background: T.searchBg }}>
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-[9px]" style={{ background: T.searchBg }}>
                 <Search size={12} style={{ color: T.sectionLabel }} />
-                <input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search"
-                  className="flex-1 bg-transparent outline-none text-[13px]"
-                  style={{ color: T.textPrimary }}
-                />
+                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search" className="flex-1 bg-transparent outline-none text-[13px]"
+                  style={{ color: T.textPrimary }} />
               </div>
             </div>
 
@@ -431,9 +445,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                         style={{ boxShadow: t.id === activeTeamId ? `0 0 0 3px ${T.accent}` : "none" }}>
                         {t.name[0]?.toUpperCase()}
                       </div>
-                      <span className="text-[10px] truncate max-w-[48px]" style={{ color: T.textSecondary }}>
-                        {t.name}
-                      </span>
+                      <span className="text-[10px] truncate max-w-[48px]" style={{ color: T.textSecondary }}>{t.name}</span>
                       {(unreadPerTeam?.[t.id] || 0) > 0 && (
                         <span className="w-2 h-2 rounded-full" style={{ background: T.accent }} />
                       )}
@@ -443,7 +455,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
               </div>
             )}
 
-            {/* Pending Invites Section */}
+            {/* Pending Invites */}
             {pendingInvites.length > 0 && !searchQuery && (
               <div className="px-3 pb-1">
                 <p style={{ color: T.sectionLabel, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
@@ -457,9 +469,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                       <p style={{ color: T.textPrimary, fontSize: "13px", fontWeight: 500 }} className="truncate">
                         Invite #{inv.token.slice(0, 6)}…
                       </p>
-                      <p style={{ color: T.textTertiary, fontSize: "11px" }}>
-                        {formatConversationTime(inv.created_at)}
-                      </p>
+                      <p style={{ color: T.textTertiary, fontSize: "11px" }}>{formatConversationTime(inv.created_at)}</p>
                     </div>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
                       style={{ background: T.pendingBadge, color: T.pendingText, border: `1px solid ${T.pendingText}40` }}>
@@ -479,35 +489,24 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
             {/* Conversation list */}
             <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
-              {loading && (
-                <p style={{ color: T.textTertiary, fontSize: "13px", textAlign: "center", padding: "32px 0" }}>Loading…</p>
-              )}
-
+              {loading && <p style={{ color: T.textTertiary, fontSize: "13px", textAlign: "center", padding: "32px 0" }}>Loading…</p>}
               {!loading && filteredTeams.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-8 px-4 text-center gap-2">
                   <Users size={28} style={{ color: T.textTertiary }} />
-                  <p style={{ color: T.textSecondary, fontSize: "13px" }}>
-                    {searchQuery ? "No results" : "No teams yet"}
-                  </p>
+                  <p style={{ color: T.textSecondary, fontSize: "13px" }}>{searchQuery ? "No results" : "No teams yet"}</p>
                   {!searchQuery && (
                     <button onClick={() => setSidebarView("new-team")}
                       className="mt-1 px-4 py-1.5 rounded-full text-[13px] font-semibold"
-                      style={{ background: T.accent, color: "#fff" }}>
-                      + New Team
-                    </button>
+                      style={{ background: T.accent, color: "#fff" }}>+ New Team</button>
                   )}
                 </div>
               )}
-
               {filteredTeams.map(t => {
                 const unread = unreadPerTeam?.[t.id] || 0;
                 const isActive = t.id === activeTeamId;
-                const lastMsg = messages.length > 0 && t.id === activeTeamId
-                  ? messages[messages.length - 1]
-                  : null;
+                const lastMsg = messages.length > 0 && t.id === activeTeamId ? messages[messages.length - 1] : null;
                 return (
-                  <button key={t.id}
-                    onClick={() => { setActiveTeamId(t.id); setShowInfo(false); }}
+                  <button key={t.id} onClick={() => { setActiveTeamId(t.id); setShowInfo(false); }}
                     className="w-full flex items-center gap-2.5 px-3 py-2.5 transition-all"
                     style={{ background: isActive ? T.sidebarActive : "transparent" }}>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 ${getUserColor(t.id)}`}>
@@ -515,24 +514,16 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     </div>
                     <div className="flex-1 min-w-0 text-left">
                       <div className="flex items-center justify-between">
-                        <p style={{ color: T.textPrimary, fontSize: "14px", fontWeight: unread > 0 ? 700 : 500 }} className="truncate">
-                          {t.name}
-                        </p>
-                        {lastMsg && (
-                          <span style={{ color: T.textTertiary, fontSize: "11px" }}>
-                            {formatConversationTime(lastMsg.created_at)}
-                          </span>
-                        )}
+                        <p style={{ color: T.textPrimary, fontSize: "14px", fontWeight: unread > 0 ? 700 : 500 }} className="truncate">{t.name}</p>
+                        {lastMsg && <span style={{ color: T.textTertiary, fontSize: "11px" }}>{formatConversationTime(lastMsg.created_at)}</span>}
                       </div>
                       <p style={{ color: T.textSecondary, fontSize: "12px" }} className="truncate">
-                        {lastMsg ? lastMsg.content : `${members.length} member${members.length !== 1 ? "s" : ""}`}
+                        {lastMsg ? (lastMsg.file_name ? `📎 ${lastMsg.file_name}` : lastMsg.content) : `${members.length} member${members.length !== 1 ? "s" : ""}`}
                       </p>
                     </div>
                     {unread > 0 && (
                       <span className="min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 text-white"
-                        style={{ background: T.accent }}>
-                        {unread > 99 ? "99+" : unread}
-                      </span>
+                        style={{ background: T.accent }}>{unread > 99 ? "99+" : unread}</span>
                     )}
                   </button>
                 );
@@ -540,7 +531,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
             </div>
           </div>
 
-          {/* ── RIGHT MAIN AREA ──────────────────────────────────── */}
+          {/* ── RIGHT MAIN AREA ── */}
           <div className="flex-1 flex flex-col overflow-hidden" style={{ background: T.chatBg }}>
             {!activeTeam ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
@@ -550,19 +541,13 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 </div>
                 <div>
                   <p style={{ color: T.textPrimary, fontSize: "18px", fontWeight: 600 }}>No Conversation Selected</p>
-                  <p style={{ color: T.textSecondary, fontSize: "14px", marginTop: 4 }}>
-                    Choose a team from the sidebar or create one to start collaborating.
-                  </p>
+                  <p style={{ color: T.textSecondary, fontSize: "14px", marginTop: 4 }}>Choose a team or create one to start collaborating.</p>
                 </div>
-                <button onClick={() => setSidebarView("new-team")}
-                  className="px-6 py-2.5 rounded-full text-[14px] font-semibold"
-                  style={{ background: T.accent, color: "#fff" }}>
-                  New Team
-                </button>
+                <button onClick={() => setSidebarView("new-team")} className="px-6 py-2.5 rounded-full text-[14px] font-semibold"
+                  style={{ background: T.accent, color: "#fff" }}>New Team</button>
               </div>
             ) : showInfo ? (
-              <motion.div key="info" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                className="flex flex-col h-full">
+              <motion.div key="info" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col h-full">
                 <div className="flex items-center gap-3 px-4 py-3"
                   style={{ borderBottom: `1px solid ${T.divider}`, background: T.header, backdropFilter: "blur(20px)" }}>
                   <button onClick={() => setShowInfo(false)} style={{ color: T.accent }} className="flex items-center gap-0.5 text-[14px]">
@@ -570,7 +555,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                   </button>
                   <p style={{ color: T.textPrimary, fontSize: "16px", fontWeight: 600 }}>Details</p>
                 </div>
-
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ scrollbarWidth: "none" }}>
                   <div className="flex flex-col items-center gap-2 py-2">
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white ${getUserColor(activeTeam.id)}`}>
@@ -579,16 +563,11 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     <p style={{ color: T.textPrimary, fontSize: "18px", fontWeight: 600 }}>{activeTeam.name}</p>
                     <p style={{ color: T.textSecondary, fontSize: "13px" }}>{members.length} member{members.length !== 1 ? "s" : ""}</p>
                   </div>
-
-                  {/* Invite section */}
                   <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${T.divider}` }}>
-                    <p style={{ color: T.sectionLabel, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", padding: "10px 14px 6px" }}>
-                      Add People
-                    </p>
+                    <p style={{ color: T.sectionLabel, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", padding: "10px 14px 6px" }}>Add People</p>
                     <div className="px-3 pb-3 flex gap-2">
                       <input value={inviteEmail} onChange={e => { setInviteEmail(e.target.value); setInviteStatus("idle"); }}
-                        onKeyDown={e => e.key === "Enter" && handleInvite()}
-                        placeholder="Email address" type="email"
+                        onKeyDown={e => e.key === "Enter" && handleInvite()} placeholder="Email address" type="email"
                         className="flex-1 rounded-[10px] px-3 py-2 text-[13px] border outline-none"
                         style={{ background: T.fieldBg, borderColor: T.fieldBorder, color: T.textPrimary }} />
                       <button onClick={handleInvite} disabled={!inviteEmail.trim() || inviteStatus === "sending"}
@@ -603,12 +582,8 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                       {inviteLinkLoading ? <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" /> : <><Link size={12} /> Copy Invite Link <Copy size={11} className="opacity-50 ml-auto" /></>}
                     </button>
                   </div>
-
-                  {/* Members */}
                   <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${T.divider}` }}>
-                    <p style={{ color: T.sectionLabel, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", padding: "10px 14px 6px" }}>
-                      Members
-                    </p>
+                    <p style={{ color: T.sectionLabel, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", padding: "10px 14px 6px" }}>Members</p>
                     {members.map((m, i) => (
                       <div key={m.id} className="flex items-center gap-3 px-3 py-2.5 group"
                         style={{ borderTop: i > 0 ? `1px solid ${T.divider}` : "none" }}>
@@ -630,7 +605,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                       </div>
                     ))}
                   </div>
-
                   {isAdmin && activeTeamId && (
                     <button onClick={() => handleDeleteTeam(activeTeamId)} disabled={deletingTeamId === activeTeamId}
                       className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[14px] font-medium disabled:opacity-30 transition-all"
@@ -642,9 +616,8 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
               </motion.div>
             ) : (
               <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
-                {/* Chat header — centered avatar + name */}
-                <div
-                  className="flex items-center justify-center px-4 py-2.5 shrink-0 relative"
+                {/* Chat header — centered */}
+                <div className="flex items-center justify-center px-4 py-2.5 shrink-0 relative"
                   style={{ borderBottom: `1px solid ${T.divider}`, background: T.header, backdropFilter: "blur(20px)" }}>
                   <div className="flex flex-col items-center cursor-pointer" onClick={() => setShowInfo(true)}>
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white ${getUserColor(activeTeam.id)}`}>
@@ -661,11 +634,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                   </button>
                 </div>
 
-                {/* Messages area */}
+                {/* Messages */}
                 <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ scrollbarWidth: "none" }}
                   onClick={() => setLongPressedMsgId(null)}>
                   {loading && <p style={{ color: T.textTertiary, fontSize: "13px", textAlign: "center", paddingTop: 40 }}>Loading…</p>}
-
                   {!loading && messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
                       <div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white ${getUserColor(activeTeam.id)}`}>
@@ -687,10 +659,12 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     const isFirst = !prevMsg || prevMsg.user_id !== msg.user_id;
                     const isLast = !nextMsg || nextMsg.user_id !== msg.user_id;
                     const showTime = !prevMsg || (new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime()) > 5 * 60 * 1000;
-
-                    // iMessage-style tail radius
                     const myRadius = `18px ${isFirst ? "4px" : "18px"} ${isLast ? "18px" : "4px"} 18px`;
                     const theirRadius = `${isFirst ? "4px" : "18px"} 18px 18px ${isLast ? "18px" : "4px"}`;
+
+                    // Read receipts for this message
+                    const readByUsers = isMe && msg.id === lastOwnMsgId ? getReadByForMessage(msg.id) : [];
+                    const isLastOwnMsg = isMe && msg.id === lastOwnMsgId;
 
                     return (
                       <React.Fragment key={msg.id}>
@@ -705,13 +679,9 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                           className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"} ${isLast ? "mb-1" : "mb-[2px]"}`}
                           onMouseEnter={() => setHoveredMsgId(msg.id)}
                           onMouseLeave={() => { setHoveredMsgId(null); cancelLongPress(); }}>
-                          {/* Avatar */}
                           <div className="w-8 shrink-0 flex justify-center">
-                            {!isMe && isLast && (
-                              <UserAvatar userId={msg.user_id} displayName={name} avatarUrl={avatar} size="sm" />
-                            )}
+                            {!isMe && isLast && <UserAvatar userId={msg.user_id} displayName={name} avatarUrl={avatar} size="sm" />}
                           </div>
-
                           <div className={`flex flex-col max-w-[68%] ${isMe ? "items-end" : "items-start"}`}>
                             {!isMe && isFirst && (
                               <span style={{ color: T.sectionLabel, fontSize: "11px", fontWeight: 500, padding: "0 4px 2px" }}>{name}</span>
@@ -733,9 +703,11 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                                   userSelect: "text",
                                 }}>
                                 {msg.content}
+                                {msg.file_url && msg.file_type && msg.file_name && (
+                                  <FilePreview url={msg.file_url} type={msg.file_type} name={msg.file_name} dark={dark} />
+                                )}
                               </div>
 
-                              {/* Reaction picker — hover or long-press */}
                               <AnimatePresence>
                                 {showReactionFor(msg.id) && (
                                   <motion.div
@@ -744,23 +716,18 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                                     exit={{ opacity: 0, scale: 0.85, y: 4 }}
                                     className={`absolute ${isMe ? "right-0" : "left-0"} -top-11 flex items-center gap-1 px-2 py-1.5 rounded-full z-20`}
                                     style={{
-                                      background: T.reactionBg,
-                                      border: `1px solid ${T.reactionBorder}`,
-                                      boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
-                                      backdropFilter: "blur(20px)",
+                                      background: T.reactionBg, border: `1px solid ${T.reactionBorder}`,
+                                      boxShadow: "0 4px 16px rgba(0,0,0,0.2)", backdropFilter: "blur(20px)",
                                     }}>
                                     {REACTION_EMOJIS.map(e => (
                                       <button key={e} onClick={() => { toggleReaction(msg.id, e); setLongPressedMsgId(null); }}
-                                        className="text-[16px] hover:scale-125 transition-transform leading-none">
-                                        {e}
-                                      </button>
+                                        className="text-[16px] hover:scale-125 transition-transform leading-none">{e}</button>
                                     ))}
                                   </motion.div>
                                 )}
                               </AnimatePresence>
                             </div>
 
-                            {/* Reactions */}
                             {hasReactions && (
                               <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
                                 {Object.entries(msgReactions).map(([emoji, userIds]) => {
@@ -781,9 +748,22 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                               </div>
                             )}
 
-                            {/* Delivered */}
-                            {isMe && isLast && idx === messages.length - 1 && (
-                              <span style={{ color: T.textTertiary, fontSize: "10px", marginTop: 2, paddingRight: 2 }}>Delivered</span>
+                            {/* Read receipts / Delivered */}
+                            {isLastOwnMsg && (
+                              <div className="flex items-center gap-1 mt-0.5 pr-1" style={{ justifyContent: "flex-end" }}>
+                                {readByUsers.length > 0 ? (
+                                  <>
+                                    <span style={{ color: T.textTertiary, fontSize: "10px" }}>Read</span>
+                                    <div className="flex -space-x-1.5">
+                                      {readByUsers.slice(0, 3).map(uid => (
+                                        <UserAvatar key={uid} userId={uid} displayName={getMemberName(uid)} avatarUrl={avatarMap[uid]} size="xs" />
+                                      ))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <span style={{ color: T.textTertiary, fontSize: "10px" }}>Delivered</span>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -791,7 +771,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     );
                   })}
 
-                  {/* Typing */}
                   <AnimatePresence>
                     {typingNames.length > 0 && (
                       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
@@ -809,6 +788,20 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
                 {/* Input bar */}
                 <div className="px-3 py-2.5 shrink-0" style={{ borderTop: `1px solid ${T.divider}`, background: T.inputBar, backdropFilter: "blur(20px)" }}>
+                  {/* Pending file preview */}
+                  {pendingFile && (
+                    <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-lg"
+                      style={{ background: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)" }}>
+                      {pendingFile.type.startsWith("image/") ? (
+                        <img src={pendingFile.url} alt="" className="w-10 h-10 rounded-md object-cover" />
+                      ) : (
+                        <FileText size={16} style={{ color: T.textSecondary }} />
+                      )}
+                      <span className="text-[12px] flex-1 truncate" style={{ color: T.textPrimary }}>{pendingFile.name}</span>
+                      <button onClick={() => setPendingFile(null)} style={{ color: T.textTertiary }}><X size={14} /></button>
+                    </div>
+                  )}
+
                   {showEmojiPicker && (
                     <div className="mb-2 p-2 rounded-xl grid grid-cols-10 gap-1"
                       style={{ background: dark ? "rgba(28,28,30,0.95)" : "rgba(229,229,234,0.95)" }}>
@@ -819,9 +812,16 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <button className="p-1.5 rounded-full transition-all shrink-0"
-                      style={{ color: T.textTertiary }}>
-                      <Plus size={18} />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="p-1.5 rounded-full transition-all shrink-0"
+                      style={{ color: uploading ? T.accent : T.textTertiary }}>
+                      {uploading ? (
+                        <span className="w-[18px] h-[18px] rounded-full border-2 border-current border-t-transparent animate-spin block" />
+                      ) : (
+                        <Plus size={18} />
+                      )}
                     </button>
                     <div className="flex-1 flex items-center gap-2 rounded-full px-3 py-2 border transition-all"
                       style={{ background: T.fieldBg, borderColor: T.fieldBorder }}>
@@ -829,7 +829,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                         value={text}
                         onChange={e => { setText(e.target.value); handleTypingChange(); }}
                         onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-                        placeholder="iMessage"
+                        placeholder="Message"
                         className="flex-1 bg-transparent outline-none text-[15px]"
                         style={{ color: T.textPrimary }}
                       />
@@ -839,11 +839,11 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                         <Smile size={16} />
                       </button>
                     </div>
-                    <button onClick={handleSend} disabled={!text.trim()}
+                    <button onClick={handleSend} disabled={!text.trim() && !pendingFile}
                       className="w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0"
                       style={{
-                        background: text.trim() ? T.accent : (dark ? "rgba(44,44,46,1)" : "rgba(229,229,234,1)"),
-                        color: text.trim() ? "#fff" : T.textTertiary,
+                        background: (text.trim() || pendingFile) ? T.accent : (dark ? "rgba(44,44,46,1)" : "rgba(229,229,234,1)"),
+                        color: (text.trim() || pendingFile) ? "#fff" : T.textTertiary,
                       }}>
                       <Send size={14} />
                     </button>
