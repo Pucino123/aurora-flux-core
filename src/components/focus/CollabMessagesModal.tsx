@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut,
   Trash2, Smile, Link, Copy, Moon, Sun, ChevronLeft, Search,
@@ -386,6 +387,12 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
       <DialogContent
         className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden"
         onOpenAutoFocus={e => e.preventDefault()}
+        onPointerDownOutside={e => {
+          // Prevent dialog from closing when clicking the context menu portal
+          if (contextMenuRef.current && contextMenuRef.current.contains(e.target as Node)) {
+            e.preventDefault();
+          }
+        }}
         style={{
           fontFamily: "-apple-system, 'SF Pro Text', 'SF Pro Display', BlinkMacSystemFont, sans-serif",
           maxWidth: "820px",
@@ -999,7 +1006,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
           </div>
         </div>
 
-        {/* Context menu rendered inside DialogContent to avoid focus trap issues */}
+        {/* Context menu via portal to body so it renders above everything */}
         {contextMenuMsgId && contextMenuPos && (() => {
           const msg = messages.find(m => m.id === contextMenuMsgId);
           if (!msg) return null;
@@ -1009,11 +1016,12 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
           const top = Math.max(8, Math.min(contextMenuPos.y - 100, window.innerHeight - menuHeight - 8));
           const left = Math.max(8, Math.min(contextMenuPos.x - 120, window.innerWidth - menuWidth - 8));
 
-          return (
+          return createPortal(
             <div
               ref={contextMenuRef}
-              className="fixed z-[300] flex flex-col gap-1 rounded-2xl overflow-hidden"
+              className="fixed flex flex-col gap-1 rounded-2xl overflow-hidden"
               style={{
+                zIndex: 99999,
                 top,
                 left,
                 background: T.reactionBg,
@@ -1021,6 +1029,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 boxShadow: "0 16px 48px rgba(0,0,0,0.4)",
                 backdropFilter: "blur(30px)",
                 width: `${menuWidth}px`,
+                pointerEvents: "auto",
               }}
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}>
@@ -1043,7 +1052,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 })}
               </div>
               <div style={{ height: 1, background: T.divider }} />
-              {/* Reply action */}
               <button
                 onClick={() => {
                   setReplyTo({ id: msg.id, content: msg.content, userName: getMemberName(msg.user_id) });
@@ -1056,7 +1064,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 <Reply size={16} style={{ color: T.textSecondary }} />
                 Reply
               </button>
-              {/* Copy action */}
               <button
                 onClick={() => { navigator.clipboard.writeText(msg.content); closeContextMenu(); toast.success("Copied"); }}
                 className="flex items-center gap-3 px-4 py-2.5 text-[14px] transition-all text-left"
@@ -1066,7 +1073,8 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 <Copy size={16} style={{ color: T.textSecondary }} />
                 Copy
               </button>
-            </div>
+            </div>,
+            document.body
           );
         })()}
       </DialogContent>
