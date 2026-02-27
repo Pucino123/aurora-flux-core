@@ -18,6 +18,8 @@ interface DesktopFolderProps {
   onDocDropped?: () => void;
   isMarqueeSelected?: boolean;
   onGroupDragStart?: (e: React.PointerEvent, itemId: string) => boolean;
+  onSingleSelect?: (id: string) => void;
+  onBulkContextMenu?: (e: React.MouseEvent) => void;
 }
 
 const FOLDER_COLORS = [
@@ -31,7 +33,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
@@ -142,7 +144,11 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
   }, [folder.id, updateDesktopFolderPosition, onDragStateChange]);
 
-  const handleContextMenu = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY }); };
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (isMarqueeSelected && onBulkContextMenu) { onBulkContextMenu(e); return; }
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
 
   const commitRename = () => {
     if (renameValue.trim() && renameValue !== folder.title) { updateFolder(folder.id, { title: renameValue.trim() }); }
@@ -224,22 +230,24 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
           scale: justAbsorbed ? [1, 1.15, 0.92, 1.05, 1] : (isDropTarget ? 1.08 : 1),
         }}
         transition={justAbsorbed ? { duration: 0.4, ease: "easeOut" } : { duration: 0.2 }}
-        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl ${
-          isDropTarget ? "ring-2 ring-blue-400/60 shadow-[0_0_28px_rgba(59,130,246,0.35)]" : isMarqueeSelected ? "ring-2 ring-blue-400/60 bg-blue-400/10" : (selected && !isDragging ? "ring-2 ring-primary/50" : "")
+        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl transition-shadow duration-200 ${
+          isDropTarget ? "ring-2 ring-blue-400/60" : (!isMarqueeSelected && selected && !isDragging ? "ring-2 ring-primary/50" : "")
         }`}
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,
-          zIndex: isDragging ? 9999 : selected ? 55 : 45,
+          zIndex: isDragging ? 9999 : (selected || isMarqueeSelected) ? 55 : 45,
           filter: isDragging ? "drop-shadow(0 20px 40px rgba(0,0,0,0.5))" : undefined,
           background: "transparent",
           backdropFilter: folderOpacity <= 0.06 ? "none" : undefined,
           WebkitBackdropFilter: folderOpacity <= 0.06 ? "none" : undefined,
-          boxShadow: folderOpacity <= 0.06 ? "none" : undefined,
+          boxShadow: isMarqueeSelected
+            ? "0 0 0 2px rgba(0,122,255,0.7), 0 0 16px 2px rgba(0,122,255,0.35), 0 0 30px 4px rgba(0,122,255,0.15)"
+            : isDropTarget ? "0 0 28px rgba(59,130,246,0.35)" : (folderOpacity <= 0.06 ? "none" : undefined),
           border: folderOpacity <= 0.06 ? "none" : undefined,
         }}
         onPointerDown={handlePointerDown}
         onDoubleClick={handleDoubleClick}
-        onClick={(e) => { e.stopPropagation(); if (!didDrag.current) setSelected(true); }}
+        onClick={(e) => { e.stopPropagation(); if (!didDrag.current) { if (onSingleSelect) onSingleSelect(folder.id); else setSelected(true); } }}
         onContextMenu={handleContextMenu}
       >
         {/* Background layer */}
