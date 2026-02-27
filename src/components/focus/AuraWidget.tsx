@@ -16,16 +16,13 @@ interface ChatMessage {
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Proactive hints with self-introductions
 const TIPS = [
   "Hi, my name is Aura...",
-  "I am Aura, your personal assistant. How can I help?",
+  "I am Aura, your personal assistant.",
   "You can click me to ask anything...",
-  "Did you know I can see your screen and help you right away?",
   "Need help organizing your day?",
   "Click here to add a task...",
   "I can help you plan your schedule",
-  "Ask me to summarize your day",
 ];
 
 // --- Helpers ---
@@ -168,60 +165,8 @@ function useVoiceInput(onResult: (text: string) => void) {
   return { listening, toggle };
 }
 
-// --- Glassmorphic speech bubble with cycling tips ---
-const HintBubble: React.FC = () => {
-  const [tipIdx, setTipIdx] = useState(0);
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setTipIdx((i) => (i + 1) % TIPS.length);
-        setVisible(true);
-      }, 600);
-    }, 4500);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="relative mt-3 mx-auto max-w-[220px]">
-      {/* Speech bubble with glassmorphism */}
-      <div
-        className="rounded-2xl px-4 py-2.5 border border-white/[0.08] relative"
-        style={{
-          background: "rgba(255,255,255,0.06)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-        }}
-      >
-        {/* Bubble tail */}
-        <div
-          className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-l border-t border-white/[0.08]"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-          }}
-        />
-        <AnimatePresence mode="wait">
-          {visible && (
-            <motion.p
-              key={tipIdx}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.45 }}
-              className="text-[11px] text-white/50 text-center leading-relaxed pointer-events-none select-none"
-            >
-              {TIPS[tipIdx]}
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-};
+// --- Pill states ---
+type PillMode = "idle" | "hint" | "input" | "processing" | "response";
 
 // --- Main Widget ---
 const AuraWidget: React.FC = () => {
@@ -229,39 +174,97 @@ const AuraWidget: React.FC = () => {
   const [input, setInput] = useState("");
   const [auraState, setAuraState] = useState<AuraState>("idle");
   const [isLoading, setIsLoading] = useState(false);
-  const [awake, setAwake] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [pillMode, setPillMode] = useState<PillMode>("idle");
+  const [currentTip, setCurrentTip] = useState("");
+  const [responseText, setResponseText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
+  const responseTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const focusStore = useFocusStore();
   const flux = useFlux();
 
-  const scrollToBottom = useCallback(() => {
-    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-  }, []);
-
-  // Click outside to revert to idle (only if nothing typed and no messages)
+  // --- Intermittent random hints ---
   useEffect(() => {
-    if (!awake) return;
+    if (pillMode !== "idle") return;
+
+    const scheduleHint = () => {
+      // Random interval: 6-15 seconds of silence, then show a hint for 4s
+      const silenceDuration = 6000 + Math.random() * 9000;
+      hintTimerRef.current = setTimeout(() => {
+        if (pillMode !== "idle") return;
+        const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+        setCurrentTip(tip);
+        setPillMode("hint");
+        // Hide hint after 4 seconds
+        hintTimerRef.current = setTimeout(() => {
+          setPillMode((prev) => prev === "hint" ? "idle" : prev);
+          setCurrentTip("");
+          scheduleHint();
+        }, 4000);
+      }, silenceDuration);
+    };
+
+    // Initial hint after a short delay
+    hintTimerRef.current = setTimeout(() => {
+      const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+      setCurrentTip(tip);
+      setPillMode("hint");
+      hintTimerRef.current = setTimeout(() => {
+        setPillMode((prev) => prev === "hint" ? "idle" : prev);
+        setCurrentTip("");
+        scheduleHint();
+      }, 4000);
+    }, 2000);
+
+    return () => { if (hintTimerRef.current) clearTimeout(hintTimerRef.current); };
+  }, [pillMode === "idle"]);
+
+  // Click outside to revert
+  useEffect(() => {
+    if (pillMode === "idle" || pillMode === "hint") return;
     const handler = (e: MouseEvent) => {
       if (widgetRef.current && !widgetRef.current.contains(e.target as Node)) {
-        if (!input.trim() && messages.length === 0) {
-          setAwake(false);
+        if (pillMode === "input" && !input.trim()) {
+          revertToIdle();
+        } else if (pillMode === "response") {
+          revertToIdle();
         }
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [awake, input, messages.length]);
+  }, [pillMode, input]);
 
-  // Focus input when waking
+  // Auto-revert after response displayed
   useEffect(() => {
-    if (awake) setTimeout(() => inputRef.current?.focus(), 300);
-  }, [awake]);
+    if (pillMode === "response" && responseText) {
+      responseTimerRef.current = setTimeout(() => {
+        revertToIdle();
+      }, 8000);
+      return () => { if (responseTimerRef.current) clearTimeout(responseTimerRef.current); };
+    }
+  }, [pillMode, responseText]);
+
+  // Focus input when entering input mode
+  useEffect(() => {
+    if (pillMode === "input") {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [pillMode]);
+
+  const revertToIdle = useCallback(() => {
+    setPillMode("idle");
+    setInput("");
+    setResponseText("");
+    setAuraState("idle");
+  }, []);
 
   const wake = useCallback(() => {
-    if (!awake) setAwake(true);
-  }, [awake]);
+    if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+    setPillMode("input");
+    setCurrentTip("");
+  }, []);
 
   // Handle tool calls from AI
   const handleToolCall = useCallback((name: string, args: any) => {
@@ -292,44 +295,46 @@ const AuraWidget: React.FC = () => {
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
-    setAwake(true);
     const userMsg: ChatMessage = { role: "user", content: text.trim() };
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput("");
     setIsLoading(true);
+    setPillMode("processing");
     setAuraState("processing");
-    scrollToBottom();
+    setResponseText("");
 
     let assistantText = "";
     const context = gatherContext(focusStore, flux);
 
-    const upsert = (chunk: string) => {
-      assistantText += chunk;
-      setAuraState("speaking");
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.role === "assistant") {
-          return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantText } : m);
-        }
-        return [...prev, { role: "assistant", content: assistantText }];
-      });
-      scrollToBottom();
-    };
-
     try {
       await streamAura(
-        [...messages, userMsg],
+        newMessages,
         context,
-        upsert,
+        (chunk) => {
+          assistantText += chunk;
+          setAuraState("speaking");
+          setPillMode("response");
+          setResponseText(assistantText);
+        },
         handleToolCall,
-        () => { setIsLoading(false); setAuraState("idle"); },
+        () => {
+          setIsLoading(false);
+          setMessages((prev) => {
+            if (assistantText) {
+              return [...prev, { role: "assistant", content: assistantText }];
+            }
+            return prev;
+          });
+        },
       );
     } catch {
       setIsLoading(false);
+      setPillMode("idle");
       setAuraState("idle");
       toast.error("Failed to reach Aura");
     }
-  }, [messages, isLoading, focusStore, flux, scrollToBottom, handleToolCall]);
+  }, [messages, isLoading, focusStore, flux, handleToolCall]);
 
   const { listening, toggle: toggleVoice } = useVoiceInput((text) => {
     setInput(text);
@@ -338,131 +343,172 @@ const AuraWidget: React.FC = () => {
 
   useEffect(() => {
     if (listening) setAuraState("listening");
-    else if (!isLoading) setAuraState("idle");
-  }, [listening, isLoading]);
+    else if (!isLoading && pillMode !== "processing" && pillMode !== "response") setAuraState("idle");
+  }, [listening, isLoading, pillMode]);
 
   const defaultPos = {
     x: Math.round(window.innerWidth * 0.62),
     y: Math.round(window.innerHeight * 0.08),
   };
 
-  const hasChat = messages.length > 0 || awake;
+  const orbSize = 110;
+  const showPill = pillMode !== "idle";
 
   return (
     <DraggableWidget
       id="aura"
       title=""
       defaultPosition={defaultPos}
-      defaultSize={{ w: 340, h: hasChat ? 480 : 240 }}
+      defaultSize={{ w: 300, h: 260 }}
       className="aura-widget"
+      hideHeader
+      autoHeight
+      containerStyle={{ background: "transparent", border: "none", boxShadow: "none" }}
     >
-      <div ref={widgetRef} className="flex flex-col h-full">
-        {/* Orb — always visible, centered */}
-        <div
-          className="flex items-center justify-center pt-4 pb-1 shrink-0"
-          onClick={wake}
-        >
-          <AuraOrb state={auraState} size={hasChat ? 72 : 110} onClick={wake} />
+      <div ref={widgetRef} className="flex flex-col items-center" style={{ minHeight: 180 }}>
+        {/* Orb — always visible */}
+        <div className="flex items-center justify-center pt-2 pb-1" onClick={wake}>
+          <AuraOrb state={auraState} size={orbSize} onClick={wake} />
         </div>
 
-        {/* Idle: glassmorphic speech bubble with cycling tips */}
-        <AnimatePresence>
-          {!hasChat && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6, transition: { duration: 0.2 } }}
-              className="px-4 pb-3"
-            >
-              <HintBubble />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Chat history — only when awake */}
-        <AnimatePresence>
-          {hasChat && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex-1 overflow-y-auto px-3 space-y-2 min-h-0 scrollbar-thin scrollbar-thumb-white/10"
-            >
-              {messages.map((msg, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`text-xs leading-relaxed ${
-                    msg.role === "user"
-                      ? "text-white/90 bg-white/10 rounded-2xl rounded-br-md px-3 py-2 ml-8"
-                      : "text-white/75 px-1 py-1"
-                  }`}
+        {/* Dynamic Pill — morphs between hint, input, processing, response */}
+        <div className="relative w-full flex justify-center mt-2" style={{ minHeight: 36 }}>
+          <AnimatePresence mode="wait">
+            {/* Hint pill — intermittent tips */}
+            {pillMode === "hint" && (
+              <motion.div
+                key="hint-pill"
+                initial={{ opacity: 0, scale: 0.85, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.85, y: -4 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="absolute cursor-pointer"
+                onClick={wake}
+              >
+                <div
+                  className="rounded-full px-5 py-2 border border-white/[0.1]"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    backdropFilter: "blur(24px)",
+                    WebkitBackdropFilter: "blur(24px)",
+                  }}
                 >
-                  {msg.role === "assistant" ? (
-                    <div className="prose prose-invert prose-xs max-w-none [&>*]:my-1 [&_p]:text-xs [&_li]:text-xs">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
-                  ) : (
-                    msg.content
-                  )}
-                </motion.div>
-              ))}
-              <div ref={chatEndRef} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  <p className="text-[11px] text-white/50 text-center whitespace-nowrap select-none">
+                    {currentTip}
+                  </p>
+                </div>
+              </motion.div>
+            )}
 
-        {/* Input bar — only when awake */}
-        <AnimatePresence>
-          {hasChat && (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 16 }}
-              transition={{ duration: 0.25 }}
-              className="shrink-0 p-2.5"
-            >
-              <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5 border border-white/[0.08]"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
+            {/* Input pill — text field */}
+            {pillMode === "input" && (
+              <motion.div
+                key="input-pill"
+                initial={{ opacity: 0, scale: 0.85, width: 160 }}
+                animate={{ opacity: 1, scale: 1, width: 260 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="absolute"
+              >
+                <div
+                  className="flex items-center gap-1.5 rounded-full px-3 py-2 border border-white/[0.1]"
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    backdropFilter: "blur(28px)",
+                    WebkitBackdropFilter: "blur(28px)",
+                  }}
+                >
+                  <button
+                    onClick={toggleVoice}
+                    className={`p-1 rounded-full transition-all shrink-0 ${
+                      listening
+                        ? "bg-purple-500/30 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.4)]"
+                        : "text-white/40 hover:text-white/70"
+                    }`}
+                    title={listening ? "Stop listening" : "Voice input"}
+                  >
+                    {listening ? <MicOff size={13} /> : <Mic size={13} />}
+                  </button>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && send(input)}
+                    placeholder="Ask Aura anything..."
+                    className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/30 outline-none min-w-0"
+                  />
+                  <button
+                    onClick={() => send(input)}
+                    disabled={isLoading || !input.trim()}
+                    className="p-1 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all shrink-0"
+                  >
+                    <Send size={13} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Processing pill — loading dots */}
+            {pillMode === "processing" && (
+              <motion.div
+                key="processing-pill"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="absolute"
+              >
+                <div
+                  className="rounded-full px-6 py-2.5 border border-white/[0.1] flex items-center gap-1.5"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    backdropFilter: "blur(24px)",
+                    WebkitBackdropFilter: "blur(24px)",
+                  }}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-white/40"
+                      animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Response pill — AI answer displayed inline, auto-resizing */}
+            {pillMode === "response" && responseText && (
+              <motion.div
+                key="response-pill"
+                initial={{ opacity: 0, scale: 0.9, maxHeight: 40 }}
+                animate={{ opacity: 1, scale: 1, maxHeight: 300 }}
+                exit={{ opacity: 0, scale: 0.9, maxHeight: 40 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="absolute w-full px-2"
+                onClick={() => {
+                  if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
+                  revertToIdle();
                 }}
               >
-                <button
-                  onClick={toggleVoice}
-                  className={`p-1.5 rounded-full transition-all ${
-                    listening
-                      ? "bg-purple-500/30 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.4)]"
-                      : "text-white/40 hover:text-white/70"
-                  }`}
-                  title={listening ? "Stop listening" : "Voice input"}
+                <div
+                  className="rounded-2xl px-4 py-3 border border-white/[0.1] max-h-[280px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 cursor-pointer"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    backdropFilter: "blur(28px)",
+                    WebkitBackdropFilter: "blur(28px)",
+                  }}
                 >
-                  {listening ? <MicOff size={14} /> : <Mic size={14} />}
-                </button>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && send(input)}
-                  placeholder="Ask Aura anything..."
-                  className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/30 outline-none"
-                />
-                <button
-                  onClick={() => send(input)}
-                  disabled={isLoading || !input.trim()}
-                  className="p-1.5 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all"
-                >
-                  <Send size={14} />
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  <div className="prose prose-invert prose-xs max-w-none [&>*]:my-0.5 [&_p]:text-[11px] [&_p]:leading-relaxed [&_li]:text-[11px] [&_p]:text-white/70">
+                    <ReactMarkdown>{responseText}</ReactMarkdown>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </DraggableWidget>
   );
