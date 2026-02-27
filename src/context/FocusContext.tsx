@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { trackWidgetToggle } from "@/hooks/useWidgetIntelligence";
+import { supabase } from "@/integrations/supabase/client";
 export type TimerMode = "pomodoro" | "stopwatch" | "countdown";
 export type TimerState = "idle" | "running" | "paused";
 export type SystemMode = "focus" | "build" | "collaboration";
@@ -98,11 +99,11 @@ const DEFAULT_STATE: FocusState = {
   clockColor: "rgba(255,255,255,1)",
   clockWeight: 200,
   clockShowDate: true,
-  clockShowSeconds: true,
+  clockShowSeconds: false,
   clockShowGreeting: true,
   clockSecondaryTz: "",
   clockGlassEffect: false,
-  clockDepthShadow: false,
+  clockDepthShadow: true,
   systemMode: "focus",
   desktopFolderPositions: {},
   desktopFolderOpacities: {},
@@ -227,9 +228,43 @@ const FocusContext = createContext<FocusContextValue | null>(null);
 
 export function FocusProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<FocusState>(loadState);
+  const dbSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialLoadDone = useRef(false);
 
+  // Load from DB on mount (authenticated users)
+  useEffect(() => {
+    let cancelled = false;
+    const loadFromDb = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || cancelled) { initialLoadDone.current = true; return; }
+      const { data } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (data?.state && typeof data.state === "object") {
+        setState(prev => ({ ...DEFAULT_STATE, ...prev, ...(data.state as Partial<FocusState>) }));
+      }
+      initialLoadDone.current = true;
+    };
+    loadFromDb();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Persist to localStorage + debounced DB upsert
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (!initialLoadDone.current) return;
+    if (dbSyncTimer.current) clearTimeout(dbSyncTimer.current);
+    dbSyncTimer.current = setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      await (supabase.from as any)("dashboard_state").upsert(
+        { user_id: session.user.id, state: state as unknown as Record<string, unknown>, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
+    }, 800);
+    return () => { if (dbSyncTimer.current) clearTimeout(dbSyncTimer.current); };
   }, [state]);
 
   // Responsive proportional scaling on window resize

@@ -269,7 +269,7 @@ const FocusContent = () => {
   // Marquee + group drag: single effect with refs to avoid stale closures
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
-    if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea, [data-widget-id]')) return;
+    if ((e.target as HTMLElement).closest('.desktop-folder, .desktop-document, [data-widget], [data-widget-id], [data-no-drag], .focus-sticky-note, button, input, textarea')) return;
     e.preventDefault(); // prevent text selection during marquee
     // Clear selection on empty canvas click
     if (selectedIdsRef.current.size > 0) {

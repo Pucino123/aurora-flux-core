@@ -125,6 +125,7 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest("button, textarea, [data-no-drag]")) return;
+    e.stopPropagation();
     dragging.current = true;
     setIsDragging(true);
     offset.current = { x: e.clientX - note.x, y: e.clientY - note.y };
