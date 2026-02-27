@@ -693,7 +693,7 @@ const AuraWidget: React.FC = () => {
         </div>
 
         {/* Dynamic Pill */}
-        <div className="relative w-full flex justify-center mt-2" style={{ minHeight: 36 }}>
+        <div className="w-full flex justify-center mt-2">
           <AnimatePresence mode="wait">
             {pillMode === "hint" && (
               <motion.div
@@ -702,7 +702,7 @@ const AuraWidget: React.FC = () => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.85, y: -4 }}
                 transition={{ duration: 0.4 }}
-                className="absolute cursor-pointer"
+                className="cursor-pointer"
                 onClick={wake}
               >
                 <div className="rounded-full px-5 py-2 border border-white/[0.08]" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
@@ -714,23 +714,17 @@ const AuraWidget: React.FC = () => {
             {(pillMode === "input" || pillMode === "processing" || pillMode === "response") && (
               <motion.div
                 key="active-pill"
-                initial={{ opacity: 0, scale: 0.85, width: 160 }}
+                initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1, width: 300 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.35 }}
-                className="absolute"
+                className="w-full"
               >
                 {pillMode === "processing" ? (
                   <div className="flex items-center justify-center gap-1.5 rounded-full px-6 py-2.5 border border-white/[0.08]" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
                     {[0, 1, 2].map((i) => (
                       <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-white/40" animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} />
                     ))}
-                  </div>
-                ) : pillMode === "response" && responseText ? (
-                  <div className="relative rounded-2xl px-4 py-3 border border-white/[0.08] max-h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
-                    <div className="prose prose-invert prose-sm max-w-none [&>*]:my-0.5 [&_p]:text-[12px] [&_p]:leading-relaxed [&_li]:text-[12px] [&_p]:text-white/70">
-                      <ReactMarkdown>{responseText}</ReactMarkdown>
-                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-1 w-full">
