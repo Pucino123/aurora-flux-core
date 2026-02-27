@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, X, Settings } from "lucide-react";
+import { Send, Mic, MicOff, X, Settings2, GripHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import DraggableWidget from "./DraggableWidget";
 import AuraOrb, { type AuraState } from "./AuraOrb";
 import { useFocusStore } from "@/context/FocusContext";
 import { useFlux } from "@/context/FluxContext";
+import { useStyleEditorCallback } from "./StyleEditorContext";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -224,6 +225,13 @@ const AuraWidget: React.FC = () => {
   const historyEndRef = useRef<HTMLDivElement>(null);
   const focusStore = useFocusStore();
   const flux = useFlux();
+  const openStyleEditor = useStyleEditorCallback();
+  const isBuildMode = focusStore.systemMode === "build";
+
+  // Force widget background to fully transparent on mount
+  useEffect(() => {
+    focusStore.setWidgetOpacity("aura", 0);
+  }, []);
 
   // --- Intermittent random hints ---
   useEffect(() => {
@@ -425,7 +433,7 @@ const AuraWidget: React.FC = () => {
   return (
     <DraggableWidget
       id="aura"
-      title=""
+      title="Aura"
       defaultPosition={defaultPos}
       defaultSize={{ w: 320, h: 300 }}
       className="aura-widget"
@@ -433,19 +441,35 @@ const AuraWidget: React.FC = () => {
       autoHeight
       containerStyle={{ background: "transparent", border: "none", boxShadow: "none" }}
     >
-      <div ref={widgetRef} className="flex flex-col items-center" style={{ minHeight: 160 }}>
-        {/* Orb + Settings icon */}
-        <div className="relative flex items-center justify-center pt-2 pb-1" onClick={wake}>
+      <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
+        {/* Build-mode header bar — matches exact same style as other widgets */}
+        {isBuildMode && (
+          <div className="absolute -top-7 left-0 right-0 flex items-center justify-between px-2 py-1 rounded-t-lg bg-white/10 backdrop-blur-sm border border-b-0 border-white/15 z-50">
+            <div className="flex items-center gap-1.5 cursor-grab">
+              <GripHorizontal size={14} className="text-white/50" />
+              <span className="text-[9px] font-semibold text-white/40 uppercase tracking-wider">Aura</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => openStyleEditor?.("aura")}
+                className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/50 transition-colors"
+                title="Widget Style"
+              >
+                <Settings2 size={14} />
+              </button>
+              <button
+                onClick={() => focusStore.toggleWidget("aura")}
+                className="p-1 rounded-lg bg-white/10 hover:bg-red-500/30 text-white/50 transition-colors"
+                title="Remove widget"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+        {/* Orb */}
+        <div className="flex items-center justify-center pt-2 pb-1" onClick={wake}>
           <AuraOrb state={auraState} size={orbSize} onClick={wake} />
-          {/* Glassmorphic settings button */}
-          <button
-            onClick={(e) => { e.stopPropagation(); toast("Aura settings coming soon ✨"); }}
-            className="absolute bottom-0 right-0 p-1.5 rounded-full border border-white/[0.12] text-white/30 hover:text-white/60 hover:bg-white/[0.08] transition-all"
-            style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: "rgba(255,255,255,0.05)" }}
-            title="Aura settings"
-          >
-            <Settings size={11} />
-          </button>
         </div>
 
         {/* Dynamic Pill */}
