@@ -1,33 +1,79 @@
 
-## Plan
+## What needs to be done
 
-The user wants 3 things:
+**Two goals:**
+1. Upgrade `AuraOrb.tsx` — layer an SVG `feTurbulence + feDisplacementMap` filter on top of the existing canvas to create true organic, cloud-like gas motion.
+2. Ensure Aura is fully integrated — check `gatherContext` covers all available data (flux tasks, schedule, goals, sticky notes, goal text) and the `handleToolCall` dispatches all Aura tools correctly.
 
-1. **"Soap Bubble" visual redesign** — completely transparent/clear glass sphere aesthetic (NOT a solid glowing mass). The interior should have semi-transparent, iridescent aurora swirls on a mostly transparent/clear background. Thin iridescent edge ring like a soap bubble.
+---
 
-2. **Cmd/Ctrl voice shortcut** — replace Alt key with `metaKey` (Mac) or `ctrlKey` (Win). Use `e.metaKey || e.ctrlKey`.
+## 1. `AuraOrb.tsx` — SVG Turbulence Layer
 
-3. **Morphing pill UX refinements** — no changes needed (already exists), just cleanup + settings icon on widget + updated TIPS text to mention Cmd.
+**Approach:** Keep the canvas (soap bubble base + iridescent ring + specular). Add an SVG element stacked on top, clipped to the same circle, with:
+- An `<feTurbulence>` filter (`type="turbulence"` or `fractalNoise`, `baseFrequency ~0.008`, `numOctaves=4`) animated via `<animate>` on `seed` — this morphs the noise over time giving true organic texture.
+- A `<feDisplacementMap>` that warps the aurora color blobs (rendered as SVG radial gradients) using the turbulence as a displacement source.
+- The SVG layer uses `mix-blend-mode: screen` so it composites additively over the canvas, not occluding it.
+- The turbulence `baseFrequency` and the displacement `scale` change per `AuraState`:
+  - `idle` → low baseFreq (0.006), low scale (8)
+  - `listening` → higher (0.010, scale 18)
+  - `processing` → highest (0.014, scale 24)
+  - `speaking` → medium (0.008, scale 12)
+- The `seed` `<animate>` duration:
+  - `idle` → 18s, `listening/processing` → 5s
 
-### Changes to `AuraOrb.tsx`
+**SVG structure inside the orb div:**
+```
+<svg> (absolute, same size as canvas, pointer-events:none, z:20)
+  <defs>
+    <filter id="aura-turbulence">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves="4" seed="0" result="noise">
+        <animate attributeName="seed" values="0;20;0" dur="18s" repeatCount="indefinite" />
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+    <clipPath id="aura-clip">
+      <circle cx="50%" cy="50%" r="46%" />
+    </clipPath>
+  </defs>
+  <!-- Aurora color blobs — 3 circles with radial gradient fill, displaced by turbulence -->
+  <g filter="url(#aura-turbulence)" clip-path="url(#aura-clip)" style="mix-blend-mode:screen; opacity:0.55">
+    <circle cx="40%" cy="35%" r="38%" fill="url(#g-cyan)" />
+    <circle cx="60%" cy="65%" r="35%" fill="url(#g-purple)" />
+    <circle cx="55%" cy="40%" r="32%" fill="url(#g-pink)" />
+  </g>
+```
 
-Completely rewrite the canvas rendering to achieve a soap bubble look:
+The SVG blobs are kept simple; the `feTurbulence` displacement warps them into organic shapes. The canvas underneath still provides the bubble structure, ring, and specular. The SVG layer adds fluid morphing texture.
 
-- **Background**: Near-transparent (rgba 0,0,0,0 or very faint) instead of solid dark navy
-- **Blobs**: Reduce opacity significantly (0.3–0.5 max), use `source-over` instead of `lighter` to prevent solid mass buildup
-- **Blur**: Keep moderate blur but reduce so colors don't merge into a dark mass
-- **Edge ring**: Add a thin iridescent stroke around the circumference (thin rainbow gradient stroke — this is the "soap bubble" effect)
-- **Inner aurora**: Use translucent gradient meshes that you can see through — the whole bubble should feel hollow/glassy
-- **Specular**: More pronounced white highlight top-left for glass sphere look
-- **Outer glow wrapper**: Keep the framer-motion ambient glow but make it very subtle
+**State reactivity:** Use a `useEffect` on `state` to update the SVG filter attributes via `svgRef.current.querySelector(...)` directly (no React re-render needed for perf).
 
-### Changes to `AuraWidget.tsx`
+---
 
-- **Keyboard shortcut**: Change `e.key !== "Alt"` to use `(e.metaKey || e.ctrlKey)` with a specific key (e.g., press Space while holding Cmd/Ctrl — but spec says "press Cmd once, press again to stop"). Since Cmd alone is a modifier key without a specific keyCode event firing on keydown cleanly, the best approach is to listen for `keydown` where `e.key === "Meta"` on Mac or `e.key === "Control"` on Win. Use `e.key === "Meta" || e.key === "Control"` — press once to start, press again to stop.
-- **Settings icon**: Add a small `Settings` lucide icon button in the widget, positioned absolutely near the orb (bottom-right), glassmorphic style, that could open a small settings popover (for now, just the icon as a placeholder or showing a toast).
-- **Update TIPS**: Change "Hold Alt" to "Press ⌘/Ctrl to talk to me"
-- **Remove the duplicate X in history box** (from previous iteration — only keep X in the pill input area)
+## 2. Aura Integration Audit
 
-### Files to edit
-1. `src/components/focus/AuraOrb.tsx` — full rewrite of canvas drawing for soap bubble aesthetic
-2. `src/components/focus/AuraWidget.tsx` — shortcut, settings icon, tip text update
+Review `gatherContext` in `AuraWidget.tsx` — it already covers:
+- ✅ sticky notes, goal text, brain dump tasks
+- ✅ active widgets
+- ✅ today's schedule blocks
+- ✅ pending tasks with IDs (15 max), completed tasks (5 max)
+- ✅ goals
+
+**Missing from context:**
+- ❌ Today's date (important for scheduling context) — add `Today: ${new Date().toLocaleDateString()}`
+- ❌ Flux folders list — Aura can't know what folders exist when creating tasks
+
+**Missing tool handlers in `handleToolCall`:**
+- ❌ `update_task` — partially there but need to check it handles `due_date`
+- ✅ All others present
+
+**Aura system prompt in edge function** (`flux-ai/index.ts` line 565): Already good. Needs one addition: more explicit instruction about `gatherContext` data freshness and folder awareness.
+
+**Fix**: Enhance `gatherContext` to also include `flux.folders` list (folder IDs + names) so Aura can correctly assign tasks to folders.
+
+---
+
+## Files to change
+
+1. **`src/components/focus/AuraOrb.tsx`** — Add SVG turbulence layer on top of canvas
+2. **`src/components/focus/AuraWidget.tsx`** — Enhance `gatherContext` with date + folders, fix `update_task` due_date handling
+3. **`supabase/functions/flux-ai/index.ts`** — Upgrade Aura system prompt: add folder awareness, add `navigate` tool for switching views, add `create_note` tool for creating notes, add today's date to context injection. Also upgrade model to `google/gemini-2.5-pro` for better tool-call accuracy.
