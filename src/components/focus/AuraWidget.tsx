@@ -455,7 +455,7 @@ const AuraWidget: React.FC = () => {
   // Listen for in-document Aura summon events (fired by floating Aura button inside DocumentView)
   useEffect(() => {
     const handler = (e: CustomEvent) => {
-    const { content, title, docId, prompt } = e.detail || {};
+      const { content, title, docId, prompt } = e.detail || {};
       if (content) {
         setInjectedDocContext(`[Open document: "${title || "Untitled"}"]\n${content}`);
         setInjectedDocId(docId || null);
@@ -466,6 +466,26 @@ const AuraWidget: React.FC = () => {
     window.addEventListener("aura:summon-with-doc" as any, handler);
     return () => window.removeEventListener("aura:summon-with-doc" as any, handler);
   }, [wake]);
+
+  // Listen for aura:toggle — summon or close from document toolbar orb
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { content, title, docId, prompt } = e.detail || {};
+      if (pillMode !== "idle" && pillMode !== "hint") {
+        // Already open — close it
+        revertToIdle();
+      } else {
+        if (content) {
+          setInjectedDocContext(`[Open document: "${title || "Untitled"}"]\n${content}`);
+          setInjectedDocId(docId || null);
+        }
+        wake();
+        if (prompt) setTimeout(() => setInput(prompt), 50);
+      }
+    };
+    window.addEventListener("aura:toggle" as any, handler);
+    return () => window.removeEventListener("aura:toggle" as any, handler);
+  }, [pillMode, wake, revertToIdle]);
 
   const handleToolCall = useCallback((name: string, args: any) => {
     if (name === "add_task") {
