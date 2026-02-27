@@ -589,6 +589,15 @@ CAPABILITIES:
 - Generate images and place them on the dashboard as a widget OR insert into an open document.
 - Inject formulas directly into spreadsheet cells when a spreadsheet document is open.
 - When generating images, write a rich, detailed visual prompt. Target "dashboard" unless the user is asking to insert into a document.
+- Write long-form text (reports, essays, articles) and insert it directly into a document using write_to_document.
+
+DOCUMENT-AWARE GENERATION RULES (CRITICAL):
+- When user asks to write a report, essay, article, or any long text (>200 words), ALWAYS check the context for "CURRENTLY OPEN DOCUMENT".
+- IF a text document IS open in context: Ask the user "Jeg kan se du har et dokument åbent. Skal jeg skrive rapporten direkte i det, eller oprette et nyt?" (translate to user's language). Do NOT start writing yet.
+- IF NO document is open: immediately call write_to_document with target="new" — this creates a new doc and injects the content.
+- When the user confirms to use the existing document: call write_to_document with target="current".
+- NEVER generate unsolicited outlines or bullet-point summaries when user asks for full content. Write the FULL content directly.
+- The content field must contain the COMPLETE text — no placeholders, no "..." — the entire requested piece.
 
 SMART DEFAULTS — NEVER ASK FOR CLARIFICATION ON SIMPLE REQUESTS:
 - "Book a meeting" → title="Meeting", time = next clean hour slot (e.g. 10:00), duration="30m", date=today
@@ -949,6 +958,23 @@ ${context}
                 target: { type: "string", enum: ["dashboard", "document"], description: "Where to place the image: 'dashboard' spawns a floating image widget, 'document' inserts into the currently open document" },
               },
               required: ["prompt", "target"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "write_to_document",
+            description: "Write long-form content (report, essay, article, story, plan, etc.) into a document. Use when user asks to write anything substantial. If a text document is open, use target='current' to inject into it. Otherwise use target='new' to create a new document. The content must be the COMPLETE final text — no outlines or placeholders.",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Title of the document (used when creating a new one)" },
+                content: { type: "string", description: "The COMPLETE text content to write. Must be the full piece — no placeholders." },
+                target: { type: "string", enum: ["current", "new"], description: "'current' = inject into the open document, 'new' = create a new document" },
+                folder_id: { type: "string", description: "Folder UUID to place the new document in (optional)" },
+              },
+              required: ["title", "content", "target"],
             },
           },
         },

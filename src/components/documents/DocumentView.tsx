@@ -97,6 +97,24 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     return () => window.removeEventListener("aura:insert-image" as any, handler);
   }, [doc.id, onUpdate]);
 
+  // Listen for Aura write-to-document events
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { html, append } = e.detail || {};
+      if (!html || !editorRef.current) return;
+      if (append) {
+        editorRef.current.innerHTML += html;
+      } else {
+        editorRef.current.innerHTML = html;
+      }
+      onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+    };
+    window.addEventListener("aura:write-to-document" as any, handler);
+    return () => window.removeEventListener("aura:write-to-document" as any, handler);
+  }, [doc.id, onUpdate]);
+
+
+
   // Ghost text: suggest meeting notes if doc is blank and matches a recent calendar event
   useEffect(() => {
     const isEmpty = !((doc.content as any)?.html?.replace(/<[^>]*>/g, "").trim());

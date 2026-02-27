@@ -325,6 +325,7 @@ const AuraWidget: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [memories, setMemories] = useState<Record<string, string>>({});
   const [injectedDocContext, setInjectedDocContext] = useState<string | null>(null);
+  const [injectedDocId, setInjectedDocId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -454,8 +455,11 @@ const AuraWidget: React.FC = () => {
   // Listen for in-document Aura summon events (fired by floating Aura button inside DocumentView)
   useEffect(() => {
     const handler = (e: CustomEvent) => {
-      const { content, title, prompt } = e.detail || {};
-      if (content) setInjectedDocContext(`[Open document: "${title || "Untitled"}"]\n${content}`);
+    const { content, title, docId, prompt } = e.detail || {};
+      if (content) {
+        setInjectedDocContext(`[Open document: "${title || "Untitled"}"]\n${content}`);
+        setInjectedDocId(docId || null);
+      }
       wake();
       if (prompt) setTimeout(() => setInput(prompt), 50);
     };
@@ -655,6 +659,41 @@ const AuraWidget: React.FC = () => {
           toast.error("Image generation failed", { id: "aura-img-gen" });
         }
       })();
+    } else if (name === "write_to_document") {
+      const { title, content, target, folder_id } = args;
+      if (!content) return;
+      const htmlContent = content
+        .split(/\n{2,}/)
+        .map((p: string) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
+        .join("");
+      if (target === "current") {
+        // Dispatch to currently open document
+        window.dispatchEvent(new CustomEvent("aura:write-to-document", { detail: { html: htmlContent, append: true } }));
+        toast.success("Content written to document ✓");
+      } else {
+        // Create new document and inject content
+        if (!user) { toast.error("Sign in to create documents"); return; }
+        const noteTitle = title || "Document";
+        const dedupKey = `aura-create-note-${noteTitle}`;
+        if ((window as any)[dedupKey]) return;
+        (window as any)[dedupKey] = true;
+        setTimeout(() => { delete (window as any)[dedupKey]; }, 10000);
+        (supabase as any).from("documents").insert({
+          user_id: user.id,
+          title: noteTitle,
+          type: "text",
+          folder_id: folder_id || null,
+          content: { html: htmlContent },
+        }).select().single().then(({ data, error }: { data: any; error: any }) => {
+          if (error) { toast.error("Failed to create document"); return; }
+          toast.success(`Document created: ${noteTitle}`);
+          // Navigate to documents and open the new doc
+          flux.setActiveView("documents");
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("aura:open-document", { detail: { docId: data.id } }));
+          }, 300);
+        });
+      }
     } else if (name === "inject_formula") {
       const { cell, formula, note } = args;
       if (cell && formula) {
@@ -893,13 +932,36 @@ const AuraWidget: React.FC = () => {
                               }}
                             >{msg.content}</ReactMarkdown>
                           </div>
-                          <button
-                            onClick={() => speakText(msg.content)}
-                            className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full text-white/30 hover:text-white/60"
-                            title="Read aloud"
-                          >
-                            <Volume2 size={11} />
-                          </button>
+                          <div className="flex items-center gap-1 mt-1">
+                            <button
+                              onClick={() => speakText(msg.content)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full text-white/30 hover:text-white/60"
+                              title="Read aloud"
+                            >
+                              <Volume2 size={11} />
+                            </button>
+                            {msg.content.length > 300 && (
+                              <button
+                                onClick={() => {
+                                  const html = msg.content
+                                    .split(/\n{2,}/)
+                                    .map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
+                                    .join("");
+                                  if (injectedDocContext) {
+                                    window.dispatchEvent(new CustomEvent("aura:write-to-document", { detail: { html, append: true } }));
+                                    toast.success("Inserted into document ✓");
+                                  } else {
+                                    window.dispatchEvent(new CustomEvent("aura:write-to-document", { detail: { html, append: false, createNew: true } }));
+                                    toast.success("Opening in new document…");
+                                  }
+                                }}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-white/40 hover:text-white/70 hover:bg-white/10"
+                                title="Insert into document"
+                              >
+                                📄 Insert into document
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ) : msg.content}
                     </div>
