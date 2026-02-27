@@ -10,74 +10,41 @@ interface AuraOrbProps {
 }
 
 /*
- * Siri-style orb — Canvas-based smooth aurora color bands that
- * flow and blend like real Siri, not geometric SVG paths.
+ * Siri-style orb — Canvas-based wide luminous aurora bands
+ * that flow and blend with screen-mode compositing, plus
+ * a bright white center glow. Inspired by Apple Siri.
  */
 
-// Color palette for Siri-like bands
-const BAND_COLORS = [
-  { r: 255, g: 60, b: 120, label: "pink" },
-  { r: 100, g: 180, b: 255, label: "blue" },
-  { r: 180, g: 100, b: 255, label: "purple" },
-  { r: 80, g: 220, b: 200, label: "teal" },
-  { r: 255, g: 140, b: 50, label: "orange" },
-  { r: 120, g: 255, b: 160, label: "green" },
-];
-
-interface Band {
-  color: typeof BAND_COLORS[number];
-  phase: number;
-  speed: number;
-  amplitude: number;
-  yOffset: number;
-  width: number;
-}
-
-function createBands(): Band[] {
-  return BAND_COLORS.map((color, i) => ({
-    color,
-    phase: (i / BAND_COLORS.length) * Math.PI * 2,
-    speed: 0.3 + i * 0.08,
-    amplitude: 0.15 + (i % 3) * 0.06,
-    yOffset: -0.25 + (i / (BAND_COLORS.length - 1)) * 0.5,
-    width: 0.12 + (i % 2) * 0.04,
-  }));
-}
-
 const stateConfig = {
-  idle: { speedMul: 1, ampMul: 1, glow: 0.4, brightness: 0.7 },
-  listening: { speedMul: 2.2, ampMul: 1.4, glow: 0.7, brightness: 1 },
-  processing: { speedMul: 4, ampMul: 0.6, glow: 0.9, brightness: 1.2 },
-  speaking: { speedMul: 1.8, ampMul: 1.2, glow: 0.6, brightness: 0.9 },
+  idle:       { speedMul: 0.6,  ampMul: 1.0, glow: 0.5, brightness: 0.85, bandWidth: 1.0 },
+  listening:  { speedMul: 1.8,  ampMul: 1.5, glow: 0.85, brightness: 1.2, bandWidth: 1.3 },
+  processing: { speedMul: 3.5,  ampMul: 0.5, glow: 1.0,  brightness: 1.4, bandWidth: 0.7 },
+  speaking:   { speedMul: 1.4,  ampMul: 1.2, glow: 0.7,  brightness: 1.0, bandWidth: 1.1 },
 };
 
 const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const bandsRef = useRef<Band[]>(createBands());
   const timeRef = useRef(0);
-  const stateRef = useRef(state);
   const configRef = useRef(stateConfig[state]);
   const animRef = useRef<number>(0);
 
-  stateRef.current = state;
-
-  // Smoothly interpolate config
+  // Smoothly interpolate config on state change
   useEffect(() => {
     const target = stateConfig[state];
     const start = { ...configRef.current };
     const startTime = performance.now();
     const duration = 600;
-
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
     const animate = () => {
       const t = Math.min((performance.now() - startTime) / duration, 1);
-      const eased = t * t * (3 - 2 * t); // smoothstep
+      const e = t * t * (3 - 2 * t);
       configRef.current = {
-        speedMul: lerp(start.speedMul, target.speedMul, eased),
-        ampMul: lerp(start.ampMul, target.ampMul, eased),
-        glow: lerp(start.glow, target.glow, eased),
-        brightness: lerp(start.brightness, target.brightness, eased),
+        speedMul: lerp(start.speedMul, target.speedMul, e),
+        ampMul: lerp(start.ampMul, target.ampMul, e),
+        glow: lerp(start.glow, target.glow, e),
+        brightness: lerp(start.brightness, target.brightness, e),
+        bandWidth: lerp(start.bandWidth, target.bandWidth, e),
       };
       if (t < 1) requestAnimationFrame(animate);
     };
@@ -99,66 +66,80 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
     const ctx = canvas.getContext("2d")!;
     ctx.scale(dpr, dpr);
 
-    const bands = bandsRef.current;
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = w * 0.44;
+
     let lastTime = performance.now();
+
+    // Define aurora bands — wide, luminous, flowing
+    const bands = [
+      { hue: 280, sat: 100, light: 60, phase: 0,    speed: 0.35, yOff: -0.15, amp: 0.18 },  // purple
+      { hue: 320, sat: 100, light: 55, phase: 1.2,  speed: 0.28, yOff: 0.05,  amp: 0.22 },  // pink/magenta
+      { hue: 200, sat: 100, light: 60, phase: 2.5,  speed: 0.42, yOff: -0.08, amp: 0.16 },  // cyan/blue
+      { hue: 240, sat: 90,  light: 50, phase: 3.8,  speed: 0.32, yOff: 0.12,  amp: 0.20 },  // deep blue
+      { hue: 170, sat: 90,  light: 55, phase: 5.0,  speed: 0.38, yOff: -0.02, amp: 0.14 },  // teal
+      { hue: 300, sat: 80,  light: 65, phase: 0.8,  speed: 0.25, yOff: 0.18,  amp: 0.15 },  // violet-pink
+    ];
 
     const draw = (now: number) => {
       const dt = (now - lastTime) / 1000;
       lastTime = now;
-      timeRef.current += dt * configRef.current.speedMul;
+      const cfg = configRef.current;
+      timeRef.current += dt * cfg.speedMul;
       const t = timeRef.current;
 
       ctx.clearRect(0, 0, w, h);
 
-      const cx = w / 2;
-      const cy = h / 2;
-      const radius = w * 0.44;
-
-      // Dark sphere background
+      // === Dark sphere background ===
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.clip();
 
       const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-      bgGrad.addColorStop(0, "#1a1030");
-      bgGrad.addColorStop(0.6, "#0d0a1a");
-      bgGrad.addColorStop(1, "#050510");
+      bgGrad.addColorStop(0, "#1a0a2e");
+      bgGrad.addColorStop(0.4, "#0d0520");
+      bgGrad.addColorStop(0.7, "#080318");
+      bgGrad.addColorStop(1, "#030108");
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // Draw flowing aurora bands
-      const cfg = configRef.current;
-      const numPoints = 80;
+      // === Draw luminous aurora bands ===
+      const numPts = 60;
 
       for (const band of bands) {
-        const { color, phase, speed, amplitude, yOffset, width: bandW } = band;
-        const amp = amplitude * cfg.ampMul * radius;
-        const bw = bandW * radius * 1.2;
+        const amp = band.amp * cfg.ampMul * radius;
+        const bandW = radius * 0.35 * cfg.bandWidth; // Wide bands
 
-        ctx.save();
-        ctx.globalCompositeOperation = "screen";
-
-        // Build wave path points
+        // Build wave path
         const points: { x: number; y: number }[] = [];
-        for (let i = 0; i <= numPoints; i++) {
-          const frac = i / numPoints;
+        for (let i = 0; i <= numPts; i++) {
+          const frac = i / numPts;
           const x = cx - radius + frac * radius * 2;
 
-          // Multiple sine waves for organic flow
-          const wave1 = Math.sin(frac * Math.PI * 2.5 + t * speed + phase) * amp;
-          const wave2 = Math.sin(frac * Math.PI * 4 + t * speed * 0.7 + phase * 1.3) * amp * 0.4;
-          const wave3 = Math.sin(frac * Math.PI * 1.5 + t * speed * 1.3 + phase * 0.7) * amp * 0.3;
+          // Layered sine waves for organic, flowing motion
+          const w1 = Math.sin(frac * Math.PI * 2.0 + t * band.speed + band.phase) * amp;
+          const w2 = Math.sin(frac * Math.PI * 3.5 + t * band.speed * 0.6 + band.phase * 1.5) * amp * 0.5;
+          const w3 = Math.sin(frac * Math.PI * 1.2 + t * band.speed * 1.4 + band.phase * 0.6) * amp * 0.35;
 
-          const y = cy + yOffset * radius + wave1 + wave2 + wave3;
+          const y = cy + band.yOff * radius + w1 + w2 + w3;
           points.push({ x, y });
         }
 
-        // Draw band as a thick gradient stroke with feathered edges
-        for (let layer = 0; layer < 3; layer++) {
-          const layerWidth = layer === 0 ? bw * 2 : layer === 1 ? bw : bw * 0.4;
-          const layerAlpha = layer === 0 ? 0.08 : layer === 1 ? 0.25 : 0.5;
+        // Draw multiple layers for each band (glow → core → bright center)
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
 
+        const layers = [
+          { widthMul: 3.0, alpha: 0.06 },  // wide outer glow
+          { widthMul: 2.0, alpha: 0.12 },  // mid glow
+          { widthMul: 1.2, alpha: 0.25 },  // main band
+          { widthMul: 0.5, alpha: 0.45 },  // bright core
+          { widthMul: 0.15, alpha: 0.7 },  // hot center line
+        ];
+
+        for (const layer of layers) {
           ctx.beginPath();
           ctx.moveTo(points[0].x, points[0].y);
           for (let i = 1; i < points.length - 1; i++) {
@@ -167,8 +148,9 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
             ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
           }
 
-          ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${layerAlpha * cfg.brightness})`;
-          ctx.lineWidth = layerWidth;
+          const l = Math.min(band.light * cfg.brightness, 100);
+          ctx.strokeStyle = `hsla(${band.hue}, ${band.sat}%, ${l}%, ${layer.alpha * cfg.brightness})`;
+          ctx.lineWidth = bandW * layer.widthMul;
           ctx.lineCap = "round";
           ctx.lineJoin = "round";
           ctx.stroke();
@@ -177,29 +159,32 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
         ctx.restore();
       }
 
-      // Central white glow
-      const glowRadius = radius * 0.45;
-      const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowRadius);
-      glowGrad.addColorStop(0, `rgba(255,255,255,${0.35 * cfg.glow})`);
-      glowGrad.addColorStop(0.4, `rgba(255,255,255,${0.1 * cfg.glow})`);
+      // === Bright white center glow (convergence point) ===
+      const glowR = radius * 0.55;
+      const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
+      glowGrad.addColorStop(0, `rgba(255,255,255,${0.5 * cfg.glow})`);
+      glowGrad.addColorStop(0.15, `rgba(255,255,255,${0.25 * cfg.glow})`);
+      glowGrad.addColorStop(0.4, `rgba(200,180,255,${0.08 * cfg.glow})`);
       glowGrad.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = glowGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // Specular highlight top-left
-      const specGrad = ctx.createRadialGradient(cx - radius * 0.2, cy - radius * 0.3, 0, cx - radius * 0.2, cy - radius * 0.3, radius * 0.35);
-      specGrad.addColorStop(0, "rgba(255,255,255,0.12)");
+      // === Specular highlight (top-left) ===
+      const specX = cx - radius * 0.25;
+      const specY = cy - radius * 0.3;
+      const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, radius * 0.3);
+      specGrad.addColorStop(0, "rgba(255,255,255,0.1)");
       specGrad.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = specGrad;
       ctx.fillRect(0, 0, w, h);
 
       ctx.restore();
 
-      // Thin ring around sphere
+      // === Subtle rim ===
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255,255,255,0.06)";
-      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = "rgba(180,140,255,0.08)";
+      ctx.lineWidth = 1;
       ctx.stroke();
 
       animRef.current = requestAnimationFrame(draw);
@@ -219,13 +204,13 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick }) => {
       <motion.div
         className="absolute inset-0 rounded-full pointer-events-none"
         animate={{
-          opacity: state === "idle" ? [0.15, 0.25, 0.15] : [0.3, 0.5, 0.3],
-          scale: state === "idle" ? [1.1, 1.2, 1.1] : [1.15, 1.35, 1.15],
+          opacity: state === "idle" ? [0.2, 0.35, 0.2] : [0.4, 0.65, 0.4],
+          scale: state === "idle" ? [1.05, 1.15, 1.05] : [1.1, 1.3, 1.1],
         }}
-        transition={{ duration: state === "idle" ? 4 : 2, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: state === "idle" ? 5 : 2.5, repeat: Infinity, ease: "easeInOut" }}
         style={{
-          background: "radial-gradient(circle, rgba(168,85,247,0.25) 0%, rgba(6,182,212,0.12) 40%, transparent 70%)",
-          filter: "blur(16px)",
+          background: "radial-gradient(circle, rgba(140,60,255,0.3) 0%, rgba(200,80,200,0.15) 30%, rgba(80,180,255,0.08) 50%, transparent 70%)",
+          filter: "blur(20px)",
         }}
       />
       <canvas

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Sparkles } from "lucide-react";
+import { Send, Mic, MicOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -16,8 +16,10 @@ interface ChatMessage {
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Floating tip suggestions
+// Proactive hints with self-introductions
 const TIPS = [
+  "Hi, my name is Aura...",
+  "I am Aura, your personal assistant. How can I help?",
   "You can click me to ask anything...",
   "Did you know I can see your screen and help you right away?",
   "Need help organizing your day?",
@@ -26,46 +28,33 @@ const TIPS = [
   "Ask me to summarize your day",
 ];
 
+// --- Helpers ---
+
 function gatherContext(focusStore: any, flux: any): string {
   const parts: string[] = [];
-
-  // Sticky notes
   if (focusStore.focusStickyNotes?.length) {
     const notes = focusStore.focusStickyNotes.map((n: any) => n.text).filter(Boolean);
     if (notes.length) parts.push(`Sticky notes: ${notes.join("; ")}`);
   }
-
-  // Goal
   if (focusStore.goalText) parts.push(`Current goal: ${focusStore.goalText}`);
-
-  // Brain dump tasks
   if (focusStore.brainDumpTasks?.length) {
     parts.push(`Brain dump: ${focusStore.brainDumpTasks.map((t: any) => t.text).join(", ")}`);
   }
-
-  // Active widgets
   if (focusStore.activeWidgets?.length) {
     parts.push(`Active widgets: ${focusStore.activeWidgets.join(", ")}`);
   }
-
-  // Today's schedule blocks
   const today = new Date().toISOString().split("T")[0];
   const todayBlocks = flux.scheduleBlocks?.filter((b: any) => b.scheduled_date === today) || [];
   if (todayBlocks.length) {
     parts.push(`Today's schedule: ${todayBlocks.map((b: any) => `${b.time} - ${b.title} (${b.duration})`).join("; ")}`);
   }
-
-  // Tasks
   const pendingTasks = flux.tasks?.filter((t: any) => !t.done)?.slice(0, 10) || [];
   if (pendingTasks.length) {
     parts.push(`Pending tasks: ${pendingTasks.map((t: any) => t.title).join(", ")}`);
   }
-
-  // Goals
   if (flux.goals?.length) {
     parts.push(`Goals: ${flux.goals.map((g: any) => `${g.title} (${g.current_amount}/${g.target_amount})`).join(", ")}`);
   }
-
   return parts.join("\n");
 }
 
@@ -121,9 +110,7 @@ async function streamAura(
         if (delta?.tool_calls) {
           for (const tc of delta.tool_calls) {
             if (tc.function?.name && tc.function?.arguments) {
-              try {
-                onToolCall(tc.function.name, JSON.parse(tc.function.arguments));
-              } catch {}
+              try { onToolCall(tc.function.name, JSON.parse(tc.function.arguments)); } catch {}
             }
           }
         }
@@ -181,8 +168,8 @@ function useVoiceInput(onResult: (text: string) => void) {
   return { listening, toggle };
 }
 
-// Floating tip component
-const FloatingTip: React.FC = () => {
+// --- Glassmorphic speech bubble with cycling tips ---
+const HintBubble: React.FC = () => {
   const [tipIdx, setTipIdx] = useState(0);
   const [visible, setVisible] = useState(true);
 
@@ -192,29 +179,51 @@ const FloatingTip: React.FC = () => {
       setTimeout(() => {
         setTipIdx((i) => (i + 1) % TIPS.length);
         setVisible(true);
-      }, 500);
-    }, 4000);
+      }, 600);
+    }, 4500);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <AnimatePresence mode="wait">
-      {visible && (
-        <motion.p
-          key={tipIdx}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.4 }}
-          className="text-[11px] text-white/40 text-center px-6 pointer-events-none select-none"
-        >
-          {TIPS[tipIdx]}
-        </motion.p>
-      )}
-    </AnimatePresence>
+    <div className="relative mt-3 mx-auto max-w-[220px]">
+      {/* Speech bubble with glassmorphism */}
+      <div
+        className="rounded-2xl px-4 py-2.5 border border-white/[0.08] relative"
+        style={{
+          background: "rgba(255,255,255,0.06)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+        }}
+      >
+        {/* Bubble tail */}
+        <div
+          className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-l border-t border-white/[0.08]"
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+          }}
+        />
+        <AnimatePresence mode="wait">
+          {visible && (
+            <motion.p
+              key={tipIdx}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.45 }}
+              className="text-[11px] text-white/50 text-center leading-relaxed pointer-events-none select-none"
+            >
+              {TIPS[tipIdx]}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 };
 
+// --- Main Widget ---
 const AuraWidget: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -231,12 +240,11 @@ const AuraWidget: React.FC = () => {
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }, []);
 
-  // Click outside to revert to idle
+  // Click outside to revert to idle (only if nothing typed and no messages)
   useEffect(() => {
     if (!awake) return;
     const handler = (e: MouseEvent) => {
       if (widgetRef.current && !widgetRef.current.contains(e.target as Node)) {
-        // Only revert if nothing typed and no messages
         if (!input.trim() && messages.length === 0) {
           setAwake(false);
         }
@@ -248,9 +256,7 @@ const AuraWidget: React.FC = () => {
 
   // Focus input when waking
   useEffect(() => {
-    if (awake) {
-      setTimeout(() => inputRef.current?.focus(), 300);
-    }
+    if (awake) setTimeout(() => inputRef.current?.focus(), 300);
   }, [awake]);
 
   const wake = useCallback(() => {
@@ -316,10 +322,7 @@ const AuraWidget: React.FC = () => {
         context,
         upsert,
         handleToolCall,
-        () => {
-          setIsLoading(false);
-          setAuraState("idle");
-        },
+        () => { setIsLoading(false); setAuraState("idle"); },
       );
     } catch {
       setIsLoading(false);
@@ -348,34 +351,30 @@ const AuraWidget: React.FC = () => {
   return (
     <DraggableWidget
       id="aura"
-      title="Aura"
+      title=""
       defaultPosition={defaultPos}
-      defaultSize={{ w: 380, h: hasChat ? 500 : 260 }}
+      defaultSize={{ w: 340, h: hasChat ? 480 : 240 }}
       className="aura-widget"
     >
       <div ref={widgetRef} className="flex flex-col h-full">
-        {/* Orb area — always visible */}
+        {/* Orb — always visible, centered */}
         <div
-          className="flex items-center justify-center pt-4 pb-2 shrink-0"
+          className="flex items-center justify-center pt-4 pb-1 shrink-0"
           onClick={wake}
         >
-          <AuraOrb state={auraState} size={hasChat ? 80 : 120} onClick={wake} />
+          <AuraOrb state={auraState} size={hasChat ? 72 : 110} onClick={wake} />
         </div>
 
-        {/* Idle state: floating tips */}
+        {/* Idle: glassmorphic speech bubble with cycling tips */}
         <AnimatePresence>
           {!hasChat && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0.2 } }}
-              className="text-center px-4 pb-2"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6, transition: { duration: 0.2 } }}
+              className="px-4 pb-3"
             >
-              <div className="flex items-center justify-center gap-1.5 mb-2">
-                <Sparkles size={14} className="text-purple-400" />
-                <span className="text-sm font-semibold text-white/80">Aura</span>
-              </div>
-              <FloatingTip />
+              <HintBubble />
             </motion.div>
           )}
         </AnimatePresence>
@@ -426,7 +425,13 @@ const AuraWidget: React.FC = () => {
               transition={{ duration: 0.25 }}
               className="shrink-0 p-2.5"
             >
-              <div className="flex items-center gap-1.5 bg-white/8 rounded-full px-3 py-1.5 border border-white/10">
+              <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5 border border-white/[0.08]"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                }}
+              >
                 <button
                   onClick={toggleVoice}
                   className={`p-1.5 rounded-full transition-all ${
