@@ -156,6 +156,7 @@ const DraggableWidget = ({
   posRef.current = pos;
 
   const onPointerDownDrag = useCallback((e: React.PointerEvent) => {
+    e.stopPropagation();
     dragging.current = true;
     setIsDragging(true);
     offset.current = { x: e.clientX - posRef.current.x, y: e.clientY - posRef.current.y };
