@@ -169,6 +169,11 @@ async function streamAura(
 function useVoiceInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const recRef = useRef<any>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const levelRafRef = useRef<number>(0);
+  const [audioLevel, setAudioLevel] = useState(0);
 
   const stop = useCallback(() => {
     if (recRef.current) {
@@ -176,6 +181,14 @@ function useVoiceInput(onResult: (text: string) => void) {
       recRef.current.stop();
       recRef.current = null;
     }
+    // Tear down audio analyser
+    cancelAnimationFrame(levelRafRef.current);
+    audioCtxRef.current?.close();
+    audioCtxRef.current = null;
+    analyserRef.current = null;
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    setAudioLevel(0);
     setListening(false);
   }, []);
 
@@ -197,6 +210,31 @@ function useVoiceInput(onResult: (text: string) => void) {
     rec.onerror = (e: any) => {
       if (e.error !== "no-speech") stop();
     };
+
+    // Start Web Audio API analyser for real-time amplitude
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      .then((stream) => {
+        streamRef.current = stream;
+        const ctx = new AudioContext();
+        audioCtxRef.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.6;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+        const buf = new Uint8Array(analyser.frequencyBinCount);
+        const tick = () => {
+          if (!analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(buf);
+          const avg = buf.reduce((a, b) => a + b, 0) / buf.length;
+          setAudioLevel(Math.min(avg / 80, 1)); // normalise 0-1
+          levelRafRef.current = requestAnimationFrame(tick);
+        };
+        levelRafRef.current = requestAnimationFrame(tick);
+      })
+      .catch(() => {}); // mic permission denied — animation falls back gracefully
+
     rec.onend = () => {
       if (recRef.current === rec) {
         try { rec.start(); } catch { stop(); }
@@ -214,7 +252,7 @@ function useVoiceInput(onResult: (text: string) => void) {
 
   useEffect(() => () => stop(), [stop]);
 
-  return { listening, toggle, stop, start };
+  return { listening, toggle, stop, start, audioLevel };
 }
 
 type PillMode = "idle" | "hint" | "input" | "processing" | "response";
@@ -415,7 +453,7 @@ const AuraWidget: React.FC = () => {
     }
   }, [messages, isLoading, focusStore, flux, handleToolCall]);
 
-  const { listening, toggle: toggleVoice, stop: stopVoice, start: startVoice } = useVoiceInput((text) => {
+  const { listening, toggle: toggleVoice, stop: stopVoice, start: startVoice, audioLevel } = useVoiceInput((text) => {
     send(text);
   });
 
@@ -464,7 +502,7 @@ const AuraWidget: React.FC = () => {
       <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
         {/* Orb */}
         <div className="flex items-center justify-center pt-2 pb-1" onClick={wake}>
-          <AuraOrb state={auraState} size={orbSize} onClick={wake} />
+          <AuraOrb state={auraState} size={orbSize} onClick={wake} audioLevel={audioLevel} />
         </div>
 
         {/* Dynamic Pill */}
