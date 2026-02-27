@@ -111,8 +111,10 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const [inviteError, setInviteError] = useState("");
   const [newTeamName, setNewTeamName] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
-  const [longPressedMsgId, setLongPressedMsgId] = useState<string | null>(null);
+  const [contextMenuMsgId, setContextMenuMsgId] = useState<string | null>(null);
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
   const [inviteLinkLoading, setInviteLinkLoading] = useState(false);
   const [avatarMap, setAvatarMap] = useState<Record<string, string>>({});
   const [leavingTeamId, setLeavingTeamId] = useState<string | null>(null);
@@ -121,7 +123,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const [uploading, setUploading] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ url: string; type: string; name: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Theme tokens — deep glassmorphism
@@ -258,18 +259,49 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const startLongPress = useCallback((msgId: string) => {
-    longPressTimerRef.current = setTimeout(() => {
-      setLongPressedMsgId(msgId);
-    }, 500);
+  const handleContextMenu = useCallback((e: React.MouseEvent, msgId: string) => {
+    e.preventDefault();
+    setContextMenuMsgId(msgId);
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
   }, []);
 
-  const cancelLongPress = useCallback(() => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
+  const closeContextMenu = useCallback(() => {
+    setContextMenuMsgId(null);
+    setContextMenuPos(null);
   }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current++;
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) setIsDragging(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { toast.error("File too large (max 20MB)"); return; }
+    setUploading(true);
+    const result = await uploadFile(file);
+    setUploading(false);
+    if (result) {
+      setPendingFile(result);
+    } else {
+      toast.error("Upload failed");
+    }
+  }, [uploadFile]);
 
   const isAdmin = members.some(m => m.user_id === user?.id && m.role === "admin");
   const insertEmoji = (emoji: string) => { setText(p => p + emoji); setShowEmojiPicker(false); };
@@ -281,7 +313,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   );
 
   const pinnedTeams = teams.slice(0, 4);
-  const showReactionFor = (msgId: string) => hoveredMsgId === msgId || longPressedMsgId === msgId;
+  const showReactionFor = (msgId: string) => contextMenuMsgId === msgId;
 
   // Read receipts: find which members have read which messages
   const getReadByForMessage = (msgId: string) => {
@@ -635,8 +667,31 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 </div>
 
                 {/* Messages */}
-                <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ scrollbarWidth: "none" }}
-                  onClick={() => setLongPressedMsgId(null)}>
+                <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1 relative" style={{ scrollbarWidth: "none" }}
+                  onClick={closeContextMenu}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}>
+                  {/* Drag overlay */}
+                  <AnimatePresence>
+                    {isDragging && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-30 flex items-center justify-center rounded-lg"
+                        style={{
+                          background: dark ? "rgba(10,132,255,0.15)" : "rgba(0,122,255,0.10)",
+                          border: `2px dashed ${T.accent}`,
+                        }}>
+                        <div className="flex flex-col items-center gap-2">
+                          <Paperclip size={28} style={{ color: T.accent }} />
+                          <p style={{ color: T.accent, fontSize: "15px", fontWeight: 600 }}>Drop file to attach</p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   {loading && <p style={{ color: T.textTertiary, fontSize: "13px", textAlign: "center", paddingTop: 40 }}>Loading…</p>}
                   {!loading && messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
@@ -676,9 +731,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                           </div>
                         )}
                         <div
-                          className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"} ${isLast ? "mb-1" : "mb-[2px]"}`}
-                          onMouseEnter={() => setHoveredMsgId(msg.id)}
-                          onMouseLeave={() => { setHoveredMsgId(null); cancelLongPress(); }}>
+                          className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"} ${isLast ? "mb-1" : "mb-[2px]"}`}>
                           <div className="w-8 shrink-0 flex justify-center">
                             {!isMe && isLast && <UserAvatar userId={msg.user_id} displayName={name} avatarUrl={avatar} size="sm" />}
                           </div>
@@ -688,10 +741,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                             )}
                             <div className="relative">
                               <div
-                                onMouseDown={() => startLongPress(msg.id)}
-                                onMouseUp={cancelLongPress}
-                                onTouchStart={() => startLongPress(msg.id)}
-                                onTouchEnd={cancelLongPress}
+                                onContextMenu={(e) => handleContextMenu(e, msg.id)}
                                 style={{
                                   background: isMe ? T.myBubble : T.theirBubble,
                                   color: isMe ? "#fff" : T.textPrimary,
@@ -708,24 +758,22 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                                 )}
                               </div>
 
-                              <AnimatePresence>
-                                {showReactionFor(msg.id) && (
-                                  <motion.div
-                                    initial={{ opacity: 0, scale: 0.85, y: 4 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.85, y: 4 }}
-                                    className={`absolute ${isMe ? "right-0" : "left-0"} -top-11 flex items-center gap-1 px-2 py-1.5 rounded-full z-20`}
-                                    style={{
-                                      background: T.reactionBg, border: `1px solid ${T.reactionBorder}`,
-                                      boxShadow: "0 4px 16px rgba(0,0,0,0.2)", backdropFilter: "blur(20px)",
-                                    }}>
-                                    {REACTION_EMOJIS.map(e => (
-                                      <button key={e} onClick={() => { toggleReaction(msg.id, e); setLongPressedMsgId(null); }}
-                                        className="text-[16px] hover:scale-125 transition-transform leading-none">{e}</button>
-                                    ))}
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
+                              {/* Right-click reaction popover rendered at cursor position via portal */}
+                              {contextMenuMsgId === msg.id && contextMenuPos && (
+                                <div
+                                  className="fixed z-[999] flex items-center gap-1 px-2.5 py-2 rounded-full"
+                                  style={{
+                                    top: contextMenuPos.y - 48,
+                                    left: contextMenuPos.x - 100,
+                                    background: T.reactionBg, border: `1px solid ${T.reactionBorder}`,
+                                    boxShadow: "0 8px 32px rgba(0,0,0,0.3)", backdropFilter: "blur(24px)",
+                                  }}>
+                                  {REACTION_EMOJIS.map(e => (
+                                    <button key={e} onClick={() => { toggleReaction(msg.id, e); closeContextMenu(); }}
+                                      className="text-[18px] hover:scale-125 transition-transform leading-none p-0.5">{e}</button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                             {hasReactions && (
