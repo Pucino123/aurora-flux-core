@@ -12,50 +12,44 @@ interface AuraOrbProps {
 }
 
 const stateConfig = {
-  // idle: slow dreamy rotation — clearly visible color swirl
   idle:       { speedMul: 0.30, ampMul: 0.85, opacity: 0.62, brightness: 1.05 },
-  // listening: nearly stopped — only moves when voice is detected
   listening:  { speedMul: 0.04, ampMul: 1.20, opacity: 0.80, brightness: 1.4  },
-  // processing: rapid chaotic churn
   processing: { speedMul: 3.50, ampMul: 1.20, opacity: 0.90, brightness: 1.8  },
-  // speaking: smooth flowing pulse
   speaking:   { speedMul: 0.90, ampMul: 1.10, opacity: 0.75, brightness: 1.3  },
 };
 
-// SVG turbulence config per state
-const svgStateConfig: Record<AuraState, { baseFreq: string; scale: number; seedDur: string; opacity: number }> = {
-  idle:       { baseFreq: "0.007 0.005", scale: 14, seedDur: "12s", opacity: 0.58 },
-  listening:  { baseFreq: "0.012 0.010", scale: 28, seedDur: "3s",  opacity: 0.72 },
-  processing: { baseFreq: "0.018 0.014", scale: 38, seedDur: "2s",  opacity: 0.80 },
-  speaking:   { baseFreq: "0.009 0.007", scale: 20, seedDur: "5s",  opacity: 0.65 },
-};
+// SVG layer is permanently locked to idle config — no state-driven updates
+const SVG_IDLE = { baseFreq: "0.007 0.005", scale: 14, seedDur: "12s", opacity: 0.58 };
 
-// Each blob: hue, different speeds & opposite orbit directions (negative spd = counter-clockwise)
 const BLOBS = [
-  // Cyan — orbits clockwise, wide
   { hue: 188, sat: 100, light: 80, ox: 0.0, oy: 0.0, rad: 0.80, spd:  0.28, ph: 0.0,  orbitR: 0.54 },
   { hue: 198, sat: 90,  light: 84, ox: 0.0, oy: 0.0, rad: 0.62, spd:  0.19, ph: 1.0,  orbitR: 0.38 },
-  // Purple — counter-clockwise for contrast
   { hue: 272, sat: 90,  light: 72, ox: 0.0, oy: 0.0, rad: 0.78, spd: -0.22, ph: 2.1,  orbitR: 0.56 },
   { hue: 258, sat: 82,  light: 68, ox: 0.0, oy: 0.0, rad: 0.60, spd: -0.35, ph: 3.5,  orbitR: 0.40 },
-  // Pink/Magenta — clockwise, medium orbit
   { hue: 322, sat: 96,  light: 76, ox: 0.0, oy: 0.0, rad: 0.72, spd:  0.17, ph: 4.8,  orbitR: 0.50 },
   { hue: 338, sat: 88,  light: 80, ox: 0.0, oy: 0.0, rad: 0.55, spd:  0.26, ph: 1.6,  orbitR: 0.32 },
-  // Warm teal — slow counter-clockwise anchor
   { hue: 210, sat: 82,  light: 72, ox: 0.0, oy: 0.0, rad: 0.50, spd: -0.12, ph: 3.2,  orbitR: 0.28 },
 ];
 
 const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLevelRef: externalAudioRef }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
   const timeRef = useRef(0);
   const configRef = useRef({ ...stateConfig[state] });
   const animRef = useRef<number>(0);
+
+  // stateRef — always holds current state so canvas loop (dep: [size]) never has a stale closure
+  const stateRef = useRef<AuraState>(state);
+
   // Internal fallback ref — used when no external ref provided
   const internalAudioRef = useRef(0);
   const audioLevelRef = externalAudioRef ?? internalAudioRef;
 
   const uid = useRef(`aura-${Math.random().toString(36).slice(2, 8)}`);
+
+  // Keep stateRef in sync on every state prop change
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Smooth transition between canvas states
   useEffect(() => {
@@ -78,31 +72,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
     requestAnimationFrame(tick);
   }, [state]);
 
-  // Update SVG filter attributes on state change (no re-render needed)
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const cfg = svgStateConfig[state];
-
-    const turbulence = svg.querySelector("feTurbulence");
-    const displacement = svg.querySelector("feDisplacementMap");
-    const blobGroup = svg.querySelector(".aura-blob-group") as SVGGElement | null;
-
-    if (turbulence) {
-      turbulence.setAttribute("baseFrequency", cfg.baseFreq);
-      // Update seed animation duration
-      const anim = turbulence.querySelector("animate");
-      if (anim) anim.setAttribute("dur", cfg.seedDur);
-    }
-    if (displacement) {
-      displacement.setAttribute("scale", String(cfg.scale));
-    }
-    if (blobGroup) {
-      blobGroup.style.opacity = String(cfg.opacity);
-    }
-  }, [state]);
-
-  // Canvas animation loop
+  // Canvas animation loop — dep [size] only; uses stateRef + audioLevelRef for current values
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -125,14 +95,19 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
       lastTime = now;
       const cfg = configRef.current;
       const mic = audioLevelRef.current; // 0–1
+
+      // Use stateRef.current — never stale
+      const currentState = stateRef.current;
+
       // When listening: mic IS the speed — silence = nearly still, loud = fast spin
-      const effectiveSpeed = state === "listening"
+      const effectiveSpeed = currentState === "listening"
         ? cfg.speedMul + mic * 6.0
         : cfg.speedMul;
       timeRef.current += dt * effectiveSpeed;
       const t = timeRef.current;
-      // Amplitude also swells blob size when speaking
-      const ampBoost = state === "listening" ? 1 + mic * 0.6 : 1;
+
+      // Amplitude swells blob size when listening/speaking
+      const ampBoost = currentState === "listening" ? 1 + mic * 0.6 : 1;
 
       ctx.clearRect(0, 0, size, size);
 
@@ -142,7 +117,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.clip();
 
-      // ── Background: very subtle dark void ──
+      // ── Background ──
       const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
       bgGrad.addColorStop(0,   "rgba(8,4,18,0.10)");
       bgGrad.addColorStop(0.6, "rgba(4,2,12,0.06)");
@@ -150,17 +125,15 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, size, size);
 
-      // ── Fluid gas blobs — screen blend for colour mixing ──
+      // ── Fluid gas blobs ──
       ctx.globalCompositeOperation = "screen";
 
       for (const blob of BLOBS) {
-        // true orbit angle — negative spd = counter-clockwise
         const orbitAngle = t * blob.spd * Math.PI * 2 + blob.ph;
-        // breathe size slightly so blobs pulse
         const breathe = 0.88 + 0.14 * Math.sin(t * Math.abs(blob.spd) * 1.8 + blob.ph * 0.9);
         const bx = cx + Math.cos(orbitAngle) * blob.orbitR * r * cfg.ampMul * ampBoost;
         const by = cy + Math.sin(orbitAngle * 0.80) * blob.orbitR * r * 0.85 * cfg.ampMul * ampBoost;
-        const br = blob.rad * r * breathe * (state === "listening" ? 1 + mic * 0.35 : 1);
+        const br = blob.rad * r * breathe * (currentState === "listening" ? 1 + mic * 0.35 : 1);
 
         const l = Math.min(blob.light * cfg.brightness, 100);
         const op = cfg.opacity;
@@ -179,7 +152,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
 
       ctx.globalCompositeOperation = "source-over";
 
-      // ── Very subtle hollow center brightening ──
+      // ── Subtle hollow center brightening ──
       const hollow = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.55);
       hollow.addColorStop(0,   "rgba(210,240,255,0.04)");
       hollow.addColorStop(0.5, "rgba(210,240,255,0.02)");
@@ -191,7 +164,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
 
       ctx.restore();
 
-      // ── Iridescent soap-bubble ring — smooth continuous ──
+      // ── Iridescent soap-bubble ring ──
       const ringSteps = 120;
       ctx.save();
       ctx.lineWidth = 1.6;
@@ -209,7 +182,7 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
       ctx.globalAlpha = 1;
       ctx.restore();
 
-      // ── Specular highlight — top-left glassy reflection ──
+      // ── Specular highlight ──
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -228,7 +201,6 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
       ctx.arc(specX, specY, specR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Secondary bottom-right caustic (glass refraction)
       const caus2X = cx + r * 0.28;
       const caus2Y = cy + r * 0.30;
       const caus2 = ctx.createRadialGradient(caus2X, caus2Y, 0, caus2X, caus2Y, r * 0.18);
@@ -248,7 +220,6 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
   }, [size]);
 
   const id = uid.current;
-  const initCfg = svgStateConfig[state];
 
   return (
     <div
@@ -270,23 +241,21 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
         }}
       />
 
-      {/* Canvas — soap bubble base with iridescent ring + specular */}
+      {/* Canvas — soap bubble base */}
       <canvas
         ref={canvasRef}
         className="absolute z-10"
         style={{ borderRadius: "50%", top: 0, left: 0 }}
       />
 
-      {/* SVG turbulence layer — organic gas displacement on top of canvas */}
+      {/* SVG turbulence layer — permanently locked to idle config, no state-driven changes */}
       <svg
-        ref={svgRef}
         width={size}
         height={size}
         className="absolute z-20 pointer-events-none"
         style={{ top: 0, left: 0, mixBlendMode: "screen" }}
       >
         <defs>
-          {/* Radial gradient fills for the gas blobs */}
           <radialGradient id={`${id}-g-cyan`} cx="50%" cy="50%" r="50%">
             <stop offset="0%"   stopColor="hsl(188,100%,70%)" stopOpacity="0.70" />
             <stop offset="45%"  stopColor="hsl(195,90%,60%)"  stopOpacity="0.35" />
@@ -308,11 +277,10 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
             <stop offset="100%" stopColor="hsl(230,60%,45%)" stopOpacity="0" />
           </radialGradient>
 
-          {/* Turbulence displacement filter */}
           <filter id={`${id}-turbulence`} x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
             <feTurbulence
               type="fractalNoise"
-              baseFrequency={initCfg.baseFreq}
+              baseFrequency={SVG_IDLE.baseFreq}
               numOctaves={4}
               seed={0}
               result="noise"
@@ -320,39 +288,33 @@ const AuraOrb: React.FC<AuraOrbProps> = ({ state, size = 120, onClick, audioLeve
               <animate
                 attributeName="seed"
                 values="0;8;16;24;16;8;0"
-                dur={initCfg.seedDur}
+                dur={SVG_IDLE.seedDur}
                 repeatCount="indefinite"
               />
             </feTurbulence>
             <feDisplacementMap
               in="SourceGraphic"
               in2="noise"
-              scale={initCfg.scale}
+              scale={SVG_IDLE.scale}
               xChannelSelector="R"
               yChannelSelector="G"
             />
           </filter>
 
-          {/* Clip to sphere */}
           <clipPath id={`${id}-clip`}>
             <circle cx={size / 2} cy={size / 2} r={size * 0.46} />
           </clipPath>
         </defs>
 
-        {/* Gas blobs displaced by turbulence — clipped to sphere */}
         <g
           className="aura-blob-group"
           filter={`url(#${id}-turbulence)`}
           clipPath={`url(#${id}-clip)`}
-          style={{ mixBlendMode: "screen", opacity: initCfg.opacity }}
+          style={{ mixBlendMode: "screen", opacity: SVG_IDLE.opacity }}
         >
-          {/* Cyan blob — top-left area, wide */}
           <circle cx={size * 0.35} cy={size * 0.30} r={size * 0.50} fill={`url(#${id}-g-cyan)`} />
-          {/* Purple blob — bottom-right area, wide */}
           <circle cx={size * 0.65} cy={size * 0.68} r={size * 0.48} fill={`url(#${id}-g-purple)`} />
-          {/* Pink blob — center-right */}
           <circle cx={size * 0.60} cy={size * 0.35} r={size * 0.44} fill={`url(#${id}-g-pink)`} />
-          {/* Teal accent — center anchor */}
           <circle cx={size * 0.45} cy={size * 0.55} r={size * 0.38} fill={`url(#${id}-g-teal)`} />
         </g>
       </svg>
