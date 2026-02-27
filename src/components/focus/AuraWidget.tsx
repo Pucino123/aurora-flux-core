@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Send, Mic, MicOff, X, Volume2 } from "lucide-react";
+import { Send, Mic, MicOff, X, Volume2, Copy, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -19,6 +19,39 @@ interface ChatMessage {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+/* ── Inline Code Block with copy button ── */
+function CodeBlock({ children, className }: { children: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  const lang = className?.replace("language-", "") || "";
+  const copy = () => {
+    navigator.clipboard.writeText(children).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  };
+  return (
+    <div className="relative group my-1.5 rounded-lg overflow-hidden" style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.07)" }}>
+      {lang && (
+        <div className="flex items-center justify-between px-3 py-1 border-b border-white/[0.06]">
+          <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider">{lang}</span>
+          <button onClick={copy} className="flex items-center gap-1 text-[9px] text-white/30 hover:text-white/60 transition-colors">
+            {copied ? <Check size={9} /> : <Copy size={9} />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+      )}
+      <pre className="px-3 py-2 text-[11px] font-mono text-green-300/80 overflow-x-auto leading-relaxed whitespace-pre">
+        <code>{children}</code>
+      </pre>
+      {!lang && (
+        <button onClick={copy} className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[9px] text-white/30 hover:text-white/60 px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.08)" }}>
+          {copied ? <Check size={9} /> : <Copy size={9} />}
+        </button>
+      )}
+    </div>
+  );
+}
 
 const TIPS = [
   "Hi, I'm Aura...",
@@ -581,6 +614,48 @@ const AuraWidget: React.FC = () => {
       }
     } else if (name === "summarize_context") {
       // No-op — Aura will produce a text response using the context already injected in system prompt
+    } else if (name === "generate_image") {
+      const prompt = args.prompt || "abstract art";
+      const target: "dashboard" | "document" = args.target || "dashboard";
+      toast.loading("Generating image…", { id: "aura-img-gen" });
+      (async () => {
+        try {
+          const resp = await fetch(`${SUPABASE_URL}/functions/v1/flux-ai`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${ANON_KEY}` },
+            body: JSON.stringify({ type: "generate-image", prompt }),
+          });
+          if (!resp.ok) { toast.error("Image generation failed", { id: "aura-img-gen" }); return; }
+          const { imageBase64, mimeType } = await resp.json();
+          if (!imageBase64) { toast.error("No image returned", { id: "aura-img-gen" }); return; }
+
+          // Convert base64 → blob → upload to document-images bucket
+          const byteArr = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
+          const blob = new Blob([byteArr], { type: mimeType || "image/png" });
+          const ext = (mimeType || "image/png").split("/")[1] || "png";
+          const fileName = `aura-${Date.now()}.${ext}`;
+          const { data: uploadData, error: uploadErr } = await (supabase.storage as any)
+            .from("document-images")
+            .upload(fileName, blob, { contentType: mimeType || "image/png", upsert: false });
+          if (uploadErr) { toast.error("Image upload failed", { id: "aura-img-gen" }); return; }
+          const { data: { publicUrl } } = (supabase.storage as any).from("document-images").getPublicUrl(fileName);
+          toast.success("Image generated!", { id: "aura-img-gen" });
+
+          if (target === "document") {
+            window.dispatchEvent(new CustomEvent("aura:insert-image", { detail: { url: publicUrl } }));
+          } else {
+            window.dispatchEvent(new CustomEvent("aura:spawn-image-widget", { detail: { url: publicUrl, prompt, id: `img-${Date.now()}` } }));
+          }
+        } catch {
+          toast.error("Image generation failed", { id: "aura-img-gen" });
+        }
+      })();
+    } else if (name === "inject_formula") {
+      const { cell, formula, note } = args;
+      if (cell && formula) {
+        window.dispatchEvent(new CustomEvent("aura:inject-formula", { detail: { cell, formula } }));
+        toast.success(`Formula injected into ${cell}${note ? ` — ${note}` : ""}`);
+      }
     }
   }, [flux, user, setTheme, focusStore]);
 
@@ -803,7 +878,15 @@ const AuraWidget: React.FC = () => {
                       {msg.role === "assistant" ? (
                         <div className="group relative">
                           <div className="prose prose-invert prose-sm max-w-none [&>*]:my-0.5 [&_p]:text-[12px] [&_p]:leading-relaxed [&_li]:text-[12px] [&_p]:text-white/60">
-                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                            <ReactMarkdown
+                              components={{
+                                code({ className, children, ...props }: any) {
+                                  const inline = !className && !String(children).includes("\n");
+                                  if (inline) return <code className="px-1 py-0.5 rounded text-[11px] font-mono bg-white/10 text-green-300/90" {...props}>{children}</code>;
+                                  return <CodeBlock className={className}>{String(children).replace(/\n$/, "")}</CodeBlock>;
+                                },
+                              }}
+                            >{msg.content}</ReactMarkdown>
                           </div>
                           <button
                             onClick={() => speakText(msg.content)}

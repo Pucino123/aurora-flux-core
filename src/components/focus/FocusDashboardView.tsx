@@ -25,6 +25,7 @@ import ToolDrawer from "./ToolDrawer";
 import BreathingWidget from "./BreathingWidget";
 import FocusCouncilWidget from "./FocusCouncilWidget";
 import AuraWidget from "./AuraWidget";
+import AuraImageWidget from "./AuraImageWidget";
 import RoutineBuilderWidget from "./RoutineBuilderWidget";
 import ClockEditor from "./ClockEditor";
 import WidgetStyleEditor from "./WidgetStyleEditor";
@@ -69,6 +70,7 @@ const FocusContent = () => {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showDocPicker, setShowDocPicker] = useState(false);
+  const [auraImages, setAuraImages] = useState<{ id: string; url: string; prompt: string }[]>([]);
   const [dragState, setDragState] = useState<{ id: string; x: number; y: number } | null>(null);
   const [docDragState, setDocDragState] = useState<{ id: string; x: number; y: number } | null>(null);
   const dragStateRef = useRef<{ id: string; x: number; y: number } | null>(null);
@@ -90,6 +92,16 @@ const FocusContent = () => {
 
   // Keep refs in sync
   useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
+
+  // Listen for Aura image widget spawn events
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { id, url, prompt } = e.detail || {};
+      if (id && url) setAuraImages(prev => [...prev, { id, url, prompt: prompt || "Generated image" }]);
+    };
+    window.addEventListener("aura:spawn-image-widget" as any, handler);
+    return () => window.removeEventListener("aura:spawn-image-widget" as any, handler);
+  }, []);
 
   /** Convert viewport clientX/Y to canvas-relative coordinates */
   const toCanvasCoords = useCallback((clientX: number, clientY: number) => {
@@ -520,6 +532,16 @@ const FocusContent = () => {
             {activeWidgets.includes("council") && <FocusCouncilWidget key="council" />}
             {activeWidgets.includes("aura") && <AuraWidget key="aura" />}
             {activeWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
+            {/* Aura-spawned image widgets */}
+            {auraImages.map(img => (
+              <AuraImageWidget
+                key={img.id}
+                id={img.id}
+                url={img.url}
+                prompt={img.prompt}
+                onRemove={(id) => setAuraImages(prev => prev.filter(i => i.id !== id))}
+              />
+            ))}
             {activeWidgets.includes("budget-preview") && <FocusBudgetWidget key="budget-preview" />}
             {activeWidgets.includes("savings-ring") && <FocusSavingsWidget key="savings-ring" />}
             {activeWidgets.includes("weekly-workout") && <FocusWorkoutWidget key="weekly-workout" />}
