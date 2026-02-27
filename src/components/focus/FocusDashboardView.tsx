@@ -243,19 +243,11 @@ const FocusContent = () => {
       onDrop={handleCanvasDrop}
     >
       <BackgroundEngine embedded />
-      <AnimatePresence>
-        {systemMode === "focus" && (
-          <motion.div
-            key="vignette"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="absolute inset-0 z-[15] pointer-events-none"
-            style={{ background: "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.35) 100%)" }}
-          />
-        )}
-      </AnimatePresence>
+      {/* Vignette always visible */}
+      <div
+        className="absolute inset-0 z-[15] pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.35) 100%)" }}
+      />
       <AnimatePresence>
         {systemMode === "build" && (
           <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>

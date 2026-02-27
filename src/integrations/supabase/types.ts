@@ -719,6 +719,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          assigned_to: string | null
           content: string | null
           created_at: string
           done: boolean
@@ -738,6 +739,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assigned_to?: string | null
           content?: string | null
           created_at?: string
           done?: boolean
@@ -757,6 +759,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assigned_to?: string | null
           content?: string | null
           created_at?: string
           done?: boolean
@@ -776,6 +779,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_folder_id_fkey"
             columns: ["folder_id"]

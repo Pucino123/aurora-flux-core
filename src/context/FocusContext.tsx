@@ -93,7 +93,7 @@ const DEFAULT_STATE: FocusState = {
   taskTimeLog: {},
   quoteFontSize: 14,
   widgetMinimalMode: false,
-  clockFontSize: 60,
+  clockFontSize: 86,
   clockFont: "inter",
   clockColor: "rgba(255,255,255,1)",
   clockWeight: 200,

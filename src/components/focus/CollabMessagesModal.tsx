@@ -4,8 +4,9 @@ import {
   X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut,
   Trash2, Smile, Link, Copy, Moon, Sun, ChevronLeft, Search,
   Video, Phone, Info, Hash, MoreHorizontal, Clock, Paperclip,
-  FileText, Image as ImageIcon, Reply, CornerUpLeft
+  FileText, Image as ImageIcon, Reply, CornerUpLeft, ListTodo, CalendarPlus,
 } from "lucide-react";
+import { useFlux } from "@/context/FluxContext";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTeamChat, getUserColor } from "@/hooks/useTeamChat";
 import { useAuth } from "@/hooks/useAuth";
@@ -101,6 +102,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     pendingInvites, readReceipts, uploadFile,
   } = useTeamChat();
   const { user } = useAuth();
+  const { createTask, createBlock } = useFlux();
 
   const [text, setText] = useState("");
   const [dark, setDark] = useState(true);
@@ -1079,6 +1081,46 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                 onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>
                 <Copy size={16} style={{ color: T.textSecondary }} />
                 Copy
+              </button>
+              <div style={{ height: 1, background: T.divider }} />
+              <button
+                onClick={async () => {
+                  closeContextMenu();
+                  try {
+                    const { data } = await supabase.functions.invoke("flux-ai", {
+                      body: { type: "message-to-action", text: msg.content, sender_name: getMemberName(msg.user_id) },
+                    });
+                    const title = data?.title || msg.content;
+                    await createTask({ title, priority: "medium", status: "todo" });
+                    toast.success("Added to tasks: " + title);
+                  } catch { toast.error("Failed to create task"); }
+                }}
+                className="flex items-center gap-3 px-4 py-2.5 text-[14px] transition-all text-left"
+                style={{ color: T.textPrimary }}
+                onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)")}
+                onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>
+                <ListTodo size={16} style={{ color: T.accent }} />
+                Add to Task
+              </button>
+              <button
+                onClick={async () => {
+                  closeContextMenu();
+                  try {
+                    const { data } = await supabase.functions.invoke("flux-ai", {
+                      body: { type: "message-to-action", text: msg.content, sender_name: getMemberName(msg.user_id) },
+                    });
+                    const title = data?.title || msg.content;
+                    const now = new Date();
+                    await createBlock({ title, time: `${String(now.getHours() + 1).padStart(2, "0")}:00`, duration: "30m", type: "deep", scheduled_date: now.toISOString().split("T")[0] });
+                    toast.success("Added to calendar: " + title);
+                  } catch { toast.error("Failed to add to calendar"); }
+                }}
+                className="flex items-center gap-3 px-4 py-2.5 text-[14px] transition-all text-left"
+                style={{ color: T.textPrimary }}
+                onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)")}
+                onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>
+                <CalendarPlus size={16} style={{ color: T.accent }} />
+                Add to Calendar
               </button>
             </motion.div>,
             document.body

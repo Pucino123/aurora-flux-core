@@ -561,11 +561,33 @@ async function handleCouncilQuick(question: string, mode: string, personaKey: st
   return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
 }
 
+async function handleMessageToAction(messageText: string, senderName: string, apiKey: string) {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash-lite",
+      messages: [
+        { role: "system", content: "You rewrite chat messages into actionable task titles. Be concise (max 8 words). Append '(Requested by [Name])' at the end. Reply with ONLY the task title, nothing else." },
+        { role: "user", content: `Message from ${senderName}: "${messageText}"` },
+      ],
+    }),
+  });
+  const errResp = handleAIError(response);
+  if (errResp) return errResp;
+  if (!response.ok) throw new Error("AI gateway error");
+  const data = await response.json();
+  const title = data.choices?.[0]?.message?.content?.trim() || messageText;
+  return new Response(JSON.stringify({ title }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, messages, context, action, text, question, mode, persona_key } = await req.json();
+    const { type, messages, context, action, text, question, mode, persona_key, sender_name } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -575,6 +597,7 @@ serve(async (req) => {
     if (type === "council-quick") return await handleCouncilQuick(question, mode, persona_key, LOVABLE_API_KEY);
     if (type === "document-chat") return await handleDocumentChat(messages, context, LOVABLE_API_KEY);
     if (type === "document-tools") return await handleDocumentTools(action, text, LOVABLE_API_KEY);
+    if (type === "message-to-action") return await handleMessageToAction(text || "", sender_name || "Someone", LOVABLE_API_KEY);
     return await handleChat(Array.isArray(messages) ? messages : [], LOVABLE_API_KEY);
   } catch (e) {
     console.error("flux-ai error:", e);

@@ -40,7 +40,7 @@ const da: Record<string, string> = {
   "auth.signout": "Log ud",
 
   // Sidebar
-  "sidebar.home": "Hjem",
+  "sidebar.home": "Dashboard",
   "sidebar.toggle_neural": "Vis neuralt overblik",
 
   // Brain
@@ -354,7 +354,7 @@ const en: Record<string, string> = {
   "auth.signin_link": "Sign In",
   "auth.check_email": "Check your email for a verification link!",
   "auth.signout": "Sign out",
-  "sidebar.home": "Home",
+  "sidebar.home": "Dashboard",
   "sidebar.toggle_neural": "Toggle Neural View",
   "brain.inbox": "Inbox",
   "brain.my_brain": "My Brain",
