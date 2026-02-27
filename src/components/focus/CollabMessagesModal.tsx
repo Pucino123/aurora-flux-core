@@ -128,7 +128,6 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   const swipeStartRef = useRef<{ x: number; y: number; msgId: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dialogContentRef = useRef<HTMLDivElement>(null);
 
   // Theme tokens — deep glassmorphism
   const T = {
@@ -385,8 +384,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
       {/* Lighten default overlay so frosted glass effect is visible */}
       <style dangerouslySetInnerHTML={{ __html: `[data-state="open"][class*="bg-black"] { background: rgba(0,0,0,0.35) !important; backdrop-filter: blur(4px); }` }} />
       <DialogContent
-        ref={dialogContentRef}
-        className="relative border-0 p-0 gap-0 overflow-hidden [&>button]:hidden"
+        className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden"
         onOpenAutoFocus={e => e.preventDefault()}
         style={{
           fontFamily: "-apple-system, 'SF Pro Text', 'SF Pro Display', BlinkMacSystemFont, sans-serif",
@@ -1006,18 +1004,15 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
           const msg = messages.find(m => m.id === contextMenuMsgId);
           if (!msg) return null;
           const msgReactions = reactionsMap[msg.id] || {};
-          const dialogRect = dialogContentRef.current?.getBoundingClientRect();
-          const localX = dialogRect ? contextMenuPos.x - dialogRect.left : contextMenuPos.x;
-          const localY = dialogRect ? contextMenuPos.y - dialogRect.top : contextMenuPos.y;
           const menuWidth = 260;
           const menuHeight = 172;
-          const top = Math.max(8, Math.min(localY - 100, (dialogRect?.height ?? 600) - menuHeight - 8));
-          const left = Math.max(8, Math.min(localX - 120, (dialogRect?.width ?? 820) - menuWidth - 8));
+          const top = Math.max(8, Math.min(contextMenuPos.y - 100, window.innerHeight - menuHeight - 8));
+          const left = Math.max(8, Math.min(contextMenuPos.x - 120, window.innerWidth - menuWidth - 8));
 
           return (
             <div
               ref={contextMenuRef}
-              className="absolute z-[120] flex flex-col gap-1 rounded-2xl overflow-hidden"
+              className="fixed z-[300] flex flex-col gap-1 rounded-2xl overflow-hidden"
               style={{
                 top,
                 left,
