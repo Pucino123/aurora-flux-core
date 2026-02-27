@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Settings, User, Palette, LogOut } from "lucide-react";
+import { Settings, User, Palette, LogOut, Brain, Pencil, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
+
+interface AuraMemory {
+  id: string;
+  key: string;
+  value: string;
+  updated_at: string;
+}
 
 const SettingsView = () => {
   const { user, signOut } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [theme, setTheme] = useState<"system" | "light" | "dark">("system");
   const [saving, setSaving] = useState(false);
+  const [memories, setMemories] = useState<AuraMemory[]>([]);
+  const [memoriesLoading, setMemoriesLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editKey, setEditKey] = useState("");
+  const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -20,7 +32,16 @@ const SettingsView = () => {
         if (s?.theme) setTheme(s.theme);
       }
     })();
+    fetchMemories();
   }, [user]);
+
+  const fetchMemories = async () => {
+    if (!user) return;
+    setMemoriesLoading(true);
+    const { data } = await (supabase as any).from("aura_memory").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
+    setMemories((data || []) as AuraMemory[]);
+    setMemoriesLoading(false);
+  };
 
   // Apply theme immediately on change
   useEffect(() => {
@@ -45,6 +66,27 @@ const SettingsView = () => {
     }).eq("id", user.id);
     setSaving(false);
     toast.success("Settings saved");
+  };
+
+  const startEdit = (mem: AuraMemory) => {
+    setEditingId(mem.id);
+    setEditKey(mem.key);
+    setEditValue(mem.value);
+  };
+
+  const saveEdit = async () => {
+    if (!user || !editingId) return;
+    await (supabase as any).from("aura_memory").update({ key: editKey.trim(), value: editValue.trim() }).eq("id", editingId).eq("user_id", user.id);
+    setEditingId(null);
+    fetchMemories();
+    toast.success("Memory updated");
+  };
+
+  const deleteMemory = async (id: string) => {
+    if (!user) return;
+    await (supabase as any).from("aura_memory").delete().eq("id", id).eq("user_id", user.id);
+    setMemories(prev => prev.filter(m => m.id !== id));
+    toast.success("Memory deleted");
   };
 
   return (
@@ -90,6 +132,76 @@ const SettingsView = () => {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Aura Memory Manager */}
+        <div className="flux-card">
+          <h3 className="text-sm font-semibold flex items-center gap-2 mb-1"><Brain size={16} /> Aura Memory</h3>
+          <p className="text-xs text-muted-foreground mb-4">Things Aura has learned and remembered about you. Edit or delete any entry.</p>
+          {!user ? (
+            <p className="text-xs text-muted-foreground italic">Sign in to manage Aura's memory.</p>
+          ) : memoriesLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => <div key={i} className="h-9 rounded-lg bg-secondary/40 animate-pulse" />)}
+            </div>
+          ) : memories.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic py-4 text-center">No memories stored yet. Chat with Aura and she'll start learning about you.</p>
+          ) : (
+            <div className="rounded-xl overflow-hidden border border-border/30">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-secondary/40 border-b border-border/20">
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground w-1/3">Key</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Value</th>
+                    <th className="px-2 py-2 w-16"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {memories.map((mem, i) => (
+                    <tr key={mem.id} className={`border-b border-border/10 last:border-0 ${i % 2 === 0 ? "" : "bg-secondary/10"}`}>
+                      {editingId === mem.id ? (
+                        <>
+                          <td className="px-2 py-1.5">
+                            <input
+                              value={editKey}
+                              onChange={e => setEditKey(e.target.value)}
+                              className="w-full px-2 py-1 rounded-lg bg-secondary/60 border border-primary/30 text-xs focus:outline-none focus:ring-1 focus:ring-primary/40"
+                            />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input
+                              value={editValue}
+                              onChange={e => setEditValue(e.target.value)}
+                              className="w-full px-2 py-1 rounded-lg bg-secondary/60 border border-primary/30 text-xs focus:outline-none focus:ring-1 focus:ring-primary/40"
+                              onKeyDown={e => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditingId(null); }}
+                              autoFocus
+                            />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <div className="flex gap-1 justify-end">
+                              <button onClick={saveEdit} className="p-1 rounded-md hover:bg-primary/20 text-primary transition-colors"><Check size={12} /></button>
+                              <button onClick={() => setEditingId(null)} className="p-1 rounded-md hover:bg-secondary text-muted-foreground transition-colors"><X size={12} /></button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-3 py-2 font-medium text-foreground/80">{mem.key}</td>
+                          <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px]">{mem.value}</td>
+                          <td className="px-2 py-2">
+                            <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 hover:opacity-100">
+                              <button onClick={() => startEdit(mem)} className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Pencil size={11} /></button>
+                              <button onClick={() => deleteMemory(mem.id)} className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={11} /></button>
+                            </div>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
