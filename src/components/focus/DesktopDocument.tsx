@@ -182,7 +182,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
           border: docOpacity <= 0.06 ? "none" : undefined,
         }}
         onPointerDown={handlePointerDown}
-        onClick={(e) => { e.stopPropagation(); if (!didDrag.current) { if (onSingleSelect) onSingleSelect(doc.id); else setSelected(s => !s); } }}
+        onClick={(e) => { e.stopPropagation(); if (!didDrag.current && !isMarqueeSelected) { if (onSingleSelect) onSingleSelect(doc.id); else setSelected(s => !s); } }}
         onDoubleClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setSelected(false); onOpen(doc); } }}
         onContextMenu={handleContextMenu}
       >
