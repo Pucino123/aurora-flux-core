@@ -1,62 +1,40 @@
 
 
-## Plan: Dashboard Interactions, UI Standardization, Defaults & Reactive Today's Plan
+## Issues Found & Fix Plan
 
-### 1. Context Menu — Place items at click coordinates
-**File:** `src/components/focus/FocusDashboardView.tsx`
-- Store the context menu `{x, y}` coordinates when right-clicking.
-- Pass these coordinates to `CreateFolderModal` and to `createDocument` so newly created folders/documents spawn at the exact click position.
-- For folders: after creation, immediately set `desktopFolderPositions[folder.id] = { x: contextMenu.x, y: contextMenu.y }` in the FocusStore.
-- For documents: same pattern with `desktopDocPositions`.
-- For sticky notes: use the context menu coordinates instead of random placement.
+### 1. Sidebar Folders: Remove Default Kanban + Remove Budget Item
 
-### 2. Folder Modal — "Create folder" button text
-**File:** `src/lib/i18n.ts`, `src/components/CreateFolderModal.tsx`
-- Add `"folder.create_button": "Create folder"` to both `da` and `en` dictionaries.
-- The button already uses `t("folder.create_button")` — just needs the i18n key defined.
+**Problem:** `FolderNodeComponent` in `BrainTree.tsx` shows `folder.tasks.length` as a badge, and clicking a folder runs `setActiveView("canvas")` which opens the kanban board. The user wants folders to only display their actual nested contents (sub-folders and documents) — not tasks/kanban.
 
-### 3. Standardize all close buttons (red, top-right)
-**Files:** All modals/popups across the app (~10 files)
-- Define a shared close button style: small circle with `background: #ff5f57`, positioned `absolute top-3 right-3`.
-- X icon appears on hover (matching Colab modal pattern).
-- Apply to: `CreateFolderModal`, `PlanModal`, `FolderModal`, `DesktopDocumentViewer`, `ToolDrawer`, `ClockEditor`, `WidgetStyleEditor`, `CollabMessagesModal` (move from left to right), `FocusReportModal`, `WorkoutModal`, `AddToCalendarModal`, `KeyboardShortcutsSheet`.
+Additionally, the task count badge (`folder.tasks.length`) implies kanban-style content. The "følg mit månedlige budget" item appears because tasks are associated with folders.
 
-### 4. Default Spaces settings (match screenshot 3)
-**File:** `src/components/focus/BackgroundEngine.tsx`
-- Change default `bgBlur` from `0` → `4`.
-- Change default `vignette` from `0` → `0.22`.
-- Brightness (dimming=0.15 = 85%) is already correct.
-- Video Audio (0%) is already correct.
+**Fix in `BrainTree.tsx`:**
+- Remove the `folder.tasks.length` badge from `FolderNodeComponent` (line 145-147)
+- Change `handleClick` to only toggle the folder open/closed (expand tree) instead of switching to canvas/kanban view. Double-click can still open the folder modal on the desktop.
+- Only show documents and child folders in the expanded tree — no tasks
 
-### 5. Default clock settings
-**File:** `src/context/FocusContext.tsx`
-- Already set to `clockFontSize: 86`, `clockWeight: 200`, `clockShowSeconds: true`, `clockShowDate: true`, `clockShowGreeting: true`. Verify these match the screenshot — they do.
+### 2. Group Drag Broken After Marquee Selection
 
-### 6. Reactive Today's Plan
-**File:** `src/components/Scheduler.tsx`, `src/components/focus/TodaysPlanWidget.tsx`
-- Add a `useEffect` that listens for changes to tasks and schedule blocks (via FluxContext) and auto-refreshes the plan view.
-- Subscribe to FluxContext's `tasks` and `scheduleBlocks` arrays as dependencies so the widget re-renders immediately when a task or event is created/updated anywhere.
-- Add a simple AI sorting heuristic: sort today's items by priority (high → medium → low), then by scheduled time, grouping calendar events and tasks into a logical timeline.
+**Root cause:** `handleGroupDragStart` calls `e.preventDefault()` on the PointerEvent (line 392). This suppresses the subsequent mouse events. But the group drag movement listener (`onMouseMove` at line 304) listens on `window.addEventListener("mousemove", ...)`. Since `preventDefault()` on pointerdown suppresses mousedown → mousemove chain, the group drag never gets movement data.
 
-### Technical Details
+**Fix in `FocusDashboardView.tsx`:**
+- Change `window.addEventListener("mousemove", onMouseMove)` and `window.addEventListener("mouseup", onMouseUp)` to use `pointermove` and `pointerup` instead. This ensures compatibility with the PointerEvent-based drag initiation.
+- Remove `e.preventDefault()` from `handleGroupDragStart` or ensure pointer events are used throughout.
 
-**Context menu coordinate passing:**
-```text
-contextMenu {x, y} → CreateFolderModal.onCreate callback 
-  → setDesktopFolderPositions(prev => ({...prev, [folder.id]: {x, y}}))
-```
+### 3. Right-Click Should Not Move Items
 
-**Red close button pattern (reusable):**
-```text
-<button className="absolute top-3 right-3 z-50 group">
-  <div style={{ width: 13, height: 13, borderRadius: "50%", 
-    background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.12)" }}>
-    <X size={7} className="opacity-0 group-hover:opacity-100" />
-  </div>
-</button>
-```
+**Problem:** Right-clicking a selected item triggers `handlePointerDown` which can start group drag, then the context menu opens, but the group drag state is now active.
 
-**Spaces defaults localStorage:**
-- On first load (no localStorage key), `bgBlur` initializes to `4` and `vignette` to `0.22`.
-- Existing users who already have saved values will keep their settings.
+**Fix in `DesktopFolder.tsx` and `DesktopDocument.tsx`:**
+- In `handlePointerDown`, check `if (e.button !== 0) return;` at the very top — only start drag on left-click. Right-click (button 2) should be ignored by the drag handler.
+- Same check needed in `handleGroupDragStart` in `FocusDashboardView.tsx`
+
+### Summary of File Changes
+
+| File | Change |
+|------|--------|
+| `BrainTree.tsx` | Remove task count badge; change folder click to toggle expand instead of opening kanban |
+| `FocusDashboardView.tsx` | Switch mousemove/mouseup listeners to pointermove/pointerup; add button check in handleGroupDragStart |
+| `DesktopFolder.tsx` | Add `if (e.button !== 0) return;` guard in handlePointerDown |
+| `DesktopDocument.tsx` | Same button guard |
 
