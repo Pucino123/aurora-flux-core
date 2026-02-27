@@ -201,8 +201,9 @@ const CreateFolderModal = ({ open, onClose, onCreate }: CreateFolderModalProps) 
               </div>
 
               <div className="relative bg-card/75 backdrop-blur-2xl border border-border/50 rounded-3xl shadow-2xl p-6 md:p-8">
-                <button onClick={handleClose} className="absolute top-4 right-4 p-1.5 rounded-full bg-secondary/50 hover:bg-secondary transition-colors z-10">
-                  <X size={14} className="text-muted-foreground" />
+                <button onClick={handleClose} className="absolute top-3 right-3 z-10 group flex items-center justify-center"
+                  style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.12)", boxShadow: "0 0.5px 1px rgba(0,0,0,0.15)" }}>
+                  <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100" style={{ color: "rgba(80,0,0,0.7)" }} />
                 </button>
 
                 <div className="mb-5">

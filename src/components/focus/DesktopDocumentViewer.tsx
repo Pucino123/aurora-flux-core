@@ -172,11 +172,9 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
                   {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                 </button>
 
-                <button
-                  onClick={onClose}
-                  className={`p-2 rounded-lg transition-colors ${lightMode ? "text-gray-500 hover:bg-gray-100" : "text-muted-foreground hover:bg-secondary/60"}`}
-                >
-                  <X size={16} />
+                <button onClick={onClose} className="group flex items-center justify-center"
+                  style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.12)", boxShadow: "0 0.5px 1px rgba(0,0,0,0.15)" }}>
+                  <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100" style={{ color: "rgba(80,0,0,0.7)" }} />
                 </button>
               </div>
             </TooltipProvider>

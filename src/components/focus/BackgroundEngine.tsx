@@ -262,8 +262,8 @@ const BackgroundEngine = ({ embedded = false, onMouseMove }: { embedded?: boolea
   const [user, setUser] = useState<any>(null);
   const [youtubeVolume, setYoutubeVolume] = useState(() => { try { return parseFloat(localStorage.getItem("flux-yt-volume") || "0"); } catch { return 0; } });
   const [dimming, setDimming] = useState(() => { try { return parseFloat(localStorage.getItem("flux-bg-dimming") || "0.15"); } catch { return 0.15; } });
-  const [bgBlur, setBgBlur] = useState(() => { try { return parseFloat(localStorage.getItem("flux-bg-blur") || "0"); } catch { return 0; } });
-  const [vignette, setVignette] = useState(() => { try { return parseFloat(localStorage.getItem("flux-bg-vignette") || "0"); } catch { return 0; } });
+  const [bgBlur, setBgBlur] = useState(() => { try { const v = localStorage.getItem("flux-bg-blur"); return v !== null ? parseFloat(v) : 4; } catch { return 4; } });
+  const [vignette, setVignette] = useState(() => { try { const v = localStorage.getItem("flux-bg-vignette"); return v !== null ? parseFloat(v) : 0.22; } catch { return 0.22; } });
 
   React.useEffect(() => { supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null)); }, []);
   React.useEffect(() => {
