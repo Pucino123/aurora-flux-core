@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, X } from "lucide-react";
+import { Send, Mic, MicOff, X, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -17,13 +17,14 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 const TIPS = [
-  "Hi, my name is Aura...",
+  "Hi, I'm Aura...",
   "Did you know I can see your screen?",
-  "Hold Alt to talk to me...",
+  "Press ⌘/Ctrl to talk to me",
   "I can help you plan your schedule",
   "Ask me to add or remove tasks",
   "I can book meetings for you",
   "Need feedback on your progress?",
+  "Press ⌘/Ctrl again to send",
 ];
 
 function gatherContext(focusStore: any, flux: any): string {
@@ -388,10 +389,10 @@ const AuraWidget: React.FC = () => {
     send(text);
   });
 
-  // Global Alt key shortcut for voice
+  // Global Cmd/Ctrl shortcut for voice (Meta = ⌘ on Mac, Control on Windows)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Alt") return;
+      if (e.key !== "Meta" && e.key !== "Control") return;
       // Don't intercept if user is typing in an input/textarea/contenteditable
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
       const isEditable = tag === "input" || tag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
@@ -433,9 +434,18 @@ const AuraWidget: React.FC = () => {
       containerStyle={{ background: "transparent", border: "none", boxShadow: "none" }}
     >
       <div ref={widgetRef} className="flex flex-col items-center" style={{ minHeight: 160 }}>
-        {/* Orb */}
-        <div className="flex items-center justify-center pt-2 pb-1" onClick={wake}>
+        {/* Orb + Settings icon */}
+        <div className="relative flex items-center justify-center pt-2 pb-1" onClick={wake}>
           <AuraOrb state={auraState} size={orbSize} onClick={wake} />
+          {/* Glassmorphic settings button */}
+          <button
+            onClick={(e) => { e.stopPropagation(); toast("Aura settings coming soon ✨"); }}
+            className="absolute bottom-0 right-0 p-1.5 rounded-full border border-white/[0.12] text-white/30 hover:text-white/60 hover:bg-white/[0.08] transition-all"
+            style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: "rgba(255,255,255,0.05)" }}
+            title="Aura settings"
+          >
+            <Settings size={11} />
+          </button>
         </div>
 
         {/* Dynamic Pill */}
