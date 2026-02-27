@@ -58,7 +58,7 @@ const BuildModeGrid = () => (
 );
 
 const FocusContent = () => {
-  const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes } = useFocusStore();
+  const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition } = useFocusStore();
   const { folderTree, createFolder, moveFolder } = useFlux();
   const { user } = useAuth();
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
@@ -108,13 +108,16 @@ const FocusContent = () => {
   const contextMenuPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleCreateDocument = useCallback(async (type: "text" | "spreadsheet") => {
-    contextMenuPosRef.current = contextMenu;
+    const pos = contextMenu;
     setShowDocPicker(false);
     setContextMenu(null);
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
-    await createDocument(title, type, null);
+    const doc = await createDocument(title, type, null);
+    if (doc && pos) {
+      updateDesktopDocPosition(doc.id, { x: pos.x, y: pos.y });
+    }
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-  }, [createDocument, contextMenu]);
+  }, [createDocument, contextMenu, updateDesktopDocPosition]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
@@ -383,13 +386,20 @@ const FocusContent = () => {
           open={showCreateFolder}
           onClose={() => setShowCreateFolder(false)}
           onCreate={async (data) => {
+            const pos = contextMenuPosRef.current;
             const parent = await createFolder({ title: data.title, type: "project", color: data.color, icon: data.icon });
-            if (parent && data.subfolders.length > 0) {
-              for (const sub of data.subfolders) {
-                const subIcon = suggestIcon(sub);
-                await createFolder({ title: sub, type: "project", parent_id: parent.id, color: data.color, icon: subIcon });
+            if (parent) {
+              if (pos) {
+                updateDesktopFolderPosition(parent.id, { x: pos.x, y: pos.y });
+              }
+              if (data.subfolders.length > 0) {
+                for (const sub of data.subfolders) {
+                  const subIcon = suggestIcon(sub);
+                  await createFolder({ title: sub, type: "project", parent_id: parent.id, color: data.color, icon: subIcon });
+                }
               }
             }
+            contextMenuPosRef.current = null;
           }}
         />
       )}
