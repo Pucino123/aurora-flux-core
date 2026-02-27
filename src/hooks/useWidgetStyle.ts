@@ -19,16 +19,16 @@ export interface WidgetStyle {
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
-  backgroundColor: "",
-  backgroundOpacity: 0,
+  backgroundColor: "#000000",
+  backgroundOpacity: 25,
   textColor: "",
   textOpacity: 100,
-  borderColor: "",
-  borderWidth: 0,
+  borderColor: "#ffffff",
+  borderWidth: 1,
   borderRadius: 16,
   borderStyle: "solid",
-  borderOpacity: 100,
-  blurAmount: 0,
+  borderOpacity: 15,
+  blurAmount: 20,
   fontFamily: "",
   fontSize: 0,
   glassEffect: false,

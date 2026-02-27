@@ -42,7 +42,7 @@ interface GoogleEvent {
 }
 
 const FullCalendarView = () => {
-  const { tasks, scheduleBlocks, createBlock, updateTask } = useFlux();
+  const { tasks, scheduleBlocks, createBlock, updateTask, updateBlock } = useFlux();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("month");
@@ -52,6 +52,7 @@ const FullCalendarView = () => {
   const [newBlockType, setNewBlockType] = useState("deep");
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   const [googleEvents, setGoogleEvents] = useState<GoogleEvent[]>([]);
 
   // Fetch Google Calendar events
@@ -111,17 +112,27 @@ const FullCalendarView = () => {
     setDraggingTaskId(taskId);
   };
 
+  const handleBlockDragStart = (e: React.DragEvent, blockId: string) => {
+    e.dataTransfer.setData("block-id", blockId);
+    setDraggingBlockId(blockId);
+  };
+
   const handleDragEnd = () => {
     setDraggingTaskId(null);
+    setDraggingBlockId(null);
     setDragOverDate(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetDate: string) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData("task-id");
+    const blockId = e.dataTransfer.getData("block-id");
     if (taskId) {
       await updateTask(taskId, { scheduled_date: targetDate, due_date: targetDate });
       toast.success("Task rescheduled");
+    } else if (blockId) {
+      await updateBlock(blockId, { scheduled_date: targetDate });
+      toast.success("Block rescheduled");
     }
     setDragOverDate(null);
   };
@@ -202,7 +213,7 @@ const FullCalendarView = () => {
                       onDrop={(e) => handleDrop(e, key)}
                       className={`bg-background min-h-[80px] p-1.5 cursor-pointer transition-all duration-150 ${
                         isSelected ? "ring-inset ring-1 ring-primary/50 bg-primary/[0.02]" : "hover:bg-secondary/30"
-                      } ${isDragOver && draggingTaskId ? "bg-primary/10 ring-inset ring-2 ring-primary/40 scale-[0.99]" : ""}`}
+                      } ${isDragOver && (draggingTaskId || draggingBlockId) ? "bg-primary/10 ring-inset ring-2 ring-primary/40 scale-[0.99]" : ""}`}
                     >
                       <span className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ${
                         isToday(day) ? "bg-primary text-primary-foreground" : isSelected ? "text-primary font-bold" : isCurrentMonth ? "text-foreground" : "text-muted-foreground/30"
@@ -211,7 +222,14 @@ const FullCalendarView = () => {
                       </span>
                       <div className="mt-1 space-y-0.5">
                         {events?.blocks.slice(0, 1).map(b => (
-                          <div key={b.id} className={`text-[9px] px-1 py-0.5 rounded truncate border ${COLOR_MAP[b.type] || COLOR_MAP.deep}`}>
+                          <div
+                            key={b.id}
+                            draggable
+                            onDragStart={(e) => handleBlockDragStart(e, b.id)}
+                            onDragEnd={handleDragEnd}
+                            className={`text-[9px] px-1 py-0.5 rounded truncate border cursor-grab flex items-center gap-0.5 active:opacity-40 transition-opacity ${COLOR_MAP[b.type] || COLOR_MAP.deep} ${draggingBlockId === b.id ? "opacity-30" : ""}`}
+                          >
+                            <Grip size={7} className="shrink-0 opacity-50" />
                             {b.time} {b.title}
                           </div>
                         ))}
@@ -284,7 +302,13 @@ const FullCalendarView = () => {
                             onDrop={(e) => handleDrop(e, key)}
                           >
                             {blocks.map(b => (
-                              <div key={b.id} className={`text-[9px] px-1 py-0.5 rounded truncate border ${COLOR_MAP[b.type] || COLOR_MAP.deep}`}>
+                              <div
+                                key={b.id}
+                                draggable
+                                onDragStart={(e) => handleBlockDragStart(e, b.id)}
+                                onDragEnd={handleDragEnd}
+                                className={`text-[9px] px-1 py-0.5 rounded truncate border cursor-grab active:opacity-40 transition-opacity ${COLOR_MAP[b.type] || COLOR_MAP.deep} ${draggingBlockId === b.id ? "opacity-30" : ""}`}
+                              >
                                 {b.title}
                               </div>
                             ))}

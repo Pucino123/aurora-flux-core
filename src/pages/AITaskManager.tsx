@@ -1,14 +1,15 @@
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useFlux } from "@/context/FluxContext";
 import { format, isToday, isTomorrow, isPast, parseISO } from "date-fns";
 import {
   Check, Plus, Trash2, ArrowUpRight, Sparkles, Loader2,
   GripVertical, Calendar, Circle,
-  MoreHorizontal, Search, X, CheckCircle2, AlertCircle, Minus, RotateCcw, Pencil,
+  MoreHorizontal, Search, X, CheckCircle2, AlertCircle, Minus, RotateCcw, Pencil, UserCircle2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeamChat } from "@/hooks/useTeamChat";
 import {
   DndContext, PointerSensor, useSensor, useSensors,
   DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay,
@@ -59,7 +60,7 @@ function formatDue(date: string | null): { label: string; urgent: boolean } | nu
 /* ── Task Row ── */
 const SortableTaskRow = React.memo(({
   task, editingId, editValue, setEditingId, setEditValue,
-  expandedId, setExpandedId, onToggle, onRemove, onUpdate, onUndone,
+  expandedId, setExpandedId, onToggle, onRemove, onUpdate, onUndone, teamMembers,
 }: {
   task: any; editingId: string | null; editValue: string;
   expandedId: string | null;
@@ -70,6 +71,7 @@ const SortableTaskRow = React.memo(({
   onRemove: (id: string) => void;
   onUpdate: (id: string, data: any) => void;
   onUndone?: (id: string) => void;
+  teamMembers?: Array<{ user_id: string; display_name: string | null }>;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   const style = {
@@ -142,10 +144,21 @@ const SortableTaskRow = React.memo(({
               {prio.label}
             </span>
             {due && (
-              <span className={`inline-flex items-center gap-1 text-[10px] ${due.urgent ? "text-red-400" : "text-muted-foreground"}`}>
+              <span className={`inline-flex items-center gap-1 text-[10px] ${due.urgent ? "text-destructive" : "text-muted-foreground"}`}>
                 <Calendar size={10} /> {due.label}
               </span>
             )}
+            {(task as any).assigned_to && teamMembers && (() => {
+              const member = teamMembers.find(m => m.user_id === (task as any).assigned_to);
+              if (!member) return null;
+              const initial = (member.display_name || member.user_id)?.[0]?.toUpperCase() || "?";
+              return (
+                <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground" title={member.display_name || member.user_id}>
+                  <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[8px] font-bold">{initial}</span>
+                  {member.display_name || member.user_id.slice(0, 6)}
+                </span>
+              );
+            })()}
           </div>
         </div>
 
@@ -176,7 +189,7 @@ const SortableTaskRow = React.memo(({
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="ml-9 mr-3 mb-2 px-3 py-3 rounded-xl bg-secondary/20 border border-border/30 grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="ml-9 mr-3 mb-2 px-3 py-3 rounded-xl bg-secondary/20 border border-border/30 grid grid-cols-2 md:grid-cols-5 gap-3">
               <div>
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Priority</label>
                 <div className="flex flex-wrap gap-1">
@@ -209,6 +222,19 @@ const SortableTaskRow = React.memo(({
                 />
               </div>
               <div>
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Assign to</label>
+                <select
+                  value={(task as any).assigned_to || ""}
+                  onChange={e => onUpdate(task.id, { assigned_to: e.target.value || null } as any)}
+                  className="text-xs bg-background/60 border border-border/40 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary/30 w-full"
+                >
+                  <option value="">Unassigned</option>
+                  {teamMembers?.map(m => (
+                    <option key={m.user_id} value={m.user_id}>{m.display_name || m.user_id.slice(0, 8)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes</label>
                 <input
                   defaultValue={task.content || ""}
@@ -230,7 +256,7 @@ SortableTaskRow.displayName = "SortableTaskRow";
 const DroppableColumn = ({
   col, tasks, editingId, editValue, expandedId, colTitles, onRenameCol, onDeleteCol, isCustom,
   setEditingId, setEditValue, setExpandedId,
-  onToggle, onRemove, onUpdate, onUndone, onAddTask, isOver,
+  onToggle, onRemove, onUpdate, onUndone, onAddTask, isOver, teamMembers,
 }: any) => {
   const { setNodeRef } = useDroppable({ id: col.id });
   const [addingTask, setAddingTask] = useState(false);
@@ -313,6 +339,7 @@ const DroppableColumn = ({
                 setEditingId={setEditingId} setEditValue={setEditValue}
                 setExpandedId={setExpandedId}
                 onToggle={onToggle} onRemove={onRemove} onUpdate={onUpdate} onUndone={onUndone}
+                teamMembers={teamMembers}
               />
             ))
           )}
@@ -347,6 +374,7 @@ const DroppableColumn = ({
 /* ── Main ── */
 const AITaskManager = () => {
   const { tasks, updateTask, createTask, removeTask } = useFlux();
+  const { members } = useTeamChat();
   const [newTitle, setNewTitle] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -596,6 +624,7 @@ const AITaskManager = () => {
     onToggle: handleToggle, onRemove: removeTask, onUpdate: updateTask, onUndone: handleUndone,
     onRenameCol: handleRenameCol, onDeleteCol: handleDeleteCol,
     onAddTask: handleAddTaskToColumn,
+    teamMembers: members,
   };
 
   return (
