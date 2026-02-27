@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw } from "lucide-react";
+import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit } from "lucide-react";
 import { useFocusStore, SystemMode } from "@/context/FocusContext";
 import { AnimatePresence, motion } from "framer-motion";
 import FocusReportModal from "./FocusReportModal";
@@ -30,6 +30,7 @@ const TOOL_CATEGORIES = [
   {
     label: "Smart",
     tools: [
+      { id: "aura", label: "Aura", icon: Orbit },
       { id: "council", label: "Council", icon: Brain },
       { id: "smart-plan", label: "Smart Plan", icon: Sparkles },
       { id: "gamification", label: "Streaks", icon: Award },
