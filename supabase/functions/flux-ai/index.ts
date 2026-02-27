@@ -574,12 +574,16 @@ CAPABILITIES:
 - Create, complete, update, and remove tasks (with folder assignment).
 - Book meetings and add time blocks to the schedule.
 - Clear entire days from the schedule.
-- Create notes/documents for capturing ideas or information.
+- Create notes/documents and spreadsheets for capturing ideas or information.
 - Create folders and sticky notes on the dashboard.
+- Delete folders and rename folders or tasks.
+- Create goals with target amounts and deadlines.
+- Pin/unpin tasks to prioritize them.
 - Navigate to any view in the app.
 - Toggle the app theme between dark and light mode.
 - Save user preferences to persistent memory.
 - Read text aloud via speech synthesis.
+- Summarize the user's context (tasks, schedule, goals).
 - Give productivity feedback, analyze workload, suggest task prioritization.
 - Chain multiple tool calls in a single response to complete multi-step workflows.
 
@@ -838,6 +842,95 @@ ${context}
                 text: { type: "string", description: "The text to speak aloud" },
               },
               required: ["text"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "create_spreadsheet",
+            description: "Create a new spreadsheet document. Use when user asks to 'create a spreadsheet', 'make a table', 'new sheet', etc.",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Spreadsheet title" },
+                folder_id: { type: "string", description: "UUID of the folder to place the spreadsheet in (optional)" },
+              },
+              required: ["title"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "delete_folder",
+            description: "Delete/remove a folder by its ID. Use when user asks to delete or remove a folder. Use the exact folder_id from context.",
+            parameters: {
+              type: "object",
+              properties: {
+                folder_id: { type: "string", description: "The exact UUID of the folder to delete (from Available folders in context)" },
+              },
+              required: ["folder_id"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "create_goal",
+            description: "Create a new goal with a target amount and deadline. Use when user says they want to save money, achieve a target, or set a goal.",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Goal title, e.g. 'Save for vacation'" },
+                target_amount: { type: "number", description: "Target amount in local currency" },
+                current_amount: { type: "number", description: "Current progress amount (default 0)" },
+                deadline: { type: "string", description: "Deadline date in YYYY-MM-DD format (optional)" },
+                folder_id: { type: "string", description: "UUID of the folder to link the goal to (optional)" },
+              },
+              required: ["title"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "pin_task",
+            description: "Pin or unpin a task to make it appear at the top. Use when user says 'pin this task', 'prioritize', or 'put at top'.",
+            parameters: {
+              type: "object",
+              properties: {
+                task_id: { type: "string", description: "The exact UUID of the task to pin" },
+                pinned: { type: "boolean", description: "true to pin, false to unpin" },
+              },
+              required: ["task_id", "pinned"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "rename_item",
+            description: "Rename a folder or task. Use when user says 'rename folder X to Y' or 'rename task X'.",
+            parameters: {
+              type: "object",
+              properties: {
+                type: { type: "string", enum: ["folder", "task"], description: "Whether to rename a folder or a task" },
+                id: { type: "string", description: "The exact UUID of the item to rename" },
+                new_title: { type: "string", description: "The new title/name" },
+              },
+              required: ["type", "id", "new_title"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "summarize_context",
+            description: "Summarize the user's current dashboard state: tasks, schedule, goals. Use when user asks for a status report, 'what's on my plate', 'give me an overview', etc. No parameters needed — you already have the context.",
+            parameters: {
+              type: "object",
+              properties: {},
             },
           },
         },
