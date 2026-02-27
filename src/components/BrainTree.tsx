@@ -66,8 +66,8 @@ const FolderNodeComponent = ({
   const isDragOver = dragOverId === folder.id;
 
   const handleClick = () => {
+    setOpen(!open);
     setActiveFolder(folder.id);
-    setActiveView("canvas");
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -142,9 +142,11 @@ const FolderNodeComponent = ({
           ) : (
             <span className="truncate flex-1 text-left">{folder.title}</span>
           )}
-          <span className="text-[10px] opacity-0 group-hover:opacity-60 transition-opacity">
-            {folder.tasks.length}
-          </span>
+          {(folderDocs.length > 0 || hasChildren) && (
+            <span className="text-[10px] opacity-0 group-hover:opacity-60 transition-opacity">
+              {folderDocs.length + folder.children.length}
+            </span>
+          )}
         </button>
       </div>
 
