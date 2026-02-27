@@ -177,12 +177,21 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
     }
   }, [open]);
 
-  // Close context menu on any click outside
+  // Close context menu on any click outside — use mousedown to avoid racing with button onClick
+  const contextMenuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!contextMenuMsgId) return;
-    const handler = () => { setContextMenuMsgId(null); setContextMenuPos(null); };
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
+    const handler = (e: MouseEvent) => {
+      // Don't close if clicking inside the context menu itself
+      if (contextMenuRef.current && contextMenuRef.current.contains(e.target as Node)) return;
+      setContextMenuMsgId(null);
+      setContextMenuPos(null);
+    };
+    // Use mousedown with a small delay so it doesn't fire on the same right-click that opened it
+    const timeout = setTimeout(() => {
+      document.addEventListener("mousedown", handler);
+    }, 50);
+    return () => { clearTimeout(timeout); document.removeEventListener("mousedown", handler); };
   }, [contextMenuMsgId]);
 
   useEffect(() => {
@@ -836,6 +845,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                               {/* Right-click context menu via portal to ensure it renders above modal */}
                               {contextMenuMsgId === msg.id && contextMenuPos && createPortal(
                                 <div
+                                  ref={contextMenuRef}
                                   className="fixed flex flex-col gap-1 rounded-2xl overflow-hidden"
                                   style={{
                                     zIndex: 99999,
@@ -845,16 +855,25 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                                     boxShadow: "0 16px 48px rgba(0,0,0,0.4)", backdropFilter: "blur(30px)",
                                     width: "260px",
                                   }}
-                                  onClick={(e) => e.stopPropagation()}>
-                                  {/* Emoji row */}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onMouseDown={(e) => e.stopPropagation()}>
+                                  {/* Emoji row — iMessage Tapback style */}
                                   <div className="flex items-center justify-between px-3 py-2.5">
-                                    {REACTION_EMOJIS.slice(0, 6).map(e => (
-                                      <button key={e} onClick={() => { toggleReaction(msg.id, e); closeContextMenu(); }}
-                                        className="text-[22px] hover:scale-125 transition-transform leading-none p-1 rounded-full"
-                                        style={{ background: "transparent" }}
-                                        onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)")}
-                                        onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>{e}</button>
-                                    ))}
+                                    {REACTION_EMOJIS.slice(0, 6).map(emoji => {
+                                      const alreadyReacted = msgReactions[emoji]?.includes(user?.id || "");
+                                      return (
+                                        <button key={emoji} onClick={() => { toggleReaction(msg.id, emoji); closeContextMenu(); }}
+                                          className="text-[22px] hover:scale-125 transition-transform leading-none p-1.5 rounded-full"
+                                          style={{
+                                            background: alreadyReacted ? (dark ? "rgba(10,132,255,0.25)" : "rgba(0,122,255,0.15)") : "transparent",
+                                            outline: alreadyReacted ? `2px solid ${T.accent}` : "none",
+                                          }}
+                                          onMouseEnter={(ev) => { if (!alreadyReacted) ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)"; }}
+                                          onMouseLeave={(ev) => { if (!alreadyReacted) ev.currentTarget.style.background = "transparent"; }}>
+                                          {emoji}
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                   <div style={{ height: 1, background: T.divider }} />
                                   {/* Reply action */}
@@ -885,23 +904,27 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                               )}
                             </div>
 
+                            {/* iMessage-style Tapback reactions — badge on bubble corner */}
                             {hasReactions && (
-                              <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
-                                {Object.entries(msgReactions).map(([emoji, userIds]) => {
-                                  const myReaction = userIds.includes(user?.id || "");
-                                  return (
+                              <div className={`flex items-center gap-0.5 -mt-2 mb-1 ${isMe ? "justify-end pr-2" : "justify-start pl-2"}`}>
+                                <div className="flex items-center rounded-full px-1.5 py-0.5 shadow-sm border"
+                                  style={{
+                                    background: dark ? "rgba(44,44,46,0.95)" : "rgba(255,255,255,0.95)",
+                                    borderColor: T.reactionBorder,
+                                    backdropFilter: "blur(10px)",
+                                  }}>
+                                  {Object.entries(msgReactions).map(([emoji, userIds]) => (
                                     <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                      className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[12px] font-medium border transition-all"
-                                      style={{
-                                        background: myReaction ? `${T.accent}25` : T.reactionBg,
-                                        borderColor: myReaction ? `${T.accent}60` : T.reactionBorder,
-                                        color: myReaction ? T.accent : T.textSecondary,
-                                      }}>
-                                      <span>{emoji}</span>
-                                      <span style={{ fontSize: "10px" }}>{(userIds as string[]).length}</span>
+                                      className="text-[13px] leading-none hover:scale-110 transition-transform">
+                                      {emoji}
                                     </button>
-                                  );
-                                })}
+                                  ))}
+                                  {Object.values(msgReactions).reduce((sum, ids) => sum + (ids as string[]).length, 0) > 1 && (
+                                    <span className="text-[10px] font-medium ml-0.5" style={{ color: T.textSecondary }}>
+                                      {Object.values(msgReactions).reduce((sum, ids) => sum + (ids as string[]).length, 0)}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             )}
 
