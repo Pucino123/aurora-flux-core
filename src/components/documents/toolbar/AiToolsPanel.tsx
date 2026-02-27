@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { Sparkles, RefreshCw, Maximize2, Minimize2, Languages, Loader2, Wand2 } from "lucide-react";
+import { Sparkles, RefreshCw, Maximize2, Minimize2, Languages, Loader2 } from "lucide-react";
 import ToolbarButton from "./ToolbarButton";
+import MiniAuraOrb from "./MiniAuraOrb";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AiToolsPanelProps {
   editorRef: React.RefObject<HTMLDivElement>;
@@ -39,11 +41,13 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
 
     setLoading(action);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const resp = await fetch(FLUX_AI_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ type: "document-tools", action, text }),
       });
@@ -77,7 +81,7 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
   return (
     <>
       <ToolbarButton
-        icon={<Wand2 size={13} />}
+        icon={<MiniAuraOrb size={15} />}
         label="Ask Aura"
         onClick={askAura}
         lightMode={lm}
