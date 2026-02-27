@@ -72,6 +72,9 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const [studioMode, setStudioMode] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [ghostText, setGhostText] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const streamCancelRef = useRef<(() => void) | null>(null);
+  const streamFinishRef = useRef<(() => void) | null>(null);
   const lm = lightMode;
 
   useEffect(() => {
@@ -115,52 +118,71 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
 
   // Listen for Aura stream-to-document (typewriter word-by-word)
   useEffect(() => {
-    let rafId: number;
     let timeoutId: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+    let finishNow = false;
+
     const handler = (e: CustomEvent) => {
       const { text, append } = e.detail || {};
       if (!text || !editorRef.current) return;
 
-      // Split into words (preserve spaces/punctuation)
+      cancelled = false;
+      finishNow = false;
+      setIsStreaming(true);
+
       const words = text.match(/\S+|\s+/g) || [];
       let wordIdx = 0;
-
-      // Base HTML to start from
       const baseHtml = append ? (editorRef.current.innerHTML || "") : "";
-
-      // Build a streaming paragraph container
       const streamId = `aura-stream-${Date.now()}`;
-      editorRef.current.innerHTML =
-        baseHtml + `<p id="${streamId}" style="white-space:pre-wrap;"></p>`;
-
+      editorRef.current.innerHTML = baseHtml + `<p id="${streamId}" style="white-space:pre-wrap;"></p>`;
       let accumulated = "";
       const saveTimer = { current: null as ReturnType<typeof setTimeout> | null };
 
+      const finish = () => {
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        // Remove cursor blink span if present
+        const el = editorRef.current?.querySelector(`#${streamId}`);
+        if (el) el.textContent = accumulated;
+        onUpdate(doc.id, { content: { html: editorRef.current!.innerHTML } });
+        setIsStreaming(false);
+        streamCancelRef.current = null;
+        streamFinishRef.current = null;
+      };
+
+      streamCancelRef.current = () => {
+        cancelled = true;
+        clearTimeout(timeoutId);
+        finish();
+      };
+
+      streamFinishRef.current = () => {
+        finishNow = true;
+        clearTimeout(timeoutId);
+        // Dump all remaining words instantly
+        accumulated = words.join("");
+        finish();
+      };
+
       const typeNextWord = () => {
-        if (wordIdx >= words.length) {
-          // Final save
-          if (saveTimer.current) clearTimeout(saveTimer.current);
-          onUpdate(doc.id, { content: { html: editorRef.current!.innerHTML } });
-          return;
-        }
+        if (cancelled) return;
+        if (finishNow) { accumulated = words.join(""); finish(); return; }
+        if (wordIdx >= words.length) { finish(); return; }
+
         accumulated += words[wordIdx];
         wordIdx++;
 
         const el = editorRef.current?.querySelector(`#${streamId}`);
-        if (el) el.textContent = accumulated;
+        if (el) el.textContent = accumulated + "▍";
 
-        // Scroll into view
         editorRef.current?.scrollTo({ top: editorRef.current.scrollHeight, behavior: "smooth" });
 
-        // Debounced save every ~30 words
         if (wordIdx % 30 === 0) {
           if (saveTimer.current) clearTimeout(saveTimer.current);
           saveTimer.current = setTimeout(() => {
-            onUpdate(doc.id, { content: { html: editorRef.current!.innerHTML } });
+            if (editorRef.current) onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
           }, 300);
         }
 
-        // Speed: 30ms base, slight jitter for natural feel
         const delay = 28 + Math.random() * 18;
         timeoutId = setTimeout(typeNextWord, delay);
       };
@@ -171,7 +193,6 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     window.addEventListener("aura:stream-to-document" as any, handler);
     return () => {
       window.removeEventListener("aura:stream-to-document" as any, handler);
-      cancelAnimationFrame(rafId);
       clearTimeout(timeoutId);
     };
   }, [doc.id, onUpdate]);
@@ -290,6 +311,9 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
         zoom={zoom} onZoomChange={setZoom}
         lightMode={lm}
         onToggleLightMode={onToggleLightMode}
+        isStreaming={isStreaming}
+        onStopStream={() => streamCancelRef.current?.()}
+        onFinishStream={() => streamFinishRef.current?.()}
       />
       <div className="relative flex-1 flex flex-col min-h-0">
         {ghostText && (
