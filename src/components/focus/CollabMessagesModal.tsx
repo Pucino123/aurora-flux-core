@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
 import {
   X, Send, UserPlus, Users, Plus, Check, AlertCircle, LogOut,
   Trash2, Smile, Link, Copy, Moon, Sun, ChevronLeft, Search,
@@ -842,66 +841,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
                                 )}
                               </div>
 
-                              {/* Right-click context menu via portal to ensure it renders above modal */}
-                              {contextMenuMsgId === msg.id && contextMenuPos && createPortal(
-                                <div
-                                  ref={contextMenuRef}
-                                  className="fixed flex flex-col gap-1 rounded-2xl overflow-hidden"
-                                  style={{
-                                    zIndex: 99999,
-                                    top: Math.max(8, contextMenuPos.y - 100),
-                                    left: Math.max(8, Math.min(contextMenuPos.x - 120, window.innerWidth - 280)),
-                                    background: T.reactionBg, border: `1px solid ${T.reactionBorder}`,
-                                    boxShadow: "0 16px 48px rgba(0,0,0,0.4)", backdropFilter: "blur(30px)",
-                                    width: "260px",
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onMouseDown={(e) => e.stopPropagation()}>
-                                  {/* Emoji row — iMessage Tapback style */}
-                                  <div className="flex items-center justify-between px-3 py-2.5">
-                                    {REACTION_EMOJIS.slice(0, 6).map(emoji => {
-                                      const alreadyReacted = msgReactions[emoji]?.includes(user?.id || "");
-                                      return (
-                                        <button key={emoji} onClick={() => { toggleReaction(msg.id, emoji); closeContextMenu(); }}
-                                          className="text-[22px] hover:scale-125 transition-transform leading-none p-1.5 rounded-full"
-                                          style={{
-                                            background: alreadyReacted ? (dark ? "rgba(10,132,255,0.25)" : "rgba(0,122,255,0.15)") : "transparent",
-                                            outline: alreadyReacted ? `2px solid ${T.accent}` : "none",
-                                          }}
-                                          onMouseEnter={(ev) => { if (!alreadyReacted) ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)"; }}
-                                          onMouseLeave={(ev) => { if (!alreadyReacted) ev.currentTarget.style.background = "transparent"; }}>
-                                          {emoji}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                  <div style={{ height: 1, background: T.divider }} />
-                                  {/* Reply action */}
-                                  <button
-                                    onClick={() => {
-                                      setReplyTo({ id: msg.id, content: msg.content, userName: getMemberName(msg.user_id) });
-                                      closeContextMenu();
-                                    }}
-                                    className="flex items-center gap-3 px-4 py-2.5 text-[14px] transition-all text-left"
-                                    style={{ color: T.textPrimary }}
-                                    onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)")}
-                                    onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>
-                                    <Reply size={16} style={{ color: T.textSecondary }} />
-                                    Reply
-                                  </button>
-                                  {/* Copy action */}
-                                  <button
-                                    onClick={() => { navigator.clipboard.writeText(msg.content); closeContextMenu(); toast.success("Copied"); }}
-                                    className="flex items-center gap-3 px-4 py-2.5 text-[14px] transition-all text-left"
-                                    style={{ color: T.textPrimary }}
-                                    onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)")}
-                                    onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>
-                                    <Copy size={16} style={{ color: T.textSecondary }} />
-                                    Copy
-                                  </button>
-                                </div>,
-                                document.body
-                              )}
+                              {/* Right-click context menu — rendered inside dialog to avoid focus trap blocking */}
                             </div>
 
                             {/* iMessage-style Tapback reactions — badge on bubble corner */}
@@ -1058,6 +998,71 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
             )}
           </div>
         </div>
+
+        {/* Context menu rendered inside DialogContent to avoid focus trap issues */}
+        {contextMenuMsgId && contextMenuPos && (() => {
+          const msg = messages.find(m => m.id === contextMenuMsgId);
+          if (!msg) return null;
+          const msgReactions = reactionsMap[msg.id] || {};
+          return (
+            <div
+              ref={contextMenuRef}
+              className="fixed flex flex-col gap-1 rounded-2xl overflow-hidden"
+              style={{
+                zIndex: 99999,
+                top: Math.max(8, contextMenuPos.y - 100),
+                left: Math.max(8, Math.min(contextMenuPos.x - 120, window.innerWidth - 280)),
+                background: T.reactionBg, border: `1px solid ${T.reactionBorder}`,
+                boxShadow: "0 16px 48px rgba(0,0,0,0.4)", backdropFilter: "blur(30px)",
+                width: "260px",
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}>
+              {/* Emoji row — iMessage Tapback style */}
+              <div className="flex items-center justify-between px-3 py-2.5">
+                {REACTION_EMOJIS.slice(0, 6).map(emoji => {
+                  const alreadyReacted = (msgReactions[emoji] as string[] | undefined)?.includes(user?.id || "");
+                  return (
+                    <button key={emoji} onClick={() => { toggleReaction(msg.id, emoji); closeContextMenu(); }}
+                      className="text-[22px] hover:scale-125 transition-transform leading-none p-1.5 rounded-full"
+                      style={{
+                        background: alreadyReacted ? (dark ? "rgba(10,132,255,0.25)" : "rgba(0,122,255,0.15)") : "transparent",
+                        outline: alreadyReacted ? `2px solid ${T.accent}` : "none",
+                      }}
+                      onMouseEnter={(ev) => { if (!alreadyReacted) ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)"; }}
+                      onMouseLeave={(ev) => { if (!alreadyReacted) ev.currentTarget.style.background = "transparent"; }}>
+                      {emoji}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ height: 1, background: T.divider }} />
+              {/* Reply action */}
+              <button
+                onClick={() => {
+                  setReplyTo({ id: msg.id, content: msg.content, userName: getMemberName(msg.user_id) });
+                  closeContextMenu();
+                }}
+                className="flex items-center gap-3 px-4 py-2.5 text-[14px] transition-all text-left"
+                style={{ color: T.textPrimary }}
+                onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)")}
+                onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>
+                <Reply size={16} style={{ color: T.textSecondary }} />
+                Reply
+              </button>
+              {/* Copy action */}
+              <button
+                onClick={() => { navigator.clipboard.writeText(msg.content); closeContextMenu(); toast.success("Copied"); }}
+                className="flex items-center gap-3 px-4 py-2.5 text-[14px] transition-all text-left"
+                style={{ color: T.textPrimary }}
+                onMouseEnter={(ev) => (ev.currentTarget.style.background = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)")}
+                onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}>
+                <Copy size={16} style={{ color: T.textSecondary }} />
+                Copy
+              </button>
+            </div>
+          );
+        })()}
       </DialogContent>
     </Dialog>
   );
