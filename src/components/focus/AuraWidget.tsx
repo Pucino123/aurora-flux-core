@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, X } from "lucide-react";
+import { Send, Mic, MicOff, X, Volume2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 import DraggableWidget from "./DraggableWidget";
 import AuraOrb, { type AuraState } from "./AuraOrb";
 import { useFocusStore } from "@/context/FocusContext";
@@ -27,13 +28,35 @@ const TIPS = [
   "I can book meetings for you",
   "Need feedback on your progress?",
   "Press ⌘/Ctrl again to send",
+  "Say 'dark mode' to change theme",
+  "I can open any view for you",
+  "I remember your preferences",
 ];
 
-function gatherContext(focusStore: any, flux: any): string {
+// View name to route/key mapping for open_view tool
+const VIEW_MAP: Record<string, string> = {
+  focus: "focus",
+  canvas: "canvas",
+  calendar: "calendar",
+  tasks: "tasks",
+  analytics: "analytics",
+  documents: "documents",
+  projects: "projects",
+  settings: "settings",
+  council: "council",
+};
+
+function gatherContext(focusStore: any, flux: any, memories: Record<string, string>): string {
   const parts: string[] = [];
 
   // Current date — critical for scheduling relative dates like "tomorrow"
   parts.push(`Today: ${new Date().toLocaleDateString("en-CA")} (${new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })})`);
+
+  // Inject persistent memories
+  if (Object.keys(memories).length > 0) {
+    const memStr = Object.entries(memories).map(([k, v]) => `${k}=${v}`).join(", ");
+    parts.push(`Your persistent memories about this user: ${memStr}`);
+  }
 
   if (focusStore.focusStickyNotes?.length) {
     const notes = focusStore.focusStickyNotes.map((n: any) => n.text).filter(Boolean);
@@ -62,7 +85,6 @@ function gatherContext(focusStore: any, flux: any): string {
   if (flux.goals?.length) {
     parts.push(`Goals: ${flux.goals.map((g: any) => `${g.title} (${g.current_amount}/${g.target_amount}${g.deadline ? `, deadline: ${g.deadline}` : ""})`).join(", ")}`);
   }
-  // Folders — so Aura can assign tasks to the right folder
   if (flux.folders?.length) {
     parts.push(`Available folders: ${flux.folders.map((f: any) => `[${f.id}] "${f.title}" (type: ${f.type})`).join("; ")}`);
   }
@@ -100,7 +122,6 @@ async function streamAura(
   const decoder = new TextDecoder();
   let buf = "";
   let done = false;
-  // Accumulate tool call arguments across multiple chunks
   const toolCallAccum: Record<number, { name: string; args: string }> = {};
 
   while (!done) {
@@ -129,7 +150,6 @@ async function streamAura(
             if (tc.function?.arguments) toolCallAccum[tcIdx].args += tc.function.arguments;
           }
         }
-        // Check finish_reason for tool_calls
         if (parsed.choices?.[0]?.finish_reason === "tool_calls" || parsed.choices?.[0]?.finish_reason === "stop") {
           for (const key of Object.keys(toolCallAccum)) {
             const tc = toolCallAccum[Number(key)];
@@ -145,7 +165,6 @@ async function streamAura(
     }
   }
 
-  // Final flush - process any remaining tool calls
   for (const key of Object.keys(toolCallAccum)) {
     const tc = toolCallAccum[Number(key)];
     if (tc.name && tc.args) {
@@ -168,7 +187,6 @@ async function streamAura(
 
 function useVoiceInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
-  // Use a ref (not state) for audioLevel — canvas reads it directly every frame with zero React overhead
   const audioLevelRef = useRef(0);
   const recRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -186,7 +204,6 @@ function useVoiceInput(onResult: (text: string) => void) {
     audioLevelRef.current = 0;
   }, []);
 
-
   const stop = useCallback(() => {
     if (recRef.current) {
       recRef.current.onend = null;
@@ -197,7 +214,6 @@ function useVoiceInput(onResult: (text: string) => void) {
     setListening(false);
   }, [stopAnalyser]);
 
-  // Start real-time amplitude tracking via Web Audio API
   const startAnalyser = useCallback(() => {
     navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then((stream) => {
       streamRef.current = stream;
@@ -213,17 +229,14 @@ function useVoiceInput(onResult: (text: string) => void) {
       const tick = () => {
         if (!analyserRef.current) return;
         analyserRef.current.getByteFrequencyData(buf);
-        // Use full spectrum RMS for better sensitivity
         let sumSq = 0;
         for (let i = 1; i < buf.length; i++) sumSq += buf[i] * buf[i];
         const rms = Math.sqrt(sumSq / buf.length);
-        audioLevelRef.current = Math.min(rms / 30, 1); // direct ref write — zero React overhead
+        audioLevelRef.current = Math.min(rms / 30, 1);
         levelRafRef.current = requestAnimationFrame(tick);
       };
       levelRafRef.current = requestAnimationFrame(tick);
-    }).catch(() => {
-      // Graceful fallback — orb still animates but without mic data
-    });
+    }).catch(() => {});
   }, []);
 
   const start = useCallback(() => {
@@ -252,7 +265,6 @@ function useVoiceInput(onResult: (text: string) => void) {
     recRef.current = rec;
     rec.start();
     setListening(true);
-    // Start amplitude analyser in parallel — independent of SpeechRecognition
     startAnalyser();
   }, [onResult, stop, startAnalyser]);
 
@@ -266,9 +278,6 @@ function useVoiceInput(onResult: (text: string) => void) {
   return { listening, toggle, stop, start, audioLevelRef };
 }
 
-
-
-
 type PillMode = "idle" | "hint" | "input" | "processing" | "response";
 
 const AuraWidget: React.FC = () => {
@@ -280,6 +289,7 @@ const AuraWidget: React.FC = () => {
   const [currentTip, setCurrentTip] = useState("");
   const [responseText, setResponseText] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [memories, setMemories] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -287,8 +297,53 @@ const AuraWidget: React.FC = () => {
   const focusStore = useFocusStore();
   const flux = useFlux();
   const { user } = useAuth();
+  const { setTheme } = useTheme();
 
-  // No forced opacity override — let the style editor control it like all other widgets
+  // Load aura_memory on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("aura_memory" as any)
+      .select("key, value")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, string> = {};
+          (data as any[]).forEach((row) => { map[row.key] = row.value; });
+          setMemories(map);
+        }
+      });
+  }, [user]);
+
+  // Proactive meeting alert — check every 60 seconds
+  useEffect(() => {
+    const checkUpcoming = () => {
+      if (pillMode !== "idle" && pillMode !== "hint") return;
+      const now = new Date();
+      const today = now.toISOString().split("T")[0];
+      const todayBlocks = flux.scheduleBlocks?.filter((b: any) => b.scheduled_date === today) || [];
+      for (const block of todayBlocks) {
+        const [h, m] = block.time.split(":").map(Number);
+        const blockDate = new Date(now);
+        blockDate.setHours(h, m, 0, 0);
+        const diffMs = blockDate.getTime() - now.getTime();
+        const diffMin = diffMs / 60000;
+        if (diffMin > 0 && diffMin <= 5) {
+          const mins = Math.ceil(diffMin);
+          setCurrentTip(`"${block.title}" starts in ${mins} min`);
+          setPillMode("hint");
+          if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+          hintTimerRef.current = setTimeout(() => {
+            setPillMode((prev) => prev === "hint" ? "idle" : prev);
+            setCurrentTip("");
+          }, 8000);
+          return;
+        }
+      }
+    };
+    const interval = setInterval(checkUpcoming, 60000);
+    return () => clearInterval(interval);
+  }, [flux.scheduleBlocks, pillMode]);
 
   // --- Intermittent random hints ---
   useEffect(() => {
@@ -361,8 +416,6 @@ const AuraWidget: React.FC = () => {
     setCurrentTip("");
   }, []);
 
-
-
   const handleToolCall = useCallback((name: string, args: any) => {
     if (name === "add_task") {
       const title = args.title || args.text || "New task";
@@ -370,16 +423,10 @@ const AuraWidget: React.FC = () => {
       toast.success(`Task added: ${title}`);
     } else if (name === "remove_task") {
       const taskId = args.task_id;
-      if (taskId) {
-        flux.removeTask(taskId);
-        toast.success("Task removed");
-      }
+      if (taskId) { flux.removeTask(taskId); toast.success("Task removed"); }
     } else if (name === "complete_task") {
       const taskId = args.task_id;
-      if (taskId) {
-        flux.updateTask(taskId, { done: true, status: "done" });
-        toast.success("Task completed ✓");
-      }
+      if (taskId) { flux.updateTask(taskId, { done: true, status: "done" }); toast.success("Task completed ✓"); }
     } else if (name === "update_task") {
       const taskId = args.task_id;
       if (taskId) {
@@ -394,7 +441,7 @@ const AuraWidget: React.FC = () => {
       const today = new Date().toISOString().split("T")[0];
       flux.createBlock({
         title: args.title || "Meeting",
-        time: args.time || "09:00",
+        time: args.time || "10:00",
         duration: args.duration || "30m",
         type: name === "book_meeting" ? "meeting" : (args.type || "custom"),
         scheduled_date: args.date || today,
@@ -420,8 +467,71 @@ const AuraWidget: React.FC = () => {
       } else {
         toast.error("Sign in to create notes");
       }
+    } else if (name === "set_theme") {
+      const t = args.theme === "dark" ? "dark" : "light";
+      setTheme(t);
+      // Also apply directly to DOM for immediate effect
+      if (t === "dark") document.documentElement.classList.add("dark");
+      else document.documentElement.classList.remove("dark");
+      toast.success(`Theme set to ${t} mode`);
+    } else if (name === "create_folder") {
+      if (user) {
+        const newFolder = {
+          title: args.title || "New Folder",
+          type: "project",
+          icon: args.icon || null,
+          color: args.color || null,
+          sort_order: (flux.folders?.length || 0) + 1,
+        };
+        flux.createFolder(newFolder);
+        toast.success(`Folder created: ${args.title}`);
+      }
+    } else if (name === "create_sticky_note") {
+      const text = args.text || "Note";
+      const color = args.color || "yellow";
+      const newNote = {
+        id: `aura-note-${Date.now()}`,
+        text,
+        color,
+        x: Math.round(window.innerWidth * 0.1 + Math.random() * 100),
+        y: Math.round(window.innerHeight * 0.1 + Math.random() * 60),
+        rotation: Math.floor(Math.random() * 7) - 3,
+        opacity: 1,
+      };
+      focusStore.setFocusStickyNotes([...(focusStore.focusStickyNotes || []), newNote]);
+      toast.success("Sticky note created");
+    } else if (name === "open_view") {
+      const view = VIEW_MAP[args.view];
+      if (view) {
+        flux.setActiveView(view as any);
+        toast.success(`Opened ${args.view}`);
+      }
+    } else if (name === "save_memory") {
+      if (user && args.key && args.value) {
+        setMemories((prev) => ({ ...prev, [args.key]: args.value }));
+        (supabase as any).from("aura_memory").upsert(
+          { user_id: user.id, key: args.key, value: args.value },
+          { onConflict: "user_id,key" }
+        ).then(({ error }: { error: any }) => {
+          if (error) console.error("save_memory error:", error);
+          else toast.success(`Memory saved: ${args.key}`);
+        });
+      }
+    } else if (name === "read_aloud") {
+      if (args.text && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const utt = new SpeechSynthesisUtterance(args.text);
+        window.speechSynthesis.speak(utt);
+      }
     }
-  }, [flux, user]);
+  }, [flux, user, setTheme, focusStore]);
+
+  const speakText = useCallback((text: string) => {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    window.speechSynthesis.speak(utt);
+  }, []);
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -435,7 +545,7 @@ const AuraWidget: React.FC = () => {
     setResponseText("");
 
     let assistantText = "";
-    const context = gatherContext(focusStore, flux);
+    const context = gatherContext(focusStore, flux, memories);
 
     try {
       await streamAura(
@@ -465,21 +575,19 @@ const AuraWidget: React.FC = () => {
       setAuraState("idle");
       toast.error("Failed to reach Aura");
     }
-  }, [messages, isLoading, focusStore, flux, handleToolCall]);
+  }, [messages, isLoading, focusStore, flux, memories, handleToolCall]);
 
   const { listening, toggle: toggleVoice, stop: stopVoice, start: startVoice, audioLevelRef: voiceAudioLevelRef } = useVoiceInput((text) => {
     send(text);
   });
 
-  // Global Cmd/Ctrl shortcut for voice (Meta = ⌘ on Mac, Control on Windows)
+  // Global Cmd/Ctrl shortcut for voice
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Meta" && e.key !== "Control") return;
-      // Don't intercept if user is typing in an input/textarea/contenteditable
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
       const isEditable = tag === "input" || tag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
       if (isEditable) return;
-
       e.preventDefault();
       if (listening) {
         stopVoice();
@@ -564,7 +672,7 @@ const AuraWidget: React.FC = () => {
                     <button
                       onClick={toggleVoice}
                       className={`p-1 rounded-full transition-all shrink-0 ${listening ? "bg-purple-500/30 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.4)]" : "text-white/40 hover:text-white/70"}`}
-                      title={listening ? "Stop listening (Alt)" : "Start voice (Alt)"}
+                      title={listening ? "Stop listening" : "Start voice (⌘/Ctrl)"}
                     >
                       {listening ? <MicOff size={13} /> : <Mic size={13} />}
                     </button>
@@ -601,7 +709,7 @@ const AuraWidget: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* Chat history box — NO close button here, only in pill */}
+        {/* Chat history */}
         <AnimatePresence>
           {showHistory && messages.length > 0 && (
             <motion.div
@@ -626,8 +734,17 @@ const AuraWidget: React.FC = () => {
                       }`}
                     >
                       {msg.role === "assistant" ? (
-                        <div className="prose prose-invert prose-sm max-w-none [&>*]:my-0.5 [&_p]:text-[12px] [&_p]:leading-relaxed [&_li]:text-[12px] [&_p]:text-white/60">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <div className="group relative">
+                          <div className="prose prose-invert prose-sm max-w-none [&>*]:my-0.5 [&_p]:text-[12px] [&_p]:leading-relaxed [&_li]:text-[12px] [&_p]:text-white/60">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
+                          <button
+                            onClick={() => speakText(msg.content)}
+                            className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full text-white/30 hover:text-white/60"
+                            title="Read aloud"
+                          >
+                            <Volume2 size={11} />
+                          </button>
                         </div>
                       ) : msg.content}
                     </div>

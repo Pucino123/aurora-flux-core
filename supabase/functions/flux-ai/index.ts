@@ -575,8 +575,25 @@ CAPABILITIES:
 - Book meetings and add time blocks to the schedule.
 - Clear entire days from the schedule.
 - Create notes/documents for capturing ideas or information.
+- Create folders and sticky notes on the dashboard.
+- Navigate to any view in the app.
+- Toggle the app theme between dark and light mode.
+- Save user preferences to persistent memory.
+- Read text aloud via speech synthesis.
 - Give productivity feedback, analyze workload, suggest task prioritization.
-- Help plan projects by breaking them into tasks across the right folders.
+- Chain multiple tool calls in a single response to complete multi-step workflows.
+
+SMART DEFAULTS — NEVER ASK FOR CLARIFICATION ON SIMPLE REQUESTS:
+- "Book a meeting" → title="Meeting", time = next clean hour slot (e.g. 10:00), duration="30m", date=today
+- "Add a task" → title="New Task", priority="medium"
+- "Create a folder" → title="New Folder", type="project"
+- "Create a sticky note" → text="Note", color="yellow"
+- Infer the most logical values from context. Act immediately.
+
+MULTI-STEP WORKFLOWS — chain tools in one response:
+- "Prepare for the Magnus meeting" → check_context for meeting, create note "Meeting Notes - Magnus", open "documents" view
+- "Clean up my workspace" → navigate to focus view
+- Always chain multiple tool calls when needed, without waiting for user confirmation.
 
 CRITICAL RULES:
 - When removing or completing tasks, use the EXACT task_id from context. NEVER guess or fabricate IDs.
@@ -587,6 +604,7 @@ CRITICAL RULES:
 - Never invent data — only reference what's in the context.
 - After performing actions, briefly confirm what you did in the user's language.
 - You CAN call multiple tools in one response (e.g., add 3 tasks at once).
+- Use save_memory to remember user preferences when they express them (e.g. "always remind me 10 min before meetings").
 
 ═══ DASHBOARD CONTEXT ═══
 ${context}
@@ -728,6 +746,98 @@ ${context}
                 folder_id: { type: "string", description: "UUID of the folder to place the note in (from Available folders in context)" },
               },
               required: ["title"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "set_theme",
+            description: "Switch the app theme to dark or light mode. Use when user says 'dark mode', 'light mode', 'turn on dark mode', etc.",
+            parameters: {
+              type: "object",
+              properties: {
+                theme: { type: "string", enum: ["dark", "light"], description: "The theme to apply" },
+              },
+              required: ["theme"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "create_folder",
+            description: "Create a new folder/project on the dashboard. Use when user asks to create a folder, project, or workspace.",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Folder name" },
+                icon: { type: "string", description: "Emoji icon for the folder (optional)" },
+                color: { type: "string", description: "Color for the folder, e.g. #6366f1 (optional)" },
+              },
+              required: ["title"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "create_sticky_note",
+            description: "Create a sticky note on the focus dashboard. Use when user asks to create a sticky note, reminder note, or quick note.",
+            parameters: {
+              type: "object",
+              properties: {
+                text: { type: "string", description: "The sticky note text content" },
+                color: { type: "string", enum: ["yellow", "pink", "blue", "green", "purple"], description: "Sticky note color (default: yellow)" },
+              },
+              required: ["text"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "open_view",
+            description: "Navigate to a specific view/section of the app. Use when user says 'open calendar', 'go to tasks', 'show documents', 'take me to settings', etc.",
+            parameters: {
+              type: "object",
+              properties: {
+                view: {
+                  type: "string",
+                  enum: ["focus", "canvas", "calendar", "tasks", "analytics", "documents", "projects", "settings", "council"],
+                  description: "The view to navigate to",
+                },
+              },
+              required: ["view"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "save_memory",
+            description: "Save a persistent preference or fact about the user to long-term memory. Use when user expresses a preference like 'always remind me X minutes before meetings', 'I prefer dark mode', etc.",
+            parameters: {
+              type: "object",
+              properties: {
+                key: { type: "string", description: "Short snake_case key for the memory, e.g. 'meeting_reminder', 'preferred_language'" },
+                value: { type: "string", description: "The value to store" },
+              },
+              required: ["key", "value"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "read_aloud",
+            description: "Read a text aloud using text-to-speech. Use when user asks to 'read this out loud', 'say that again', or 'read aloud'.",
+            parameters: {
+              type: "object",
+              properties: {
+                text: { type: "string", description: "The text to speak aloud" },
+              },
+              required: ["text"],
             },
           },
         },
