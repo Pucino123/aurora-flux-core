@@ -1,103 +1,91 @@
 
-## Understanding the current state
+## What's already in place
+- Aura has a full tool-calling architecture in `flux-ai/index.ts` with 15+ tools
+- `AuraWidget.tsx` handles all tool calls client-side
+- Image generation model `google/gemini-3-pro-image-preview` is available via Lovable AI (no API key needed)
+- `LOVABLE_API_KEY` is already configured as a secret
+- Documents/spreadsheets are created via the Supabase `documents` table
+- `HomeWidgets.tsx` renders draggable dashboard widgets via `DraggableWidget`
+- `FocusDashboardView.tsx` renders widgets conditionally based on `activeWidgets`
 
-Aura already has:
-- Streaming AI chat via `flux-ai` edge function (`handleAura`)
-- Tool calling: `add_task`, `remove_task`, `complete_task`, `update_task`, `book_meeting`, `add_to_plan`, `clear_schedule`, `create_note`
-- Voice input via Web Speech API + Web Audio API amplitude tracking
-- Context injection (tasks, folders, schedule, goals, sticky notes)
-- Draggable widget with morphing pill UI
+## Scope for this plan (high-impact, feasible)
 
-## What this spec asks for (scoped realistically)
+**Feature 1 — Code blocks with syntax highlighting**
+Aura already streams markdown via `ReactMarkdown`. Add `react-syntax-highlighter` (or use a CSS-only approach with `<pre>/<code>` + Tailwind) to render fenced code blocks properly in the chat history in `AuraWidget.tsx`.
 
-The spec has 5 sections with ~20 sub-features. Many require entirely new infrastructure (sandboxed code execution, ambient screen capture, personal knowledge graph, full undo/redo state history). I'll implement the highest-impact features that build directly on existing infrastructure:
+**Feature 2 — Image generation & dashboard spawning**
+Add a new `generate_image` tool to the Aura edge function. Client-side, call a new edge-function endpoint `type: "generate-image"` which uses `google/gemini-3-pro-image-preview`. The returned base64 image is uploaded to the existing `document-images` storage bucket, and Aura spawns a new `ImageWidget` on the dashboard.
 
-**Phase 1 — Core agent upgrades (this PR):**
-1. Expand Aura's tool set with `set_theme`, `create_folder`, `create_sticky_note`, `open_view` (OS control)
-2. Add `aura_memory` table for persistent user preferences — Aura reads/writes memories
-3. Add `read_aloud` tool using Web Speech API synthesis (TTS)
-4. Multi-step workflow chaining (already partially works via multiple tool calls, improve prompt)
-5. Proactive time/event awareness — check if a meeting starts soon, surface alert in pill
+**Feature 3 — In-document image insertion**
+When Aura is active inside a document context (injectedDocContext), the `generate_image` tool can also dispatch a `aura:insert-image` custom event with the image URL, which `DocumentView.tsx` listens to and inserts as an `<img>` tag at the end of the document HTML content.
 
-**Out of scope for this plan (too complex/risky):**
-- Undo/redo global state history stack (requires instrumenting every context mutation)
-- Sandboxed code execution / CSV → chart (requires backend sandbox)
-- Semantic fuzzy search across all file contents (requires embeddings/vector DB)
-- Personal knowledge graph (requires graph DB or embeddings)
-- Predictive ghost drafting in documents (separate document editor concern)
-- Notification gatekeeper (requires intercepting toast/notification system)
-- Custom automation triggers (requires persistent trigger engine)
-- External web agent (Perplexity connector available but separate feature)
-- Ambient microphone continuous processing (privacy/performance concern)
-- In-document Aura overlay (separate document component concern)
+**Feature 4 — Spreadsheet formula injection**
+Add a `inject_formula` tool. When Aura is active with a spreadsheet document context, it writes a formula string into a specific cell. The document viewer listens for `aura:inject-formula` event with `{ cell, formula }` and updates the spreadsheet content.
 
----
-
-## Concrete plan
-
-### 1. Database migration — `aura_memory` table
-```sql
-CREATE TABLE public.aura_memory (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  key text NOT NULL,
-  value text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(user_id, key)
-);
-ALTER TABLE public.aura_memory ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own memories" ON public.aura_memory FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-```
-
-### 2. `supabase/functions/flux-ai/index.ts` — expand `handleAura`
-
-Add new tools to the Aura tool array:
-
-**`set_theme`** — `{ theme: "dark" | "light" }` — Aura changes the app theme
-**`create_folder`** — `{ title, icon?, color? }` — Aura creates a new folder
-**`create_sticky_note`** — `{ text, color? }` — Aura creates a focus sticky note  
-**`open_view`** — `{ view: "focus" | "canvas" | "calendar" | "tasks" | "analytics" | "documents" | "projects" | "settings" | "council" }` — Aura navigates to a view
-**`save_memory`** — `{ key, value }` — Aura stores a preference to `aura_memory`
-
-Update system prompt to:
-- Include memories from context: `"Your persistent memories about this user: ..."`
-- Describe new tools
-- Add smart default instructions: "NEVER ask for clarification on simple requests. Infer the most logical values. If user says 'book a meeting', create it at the next available slot."
-- Add multi-step workflow guidance: "You can chain multiple tool calls in one response."
-
-### 3. `src/components/focus/AuraWidget.tsx` — handle new tools + read aloud
-
-**New tool handlers in `handleToolCall`:**
-```
-set_theme → call setTheme() from next-themes
-create_folder → call flux.createFolder(...)
-create_sticky_note → add to focusStore sticky notes
-open_view → call flux.setActiveView(...)
-save_memory → upsert to aura_memory table in Supabase
-```
-
-**Read-aloud capability:**
-- Add a "🔊" button in the chat history next to assistant messages
-- Use `window.speechSynthesis.speak(new SpeechSynthesisUtterance(text))` when clicked
-- Aura can also trigger this via a new `read_aloud` tool that accepts `{ text }`
-
-**Load memories at startup:**
-- On mount (when user is available), fetch `aura_memory` for user and inject into `gatherContext()`
-- Format as: `"Your stored memories: meeting_reminder=10min_before, preferred_language=Danish"`
-
-**Proactive meeting alert:**
-- Add a `useEffect` that checks `flux.scheduleBlocks` every 60 seconds
-- If a block starts within 5 minutes, switch pill to "hint" mode with: `"Your [meeting] starts in X minutes"`
-
-### 4. `src/context/FluxContext.tsx` — expose `setTheme` passthrough
-
-`setActiveView` already exists. Need to confirm `createFolder` and `createTask` are already exposed (they are). The theme setter needs to be passed from `next-themes` — this is handled in the widget itself via importing `useTheme`.
+**Out of scope (too risky/complex for this session):**
+- Contextual code debugging with "Click to Fix" (requires selecting code in document, tracking cursor position — large UI change)
+- Charting from spreadsheet data (requires recharts widget integration with live data binding)
+- Direct file creation on the dashboard (dashboard already has desktop docs, but injecting generated code requires a new "code document" type)
 
 ---
 
 ## Files to change
 
-1. **Migration** — new `aura_memory` table
-2. **`supabase/functions/flux-ai/index.ts`** — add 5 new tools + update Aura system prompt  
-3. **`src/components/focus/AuraWidget.tsx`** — handle new tools, load memories, proactive alert, read-aloud button
+### 1. `supabase/functions/flux-ai/index.ts`
+Add two new handlers + tools:
+
+**New handler `handleImageGenerate(prompt, apiKey)`:**
+- Calls `https://ai.gateway.lovable.dev/v1/chat/completions` with `model: "google/gemini-3-pro-image-preview"` and `modalities: ["image", "text"]`
+- Returns `{ imageBase64, mimeType }` as JSON
+- Called when `type === "generate-image"`
+
+**New tools in `handleAura`:**
+```
+generate_image: { prompt: string, target: "dashboard" | "document" }
+inject_formula: { cell: string, formula: string, note?: string }
+```
+
+Update system prompt in `handleAura` to describe these new capabilities.
+
+### 2. `src/components/focus/AuraWidget.tsx`
+Handle two new tools in `handleToolCall`:
+
+**`generate_image`:**
+1. Show toast "Generating image…"
+2. Call edge function `type: "generate-image"` with the prompt
+3. Upload base64 to `document-images` bucket → get public URL
+4. If `target === "dashboard"`: dispatch `aura:spawn-image-widget` with `{ url, prompt }`
+5. If `target === "document"`: dispatch `aura:insert-image` with `{ url }`
+
+**`inject_formula`:**
+- Dispatch `aura:inject-formula` custom event with `{ cell, formula }` — DocumentView listens and updates spreadsheet
+
+**Code block rendering:**
+- In the chat history section, replace plain `<ReactMarkdown>` with a version that uses a custom `code` renderer — detect fenced code blocks and render them in a styled `<pre className="bg-black/40 rounded p-2 text-xs font-mono overflow-x-auto">` block with a copy button.
+
+### 3. `src/components/focus/FocusDashboardView.tsx`
+- Add listener for `aura:spawn-image-widget` event
+- On event: add a new entry to a local `auraImages` state array `{ id, url, prompt }`
+- Render `<AuraImageWidget>` for each entry (draggable via `DraggableWidget`)
+
+### 4. `src/components/focus/AuraImageWidget.tsx` (new file)
+Simple widget: displays the generated image with title from the prompt, a close/remove button, and a download button.
+
+### 5. `src/components/documents/DocumentView.tsx`
+**For text documents:**
+- Add `useEffect` listening for `aura:insert-image` event
+- On event: append `<img src="..." />` to the document HTML content via `onUpdate`
+
+**For spreadsheet documents:**
+- Add `useEffect` listening for `aura:inject-formula` event  
+- On event: parse `cell` (e.g., "B3" → col 1, row 2), update the `cells` map in content, call `onUpdate`
+
+---
+
+## Implementation steps
+
+1. Add `handleImageGenerate` to `flux-ai/index.ts`, add `generate_image` + `inject_formula` tools to `handleAura`, update system prompt
+2. Create `src/components/focus/AuraImageWidget.tsx`
+3. Update `AuraWidget.tsx`: handle `generate_image` + `inject_formula` tools, add code block renderer
+4. Update `FocusDashboardView.tsx`: listen for `aura:spawn-image-widget`, render `AuraImageWidget` instances
+5. Update `DocumentView.tsx`: listen for `aura:insert-image` and `aura:inject-formula` events
