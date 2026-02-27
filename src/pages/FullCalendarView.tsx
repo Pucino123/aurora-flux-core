@@ -66,12 +66,12 @@ const FullCalendarView = () => {
   // ── Month grid ──
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const calStart = startOfWeek(monthStart);
-  const calEnd = endOfWeek(monthEnd);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const monthDays = eachDayOfInterval({ start: calStart, end: calEnd });
 
   // ── Week grid ──
-  const weekStart = startOfWeek(selectedDate);
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: 18 }, (_, i) => i + 6);
 
@@ -189,91 +189,96 @@ const FullCalendarView = () => {
           {viewMode === "month" ? (
             /* ── Month view ── */
             <div>
-              <div className="grid grid-cols-8 gap-px bg-border/30 rounded-t-xl overflow-hidden">
-                <div className="bg-background text-[10px] font-semibold text-muted-foreground text-center py-2">Wk</div>
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
-                  <div key={d} className="bg-background text-[10px] font-semibold text-muted-foreground text-center py-2">{d}</div>
-                ))}
+              {/* Header row */}
+              <div className="flex">
+                <div className="w-8 shrink-0" />
+                <div className="flex-1 grid grid-cols-7 gap-px bg-border/30 rounded-t-xl overflow-hidden">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (
+                    <div key={d} className="bg-background text-[10px] font-semibold text-muted-foreground text-center py-2">{d}</div>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-8 gap-px bg-border/20 border border-border/20 rounded-b-xl overflow-hidden">
-                {monthDays.map((day, idx) => {
-                  const isFirstDayOfWeek = idx % 7 === 0;
-                  const weekNum = isFirstDayOfWeek ? getISOWeek(day) : null;
-                  return (
-                    <React.Fragment key={format(day, "yyyy-MM-dd") + "-frag"}>
-                      {isFirstDayOfWeek && (
-                        <div className="bg-background flex items-start justify-center pt-2 text-[10px] font-medium text-muted-foreground/50">
-                          {weekNum}
-                        </div>
-                      )}
-                      {(() => {
-                  const key = format(day, "yyyy-MM-dd");
-                  const events = dayEvents.get(key);
-                  const totalCount = (events?.tasks.length || 0) + (events?.blocks.length || 0) + (events?.googleEvents.length || 0);
-                  const hasEvents = totalCount > 0;
-                  const isSelected = isSameDay(day, selectedDate);
-                  const isCurrentMonth = isSameMonth(day, currentDate);
-                  const isDragOver = dragOverDate === key;
-
-                  return (
-                    <div
-                      key={key}
-                      onClick={() => setSelectedDate(day)}
-                      onDragOver={(e) => { e.preventDefault(); setDragOverDate(key); }}
-                      onDragLeave={() => setDragOverDate(null)}
-                      onDrop={(e) => handleDrop(e, key)}
-                      className={`bg-background min-h-[80px] p-1.5 cursor-pointer transition-all duration-150 ${
-                        isSelected ? "ring-inset ring-1 ring-primary/50 bg-primary/[0.02]" : "hover:bg-secondary/30"
-                      } ${isDragOver && (draggingTaskId || draggingBlockId) ? "bg-primary/10 ring-inset ring-2 ring-primary/40 scale-[0.99]" : ""}`}
-                    >
-                      <span className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ${
-                        isToday(day) ? "bg-primary text-primary-foreground" : isSelected ? "text-primary font-bold" : isCurrentMonth ? "text-foreground" : "text-muted-foreground/30"
-                      }`}>
-                        {format(day, "d")}
-                      </span>
-                      <div className="mt-1 space-y-0.5">
-                        {events?.blocks.slice(0, 1).map(b => (
-                          <div
-                            key={b.id}
-                            draggable
-                            onDragStart={(e) => handleBlockDragStart(e, b.id)}
-                            onDragEnd={handleDragEnd}
-                            className={`text-[9px] px-1 py-0.5 rounded truncate border cursor-grab flex items-center gap-0.5 active:opacity-40 transition-opacity ${COLOR_MAP[b.type] || COLOR_MAP.deep} ${draggingBlockId === b.id ? "opacity-30" : ""}`}
-                          >
-                            <Grip size={7} className="shrink-0 opacity-50" />
-                            {b.time} {b.title}
-                          </div>
-                        ))}
-                        {events?.googleEvents.slice(0, 1).map(e => (
-                          <div key={e.id} className={`text-[9px] px-1 py-0.5 rounded truncate border ${COLOR_MAP.google} flex items-center gap-0.5`}>
-                            <Calendar size={6} className="shrink-0" />
-                            {e.start_time} {e.title}
-                          </div>
-                        ))}
-                        {events?.tasks.slice(0, 1).map(t => (
-                          <div
-                            key={t.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, t.id)}
-                            onDragEnd={handleDragEnd}
-                            className={`text-[9px] px-1 py-0.5 rounded truncate bg-secondary/60 text-muted-foreground cursor-grab flex items-center gap-0.5 active:opacity-40 transition-opacity ${
-                              draggingTaskId === t.id ? "opacity-30" : ""
-                            }`}
-                          >
-                            <Grip size={7} className="shrink-0 opacity-50" />
-                            {t.title}
-                          </div>
-                        ))}
-                        {hasEvents && totalCount > 3 && (
-                          <div className="text-[9px] text-muted-foreground/50 px-1">+{totalCount - 3} more</div>
-                        )}
+              {/* Calendar rows with week numbers */}
+              <div className="flex">
+                {/* Week number column */}
+                <div className="w-8 shrink-0 flex flex-col">
+                  {Array.from({ length: Math.ceil(monthDays.length / 7) }, (_, weekIdx) => {
+                    const firstDayOfWeek = monthDays[weekIdx * 7];
+                    return (
+                      <div key={weekIdx} className="flex-1 flex items-start justify-center pt-2 text-[10px] font-medium text-muted-foreground/50">
+                        {getISOWeek(firstDayOfWeek)}
                       </div>
-                    </div>
-                  );
-                      })()}
-                    </React.Fragment>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+                {/* Days grid */}
+                <div className="flex-1 grid grid-cols-7 gap-px bg-border/20 border border-border/20 rounded-b-xl overflow-hidden">
+                  {monthDays.map(day => {
+                    const key = format(day, "yyyy-MM-dd");
+                    const events = dayEvents.get(key);
+                    const totalCount = (events?.tasks.length || 0) + (events?.blocks.length || 0) + (events?.googleEvents.length || 0);
+                    const hasEvents = totalCount > 0;
+                    const isSelected = isSameDay(day, selectedDate);
+                    const isCurrentMonth = isSameMonth(day, currentDate);
+                    const isDragOver = dragOverDate === key;
+
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => setSelectedDate(day)}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverDate(key); }}
+                        onDragLeave={() => setDragOverDate(null)}
+                        onDrop={(e) => handleDrop(e, key)}
+                        className={`bg-background min-h-[80px] p-1.5 cursor-pointer transition-all duration-150 ${
+                          isSelected ? "ring-inset ring-1 ring-primary/50 bg-primary/[0.02]" : "hover:bg-secondary/30"
+                        } ${isDragOver && (draggingTaskId || draggingBlockId) ? "bg-primary/10 ring-inset ring-2 ring-primary/40 scale-[0.99]" : ""}`}
+                      >
+                        <span className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ${
+                          isToday(day) ? "bg-primary text-primary-foreground" : isSelected ? "text-primary font-bold" : isCurrentMonth ? "text-foreground" : "text-muted-foreground/30"
+                        }`}>
+                          {format(day, "d")}
+                        </span>
+                        <div className="mt-1 space-y-0.5">
+                          {events?.blocks.slice(0, 1).map(b => (
+                            <div
+                              key={b.id}
+                              draggable
+                              onDragStart={(e) => handleBlockDragStart(e, b.id)}
+                              onDragEnd={handleDragEnd}
+                              className={`text-[9px] px-1 py-0.5 rounded truncate border cursor-grab flex items-center gap-0.5 active:opacity-40 transition-opacity ${COLOR_MAP[b.type] || COLOR_MAP.deep} ${draggingBlockId === b.id ? "opacity-30" : ""}`}
+                            >
+                              <Grip size={7} className="shrink-0 opacity-50" />
+                              {b.time} {b.title}
+                            </div>
+                          ))}
+                          {events?.googleEvents.slice(0, 1).map(e => (
+                            <div key={e.id} className={`text-[9px] px-1 py-0.5 rounded truncate border ${COLOR_MAP.google} flex items-center gap-0.5`}>
+                              <Calendar size={6} className="shrink-0" />
+                              {e.start_time} {e.title}
+                            </div>
+                          ))}
+                          {events?.tasks.slice(0, 1).map(t => (
+                            <div
+                              key={t.id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, t.id)}
+                              onDragEnd={handleDragEnd}
+                              className={`text-[9px] px-1 py-0.5 rounded truncate bg-secondary/60 text-muted-foreground cursor-grab flex items-center gap-0.5 active:opacity-40 transition-opacity ${
+                                draggingTaskId === t.id ? "opacity-30" : ""
+                              }`}
+                            >
+                              <Grip size={7} className="shrink-0 opacity-50" />
+                              {t.title}
+                            </div>
+                          ))}
+                          {hasEvents && totalCount > 3 && (
+                            <div className="text-[9px] text-muted-foreground/50 px-1">+{totalCount - 3} more</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ) : (
