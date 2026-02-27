@@ -72,8 +72,11 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
   };
 
   const askAura = () => {
+    // If Aura pill is already open (not idle), close it
+    const isOpen = !!(document.querySelector('.aura-widget'));
+    // Dispatch toggle: if active send close, otherwise summon
     const content = editorRef.current?.innerText?.trim() || "";
-    window.dispatchEvent(new CustomEvent("aura:summon-with-doc", {
+    window.dispatchEvent(new CustomEvent("aura:toggle", {
       detail: { content, title: documentTitle, prompt: "" },
     }));
   };

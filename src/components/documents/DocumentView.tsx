@@ -310,6 +310,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
           contentEditable
           suppressContentEditableWarning
           onInput={handleInput}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => { handleClick(e); editorRef.current?.focus(); }}
           onKeyDown={handleKeyDown}
           style={{ zoom: `${zoom}%` }}
