@@ -6,7 +6,9 @@ export function useToolbarVisibility(storageKey: string, allSegments: string[]) 
   const [hidden, setHidden] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem(getKey(storageKey));
-      return stored ? JSON.parse(stored) : [];
+      const parsed: string[] = stored ? JSON.parse(stored) : [];
+      // "ai" segment must never be hidden
+      return parsed.filter(id => id !== "ai");
     } catch {
       return [];
     }

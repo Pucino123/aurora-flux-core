@@ -826,7 +826,7 @@ const AuraWidget: React.FC = () => {
       className="aura-widget"
       autoHeight
       overflowVisible
-      containerStyle={{ zIndex: injectedDocContext ? 9000 : 200 }}
+      containerStyle={{ zIndex: isActive || injectedDocContext ? 9000 : 200 }}
     >
       <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
         {/* Orb */}
@@ -834,8 +834,13 @@ const AuraWidget: React.FC = () => {
           <AuraOrb state={auraState} size={orbSize} onClick={wake} audioLevelRef={voiceAudioLevelRef} />
         </div>
 
-        {/* Dynamic Pill */}
-        <div className="w-full flex justify-center mt-2">
+        {/* Dynamic Pill — inner layout wrapper for smooth morphing, isolated from drag */}
+        <motion.div
+          layout
+          className="w-full flex justify-center mt-2"
+          transition={{ type: "spring", stiffness: 380, damping: 32 }}
+          style={{ originX: 0.5, originY: 0 }}
+        >
           <AnimatePresence mode="wait">
             {pillMode === "hint" && (
               <motion.div
@@ -916,7 +921,7 @@ const AuraWidget: React.FC = () => {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
 
         {/* Chat history */}
         <AnimatePresence>

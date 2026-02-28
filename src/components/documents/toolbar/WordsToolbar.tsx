@@ -88,7 +88,7 @@ const WordsToolbar = ({
     visible.map((id, i) => (
       <React.Fragment key={id}>
         {i > 0 && sep}
-        <ToolbarSegment studioMode={isStudio} lightMode={lm} onHide={() => hideSegment(id)}>
+        <ToolbarSegment studioMode={isStudio} lightMode={lm} onHide={id === "ai" ? undefined : () => hideSegment(id)}>
           {segmentContent[id]}
         </ToolbarSegment>
       </React.Fragment>
