@@ -613,8 +613,9 @@ MULTI-STEP WORKFLOWS — chain tools in one response:
 
 CRITICAL RULES:
 - When removing or completing tasks, use the EXACT task_id from context. NEVER guess or fabricate IDs.
-- When user says "remove"/"delete" → use remove_task with the matching ID.
+- When user says "remove"/"delete" a task → use remove_task with the matching ID.
 - When user says "done"/"finished" → use complete_task with the matching ID.
+- When user says "remove"/"delete"/"cancel" a meeting or schedule block → use remove_block with the exact block_id from context (shown as [block_id:xxx] in schedule).
 - When creating tasks, if the user mentions a project or folder, use the matching folder_id from "Available folders" in context.
 - For dates: use the "Today" date in context. "Tomorrow" = today + 1 day. Always use YYYY-MM-DD format for due_date.
 - Never invent data — only reference what's in the context.
@@ -779,10 +780,24 @@ ${context}
             },
           },
         },
-        {
-          type: "function",
-          function: {
-            name: "create_folder",
+          {
+            type: "function",
+            function: {
+              name: "remove_block",
+              description: "Remove/delete a single schedule block by its block_id. Use the exact block_id from the dashboard context. Use this when user says 'remove', 'delete', or 'cancel' a specific meeting or block.",
+              parameters: {
+                type: "object",
+                properties: {
+                  block_id: { type: "string", description: "The exact block_id from the schedule context" },
+                },
+                required: ["block_id"],
+              },
+            },
+          },
+          {
+            type: "function",
+            function: {
+              name: "create_folder",
             description: "Create a new folder/project on the dashboard. Use when user asks to create a folder, project, or workspace.",
             parameters: {
               type: "object",
