@@ -106,7 +106,7 @@ function gatherContext(focusStore: any, flux: any, memories: Record<string, stri
   const today = new Date().toISOString().split("T")[0];
   const todayBlocks = flux.scheduleBlocks?.filter((b: any) => b.scheduled_date === today) || [];
   if (todayBlocks.length) {
-    parts.push(`Today's schedule: ${todayBlocks.map((b: any) => `${b.time} - ${b.title} (${b.duration})`).join("; ")}`);
+    parts.push(`Today's schedule: ${todayBlocks.map((b: any) => `${b.time} - ${b.title} (${b.duration}) [block_id:${b.id}]`).join("; ")}`);
   }
   const pendingTasks = flux.tasks?.filter((t: any) => !t.done)?.slice(0, 15) || [];
   if (pendingTasks.length) {
@@ -469,14 +469,18 @@ const AuraWidget: React.FC = () => {
 
   // Listen for aura:toggle — summon or close from document toolbar orb
   const pillModeRef = useRef(pillMode);
+  const injectedDocContextRef = useRef(injectedDocContext);
   useEffect(() => { pillModeRef.current = pillMode; }, [pillMode]);
+  useEffect(() => { injectedDocContextRef.current = injectedDocContext; }, [injectedDocContext]);
 
   useEffect(() => {
     const handler = (e: CustomEvent) => {
       const { content, title, docId, prompt } = e.detail || {};
       const currentMode = pillModeRef.current;
       if (currentMode !== "idle" && currentMode !== "hint") {
-        // Already open — close it, do NOT re-open
+        // Already open — close it AND clear doc context
+        setInjectedDocContext(null);
+        setInjectedDocId(null);
         revertToIdle();
         return;
       }
@@ -527,6 +531,10 @@ const AuraWidget: React.FC = () => {
       const blocks = flux.scheduleBlocks.filter((b) => b.scheduled_date === date);
       blocks.forEach((b) => flux.removeBlock(b.id));
       toast.success(`Cleared ${blocks.length} blocks for ${date}`);
+    } else if (name === "remove_block") {
+      const blockId = args.block_id;
+      if (blockId) { flux.removeBlock(blockId); toast.success("Removed from schedule"); }
+      else toast.error("Block ID not found");
     } else if (name === "create_note") {
       if (user) {
         const noteTitle = args.title || "Note";
@@ -1002,12 +1010,19 @@ const AuraWidget: React.FC = () => {
   );
 
   // When Aura is summoned from inside a document, portal to document.body to escape the document viewer's stacking context
-  // Renders sharp above the document modal — no backdrop-filter on the portal wrapper so it doesn't get blurred
-  if (injectedDocContext && isActive) {
+  // Renders sharp above the document modal — always render when injectedDocContext is set
+  if (injectedDocContext) {
     return (
       <>
         {createPortal(
-          <div
+          <AnimatePresence>
+            {isActive && (
+          <motion.div
+            key="aura-doc-portal"
+            initial={{ opacity: 0, x: 60, y: -20, scale: 0.88 }}
+            animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 60, y: -20, scale: 0.88 }}
+            transition={{ type: "spring", stiffness: 340, damping: 28 }}
             style={{
               position: "fixed",
               top: "8%",
@@ -1103,7 +1118,9 @@ const AuraWidget: React.FC = () => {
                 </AnimatePresence>
               </motion.div>
             </div>
-          </div>,
+          </motion.div>
+            )}
+          </AnimatePresence>,
           document.body
         )}
       </>
