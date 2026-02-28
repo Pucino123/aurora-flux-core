@@ -1,26 +1,27 @@
 
-## Issues to Fix
+## Problem Analysis
 
-### Issue 1: Input text overflow
-The `<input>` element is single-line and overflows when text is too long. Replace with a `<textarea>` that auto-resizes based on content.
+The user wants:
+- ✅ The background behind the document **remains blurred** (restore `backdrop-blur-md` on the backdrop)
+- ✅ When clicking Aura inside a document, **Aura appears sharp** (not blurred by the backdrop)
+- ✅ Clicking the Aura button again closes/blurs Aura back out
 
-### Issue 2: Send button disappears in conversation
-When `messages.length > 0`, the send button is replaced entirely by an X (close) button. The user cannot send follow-up messages. Fix: always show the Send button, and move the X/close button to a separate position (e.g. top-right of the pill or alongside the send button).
+### Root Cause
 
-### Issue 3: Aura overlay not appearing in documents
-The document viewer opens as a modal/overlay that creates its own CSS stacking context (e.g. `z-index: 101`). Even though `AuraWidget` sets `zIndex: 9999` on `DraggableWidget`, the widget lives inside the Focus dashboard's DOM tree which is behind the document modal stacking context.
+The document backdrop div (`z-[100]`) had `backdrop-blur-md` removed in the last fix. The user wants it back.
 
-**Fix:** When `injectedDocContext` is set (i.e. Aura is summoned from inside a document), use `createPortal(widget, document.body)` to break out of the stacking context and render directly on `document.body`. This is safe because we only portal when `injectedDocContext` is active, and the toggle/close still works through the existing event system.
+The reason Aura appeared blurred: CSS `backdrop-filter` on the backdrop element creates a compositing layer. Elements with higher z-index that sit above the backdrop can appear to have blur applied to them because they're being composited on top of the blurred layer — but only if the Aura portal element itself has `backdrop-filter` or `filter` styles inherited.
 
-### Issue 4: Processing dots missing after send/voice
-The dots show during `pillMode === "processing"`. Looking at the send flow: `send()` correctly sets `setPillMode("processing")`. However the `motion.div` with `key="active-pill"` only mounts when `pillMode === "input" || pillMode === "processing" || pillMode === "response"`. The `AnimatePresence mode="wait"` means switching from `"input"` to `"processing"` triggers an exit-then-enter animation on the same key — so the dots should appear. 
+Looking at the portal div in `AuraWidget.tsx` (line 1045): the processing pill has `backdropFilter: "none"` already. The input/response pill at line 1052 does NOT — it just uses `background: rgba(20,20,30,0.85)`.
 
-The real issue: the streaming starts very fast and immediately sets `setPillMode("response")` via the `onDelta` callback, skipping the "processing" visual. Fix: add a minimum 400ms delay before transitioning from "processing" to "response" so the dots are visible for at least a moment, OR keep showing the dots inside the `"response"` pill as well (show dots when `isLoading && !responseText`).
+The actual Aura widget when portalled renders inside a `DraggableWidget` which may apply styles, OR the issue is the main `widget` variable (the DraggableWidget) is being rendered at both `{widget}` AND in the portal — causing duplication.
 
-## Files to Edit
+### Fix Plan
 
-### `src/components/focus/AuraWidget.tsx`
-1. Replace `<input>` with auto-resizing `<textarea>` (using `onInput` to adjust height, reset on clear)
-2. Fix send/X button logic: always render Send button; add a small X button alongside it (not replacing it)
-3. Add portal rendering when `injectedDocContext` is active: `isActive && injectedDocContext ? createPortal(widget, document.body) : widget`
-4. Show processing dots while `isLoading && !responseText` inside the response pill (so dots are visible before first chunk arrives)
+**File: `src/components/focus/DesktopDocumentViewer.tsx`**
+- Restore `backdrop-blur-md` on the backdrop div (line 85): change back to `className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md"`
+
+**File: `src/components/focus/AuraWidget.tsx`**
+- The portal wrapper div (line 1011) needs `filter: "none"` added to its style to break out of any compositing chain
+- Remove the duplicate `{widget}` render at line 1009 — currently when `injectedDocContext && isActive`, it renders BOTH the normal widget position AND the portal. Remove `{widget}` so only the portal version shows.
+- Add `filter: "none"` and `WebkitFilter: "none"` to the portal wrapper to ensure no blur bleeds through
