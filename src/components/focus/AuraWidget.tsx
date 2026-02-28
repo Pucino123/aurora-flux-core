@@ -1002,14 +1002,110 @@ const AuraWidget: React.FC = () => {
   );
 
   // When Aura is summoned from inside a document, portal to document.body to escape the document viewer's stacking context
+  // Renders sharp above the document modal — no backdrop-filter on the portal wrapper so it doesn't get blurred
   if (injectedDocContext && isActive) {
-    return createPortal(
-      <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 9999 }}>
-        <div style={{ pointerEvents: "auto", position: "absolute", top: "10%", right: "5%", width: 340 }}>
-          {widget}
-        </div>
-      </div>,
-      document.body
+    return (
+      <>
+        {widget}
+        {createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: "8%",
+              right: "3%",
+              width: 340,
+              zIndex: 10000,
+              pointerEvents: "auto",
+              isolation: "isolate",
+            }}
+          >
+            <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
+              {/* Orb */}
+              <div className="flex items-center justify-center pt-2 pb-1" onClick={wake}>
+                <AuraOrb state={auraState} size={orbSize} onClick={wake} audioLevelRef={voiceAudioLevelRef} />
+              </div>
+              {/* Pill */}
+              <motion.div
+                layout
+                className="w-full flex justify-center mt-2"
+                transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                style={{ originX: 0.5, originY: 0 }}
+              >
+                <AnimatePresence mode="wait">
+                  {(pillMode === "input" || pillMode === "processing" || pillMode === "response") && (
+                    <motion.div
+                      key="doc-pill"
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1, width: 300 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3 }}
+                      className="w-full"
+                    >
+                      {(pillMode === "processing" || (isLoading && !responseText)) ? (
+                        <div className="flex items-center justify-center gap-1.5 rounded-full px-6 py-2.5" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "none" }}>
+                          {[0, 1, 2].map((i) => (
+                            <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-white/60" animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1 w-full">
+                          <div className="flex items-center gap-1.5 rounded-full px-3 py-2 relative" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                            <button onClick={toggleVoice} className={`p-1 rounded-full transition-all shrink-0 ${listening ? "bg-purple-500/30 text-purple-300" : "text-white/50 hover:text-white/80"}`}>
+                              {listening ? <MicOff size={13} /> : <Mic size={13} />}
+                            </button>
+                            <textarea
+                              value={input}
+                              rows={1}
+                              onChange={(e) => {
+                                setInput(e.target.value);
+                                e.target.style.height = "auto";
+                                e.target.style.height = `${e.target.scrollHeight}px`;
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
+                              }}
+                              placeholder="Ask about this document..."
+                              className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/40 outline-none min-w-0 resize-none overflow-hidden leading-relaxed"
+                              style={{ maxHeight: 120 }}
+                            />
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <button onClick={() => send(input)} disabled={isLoading || !input.trim()} className="p-1 rounded-full text-white/50 hover:text-white/80 disabled:opacity-30 transition-all">
+                                <Send size={13} />
+                              </button>
+                              <button onClick={revertToIdle} className="p-1 rounded-full text-white/30 hover:text-red-400 transition-all">
+                                <X size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {/* Streaming response */}
+                      {responseText && (
+                        <div className="mt-1 rounded-2xl px-3 py-2 text-xs text-white/80 leading-relaxed max-h-[200px] overflow-y-auto" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                          <ReactMarkdown>{responseText}</ReactMarkdown>
+                        </div>
+                      )}
+                      {/* Chat history */}
+                      {messages.length > 0 && (
+                        <div className="mt-1 rounded-2xl max-h-[220px] overflow-y-auto" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                          <div className="px-3 py-2 space-y-2">
+                            {messages.map((msg, i) => (
+                              <div key={i} className={`text-[12px] leading-relaxed ${msg.role === "user" ? "text-white/80 bg-white/[0.08] rounded-xl px-2 py-1 ml-4" : "text-white/60"}`}>
+                                {msg.role === "assistant" ? <ReactMarkdown>{msg.content}</ReactMarkdown> : msg.content}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+          </div>,
+          document.body
+        )}
+      </>
     );
   }
 
