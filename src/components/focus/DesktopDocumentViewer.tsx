@@ -82,7 +82,7 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md"
+        className="fixed inset-0 z-[100] bg-black/60"
         onClick={onClose}
       />
       <motion.div
@@ -91,7 +91,7 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 20 }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none"
+        className="fixed inset-0 z-[102] flex items-center justify-center p-4 pointer-events-none"
       >
         <div
           className={`relative flex flex-col backdrop-blur-2xl border rounded-2xl shadow-2xl pointer-events-auto overflow-hidden transition-all duration-300 ${
