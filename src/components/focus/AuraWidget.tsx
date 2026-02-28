@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Send, Mic, MicOff, X, Volume2, Copy, Check } from "lucide-react";
+import { Send, Mic, MicOff, X, Copy, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -598,11 +598,7 @@ const AuraWidget: React.FC = () => {
         });
       }
     } else if (name === "read_aloud") {
-      if (args.text && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const utt = new SpeechSynthesisUtterance(args.text);
-        window.speechSynthesis.speak(utt);
-      }
+      // TTS disabled — text-only responses until premium voice API is integrated
     } else if (name === "create_spreadsheet") {
       if (user) {
         (supabase as any).from("documents").insert({
@@ -726,12 +722,7 @@ const AuraWidget: React.FC = () => {
     }
   }, [flux, user, setTheme, focusStore]);
 
-  const speakText = useCallback((text: string) => {
-    if (!("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    window.speechSynthesis.speak(utt);
-  }, []);
+  // TTS intentionally disabled — responses are text-only until a premium voice API is integrated
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -826,7 +817,7 @@ const AuraWidget: React.FC = () => {
       className="aura-widget"
       autoHeight
       overflowVisible
-      containerStyle={{ zIndex: isActive || injectedDocContext ? 9000 : 200 }}
+      containerStyle={{ zIndex: isActive ? 9999 : 200 }}
     >
       <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
         {/* Orb */}
@@ -961,13 +952,6 @@ const AuraWidget: React.FC = () => {
                             >{msg.content}</ReactMarkdown>
                           </div>
                           <div className="flex items-center gap-1 mt-1">
-                            <button
-                              onClick={() => speakText(msg.content)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full text-white/30 hover:text-white/60"
-                              title="Read aloud"
-                            >
-                              <Volume2 size={11} />
-                            </button>
                             {msg.content.length > 300 && (
                               <button
                                 onClick={() => {
