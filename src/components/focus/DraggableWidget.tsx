@@ -266,7 +266,7 @@ const DraggableWidget = ({
         width: pos.w,
         ...(autoHeight ? {} : { height: pos.h }),
         pointerEvents: isEditingOther ? "none" : "auto",
-        zIndex: isBeingEdited ? 65 : 50,
+        zIndex: containerStyle?.zIndex ?? (isBeingEdited ? 65 : 50),
         ...containerStyle,
       }}
       onMouseEnter={() => setIsHovered(true)}

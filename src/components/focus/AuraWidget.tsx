@@ -772,6 +772,7 @@ const AuraWidget: React.FC = () => {
   }, [messages, isLoading, focusStore, flux, memories, handleToolCall, injectedDocContext]);
 
   const { listening, toggle: toggleVoice, stop: stopVoice, start: startVoice, audioLevelRef: voiceAudioLevelRef } = useVoiceInput((text) => {
+    if (pillMode === "idle" || pillMode === "hint") wake();
     send(text);
   });
 
