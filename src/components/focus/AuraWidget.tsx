@@ -326,7 +326,7 @@ const AuraWidget: React.FC = () => {
   const [memories, setMemories] = useState<Record<string, string>>({});
   const [injectedDocContext, setInjectedDocContext] = useState<string | null>(null);
   const [injectedDocId, setInjectedDocId] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const historyEndRef = useRef<HTMLDivElement>(null);
@@ -730,6 +730,7 @@ const AuraWidget: React.FC = () => {
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
+    if (inputRef.current) inputRef.current.style.height = "auto";
     setIsLoading(true);
     setPillMode("processing");
     setAuraState("processing");
@@ -748,7 +749,10 @@ const AuraWidget: React.FC = () => {
         (chunk) => {
           assistantText += chunk;
           setAuraState("speaking");
-          setPillMode("response");
+          // Delay transition to "response" so processing dots are visible for at least 400ms
+          setTimeout(() => {
+            setPillMode((prev) => prev === "processing" || prev === "response" ? "response" : prev);
+          }, assistantText.length === chunk.length ? 400 : 0);
           setResponseText(assistantText);
         },
         handleToolCall,
@@ -859,7 +863,7 @@ const AuraWidget: React.FC = () => {
                 transition={{ duration: 0.35 }}
                 className="w-full"
               >
-                {pillMode === "processing" ? (
+                {(pillMode === "processing" || (isLoading && !responseText)) ? (
                   <div className="flex items-center justify-center gap-1.5 rounded-full px-6 py-2.5 border border-white/[0.08]" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
                     {[0, 1, 2].map((i) => (
                       <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-white/40" animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} />
@@ -881,32 +885,45 @@ const AuraWidget: React.FC = () => {
                       >
                         {listening ? <MicOff size={13} /> : <Mic size={13} />}
                       </button>
-                      <input
+                      <textarea
                         ref={inputRef}
-                        type="text"
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && send(input)}
+                        rows={1}
+                        onChange={(e) => {
+                          setInput(e.target.value);
+                          e.target.style.height = "auto";
+                          e.target.style.height = `${e.target.scrollHeight}px`;
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            send(input);
+                            if (inputRef.current) inputRef.current.style.height = "auto";
+                          }
+                        }}
                         placeholder={injectedDocContext ? "Ask about this document..." : listening ? "Listening..." : "Ask Aura anything..."}
-                        className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/30 outline-none min-w-0"
+                        className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/30 outline-none min-w-0 resize-none overflow-hidden leading-relaxed"
+                        style={{ maxHeight: 120 }}
                       />
-                      {messages.length > 0 ? (
+                      <div className="flex items-center gap-0.5 shrink-0">
                         <button
-                          onClick={revertToIdle}
-                          className="p-1 rounded-full text-white/30 hover:text-red-400 hover:bg-white/10 transition-all shrink-0"
-                          title="End conversation"
-                        >
-                          <X size={13} />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => send(input)}
+                          onClick={() => { send(input); if (inputRef.current) inputRef.current.style.height = "auto"; }}
                           disabled={isLoading || !input.trim()}
-                          className="p-1 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all shrink-0"
+                          className="p-1 rounded-full text-white/40 hover:text-white/70 disabled:opacity-30 transition-all"
+                          title="Send"
                         >
                           <Send size={13} />
                         </button>
-                      )}
+                        {messages.length > 0 && (
+                          <button
+                            onClick={revertToIdle}
+                            className="p-1 rounded-full text-white/20 hover:text-red-400 hover:bg-white/10 transition-all"
+                            title="End conversation"
+                          >
+                            <X size={11} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -983,6 +1000,18 @@ const AuraWidget: React.FC = () => {
       </div>
     </DraggableWidget>
   );
+
+  // When Aura is summoned from inside a document, portal to document.body to escape the document viewer's stacking context
+  if (injectedDocContext && isActive) {
+    return createPortal(
+      <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 9999 }}>
+        <div style={{ pointerEvents: "auto", position: "absolute", top: "10%", right: "5%", width: 340 }}>
+          {widget}
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   return widget;
 };
