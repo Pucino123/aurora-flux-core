@@ -418,8 +418,8 @@ const AuraWidget: React.FC = () => {
         }
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
   }, [pillMode, input, messages.length]);
 
   useEffect(() => {
@@ -994,7 +994,7 @@ const AuraWidget: React.FC = () => {
     </DraggableWidget>
   );
 
-  return isActive ? createPortal(widget, document.body) : widget;
+  return widget;
 };
 
 export default AuraWidget;
