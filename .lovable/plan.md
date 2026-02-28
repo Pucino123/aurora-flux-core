@@ -1,91 +1,43 @@
 
-## What's already in place
-- Aura has a full tool-calling architecture in `flux-ai/index.ts` with 15+ tools
-- `AuraWidget.tsx` handles all tool calls client-side
-- Image generation model `google/gemini-3-pro-image-preview` is available via Lovable AI (no API key needed)
-- `LOVABLE_API_KEY` is already configured as a secret
-- Documents/spreadsheets are created via the Supabase `documents` table
-- `HomeWidgets.tsx` renders draggable dashboard widgets via `DraggableWidget`
-- `FocusDashboardView.tsx` renders widgets conditionally based on `activeWidgets`
+## Bug Analysis
 
-## Scope for this plan (high-impact, feasible)
+### Bug 1: Widget "Jumping" / Layout Shift
 
-**Feature 1 — Code blocks with syntax highlighting**
-Aura already streams markdown via `ReactMarkdown`. Add `react-syntax-highlighter` (or use a CSS-only approach with `<pre>/<code>` + Tailwind) to render fenced code blocks properly in the chat history in `AuraWidget.tsx`.
+**Root cause:** `DraggableWidget` wraps everything in a `<motion.div>` with `initial/animate/exit` transitions. When `AuraWidget` switches states (idle ↔ active), line 997 conditionally switches between `createPortal(widget, document.body)` and rendering `widget` inline. This **unmounts and remounts** the entire `DraggableWidget` every time `isActive` toggles, destroying the drag library's DOM reference and causing position resets/jumps.
 
-**Feature 2 — Image generation & dashboard spawning**
-Add a new `generate_image` tool to the Aura edge function. Client-side, call a new edge-function endpoint `type: "generate-image"` which uses `google/gemini-3-pro-image-preview`. The returned base64 image is uploaded to the existing `document-images` storage bucket, and Aura spawns a new `ImageWidget` on the dashboard.
+Additionally, the outer `motion.div` in `DraggableWidget` applies `scale: 0.95 → 1` on mount, which creates a visible jump each time the widget remounts.
 
-**Feature 3 — In-document image insertion**
-When Aura is active inside a document context (injectedDocContext), the `generate_image` tool can also dispatch a `aura:insert-image` custom event with the image URL, which `DocumentView.tsx` listens to and inserts as an `<img>` tag at the end of the document HTML content.
+### Bug 2: Toggle Glitch (close immediately reopens)
 
-**Feature 4 — Spreadsheet formula injection**
-Add a `inject_formula` tool. When Aura is active with a spreadsheet document context, it writes a formula string into a specific cell. The document viewer listens for `aura:inject-formula` event with `{ cell, formula }` and updates the spreadsheet content.
+**Root cause:** In `AiToolsPanel.tsx`, the `askAura` function dispatches `aura:toggle`. The `aura:toggle` handler in `AuraWidget.tsx` (lines 474-492) checks `pillModeRef.current`. However, there's also a `mousedown` outside-click handler (lines 413-423) that calls `revertToIdle()` when clicking outside. When the user clicks the toolbar orb button:
+1. `mousedown` fires → outside-click handler sees pillMode is "input" → calls `revertToIdle()` (sets to "idle")  
+2. `click` fires → `aura:toggle` handler sees mode is now "idle" → re-opens Aura
 
-**Out of scope (too risky/complex for this session):**
-- Contextual code debugging with "Click to Fix" (requires selecting code in document, tracking cursor position — large UI change)
-- Charting from spreadsheet data (requires recharts widget integration with live data binding)
-- Direct file creation on the dashboard (dashboard already has desktop docs, but injecting generated code requires a new "code document" type)
+This is the double-flip race condition.
 
----
+## Fix Plan
 
-## Files to change
+### Fix 1: Stop unmounting/remounting DraggableWidget
+- In `AuraWidget.tsx` line 997: always render `widget` (no portal conditional). Instead, manage z-index via `containerStyle` (already done for `injectedDocContext`, just extend it to always use high z when active)
+- Remove the `isActive ? createPortal(widget, document.body) : widget` pattern — always render directly, keep `zIndex` elevation via `containerStyle` prop
 
-### 1. `supabase/functions/flux-ai/index.ts`
-Add two new handlers + tools:
+### Fix 2: Fix toggle double-fire
+- In `AuraWidget.tsx` `aura:toggle` handler: use `e.stopImmediatePropagation()` and also set a ref flag `isTogglingRef` that the outside-click `mousedown` handler checks before calling `revertToIdle()`
+- In `AiToolsPanel.tsx` `askAura`: change from dispatching `CustomEvent` on `click` to using `onMouseDown` + `e.stopPropagation()` + `e.preventDefault()` on the toggle button so the outside-click listener never sees it
 
-**New handler `handleImageGenerate(prompt, apiKey)`:**
-- Calls `https://ai.gateway.lovable.dev/v1/chat/completions` with `model: "google/gemini-3-pro-image-preview"` and `modalities: ["image", "text"]`
-- Returns `{ imageBase64, mimeType }` as JSON
-- Called when `type === "generate-image"`
+**Specifically:**
+- `AiToolsPanel.tsx`: Add `onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}` to the ToolbarButton wrapper, or pass `onMouseDown` prop
+- `AuraWidget.tsx`: In the outside-click `mousedown` handler, add a guard using a `isHandlingToggleRef` ref that is set to `true` during the `aura:toggle` handler and reset after, to prevent the outside-click from firing simultaneously
+- Alternative simpler fix: change the outside-click listener from `mousedown` to `click`, and in the `aura:toggle` event dispatch, call `e.stopPropagation()` on the original click event in `AiToolsPanel`
 
-**New tools in `handleAura`:**
-```
-generate_image: { prompt: string, target: "dashboard" | "document" }
-inject_formula: { cell: string, formula: string, note?: string }
-```
+### Cleanest solution:
+1. **`AiToolsPanel.tsx`**: In `askAura`, use `mousedown` with `stopPropagation` instead of relying on `onClick`
+2. **`AuraWidget.tsx`**: 
+   - Change outside-click listener from `mousedown` to `click` 
+   - Always render `widget` without portal switching (remove the conditional portal)
+   - Increase `zIndex` to `9000` when `isActive` (already partially done)
 
-Update system prompt in `handleAura` to describe these new capabilities.
-
-### 2. `src/components/focus/AuraWidget.tsx`
-Handle two new tools in `handleToolCall`:
-
-**`generate_image`:**
-1. Show toast "Generating image…"
-2. Call edge function `type: "generate-image"` with the prompt
-3. Upload base64 to `document-images` bucket → get public URL
-4. If `target === "dashboard"`: dispatch `aura:spawn-image-widget` with `{ url, prompt }`
-5. If `target === "document"`: dispatch `aura:insert-image` with `{ url }`
-
-**`inject_formula`:**
-- Dispatch `aura:inject-formula` custom event with `{ cell, formula }` — DocumentView listens and updates spreadsheet
-
-**Code block rendering:**
-- In the chat history section, replace plain `<ReactMarkdown>` with a version that uses a custom `code` renderer — detect fenced code blocks and render them in a styled `<pre className="bg-black/40 rounded p-2 text-xs font-mono overflow-x-auto">` block with a copy button.
-
-### 3. `src/components/focus/FocusDashboardView.tsx`
-- Add listener for `aura:spawn-image-widget` event
-- On event: add a new entry to a local `auraImages` state array `{ id, url, prompt }`
-- Render `<AuraImageWidget>` for each entry (draggable via `DraggableWidget`)
-
-### 4. `src/components/focus/AuraImageWidget.tsx` (new file)
-Simple widget: displays the generated image with title from the prompt, a close/remove button, and a download button.
-
-### 5. `src/components/documents/DocumentView.tsx`
-**For text documents:**
-- Add `useEffect` listening for `aura:insert-image` event
-- On event: append `<img src="..." />` to the document HTML content via `onUpdate`
-
-**For spreadsheet documents:**
-- Add `useEffect` listening for `aura:inject-formula` event  
-- On event: parse `cell` (e.g., "B3" → col 1, row 2), update the `cells` map in content, call `onUpdate`
-
----
-
-## Implementation steps
-
-1. Add `handleImageGenerate` to `flux-ai/index.ts`, add `generate_image` + `inject_formula` tools to `handleAura`, update system prompt
-2. Create `src/components/focus/AuraImageWidget.tsx`
-3. Update `AuraWidget.tsx`: handle `generate_image` + `inject_formula` tools, add code block renderer
-4. Update `FocusDashboardView.tsx`: listen for `aura:spawn-image-widget`, render `AuraImageWidget` instances
-5. Update `DocumentView.tsx`: listen for `aura:insert-image` and `aura:inject-formula` events
+### Files to edit:
+- `src/components/focus/AuraWidget.tsx` — remove portal conditional, fix outside-click listener to use `click` instead of `mousedown`
+- `src/components/documents/toolbar/AiToolsPanel.tsx` — use `onMouseDown` with `stopPropagation` for the toggle button
+- `src/components/documents/toolbar/ToolbarButton.tsx` — check if it needs `onMouseDown` prop support
