@@ -1006,7 +1006,6 @@ const AuraWidget: React.FC = () => {
   if (injectedDocContext && isActive) {
     return (
       <>
-        {widget}
         {createPortal(
           <div
             style={{
@@ -1017,6 +1016,8 @@ const AuraWidget: React.FC = () => {
               zIndex: 10000,
               pointerEvents: "auto",
               isolation: "isolate",
+              filter: "none",
+              WebkitFilter: "none",
             }}
           >
             <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
