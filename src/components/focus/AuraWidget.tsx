@@ -157,6 +157,7 @@ async function streamAura(
   let buf = "";
   let done = false;
   const toolCallAccum: Record<number, { name: string; args: string }> = {};
+  let toolCallsFired = false;
 
   while (!done) {
     const { done: rd, value } = await reader.read();
@@ -185,10 +186,13 @@ async function streamAura(
           }
         }
         if (parsed.choices?.[0]?.finish_reason === "tool_calls" || parsed.choices?.[0]?.finish_reason === "stop") {
-          for (const key of Object.keys(toolCallAccum)) {
-            const tc = toolCallAccum[Number(key)];
-            if (tc.name && tc.args) {
-              try { onToolCall(tc.name, JSON.parse(tc.args)); } catch {}
+          if (!toolCallsFired) {
+            toolCallsFired = true;
+            for (const key of Object.keys(toolCallAccum)) {
+              const tc = toolCallAccum[Number(key)];
+              if (tc.name && tc.args) {
+                try { onToolCall(tc.name, JSON.parse(tc.args)); } catch {}
+              }
             }
           }
         }
@@ -199,10 +203,13 @@ async function streamAura(
     }
   }
 
-  for (const key of Object.keys(toolCallAccum)) {
-    const tc = toolCallAccum[Number(key)];
-    if (tc.name && tc.args) {
-      try { onToolCall(tc.name, JSON.parse(tc.args)); } catch {}
+  // Only fire tool calls if not already fired above on finish_reason
+  if (!toolCallsFired) {
+    for (const key of Object.keys(toolCallAccum)) {
+      const tc = toolCallAccum[Number(key)];
+      if (tc.name && tc.args) {
+        try { onToolCall(tc.name, JSON.parse(tc.args)); } catch {}
+      }
     }
   }
 
@@ -443,6 +450,8 @@ const AuraWidget: React.FC = () => {
     setAuraState("idle");
     setShowHistory(false);
     setMessages([]);
+    setInjectedDocContext(null);
+    setInjectedDocId(null);
     stopVoice();
   }, []);
 
@@ -456,10 +465,9 @@ const AuraWidget: React.FC = () => {
   useEffect(() => {
     const handler = (e: CustomEvent) => {
       const { content, title, docId, prompt } = e.detail || {};
-      if (content) {
-        setInjectedDocContext(`[Open document: "${title || "Untitled"}"]\n${content}`);
-        setInjectedDocId(docId || null);
-      }
+      const docLabel = title || "Untitled";
+      setInjectedDocContext(`[Open document: "${docLabel}"]\n${content || "(empty document)"}`);
+      setInjectedDocId(docId || null);
       wake();
       if (prompt) setTimeout(() => setInput(prompt), 50);
     };
@@ -484,10 +492,10 @@ const AuraWidget: React.FC = () => {
         revertToIdle();
         return;
       }
-      if (content) {
-        setInjectedDocContext(`[Open document: "${title || "Untitled"}"]\n${content}`);
-        setInjectedDocId(docId || null);
-      }
+      // Always set injectedDocContext when triggered from a document (even if empty doc)
+      const docLabel = title || "Untitled";
+      setInjectedDocContext(`[Open document: "${docLabel}"]\n${content || "(empty document)"}`);
+      setInjectedDocId(docId || null);
       wake();
       if (prompt) setTimeout(() => setInput(prompt), 50);
     };
