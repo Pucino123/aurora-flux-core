@@ -333,6 +333,10 @@ const AuraWidget: React.FC = () => {
   const [memories, setMemories] = useState<Record<string, string>>({});
   const [injectedDocContext, setInjectedDocContext] = useState<string | null>(null);
   const [injectedDocId, setInjectedDocId] = useState<string | null>(null);
+  const [isStreamingToDoc, setIsStreamingToDoc] = useState(false);
+  // Draggable portal state
+  const [portalPos, setPortalPos] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -753,10 +757,17 @@ const AuraWidget: React.FC = () => {
     setResponseText("");
 
     let assistantText = "";
+    const streamingIntoDoc = !!injectedDocContext;
     const baseContext = gatherContext(focusStore, flux, memories);
     const context = injectedDocContext
-      ? `${baseContext}\n\n═══ CURRENTLY OPEN DOCUMENT (user is asking about this) ═══\n${injectedDocContext}\n═══ END DOCUMENT ═══`
+      ? `${baseContext}\n\n═══ CURRENTLY OPEN DOCUMENT (user is asking about this) ═══\n${injectedDocContext}\n═══ END DOCUMENT ═══\n\nIMPORTANT: When asked to write content, respond with the actual content text directly (no tool call needed) — the text will be streamed live into the document editor.`
       : baseContext;
+
+    // Signal document to start a new live stream session
+    if (streamingIntoDoc) {
+      setIsStreamingToDoc(true);
+      window.dispatchEvent(new CustomEvent("aura:stream-start", {}));
+    }
 
     try {
       await streamAura(
@@ -765,26 +776,46 @@ const AuraWidget: React.FC = () => {
         (chunk) => {
           assistantText += chunk;
           setAuraState("speaking");
-          // Delay transition to "response" so processing dots are visible for at least 400ms
-          setTimeout(() => {
-            setPillMode((prev) => prev === "processing" || prev === "response" ? "response" : prev);
-          }, assistantText.length === chunk.length ? 400 : 0);
-          setResponseText(assistantText);
+          if (streamingIntoDoc) {
+            // Stream each chunk live into the document
+            window.dispatchEvent(new CustomEvent("aura:stream-chunk", { detail: { chunk } }));
+            // Keep pill in "processing" to show streaming indicator
+            setPillMode((prev) => prev === "processing" ? "processing" : prev);
+          } else {
+            setTimeout(() => {
+              setPillMode((prev) => prev === "processing" || prev === "response" ? "response" : prev);
+            }, assistantText.length === chunk.length ? 400 : 0);
+            setResponseText(assistantText);
+          }
         },
         handleToolCall,
         () => {
           setIsLoading(false);
-          if (assistantText) {
-            setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);
-            setResponseText("");
+          if (streamingIntoDoc) {
+            // Signal document stream is done
+            window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
+            setIsStreamingToDoc(false);
+            // Save the assistant message in history but don't show response bubble
+            if (assistantText) {
+              setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);
+            }
+            setPillMode("input");
+            setAuraState("idle");
+          } else {
+            if (assistantText) {
+              setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);
+              setResponseText("");
+            }
+            setPillMode("input");
+            setAuraState("idle");
           }
-          setPillMode("input");
-          setAuraState("idle");
           setTimeout(() => inputRef.current?.focus(), 100);
         },
       );
     } catch {
       setIsLoading(false);
+      setIsStreamingToDoc(false);
+      if (streamingIntoDoc) window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
       setPillMode("input");
       setAuraState("idle");
       toast.error("Failed to reach Aura");
@@ -1017,116 +1048,160 @@ const AuraWidget: React.FC = () => {
     </DraggableWidget>
   );
 
+  // Drag handlers for portal
+  const handlePortalDragStart = useCallback((e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: portalPos.x, origY: portalPos.y };
+  }, [portalPos]);
+
+  const handlePortalDragMove = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    setPortalPos({ x: dragRef.current.origX + dx, y: dragRef.current.origY + dy });
+  }, []);
+
+  const handlePortalDragEnd = useCallback(() => { dragRef.current = null; }, []);
+
   // When Aura is summoned from inside a document, portal to document.body to escape the document viewer's stacking context
-  // Renders sharp above the document modal — always render when injectedDocContext is set
   if (injectedDocContext) {
     return (
       <>
         {createPortal(
           <AnimatePresence>
             {isActive && (
-          <motion.div
-            key="aura-doc-portal"
-            initial={{ opacity: 0, x: 60, y: -20, scale: 0.88 }}
-            animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 60, y: -20, scale: 0.88 }}
-            transition={{ type: "spring", stiffness: 340, damping: 28 }}
-            style={{
-              position: "fixed",
-              top: "8%",
-              right: "3%",
-              width: 340,
-              zIndex: 10000,
-              pointerEvents: "auto",
-              isolation: "isolate",
-              filter: "none",
-              WebkitFilter: "none",
-            }}
-          >
-            <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
-              {/* Orb */}
-              <div className="flex items-center justify-center pt-2 pb-1" onClick={wake}>
-                <AuraOrb state={auraState} size={orbSize} onClick={wake} audioLevelRef={voiceAudioLevelRef} />
-              </div>
-              {/* Pill */}
               <motion.div
-                layout
-                className="w-full flex justify-center mt-2"
-                transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                style={{ originX: 0.5, originY: 0 }}
+                key="aura-doc-portal"
+                initial={{ opacity: 0, x: 60, y: -20, scale: 0.88 }}
+                animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 60, y: -20, scale: 0.88 }}
+                transition={{ type: "spring", stiffness: 340, damping: 28 }}
+                style={{
+                  position: "fixed",
+                  top: `calc(8% + ${portalPos.y}px)`,
+                  right: `calc(3% - ${portalPos.x}px)`,
+                  width: 340,
+                  zIndex: 10000,
+                  pointerEvents: "auto",
+                  isolation: "isolate",
+                  filter: "none",
+                  WebkitFilter: "none",
+                }}
               >
-                <AnimatePresence mode="wait">
-                  {(pillMode === "input" || pillMode === "processing" || pillMode === "response") && (
-                    <motion.div
-                      key="doc-pill"
-                      initial={{ opacity: 0, scale: 0.85 }}
-                      animate={{ opacity: 1, scale: 1, width: 300 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ duration: 0.3 }}
-                      className="w-full"
-                    >
-                      {(pillMode === "processing" || (isLoading && !responseText)) ? (
-                        <div className="flex items-center justify-center gap-1.5 rounded-full px-6 py-2.5" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "none" }}>
-                          {[0, 1, 2].map((i) => (
-                            <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-white/60" animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1 w-full">
-                          <div className="flex items-center gap-1.5 rounded-full px-3 py-2 relative" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                            <button onClick={toggleVoice} className={`p-1 rounded-full transition-all shrink-0 ${listening ? "bg-purple-500/30 text-purple-300" : "text-white/50 hover:text-white/80"}`}>
-                              {listening ? <MicOff size={13} /> : <Mic size={13} />}
-                            </button>
-                            <textarea
-                              value={input}
-                              rows={1}
-                              onChange={(e) => {
-                                setInput(e.target.value);
-                                e.target.style.height = "auto";
-                                e.target.style.height = `${e.target.scrollHeight}px`;
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
-                              }}
-                              placeholder="Ask about this document..."
-                              className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/40 outline-none min-w-0 resize-none overflow-hidden leading-relaxed"
-                              style={{ maxHeight: 120 }}
-                            />
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              <button onClick={() => send(input)} disabled={isLoading || !input.trim()} className="p-1 rounded-full text-white/50 hover:text-white/80 disabled:opacity-30 transition-all">
-                                <Send size={13} />
-                              </button>
-                              <button onClick={revertToIdle} className="p-1 rounded-full text-white/30 hover:text-red-400 transition-all">
-                                <X size={11} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {/* Streaming response */}
-                      {responseText && (
-                        <div className="mt-1 rounded-2xl px-3 py-2 text-xs text-white/80 leading-relaxed max-h-[200px] overflow-y-auto" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                          <ReactMarkdown>{responseText}</ReactMarkdown>
-                        </div>
-                      )}
-                      {/* Chat history */}
-                      {messages.length > 0 && (
-                        <div className="mt-1 rounded-2xl max-h-[220px] overflow-y-auto" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                          <div className="px-3 py-2 space-y-2">
-                            {messages.map((msg, i) => (
-                              <div key={i} className={`text-[12px] leading-relaxed ${msg.role === "user" ? "text-white/80 bg-white/[0.08] rounded-xl px-2 py-1 ml-4" : "text-white/60"}`}>
-                                {msg.role === "assistant" ? <ReactMarkdown>{msg.content}</ReactMarkdown> : msg.content}
+                <div ref={widgetRef} className="flex flex-col items-center relative" style={{ minHeight: 160 }}>
+                  {/* Drag handle */}
+                  <div
+                    className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full cursor-grab active:cursor-grabbing select-none z-10"
+                    style={{ background: "rgba(255,255,255,0.18)" }}
+                    onPointerDown={handlePortalDragStart}
+                    onPointerMove={handlePortalDragMove}
+                    onPointerUp={handlePortalDragEnd}
+                  />
+
+                  {/* Orb */}
+                  <div className="flex items-center justify-center pt-3 pb-1" onClick={wake}>
+                    <AuraOrb state={auraState} size={orbSize} onClick={wake} audioLevelRef={voiceAudioLevelRef} />
+                  </div>
+
+                  {/* Pill */}
+                  <motion.div
+                    layout
+                    className="w-full flex justify-center mt-2"
+                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    style={{ originX: 0.5, originY: 0 }}
+                  >
+                    <AnimatePresence mode="wait">
+                      {(pillMode === "input" || pillMode === "processing" || pillMode === "response") && (
+                        <motion.div
+                          key="doc-pill"
+                          initial={{ opacity: 0, scale: 0.85 }}
+                          animate={{ opacity: 1, scale: 1, width: 300 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          transition={{ duration: 0.3 }}
+                          className="w-full"
+                        >
+                          {/* Streaming-into-doc indicator */}
+                          {isStreamingToDoc ? (
+                            <div className="flex items-center gap-2 rounded-full px-4 py-2.5" style={{ background: "rgba(20,20,30,0.88)", border: "1px solid rgba(139,92,246,0.35)", backdropFilter: "none" }}>
+                              <div className="flex items-center gap-1">
+                                {[0, 1, 2].map((i) => (
+                                  <motion.div key={i} className="w-1 h-3 rounded-full" style={{ background: "rgba(139,92,246,0.7)" }} animate={{ scaleY: [0.4, 1, 0.4] }} transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.15 }} />
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        </div>
+                              <span className="text-[11px] text-purple-300/80 flex-1">Writing into document…</span>
+                              <button
+                                onClick={() => { window.dispatchEvent(new CustomEvent("aura:stream-stop", {})); setIsStreamingToDoc(false); setPillMode("input"); setAuraState("idle"); }}
+                                className="text-[10px] text-white/30 hover:text-red-400 transition-colors shrink-0"
+                                title="Stop"
+                              >✕</button>
+                            </div>
+                          ) : (pillMode === "processing" || (isLoading && !responseText)) ? (
+                            <div className="flex items-center justify-center gap-1.5 rounded-full px-6 py-2.5" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "none" }}>
+                              {[0, 1, 2].map((i) => (
+                                <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-white/60" animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1 w-full">
+                              <div
+                                className="flex items-center gap-1.5 rounded-full px-3 py-2 relative cursor-grab active:cursor-grabbing"
+                                style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.12)" }}
+                                onPointerDown={handlePortalDragStart}
+                                onPointerMove={handlePortalDragMove}
+                                onPointerUp={handlePortalDragEnd}
+                              >
+                                <button
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  onClick={toggleVoice}
+                                  className={`p-1 rounded-full transition-all shrink-0 ${listening ? "bg-purple-500/30 text-purple-300" : "text-white/50 hover:text-white/80"}`}
+                                >
+                                  {listening ? <MicOff size={13} /> : <Mic size={13} />}
+                                </button>
+                                <textarea
+                                  value={input}
+                                  rows={1}
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  onChange={(e) => {
+                                    setInput(e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
+                                  }}
+                                  placeholder="Ask or write into document…"
+                                  className="flex-1 bg-transparent text-xs text-white/90 placeholder:text-white/40 outline-none min-w-0 resize-none overflow-hidden leading-relaxed cursor-text"
+                                  style={{ maxHeight: 120 }}
+                                />
+                                <div className="flex items-center gap-0.5 shrink-0" onPointerDown={(e) => e.stopPropagation()}>
+                                  <button onClick={() => send(input)} disabled={isLoading || !input.trim()} className="p-1 rounded-full text-white/50 hover:text-white/80 disabled:opacity-30 transition-all">
+                                    <Send size={13} />
+                                  </button>
+                                  <button onClick={revertToIdle} className="p-1 rounded-full text-white/30 hover:text-red-400 transition-all">
+                                    <X size={11} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {/* Chat history — shown only when not streaming */}
+                          {!isStreamingToDoc && messages.length > 0 && (
+                            <div className="mt-1 rounded-2xl max-h-[180px] overflow-y-auto" style={{ background: "rgba(20,20,30,0.85)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                              <div className="px-3 py-2 space-y-2">
+                                {messages.map((msg, i) => (
+                                  <div key={i} className={`text-[12px] leading-relaxed ${msg.role === "user" ? "text-white/80 bg-white/[0.08] rounded-xl px-2 py-1 ml-4" : "text-white/50 italic"}`}>
+                                    {msg.role === "assistant" ? "✓ Written into document" : msg.content}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </motion.div>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </AnimatePresence>
+                  </motion.div>
+                </div>
               </motion.div>
-            </div>
-          </motion.div>
             )}
           </AnimatePresence>,
           document.body

@@ -116,7 +116,67 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     return () => window.removeEventListener("aura:write-to-document" as any, handler);
   }, [doc.id, onUpdate]);
 
-  // Listen for Aura stream-to-document (typewriter word-by-word)
+  // Listen for Aura live chunk streaming (character-by-character from AI stream)
+  useEffect(() => {
+    let streamEl: HTMLElement | null = null;
+    let accumulated = "";
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const onStart = () => {
+      if (!editorRef.current) return;
+      accumulated = "";
+      const streamId = `aura-live-${Date.now()}`;
+      const p = document.createElement("p");
+      p.id = streamId;
+      p.style.whiteSpace = "pre-wrap";
+      editorRef.current.appendChild(p);
+      streamEl = p;
+      setIsStreaming(true);
+    };
+
+    const onChunk = (e: CustomEvent) => {
+      const { chunk } = e.detail || {};
+      if (!chunk || !streamEl) return;
+      accumulated += chunk;
+      streamEl.textContent = accumulated + "▍";
+      editorRef.current?.scrollTo({ top: editorRef.current.scrollHeight, behavior: "smooth" });
+      // Periodic save
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        if (editorRef.current) onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+      }, 500);
+    };
+
+    const onDone = () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      if (streamEl) { streamEl.textContent = accumulated; streamEl = null; }
+      if (editorRef.current) onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+      setIsStreaming(false);
+      accumulated = "";
+    };
+
+    const onStop = () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      if (streamEl) { streamEl.textContent = accumulated; streamEl = null; }
+      if (editorRef.current) onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+      setIsStreaming(false);
+      accumulated = "";
+    };
+
+    window.addEventListener("aura:stream-start" as any, onStart);
+    window.addEventListener("aura:stream-chunk" as any, onChunk);
+    window.addEventListener("aura:stream-done" as any, onDone);
+    window.addEventListener("aura:stream-stop" as any, onStop);
+    return () => {
+      window.removeEventListener("aura:stream-start" as any, onStart);
+      window.removeEventListener("aura:stream-chunk" as any, onChunk);
+      window.removeEventListener("aura:stream-done" as any, onDone);
+      window.removeEventListener("aura:stream-stop" as any, onStop);
+      if (saveTimer) clearTimeout(saveTimer);
+    };
+  }, [doc.id, onUpdate]);
+
+  // Listen for Aura stream-to-document (typewriter word-by-word — legacy)
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
     let cancelled = false;
