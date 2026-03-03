@@ -10,6 +10,7 @@ interface AiToolsPanelProps {
   onContentChange: () => void;
   lightMode?: boolean;
   documentTitle?: string;
+  documentId?: string;
 }
 
 const AI_ACTIONS = [
@@ -23,7 +24,7 @@ const AI_ACTIONS = [
 
 const FLUX_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flux-ai`;
 
-const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentTitle = "" }: AiToolsPanelProps) => {
+const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentTitle = "", documentId = "" }: AiToolsPanelProps) => {
   const lm = lightMode;
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -76,7 +77,7 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
     e.preventDefault();
     const content = editorRef.current?.innerText?.trim() || "";
     window.dispatchEvent(new CustomEvent("aura:toggle", {
-      detail: { content, title: documentTitle, prompt: "" },
+      detail: { content, title: documentTitle, docId: documentId, prompt: "" },
     }));
   };
 
