@@ -703,9 +703,28 @@ const AuraWidget: React.FC = () => {
       const { title, content, target, folder_id } = args;
       if (!content) return;
       if (target === "current") {
-        // Stream word-by-word into the currently open document
-        window.dispatchEvent(new CustomEvent("aura:stream-to-document", { detail: { text: content, append: true } }));
-        toast.success("Aura is writing into the document…");
+        // If we're already streaming live from the send() function, don't double-stream.
+        // Only stream via tool call when NOT in injected-doc streaming mode.
+        const alreadyStreaming = (window as any).__auraDocStreaming;
+        if (!alreadyStreaming) {
+          window.dispatchEvent(new CustomEvent("aura:stream-start", { detail: { docId: null } }));
+          let i = 0;
+          const chunkSize = 3;
+          const streamNext = () => {
+            if (i >= content.length) {
+              window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
+              (window as any).__auraDocStreaming = false;
+              return;
+            }
+            const chunk = content.slice(i, i + chunkSize);
+            window.dispatchEvent(new CustomEvent("aura:stream-chunk", { detail: { chunk } }));
+            i += chunkSize;
+            setTimeout(streamNext, 18 + Math.random() * 15);
+          };
+          (window as any).__auraDocStreaming = true;
+          streamNext();
+          toast.success("Aura is writing into the document…");
+        }
       } else {
         // Create new empty document, navigate to it, then stream content in
         if (!user) { toast.error("Sign in to create documents"); return; }
@@ -766,6 +785,7 @@ const AuraWidget: React.FC = () => {
     // Signal document to start a new live stream session
     if (streamingIntoDoc) {
       setIsStreamingToDoc(true);
+      (window as any).__auraDocStreaming = true;
       window.dispatchEvent(new CustomEvent("aura:stream-start", { detail: { docId: injectedDocId } }));
     }
 
@@ -794,6 +814,7 @@ const AuraWidget: React.FC = () => {
           if (streamingIntoDoc) {
             // Signal document stream is done
             window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
+            (window as any).__auraDocStreaming = false;
             setIsStreamingToDoc(false);
             // Save the assistant message in history but don't show response bubble
             if (assistantText) {
@@ -820,7 +841,7 @@ const AuraWidget: React.FC = () => {
       setAuraState("idle");
       toast.error("Failed to reach Aura");
     }
-  }, [messages, isLoading, focusStore, flux, memories, handleToolCall, injectedDocContext]);
+  }, [messages, isLoading, focusStore, flux, memories, handleToolCall, injectedDocContext, injectedDocId]);
 
   const { listening, toggle: toggleVoice, stop: stopVoice, start: startVoice, audioLevelRef: voiceAudioLevelRef } = useVoiceInput((text) => {
     if (pillMode === "idle" || pillMode === "hint") wake();
