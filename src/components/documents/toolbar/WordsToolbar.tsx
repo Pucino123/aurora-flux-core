@@ -24,6 +24,7 @@ interface WordsToolbarProps {
   setRenameValue: (v: string) => void;
   commitRename: () => void;
   documentTitle: string;
+  documentId?: string;
   confirmDelete: boolean;
   setConfirmDelete: (v: boolean) => void;
   onDelete: () => void;
@@ -52,7 +53,7 @@ const SEGMENT_LABELS: Record<string, string> = {
 
 const WordsToolbar = ({
   editorRef, onContentChange, exec, renaming, setRenaming, renameValue, setRenameValue,
-  commitRename, documentTitle, confirmDelete, setConfirmDelete, onDelete,
+  commitRename, documentTitle, documentId = "", confirmDelete, setConfirmDelete, onDelete,
   studioMode, onToggleStudio, zoom, onZoomChange, lightMode = false, onToggleLightMode,
   isStreaming = false, onStopStream, onFinishStream,
 }: WordsToolbarProps) => {
@@ -73,7 +74,7 @@ const WordsToolbar = ({
     structure: <StructureTools exec={exec} editorRef={editorRef} lightMode={lm} />,
     insert: <InsertMenu exec={exec} lightMode={lm} />,
     emoji: <EmojiTouchbar onInsert={(emoji) => exec("insertText", emoji)} lightMode={lm} />,
-    ai: <AiToolsPanel editorRef={editorRef} onContentChange={onContentChange} lightMode={lm} documentTitle={documentTitle} />,
+    ai: <AiToolsPanel editorRef={editorRef} onContentChange={onContentChange} lightMode={lm} documentTitle={documentTitle} documentId={documentId} />,
     view: (
       <ViewModeToggle
         studioMode={studioMode} onToggleStudio={onToggleStudio}

@@ -369,15 +369,21 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
         onContentChange={handleInput}
         exec={exec}
         renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
-        commitRename={commitRename} documentTitle={doc.title} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete}
+        commitRename={commitRename} documentTitle={doc.title} documentId={doc.id} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete}
         onDelete={() => onDelete(doc.id)}
         studioMode={studioMode} onToggleStudio={() => setStudioMode(!studioMode)}
         zoom={zoom} onZoomChange={setZoom}
         lightMode={lm}
         onToggleLightMode={onToggleLightMode}
         isStreaming={isStreaming}
-        onStopStream={() => streamCancelRef.current?.()}
-        onFinishStream={() => streamFinishRef.current?.()}
+        onStopStream={() => {
+          window.dispatchEvent(new CustomEvent("aura:stream-stop"));
+          streamCancelRef.current?.();
+        }}
+        onFinishStream={() => {
+          window.dispatchEvent(new CustomEvent("aura:stream-done"));
+          streamFinishRef.current?.();
+        }}
       />
       <div className="relative flex-1 flex flex-col min-h-0">
         {ghostText && (
