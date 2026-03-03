@@ -116,52 +116,56 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     return () => window.removeEventListener("aura:write-to-document" as any, handler);
   }, [doc.id, onUpdate]);
 
-  // Listen for Aura live chunk streaming (character-by-character from AI stream)
-  useEffect(() => {
-    let streamEl: HTMLElement | null = null;
-    let accumulated = "";
-    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  // Listen for Aura live chunk streaming — use refs so closure captures stay valid across renders
+  const streamElRef = useRef<HTMLElement | null>(null);
+  const accumulatedRef = useRef("");
+  const streamSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const onStart = () => {
+  useEffect(() => {
+    const onStart = (e: CustomEvent) => {
+      // Only respond if no docId filter, or docId matches this document
+      const targetDocId = e.detail?.docId;
+      if (targetDocId && targetDocId !== doc.id) return;
       if (!editorRef.current) return;
-      accumulated = "";
-      const streamId = `aura-live-${Date.now()}`;
+      accumulatedRef.current = "";
+      // Remove any previous unfinished stream element
+      const prev = editorRef.current.querySelector("[data-aura-stream]");
+      if (prev) prev.remove();
       const p = document.createElement("p");
-      p.id = streamId;
+      p.setAttribute("data-aura-stream", "1");
       p.style.whiteSpace = "pre-wrap";
       editorRef.current.appendChild(p);
-      streamEl = p;
+      streamElRef.current = p;
       setIsStreaming(true);
     };
 
     const onChunk = (e: CustomEvent) => {
       const { chunk } = e.detail || {};
-      if (!chunk || !streamEl) return;
-      accumulated += chunk;
-      streamEl.textContent = accumulated + "▍";
+      if (!chunk) return;
+      accumulatedRef.current += chunk;
+      if (streamElRef.current) {
+        streamElRef.current.textContent = accumulatedRef.current + "▍";
+      }
       editorRef.current?.scrollTo({ top: editorRef.current.scrollHeight, behavior: "smooth" });
-      // Periodic save
-      if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
+      if (streamSaveTimerRef.current) clearTimeout(streamSaveTimerRef.current);
+      streamSaveTimerRef.current = setTimeout(() => {
         if (editorRef.current) onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
-      }, 500);
+      }, 600);
     };
 
     const onDone = () => {
-      if (saveTimer) clearTimeout(saveTimer);
-      if (streamEl) { streamEl.textContent = accumulated; streamEl = null; }
+      if (streamSaveTimerRef.current) clearTimeout(streamSaveTimerRef.current);
+      if (streamElRef.current) {
+        streamElRef.current.textContent = accumulatedRef.current;
+        streamElRef.current.removeAttribute("data-aura-stream");
+        streamElRef.current = null;
+      }
       if (editorRef.current) onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
       setIsStreaming(false);
-      accumulated = "";
+      accumulatedRef.current = "";
     };
 
-    const onStop = () => {
-      if (saveTimer) clearTimeout(saveTimer);
-      if (streamEl) { streamEl.textContent = accumulated; streamEl = null; }
-      if (editorRef.current) onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
-      setIsStreaming(false);
-      accumulated = "";
-    };
+    const onStop = () => onDone();
 
     window.addEventListener("aura:stream-start" as any, onStart);
     window.addEventListener("aura:stream-chunk" as any, onChunk);
@@ -172,7 +176,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
       window.removeEventListener("aura:stream-chunk" as any, onChunk);
       window.removeEventListener("aura:stream-done" as any, onDone);
       window.removeEventListener("aura:stream-stop" as any, onStop);
-      if (saveTimer) clearTimeout(saveTimer);
+      if (streamSaveTimerRef.current) clearTimeout(streamSaveTimerRef.current);
     };
   }, [doc.id, onUpdate]);
 

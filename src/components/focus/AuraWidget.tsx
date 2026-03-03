@@ -766,7 +766,7 @@ const AuraWidget: React.FC = () => {
     // Signal document to start a new live stream session
     if (streamingIntoDoc) {
       setIsStreamingToDoc(true);
-      window.dispatchEvent(new CustomEvent("aura:stream-start", {}));
+      window.dispatchEvent(new CustomEvent("aura:stream-start", { detail: { docId: injectedDocId } }));
     }
 
     try {
