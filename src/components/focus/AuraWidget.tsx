@@ -703,28 +703,26 @@ const AuraWidget: React.FC = () => {
       const { title, content, target, folder_id } = args;
       if (!content) return;
       if (target === "current") {
-        // If we're already streaming live from the send() function, don't double-stream.
-        // Only stream via tool call when NOT in injected-doc streaming mode.
-        const alreadyStreaming = (window as any).__auraDocStreaming;
-        if (!alreadyStreaming) {
-          window.dispatchEvent(new CustomEvent("aura:stream-start", { detail: { docId: null } }));
-          let i = 0;
-          const chunkSize = 3;
-          const streamNext = () => {
-            if (i >= content.length) {
-              window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
-              (window as any).__auraDocStreaming = false;
-              return;
-            }
-            const chunk = content.slice(i, i + chunkSize);
-            window.dispatchEvent(new CustomEvent("aura:stream-chunk", { detail: { chunk } }));
-            i += chunkSize;
-            setTimeout(streamNext, 18 + Math.random() * 15);
-          };
-          (window as any).__auraDocStreaming = true;
-          streamNext();
-          toast.success("Aura is writing into the document…");
-        }
+        // Whether or not we were already "streaming" via plain text, we now have the full
+        // content from the tool call — stream it character-by-character into the document.
+        // First reset any stuck stream state.
+        (window as any).__auraDocStreaming = true;
+        window.dispatchEvent(new CustomEvent("aura:stream-start", {}));
+        let i = 0;
+        const chunkSize = 3;
+        const streamNext = () => {
+          if (i >= content.length) {
+            window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
+            (window as any).__auraDocStreaming = false;
+            return;
+          }
+          const chunk = content.slice(i, i + chunkSize);
+          window.dispatchEvent(new CustomEvent("aura:stream-chunk", { detail: { chunk } }));
+          i += chunkSize;
+          setTimeout(streamNext, 12 + Math.random() * 10);
+        };
+        setTimeout(streamNext, 60); // small delay so stream-start event is processed first
+        toast.success("Aura is writing into the document…");
       } else {
         // Create new empty document, navigate to it, then stream content in
         if (!user) { toast.error("Sign in to create documents"); return; }
@@ -814,13 +812,16 @@ const AuraWidget: React.FC = () => {
         () => {
           setIsLoading(false);
           if (streamingIntoDoc) {
-            // Signal document stream is done
-            window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
-            (window as any).__auraDocStreaming = false;
-            setIsStreamingToDoc(false);
-            // Save the assistant message in history but don't show response bubble
+            // Only fire stream-done here if plain text was streamed (assistantText has content).
+            // If a tool call was used (assistantText empty), the tool handler manages stream-done itself.
             if (assistantText) {
+              window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
+              (window as any).__auraDocStreaming = false;
+              setIsStreamingToDoc(false);
               setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);
+            } else {
+              // Tool call path — let the tool handler finish; just update UI state
+              setIsStreamingToDoc(false);
             }
             setPillMode("input");
             setAuraState("idle");
