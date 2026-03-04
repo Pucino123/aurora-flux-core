@@ -786,7 +786,9 @@ const AuraWidget: React.FC = () => {
     if (streamingIntoDoc) {
       setIsStreamingToDoc(true);
       (window as any).__auraDocStreaming = true;
-      window.dispatchEvent(new CustomEvent("aura:stream-start", { detail: { docId: injectedDocId } }));
+      // Small delay so DocumentView's listener is mounted before we fire stream-start
+      await new Promise(r => setTimeout(r, 50));
+      window.dispatchEvent(new CustomEvent("aura:stream-start", {}));
     }
 
     try {
