@@ -121,17 +121,20 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const accumulatedRef = useRef("");
   const streamSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Use stable refs for all streaming callbacks so re-renders never break the event listener
+  const onUpdateRef = useRef(onUpdate);
+  const docIdRef = useRef(doc.id);
+  useEffect(() => { onUpdateRef.current = onUpdate; }, [onUpdate]);
+  useEffect(() => { docIdRef.current = doc.id; }, [doc.id]);
+
   useEffect(() => {
-    const onStart = (e: CustomEvent) => {
-      // Only respond if no docId filter, or docId matches this document
-      const targetDocId = e.detail?.docId;
-      if (targetDocId && targetDocId !== doc.id) return;
+    const onStart = () => {
       if (!editorRef.current) return;
       accumulatedRef.current = "";
       // Remove any previous unfinished stream element
       const prev = editorRef.current.querySelector("[data-aura-stream]");
       if (prev) prev.remove();
-      const p = document.createElement("p");
+      const p = window.document.createElement("p");
       p.setAttribute("data-aura-stream", "1");
       p.style.whiteSpace = "pre-wrap";
       editorRef.current.appendChild(p);
@@ -141,15 +144,13 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
 
     const onChunk = (e: CustomEvent) => {
       const { chunk } = e.detail || {};
-      if (!chunk) return;
+      if (!chunk || !streamElRef.current) return;
       accumulatedRef.current += chunk;
-      if (streamElRef.current) {
-        streamElRef.current.textContent = accumulatedRef.current + "▍";
-      }
+      streamElRef.current.textContent = accumulatedRef.current + "▍";
       editorRef.current?.scrollTo({ top: editorRef.current.scrollHeight, behavior: "smooth" });
       if (streamSaveTimerRef.current) clearTimeout(streamSaveTimerRef.current);
       streamSaveTimerRef.current = setTimeout(() => {
-        if (editorRef.current) onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+        if (editorRef.current) onUpdateRef.current(docIdRef.current, { content: { html: editorRef.current.innerHTML } });
       }, 600);
     };
 
@@ -160,25 +161,25 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
         streamElRef.current.removeAttribute("data-aura-stream");
         streamElRef.current = null;
       }
-      if (editorRef.current) onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+      if (editorRef.current) onUpdateRef.current(docIdRef.current, { content: { html: editorRef.current.innerHTML } });
       setIsStreaming(false);
       accumulatedRef.current = "";
+      (window as any).__auraDocStreaming = false;
     };
-
-    const onStop = () => onDone();
 
     window.addEventListener("aura:stream-start" as any, onStart);
     window.addEventListener("aura:stream-chunk" as any, onChunk);
     window.addEventListener("aura:stream-done" as any, onDone);
-    window.addEventListener("aura:stream-stop" as any, onStop);
+    window.addEventListener("aura:stream-stop" as any, onDone);
     return () => {
       window.removeEventListener("aura:stream-start" as any, onStart);
       window.removeEventListener("aura:stream-chunk" as any, onChunk);
       window.removeEventListener("aura:stream-done" as any, onDone);
-      window.removeEventListener("aura:stream-stop" as any, onStop);
+      window.removeEventListener("aura:stream-stop" as any, onDone);
       if (streamSaveTimerRef.current) clearTimeout(streamSaveTimerRef.current);
     };
-  }, [doc.id, onUpdate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Listen for Aura stream-to-document (typewriter word-by-word — legacy)
   useEffect(() => {
