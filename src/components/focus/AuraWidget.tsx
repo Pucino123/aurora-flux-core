@@ -703,26 +703,52 @@ const AuraWidget: React.FC = () => {
       const { title, content, target, folder_id } = args;
       if (!content) return;
       if (target === "current") {
-        // Whether or not we were already "streaming" via plain text, we now have the full
-        // content from the tool call — stream it character-by-character into the document.
-        // First reset any stuck stream state.
+        // Tool-call path: stream content character-by-character into the active document.
         (window as any).__auraDocStreaming = true;
+        let stopped = false;
+        let finishNow = false;
+
+        // Register stop/finish handlers on the window so DocumentView toolbar buttons work
+        (window as any).__auraStreamStop = () => { stopped = true; };
+        (window as any).__auraStreamFinish = () => { finishNow = true; };
+
         window.dispatchEvent(new CustomEvent("aura:stream-start", {}));
         let i = 0;
-        const chunkSize = 3;
+        const chunkSize = 2;
         const streamNext = () => {
+          if (stopped) {
+            window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
+            (window as any).__auraDocStreaming = false;
+            delete (window as any).__auraStreamStop;
+            delete (window as any).__auraStreamFinish;
+            return;
+          }
+          if (finishNow) {
+            // Find end of current sentence and dump remaining to that point
+            const remaining = content.slice(i);
+            const sentenceEnd = remaining.search(/[.!?।\n]/);
+            const endIdx = sentenceEnd === -1 ? remaining.length : sentenceEnd + 1;
+            const finalChunk = remaining.slice(0, endIdx);
+            if (finalChunk) window.dispatchEvent(new CustomEvent("aura:stream-chunk", { detail: { chunk: finalChunk } }));
+            window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
+            (window as any).__auraDocStreaming = false;
+            delete (window as any).__auraStreamStop;
+            delete (window as any).__auraStreamFinish;
+            return;
+          }
           if (i >= content.length) {
             window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
             (window as any).__auraDocStreaming = false;
+            delete (window as any).__auraStreamStop;
+            delete (window as any).__auraStreamFinish;
             return;
           }
           const chunk = content.slice(i, i + chunkSize);
           window.dispatchEvent(new CustomEvent("aura:stream-chunk", { detail: { chunk } }));
           i += chunkSize;
-          setTimeout(streamNext, 12 + Math.random() * 10);
+          setTimeout(streamNext, 10 + Math.random() * 8);
         };
-        setTimeout(streamNext, 60); // small delay so stream-start event is processed first
-        toast.success("Aura is writing into the document…");
+        setTimeout(streamNext, 30);
       } else {
         // Create new empty document, navigate to it, then stream content in
         if (!user) { toast.error("Sign in to create documents"); return; }
