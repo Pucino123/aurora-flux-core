@@ -378,12 +378,15 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
         onToggleLightMode={onToggleLightMode}
         isStreaming={isStreaming}
         onStopStream={() => {
-          window.dispatchEvent(new CustomEvent("aura:stream-stop"));
+          // Hard stop — kill both legacy word-stream and new chunk-stream
           streamCancelRef.current?.();
+          if ((window as any).__auraStreamStop) (window as any).__auraStreamStop();
+          window.dispatchEvent(new CustomEvent("aura:stream-stop"));
         }}
         onFinishStream={() => {
-          window.dispatchEvent(new CustomEvent("aura:stream-done"));
+          // Graceful finish — complete current sentence then stop
           streamFinishRef.current?.();
+          if ((window as any).__auraStreamFinish) (window as any).__auraStreamFinish();
         }}
       />
       <div className="relative flex-1 flex flex-col min-h-0">
