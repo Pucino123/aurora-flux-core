@@ -76,7 +76,8 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
     e.stopPropagation();
     e.preventDefault();
     const content = editorRef.current?.innerText?.trim() || "";
-    window.dispatchEvent(new CustomEvent("aura:toggle", {
+    // Use aura:summon-with-doc so Aura opens with full document context injected
+    window.dispatchEvent(new CustomEvent("aura:summon-with-doc", {
       detail: { content, title: documentTitle, docId: documentId, prompt: "" },
     }));
   };
