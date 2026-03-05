@@ -780,13 +780,8 @@ const AuraWidget: React.FC = () => {
       ? `${baseContext}\n\n═══ CURRENTLY OPEN DOCUMENT (user is asking about this) ═══\n${injectedDocContext}\n═══ END DOCUMENT ═══\n\nIMPORTANT: When asked to write content, respond with the actual content text directly (no tool call needed) — the text will be streamed live into the document editor.`
       : baseContext;
 
-    // Signal document to start a new live stream session
     if (streamingIntoDoc) {
       setIsStreamingToDoc(true);
-      (window as any).__auraDocStreaming = true;
-      // Small delay so DocumentView's listener is mounted before we fire stream-start
-      await new Promise(r => setTimeout(r, 50));
-      window.dispatchEvent(new CustomEvent("aura:stream-start", {}));
     }
 
     try {
@@ -797,10 +792,13 @@ const AuraWidget: React.FC = () => {
           assistantText += chunk;
           setAuraState("speaking");
           if (streamingIntoDoc) {
-            // Stream each chunk live into the document
+            // Plain-text streaming path: fire start on first chunk, then stream chunks
+            if (assistantText.length === chunk.length) {
+              // First chunk — start the stream
+              (window as any).__auraDocStreaming = true;
+              window.dispatchEvent(new CustomEvent("aura:stream-start", {}));
+            }
             window.dispatchEvent(new CustomEvent("aura:stream-chunk", { detail: { chunk } }));
-            // Keep pill in "processing" to show streaming indicator
-            setPillMode((prev) => prev === "processing" ? "processing" : prev);
           } else {
             setTimeout(() => {
               setPillMode((prev) => prev === "processing" || prev === "response" ? "response" : prev);
@@ -812,17 +810,14 @@ const AuraWidget: React.FC = () => {
         () => {
           setIsLoading(false);
           if (streamingIntoDoc) {
-            // Only fire stream-done here if plain text was streamed (assistantText has content).
-            // If a tool call was used (assistantText empty), the tool handler manages stream-done itself.
             if (assistantText) {
+              // Plain-text path finished — signal done
               window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
               (window as any).__auraDocStreaming = false;
-              setIsStreamingToDoc(false);
               setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);
-            } else {
-              // Tool call path — let the tool handler finish; just update UI state
-              setIsStreamingToDoc(false);
             }
+            // Tool-call path: tool handler already owns stream-done
+            setIsStreamingToDoc(false);
             setPillMode("input");
             setAuraState("idle");
           } else {
@@ -839,7 +834,10 @@ const AuraWidget: React.FC = () => {
     } catch {
       setIsLoading(false);
       setIsStreamingToDoc(false);
-      if (streamingIntoDoc) window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
+      if (streamingIntoDoc) {
+        window.dispatchEvent(new CustomEvent("aura:stream-done", {}));
+        (window as any).__auraDocStreaming = false;
+      }
       setPillMode("input");
       setAuraState("idle");
       toast.error("Failed to reach Aura");
