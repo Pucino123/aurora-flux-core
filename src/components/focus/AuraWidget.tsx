@@ -498,8 +498,8 @@ const AuraWidget: React.FC = () => {
         return;
       }
       // Always set injectedDocContext when triggered from a document (even if empty doc)
-      const docLabel = title || "Untitled";
-      setInjectedDocContext(`[Open document: "${docLabel}"]\n${content || "(empty document)"}`);
+      const docLabel2 = title || "Untitled";
+      setInjectedDocContext(`[Open document: "${docLabel2}"][doc_id:${docId || null}]\n${content || "(empty document)"}`);
       setInjectedDocId(docId || null);
       wake();
       if (prompt) setTimeout(() => setInput(prompt), 50);
