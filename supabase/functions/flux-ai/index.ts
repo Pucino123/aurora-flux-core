@@ -1031,6 +1031,70 @@ ${context}
             },
           },
         },
+        {
+          type: "function",
+          function: {
+            name: "update_spreadsheet_cell",
+            description: "Write a value or formula into a specific spreadsheet cell. Use when user asks to set a cell value, update a cell, or enter data in a specific cell. Only when a spreadsheet is open.",
+            parameters: {
+              type: "object",
+              properties: {
+                cell: { type: "string", description: "Cell reference in A1 notation, e.g. 'B3', 'C10'" },
+                value: { type: "string", description: "The value or formula to write, e.g. '=SUM(A1:A10)', 'Hello', '42'" },
+                note: { type: "string", description: "Brief explanation of what was written (optional)" },
+              },
+              required: ["cell", "value"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "delete_document",
+            description: "Permanently delete a document by its ID. Use when user says 'delete this document', 'remove this file', or 'trash this document'. Use the doc_id from context ([doc_id:xxx]).",
+            parameters: {
+              type: "object",
+              properties: {
+                doc_id: { type: "string", description: "The exact UUID of the document to delete (from [doc_id:xxx] in context)" },
+                title: { type: "string", description: "Document title for confirmation message (optional)" },
+              },
+              required: ["doc_id"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "append_to_document",
+            description: "Append new text to an existing document WITHOUT overwriting previous content. Use when user says 'add to this document', 'append', 'continue writing', or 'add a section'. The doc_id comes from context ([doc_id:xxx]).",
+            parameters: {
+              type: "object",
+              properties: {
+                doc_id: { type: "string", description: "The exact UUID of the document to append to (from [doc_id:xxx] in context)" },
+                content: { type: "string", description: "The COMPLETE text to append. Must be the full new section — no placeholders." },
+              },
+              required: ["doc_id", "content"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "update_calendar_block",
+            description: "Reschedule an existing calendar block — change its time, date, or duration. Use when user says 'move the meeting to X', 'reschedule to', or 'change the time of'. Use the exact block_id from context ([block_id:xxx]).",
+            parameters: {
+              type: "object",
+              properties: {
+                block_id: { type: "string", description: "The exact block_id from the schedule context ([block_id:xxx])" },
+                time: { type: "string", description: "New start time, e.g. '15:00', '09:30' (optional)" },
+                scheduled_date: { type: "string", description: "New date in YYYY-MM-DD format (optional)" },
+                duration: { type: "string", description: "New duration, e.g. '30m', '60m' (optional)" },
+                title: { type: "string", description: "New title for the block (optional)" },
+              },
+              required: ["block_id"],
+            },
+          },
+        },
       ],
       stream: true,
     }),

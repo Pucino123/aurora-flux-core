@@ -783,6 +783,50 @@ const AuraWidget: React.FC = () => {
         window.dispatchEvent(new CustomEvent("aura:inject-formula", { detail: { cell, formula } }));
         toast.success(`Formula injected into ${cell}${note ? ` — ${note}` : ""}`);
       }
+    } else if (name === "update_spreadsheet_cell") {
+      const { cell, value, note } = args;
+      if (cell && value !== undefined) {
+        // Reuse inject-formula event — spreadsheet editor handles both values and formulas
+        window.dispatchEvent(new CustomEvent("aura:inject-formula", { detail: { cell, formula: value } }));
+        toast.success(`Cell ${cell} updated${note ? ` — ${note}` : ""}`);
+      }
+    } else if (name === "delete_document") {
+      const { doc_id, title: docTitle } = args;
+      if (doc_id && user) {
+        (supabase as any)
+          .from("documents")
+          .delete()
+          .eq("id", doc_id)
+          .eq("user_id", user.id)
+          .then(({ error }: { error: any }) => {
+            if (error) toast.error("Failed to delete document");
+            else {
+              toast.success(`Document deleted${docTitle ? `: "${docTitle}"` : ""}`);
+              // Clear doc context and close Aura's document mode
+              setInjectedDocContext(null);
+              setInjectedDocId(null);
+            }
+          });
+      }
+    } else if (name === "append_to_document") {
+      const { doc_id, content: appendContent } = args;
+      if (!appendContent) return;
+      if (doc_id) {
+        // Fire stream-to-document with append:true so DocumentView adds after existing content
+        window.dispatchEvent(new CustomEvent("aura:stream-to-document", { detail: { text: appendContent, append: true } }));
+        toast.success("Appending to document…");
+      }
+    } else if (name === "update_calendar_block") {
+      const { block_id, time, scheduled_date, duration, title: blockTitle } = args;
+      if (block_id) {
+        const updates: any = {};
+        if (time) updates.time = time;
+        if (scheduled_date) updates.scheduled_date = scheduled_date;
+        if (duration) updates.duration = duration;
+        if (blockTitle) updates.title = blockTitle;
+        flux.updateBlock(block_id, updates);
+        toast.success(`Schedule block updated`);
+      }
     }
   }, [flux, user, setTheme, focusStore]);
 
