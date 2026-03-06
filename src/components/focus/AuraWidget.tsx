@@ -470,8 +470,9 @@ const AuraWidget: React.FC = () => {
     const handler = (e: CustomEvent) => {
       const { content, title, docId, prompt } = e.detail || {};
       const docLabel = title || "Untitled";
-      setInjectedDocContext(`[Open document: "${docLabel}"]\n${content || "(empty document)"}`);
-      setInjectedDocId(docId || null);
+      const docId_ = docId || null;
+      setInjectedDocContext(`[Open document: "${docLabel}"][doc_id:${docId_}]\n${content || "(empty document)"}`);
+      setInjectedDocId(docId_);
       wake();
       if (prompt) setTimeout(() => setInput(prompt), 50);
     };
