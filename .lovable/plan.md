@@ -1,27 +1,54 @@
 
-## Problem Analysis
+## Upgrade Aura to Advanced Executive Assistant
 
-The user wants:
-- ✅ The background behind the document **remains blurred** (restore `backdrop-blur-md` on the backdrop)
-- ✅ When clicking Aura inside a document, **Aura appears sharp** (not blurred by the backdrop)
-- ✅ Clicking the Aura button again closes/blurs Aura back out
+### What's changing
 
-### Root Cause
+**Goal:** Make Aura a fully integrated executive assistant that can holistically manage tasks, calendar, documents, and spreadsheets — including cross-functional chaining (booking a meeting auto-creates agenda + spreadsheet + task).
 
-The document backdrop div (`z-[100]`) had `backdrop-blur-md` removed in the last fix. The user wants it back.
+---
 
-The reason Aura appeared blurred: CSS `backdrop-filter` on the backdrop element creates a compositing layer. Elements with higher z-index that sit above the backdrop can appear to have blur applied to them because they're being composited on top of the blurred layer — but only if the Aura portal element itself has `backdrop-filter` or `filter` styles inherited.
+### 1. New tools to add in the edge function (`flux-ai/index.ts`)
 
-Looking at the portal div in `AuraWidget.tsx` (line 1045): the processing pill has `backdropFilter: "none"` already. The input/response pill at line 1052 does NOT — it just uses `background: rgba(20,20,30,0.85)`.
+| Tool | Purpose |
+|---|---|
+| `update_spreadsheet_cell` | Write a value or formula into a specific cell of an open spreadsheet |
+| `delete_document` | Delete/remove an existing document by its ID |
+| `append_to_document` | Append new text to an existing document without overwriting |
+| `update_calendar_block` | Reschedule an existing block (change time/date/duration) |
 
-The actual Aura widget when portalled renders inside a `DraggableWidget` which may apply styles, OR the issue is the main `widget` variable (the DraggableWidget) is being rendered at both `{widget}` AND in the portal — causing duplication.
+### 2. System prompt overhaul (`handleAura`)
 
-### Fix Plan
+Replace the current prompt with the Advanced Executive Assistant spec:
+- Explicit CRUD capabilities listed per domain (Tasks, Calendar, Documents, Spreadsheets)
+- **Cross-functional chaining rule:** When a complex meeting is booked → chain `create_note` (agenda) + `create_spreadsheet` (tracking) + `add_task` (review task)
+- **Append vs overwrite:** `write_to_document` with `target="current"` defaults to **appending** unless user says "replace", "overwrite", or "rewrite"
+- **Confirmation protocol:** After any action(s), concise confirmation in user's language
+- Smart defaults remain (no confirmation on simple requests)
 
-**File: `src/components/focus/DesktopDocumentViewer.tsx`**
-- Restore `backdrop-blur-md` on the backdrop div (line 85): change back to `className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md"`
+### 3. New tool handlers in `AuraWidget.tsx`
 
-**File: `src/components/focus/AuraWidget.tsx`**
-- The portal wrapper div (line 1011) needs `filter: "none"` added to its style to break out of any compositing chain
-- Remove the duplicate `{widget}` render at line 1009 — currently when `injectedDocContext && isActive`, it renders BOTH the normal widget position AND the portal. Remove `{widget}` so only the portal version shows.
-- Add `filter: "none"` and `WebkitFilter: "none"` to the portal wrapper to ensure no blur bleeds through
+Wire up the 4 new tools:
+- `update_spreadsheet_cell` → fires `aura:inject-formula` event (already handled by the spreadsheet editor), includes a value mode
+- `delete_document` → calls Supabase `documents` delete by ID, shows toast
+- `append_to_document` → fires `aura:stream-to-document` with `append: true`
+- `update_calendar_block` → calls `flux.updateBlock(id, { time, duration, scheduled_date })`
+
+### 4. Context enrichment
+
+Add open document's ID to context string so Aura can reference it when calling `delete_document` or `append_to_document`. Currently only title/content is passed — add `[doc_id: xxx]` to the injected doc context.
+
+---
+
+### Files to edit
+
+```text
+supabase/functions/flux-ai/index.ts   — system prompt + 4 new tool definitions
+src/components/focus/AuraWidget.tsx   — 4 new tool handlers + context doc ID
+```
+
+### Technical notes
+
+- `update_spreadsheet_cell` reuses the existing `aura:inject-formula` event — the spreadsheet editor already handles this
+- `append_to_document` uses the existing `aura:stream-to-document` with `append: true` flag
+- `delete_document` requires the doc ID from context — Aura gets it from the enriched context string `[doc_id: xxx]`
+- `update_calendar_block` needs `flux.updateBlock` — need to verify it exists in FluxContext
