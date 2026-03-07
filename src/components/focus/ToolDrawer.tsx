@@ -12,7 +12,7 @@ const TOOL_CATEGORIES = [
     tools: [
       { id: "clock", label: "Clock", icon: Clock },
       { id: "timer", label: "Timer", icon: Timer },
-      { id: "notes", label: "Notes", icon: StickyNote },
+      { id: "notes", label: "Sticky Notes", icon: StickyNote },
       { id: "scratchpad", label: "Scratchpad", icon: FileText },
       { id: "chat", label: "Chat", icon: Users },
     ],
