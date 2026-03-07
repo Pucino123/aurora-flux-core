@@ -8,8 +8,7 @@ import { t } from "@/lib/i18n";
 import FinanceDashboard from "./FinanceDashboard";
 import FolderWidgetBar from "./dashboard/FolderWidgetBar";
 import CollapsibleSection from "./CollapsibleSection";
-import BudgetTable from "./BudgetTable";
-import type { BudgetRow } from "./BudgetTable";
+import BudgetWidget from "./BudgetWidget";
 import NotePrioritySelector, { getNotePriorityStyle, getNotePriorityBadge } from "./NotePrioritySelector";
 import { useDocuments } from "@/hooks/useDocuments";
 import DocumentView from "./documents/DocumentView";
@@ -425,16 +424,12 @@ const ProjectBoard = ({ folderId }: ProjectBoardProps) => {
         </div>
       )}
 
-      {/* Budget Tables */}
-      {budgetTasks.map((bt) => {
-        let rows: BudgetRow[] = [];
-        try {
-          rows = JSON.parse(bt.content || "[]");
-        } catch {
-          rows = [{ category: "", budgeted: 0, spent: 0 }];
-        }
-        return <BudgetTable key={bt.id} taskId={bt.id} title={bt.title} initialRows={rows} pinned={bt.pinned} />;
-      })}
+      {/* Budget Widget */}
+      {budgetTasks.length > 0 && (
+        <div className="mb-4 rounded-xl border border-border/60 bg-card/40 p-4" style={{ minHeight: 480 }}>
+          <BudgetWidget />
+        </div>
+      )}
 
       {/* Goals in this folder */}
       {folderGoals.map((goal) => (

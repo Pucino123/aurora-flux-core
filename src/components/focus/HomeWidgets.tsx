@@ -5,14 +5,15 @@ import { WeeklyWorkoutWidget } from "@/components/widgets/FitnessWidget";
 import { Top5TasksWidget, ProjectStatusWidget } from "@/components/widgets/ProductivityWidget";
 import SmartPlanWidget from "@/components/widgets/SmartPlanWidget";
 import GamificationCard from "@/components/GamificationCard";
+import BudgetWidget from "@/components/BudgetWidget";
 import { useTeamChat } from "@/hooks/useTeamChat";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useRef, useCallback, useEffect } from "react";
 
-/* ── Budget Preview ── */
+/* ── Budget Widget (full interactive) ── */
 export const FocusBudgetWidget = () => (
-  <DraggableWidget id="budget-preview" title="Budget" defaultPosition={{ x: 60, y: 400 }} defaultSize={{ w: 340, h: 280 }} scrollable>
-    <BudgetPreviewWidget />
+  <DraggableWidget id="budget-preview" title="Budget" defaultPosition={{ x: 60, y: 400 }} defaultSize={{ w: 420, h: 520 }} scrollable>
+    <BudgetWidget />
   </DraggableWidget>
 );
 
