@@ -231,7 +231,7 @@ function SummaryCard({
 }: {
   label: string;
   value: number;
-  icon: React.FC<{ size?: number; className?: string }>;
+  icon: React.ComponentType<{ size?: number | string; className?: string }>;
   colorClass: string;
 }) {
   return (
@@ -246,6 +246,7 @@ function SummaryCard({
     </div>
   );
 }
+
 
 /* ─────────────────────────────────────────────
    Main BudgetWidget
