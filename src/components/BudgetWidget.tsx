@@ -1,6 +1,7 @@
-import { useState, useCallback, useId } from "react";
+import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Check, X } from "lucide-react";
+import { type LucideProps, Plus, Trash2, TrendingUp, TrendingDown, Wallet, Check, X } from "lucide-react";
+import { type ForwardRefExoticComponent, type RefAttributes } from "react";
 import { formatCurrency } from "@/lib/locale";
 
 /* ─────────────────────────────────────────────
