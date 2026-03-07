@@ -391,19 +391,19 @@ const BudgetWidget = ({ className = "" }: BudgetWidgetProps) => {
             label="Total Income"
             value={totalIncome}
             icon={TrendingUp}
-            colorClass="text-emerald-500"
+            colorClass="text-[hsl(var(--priority-low))]"
           />
           <SummaryCard
             label="Total Expenses"
             value={totalExpenses}
             icon={TrendingDown}
-            colorClass="text-rose-500"
+            colorClass="text-destructive"
           />
           <SummaryCard
             label="Net Balance"
             value={netBalance}
             icon={Wallet}
-            colorClass={netBalance >= 0 ? "text-emerald-500" : "text-rose-500"}
+            colorClass={netBalance >= 0 ? "text-[hsl(var(--priority-low))]" : "text-destructive"}
           />
         </motion.div>
       </AnimatePresence>
@@ -422,7 +422,7 @@ const BudgetWidget = ({ className = "" }: BudgetWidgetProps) => {
           <div className="rounded-xl border border-border/60 bg-card/40 p-4">
             <EntryTable
               entries={activeTab.income}
-              accentColor="bg-emerald-500"
+              accentColor="bg-[hsl(var(--priority-low))]"
               label="Income"
               onUpdate={(id, field, value) => updateEntry("income", id, field, value)}
               onDelete={(id) => deleteEntry("income", id)}
@@ -430,14 +430,14 @@ const BudgetWidget = ({ className = "" }: BudgetWidgetProps) => {
             />
             <div className="flex justify-between text-xs font-semibold mt-3 pt-3 border-t border-border/50">
               <span className="text-muted-foreground">Total Income</span>
-              <span className="text-emerald-500">{formatCurrency(totalIncome)}</span>
+              <span className="text-[hsl(var(--priority-low))]">{formatCurrency(totalIncome)}</span>
             </div>
           </div>
 
           <div className="rounded-xl border border-border/60 bg-card/40 p-4">
             <EntryTable
               entries={activeTab.expenses}
-              accentColor="bg-rose-500"
+              accentColor="bg-destructive"
               label="Expenses"
               onUpdate={(id, field, value) => updateEntry("expenses", id, field, value)}
               onDelete={(id) => deleteEntry("expenses", id)}
@@ -445,7 +445,7 @@ const BudgetWidget = ({ className = "" }: BudgetWidgetProps) => {
             />
             <div className="flex justify-between text-xs font-semibold mt-3 pt-3 border-t border-border/50">
               <span className="text-muted-foreground">Total Expenses</span>
-              <span className="text-rose-500">{formatCurrency(totalExpenses)}</span>
+              <span className="text-destructive">{formatCurrency(totalExpenses)}</span>
             </div>
           </div>
         </motion.div>
@@ -453,5 +453,6 @@ const BudgetWidget = ({ className = "" }: BudgetWidgetProps) => {
     </div>
   );
 };
+
 
 export default BudgetWidget;
