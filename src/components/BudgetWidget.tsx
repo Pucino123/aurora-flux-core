@@ -230,7 +230,7 @@ function SummaryCard({
 }: {
   label: string;
   value: number;
-  icon: React.ElementType;
+  icon: React.FC<{ size?: number; className?: string }>;
   colorClass: string;
 }) {
   return (
