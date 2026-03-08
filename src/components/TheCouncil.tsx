@@ -870,4 +870,3 @@ const TheCouncil = () => {
 };
 
 export default TheCouncil;
-export default TheCouncil;
