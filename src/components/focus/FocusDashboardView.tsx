@@ -1403,7 +1403,16 @@ const FocusContent = () => {
                 <DesktopDocument
                   key={doc.id}
                   doc={doc}
-                  onOpen={(d) => setOpenDesktopDoc(d)}
+                  onOpen={(d) => {
+                    // Open document in a WindowFrame instead of the modal overlay
+                    openWindow({
+                      type: "document",
+                      contentId: d.id,
+                      title: d.title,
+                      layout: "floating",
+                      position: { x: Math.max(60, (window.innerWidth / 2) - 410 + Math.random() * 80), y: Math.max(40, (window.innerHeight / 2) - 310 + Math.random() * 60) },
+                    });
+                  }}
                   onDelete={(id) => { removeDesktopDoc(id); }}
                   onRefetch={refetchDesktopDocs}
                   dragState={docDragState}
