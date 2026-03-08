@@ -1401,6 +1401,12 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                 </p>
               </div>
             </div>
+             </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {!user && (
+                <a
+                  href="/auth"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-purple-200 transition-colors"
                   style={{ background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.35)" }}
                 >
                   <Sparkles size={9} /> Sign up free
