@@ -244,6 +244,23 @@ const FocusStatsWidget = () => {
   }));
   const maxWeek = Math.max(...weekData.map(d => d.minutes), 1);
 
+  // Weekly goal derived
+  const weeklyGoalMin  = weeklyGoalHrs * 60;
+  const weeklyTotalMin = weekData.reduce((s, d) => s + d.minutes, 0);
+  const weeklyPct      = weeklyGoalMin > 0 ? Math.min((weeklyTotalMin / weeklyGoalMin) * 100, 100) : 0;
+  const weeklyHrs      = Math.floor(weeklyTotalMin / 60);
+  const weeklyRem      = weeklyTotalMin % 60;
+  const weeklyGoalMet  = weeklyPct >= 100;
+
+  const saveWeeklyGoal = () => {
+    const v = parseFloat(weeklyGoalInput);
+    if (!isNaN(v) && v > 0) {
+      setWeeklyGoalHrs(v);
+      localStorage.setItem("flux-weekly-goal-hrs", String(v));
+    }
+    setEditingWeeklyGoal(false);
+  };
+
   const mins = Math.floor(timerSecs / 60);
   const secs = timerSecs % 60;
   const timerPct = 1 - timerSecs / POMODORO_SECS;
