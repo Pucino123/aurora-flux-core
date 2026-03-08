@@ -1231,9 +1231,12 @@ const FocusContent = () => {
             const pos = contextMenuPosRef.current;
             const parent = await createFolder({ title: data.title, type: "project", color: data.color, icon: data.icon });
             if (parent) {
-              if (pos) {
-                updatePageFolderPosition(parent.id, { x: pos.x, y: pos.y });
-              }
+              if (pos) updatePageFolderPosition(parent.id, { x: pos.x, y: pos.y });
+              // Register folder to this page only
+              setPages(prev => prev.map((p, i) => i === activePageIndex
+                ? { ...p, visibleFolderIds: [...(p.visibleFolderIds ?? []), parent.id] }
+                : p
+              ));
               if (data.subfolders.length > 0) {
                 for (const sub of data.subfolders) {
                   const subIcon = suggestIcon(sub);
