@@ -91,14 +91,18 @@ const EventPill: React.FC<{ event: CalEvent; compact?: boolean }> = ({ event, co
     );
   }
 
+  // AI-synced task block (has a linked taskId and title starts with "Focus:")
+  const isAiSynced = !!(event.taskId && event.title?.startsWith("Focus:"));
+
   return (
     <div
       className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium truncate cursor-pointer transition-all hover:scale-[1.02]"
       style={{
-        background: `${hex}22`,
-        border: `1px solid ${hex}55`,
-        color: hex,
+        background: isAiSynced ? "rgba(139,92,246,0.14)" : `${hex}22`,
+        border: isAiSynced ? "1px solid rgba(139,92,246,0.45)" : `1px solid ${hex}55`,
+        color: isAiSynced ? "#a78bfa" : hex,
         backdropFilter: "blur(4px)",
+        boxShadow: isAiSynced ? "0 0 10px rgba(139,92,246,0.2)" : undefined,
       }}
       title={event.title}
     >
@@ -108,7 +112,8 @@ const EventPill: React.FC<{ event: CalEvent; compact?: boolean }> = ({ event, co
           {PROVIDER_COLORS[provider].icon}
         </span>
       )}
-      {event.taskId && <CheckSquare size={8} className="shrink-0 opacity-70" />}
+      {isAiSynced && <Sparkles size={8} className="shrink-0" />}
+      {!isAiSynced && event.taskId && <CheckSquare size={8} className="shrink-0 opacity-70" />}
       {!compact && event.startTime && <span className="opacity-60 shrink-0">{event.startTime}</span>}
       <span className="truncate">{event.title}</span>
     </div>
