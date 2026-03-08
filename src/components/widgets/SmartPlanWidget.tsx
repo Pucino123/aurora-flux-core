@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check } from "lucide-react";
+import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check, CalendarDays } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
+import { format, isToday, isTomorrow, differenceInDays, parseISO } from "date-fns";
 import {
   DndContext,
   closestCenter,
@@ -19,6 +19,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type BlockType = "work" | "meeting" | "break" | "ai";
