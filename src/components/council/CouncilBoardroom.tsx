@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useMonetization } from "@/context/MonetizationContext";
 import { motion, AnimatePresence } from "framer-motion";
+import CouncilAvatar from "./CouncilAvatar";
 import {
   Sparkles, BarChart2, Send, Loader2, Share2, X, MessageSquare, TrendingUp, AlertTriangle,
   Lightbulb, Star, Reply, Maximize2, BookmarkPlus, Check, RotateCcw, Download, Users, Link,
@@ -645,13 +646,15 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
       <div className="p-4 flex flex-col h-full">
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
-          <div className="relative w-14 h-14 shrink-0">
-            <ConfidenceRing pct={response?.confidence ?? persona.ringPct} color={color} animate={state === "revealed"} size={56} />
-            <div
-              className="absolute inset-[6px] rounded-full flex items-center justify-center text-[12px] font-bold"
-              style={{ background: `linear-gradient(135deg, ${color}25, ${color}10)`, border: `1px solid ${color}30` }}
-            >
-              <span style={{ color }}>{persona.initials}</span>
+          <div className="relative shrink-0" style={{ width: 52, height: 52 }}>
+            <ConfidenceRing pct={response?.confidence ?? persona.ringPct} color={color} animate={state === "revealed"} size={52} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <CouncilAvatar
+                color={color}
+                size={36}
+                isSpeaking={state === "typing"}
+                personalityIndex={PERSONAS.findIndex(p => p.key === persona.key)}
+              />
             </div>
           </div>
           <div className="flex-1 min-w-0">
@@ -1438,6 +1441,15 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const fullscreenP = fullscreenPersona ? PERSONAS.find(p => p.key === fullscreenPersona) : null;
   const fullscreenR = fullscreenPersona ? responses[fullscreenPersona] : null;
 
+  // ── Inline saved sessions for right panel ──
+  const [savedSessions, setSavedSessions] = useState<{ id: string; content: string; consensus_score: number | null; created_at: string }[]>([]);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("council_ideas").select("id, content, consensus_score, created_at")
+      .eq("user_id", user.id).order("created_at", { ascending: false }).limit(20)
+      .then(({ data }) => { if (data) setSavedSessions(data); });
+  }, [user, savedIdeaId]); // re-fetch after saving
+
   // ── Council Digest text ──
   const digestText = `THE COUNCIL — BOARDROOM ANALYSIS
 Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
@@ -1490,8 +1502,8 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 *Powered by Dashiii Boardroom · [aurora-flux-core.lovable.app](https://aurora-flux-core.lovable.app)*`;
 
   return (
-    <div ref={boardroomRef} className="relative flex flex-col h-full min-h-0 gap-4 overflow-hidden">
-      {/* Ambient orbs — Council atmosphere */}
+    <div ref={boardroomRef} className="relative flex flex-col h-full min-h-0 overflow-hidden">
+      {/* Ambient orbs */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden -z-0">
         <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full opacity-[0.07]"
           style={{ background: "radial-gradient(circle, #34d399, transparent 70%)" }} />
@@ -1500,6 +1512,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full opacity-[0.04]"
           style={{ background: "radial-gradient(circle, #22d3ee, transparent 70%)" }} />
       </div>
+
       {/* Onboarding tour */}
       <AnimatePresence>
         {showTour && (
@@ -1509,311 +1522,288 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
           }} />
         )}
       </AnimatePresence>
-      <AnimatePresence>
-        {isSharedView && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl"
-            style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}
-          >
-            <div className="flex items-center gap-2">
-              <Eye size={12} className="text-accent/70 shrink-0" />
-              <div>
-                <p className="text-[11px] font-semibold text-accent">
+
+      {/* Shared-view / collaborators banners */}
+      <div className="shrink-0 space-y-1.5 mb-2">
+        <AnimatePresence>
+          {isSharedView && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl"
+              style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}
+            >
+              <div className="flex items-center gap-2">
+                <Eye size={11} className="text-accent/70 shrink-0" />
+                <p className="text-[10px] font-semibold text-accent">
                   {sharedByName ? `Shared by ${sharedByName}` : "Shared Boardroom analysis"}
                 </p>
-                <p className="text-[9px] text-muted-foreground">
-                  {sharedByName
-                    ? `${sharedByName} shared this council analysis with you. Sign up to save your own sessions.`
-                    : "This analysis was shared with you. Sign up to save your own sessions and consult the board."}
-                </p>
               </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {!user && (
-                <a
-                  href="/auth"
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-accent-foreground transition-colors bg-accent/20 border border-accent/30 hover:bg-accent/30"
-                >
-                  <Sparkles size={9} /> Sign up free
-                </a>
-              )}
-              <button onClick={() => setIsSharedView(false)} className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-                <X size={11} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Realtime collaborators pill */}
-      <AnimatePresence>
-        {collaborators.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full self-start bg-primary/10 border border-primary/20"
-          >
-            <Users size={10} className="text-primary/70" />
-            <span className="text-[9px] text-primary/70 font-medium">
-              {collaborators.map(c => (
-                <span key={c.userId} className="inline-flex items-center gap-1 mr-2">
-                  {c.isConsulting && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
-                  {c.displayName}
-                </span>
-              ))}
-              {collaborators.some(c => c.isConsulting) ? "is consulting the board…" : "watching live"}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Pitch area */}
-      <div className="space-y-3 shrink-0">
-        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-          <input
-            value={idea}
-            onChange={e => setIdea(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleConsult()}
-            placeholder="Idea: Should I start an eco-friendly coffee shop?"
-            className="flex-1 px-4 py-3 rounded-2xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/40 transition-colors"
-          />
-          {/* New Session button */}
-          <button
-            onClick={handleNewSession}
-            disabled={isConsulting}
-            title="New Session"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30"
-          >
-            <RotateCcw size={14} />
-          </button>
-          <motion.button
-            onClick={handleConsult}
-            disabled={isConsulting}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-50 transition-all shrink-0"
-            style={{
-              background: "linear-gradient(135deg, hsl(270 70% 55%), hsl(310 70% 55%), hsl(200 80% 55%))",
-              boxShadow: "0 4px 20px rgba(139,92,246,0.35)",
-            }}
-          >
-            {isConsulting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {isConsulting ? "Consulting…" : "Consult Board (−5 ✨)"}
-          </motion.button>
-          {/* Export PDF button */}
-          <button
-            onClick={handleExportPDF}
-            disabled={isExportingPDF || !allRevealed}
-            title="Export PDF"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30"
-          >
-            {isExportingPDF ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-          </button>
-          {/* Share session link */}
-          <button
-            onClick={handleShareSession}
-            disabled={!allRevealed}
-            title="Copy Shareable Link"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30"
-          >
-            <Link size={14} />
-          </button>
-          {/* Share verdict card */}
-          <button
-            onClick={() => setShowExport(true)}
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0"
-            title="Share Verdict Card"
-          >
-            <Share2 size={15} />
-          </button>
-          {/* Help / Onboarding tour trigger */}
-          <button
-            onClick={() => setShowTour(true)}
-            title="How to use the Boardroom"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground/50 hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0"
-          >
-            <span className="text-[13px] font-bold">?</span>
-          </button>
-        </div>
-
-        {/* Personality sliders */}
-        <BoardroomPersonalitySliders
-          sliders={personalitySliders}
-          onChange={setPersonalitySliders}
-        />
-
+              <div className="flex items-center gap-2 shrink-0">
+                {!user && (
+                  <a href="/auth" className="flex items-center gap-1 px-3 py-1 rounded-xl text-[10px] font-semibold text-accent-foreground bg-accent/20 border border-accent/30 hover:bg-accent/30 transition-colors">
+                    <Sparkles size={9} /> Sign up free
+                  </a>
+                )}
+                <button onClick={() => setIsSharedView(false)} className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"><X size={11} /></button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {collaborators.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full self-start bg-primary/10 border border-primary/20"
+            >
+              <Users size={10} className="text-primary/70" />
+              <span className="text-[9px] text-primary/70 font-medium">
+                {collaborators.map(c => (
+                  <span key={c.userId} className="inline-flex items-center gap-1 mr-2">
+                    {c.isConsulting && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+                    {c.displayName}
+                  </span>
+                ))}
+                {collaborators.some(c => c.isConsulting) ? "is consulting the board…" : "watching live"}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* ── Council Consensus Score Bar — always visible, updates live ── */}
+      {/* ── TOP: Command bar ── */}
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="shrink-0 px-4 py-3 rounded-2xl border backdrop-blur-sm overflow-hidden relative"
-        style={{
-          background: `linear-gradient(135deg, ${consensus.color}06, ${consensus.color}03)`,
-          borderColor: `${consensus.color}25`,
-        }}
+        initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+        className="shrink-0 flex gap-2 flex-wrap sm:flex-nowrap items-center mb-3 px-4 py-3 rounded-2xl backdrop-blur-sm"
+        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
       >
-        {/* Subtle ambient glow */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: `radial-gradient(ellipse at 20% 50%, ${consensus.color}08, transparent 70%)` }}
+        <input
+          value={idea}
+          onChange={e => setIdea(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleConsult()}
+          placeholder="Idea: Should I start an eco-friendly coffee shop?"
+          className="flex-1 px-4 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/40 transition-colors"
         />
-        <div className="relative flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-base leading-none">{consensus.emoji}</span>
-            <div>
-              <p className="text-[12px] font-bold" style={{ color: consensus.color }}>{consensus.label}</p>
-              <p className="text-[9px] text-muted-foreground/60 leading-tight">{consensus.sublabel}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <motion.p
-              key={avgRing}
-              initial={{ scale: 1.2, opacity: 0.5 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-[22px] font-black tabular-nums leading-none"
-              style={{ color: consensus.color }}
-            >
-              {avgRing}%
-            </motion.p>
-            <p className="text-[8px] text-muted-foreground/40 uppercase tracking-widest">consensus</p>
-          </div>
-        </div>
-        {/* Per-advisor mini bars */}
-        <div className="flex gap-1.5 mb-2">
-          {PERSONAS.map(p => {
-            const conf = responses[p.key]?.confidence ?? (cardStates[p.key] === "idle" ? 0 : p.ringPct);
-            const pColor = SENTIMENT_COLORS[p.sentiment];
-            return (
-              <div key={p.key} className="flex-1 flex flex-col gap-0.5">
-                <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: cardStates[p.key] === "revealed" ? `${conf}%` : "0%" }}
-                    transition={{ duration: 1.0, ease: "easeOut", delay: p.delay / 1000 }}
-                    className="h-full rounded-full"
-                    style={{ background: pColor }}
-                  />
-                </div>
-                <p className="text-[8px] text-muted-foreground/40 text-center truncate">{p.initials}</p>
-              </div>
-            );
-          })}
-        </div>
-        {/* Main composite bar */}
-        <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${avgRing}%` }}
-            transition={{ duration: 1.4, ease: "easeOut" }}
-            className="h-full rounded-full"
-            style={{ background: `linear-gradient(90deg, ${consensus.color}70, ${consensus.color})` }}
-          />
-        </div>
+        <button onClick={handleNewSession} disabled={isConsulting} title="New Session"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30">
+          <RotateCcw size={13} />
+        </button>
+        <motion.button
+          onClick={handleConsult} disabled={isConsulting}
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 transition-all shrink-0"
+          style={{ background: "linear-gradient(135deg, hsl(270 70% 55%), hsl(310 70% 55%), hsl(200 80% 55%))", boxShadow: "0 4px 20px rgba(139,92,246,0.35)" }}
+        >
+          {isConsulting ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+          {isConsulting ? "Consulting…" : "Consult Board (−5 ✨)"}
+        </motion.button>
+        <button onClick={handleExportPDF} disabled={isExportingPDF || !allRevealed} title="Export PDF"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-secondary border border-border text-muted-foreground hover:text-foreground transition-colors shrink-0 disabled:opacity-30">
+          {isExportingPDF ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+        </button>
+        <button onClick={handleShareSession} disabled={!allRevealed} title="Copy Shareable Link"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-secondary border border-border text-muted-foreground hover:text-foreground transition-colors shrink-0 disabled:opacity-30">
+          <Link size={13} />
+        </button>
+        <button onClick={() => setShowExport(true)} title="Share Verdict Card"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-secondary border border-border text-muted-foreground hover:text-foreground transition-colors shrink-0">
+          <Share2 size={13} />
+        </button>
+        <button onClick={() => setShowTour(true)} title="How to use the Boardroom"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-secondary border border-border text-muted-foreground/50 hover:text-foreground transition-colors shrink-0">
+          <span className="text-[12px] font-bold">?</span>
+        </button>
       </motion.div>
 
-      {/* 2×2 grid with flex for expand */}
-      <div className="flex-1 flex gap-3 min-h-0">
-        <div className="flex-1 flex flex-col gap-3 min-h-0 min-w-0">
-          {[PERSONAS[0], PERSONAS[2]].map(persona => (
-            <PersonaCard
-              key={persona.key}
-              persona={persona}
-              state={cardStates[persona.key]}
-              response={responses[persona.key]}
-              isExpanded={expandedCard === persona.key}
-              anyExpanded={expandedCard !== null}
-              onExpand={() => setExpandedCard(persona.key)}
-              onCollapse={() => setExpandedCard(null)}
-              onFullscreen={() => setFullscreenPersona(persona.key)}
-              floatingEmojis={floatingEmojis[persona.key]}
-              userId={user?.id}
-              sessionId={sessionIdRef.current}
-            />
-          ))}
-        </div>
-        <div className="flex-1 flex flex-col gap-3 min-h-0 min-w-0">
-          {[PERSONAS[1], PERSONAS[3]].map(persona => (
-            <PersonaCard
-              key={persona.key}
-              persona={persona}
-              state={cardStates[persona.key]}
-              response={responses[persona.key]}
-              isExpanded={expandedCard === persona.key}
-              anyExpanded={expandedCard !== null}
-              onExpand={() => setExpandedCard(persona.key)}
-              onCollapse={() => setExpandedCard(null)}
-              onFullscreen={() => setFullscreenPersona(persona.key)}
-              floatingEmojis={floatingEmojis[persona.key]}
-              userId={user?.id}
-              sessionId={sessionIdRef.current}
-            />
-          ))}
-        </div>
+      {/* Personality sliders — compact below command bar */}
+      <div className="shrink-0 mb-3">
+        <BoardroomPersonalitySliders sliders={personalitySliders} onChange={setPersonalitySliders} />
       </div>
 
-      {/* Action plan */}
-      <AnimatePresence>
-        {allRevealed && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="shrink-0 rounded-2xl border border-border/50 bg-card/70 backdrop-blur-xl p-4"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                ✦ Council's Recommended Action Plan
-              </h3>
-              {user && (
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={handleSaveToCouncil}
-                  disabled={saveState !== "idle"}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold transition-all disabled:opacity-70"
-                  style={
-                    saveState === "saved"
-                      ? { background: "rgba(52,211,153,0.15)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }
-                      : { background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.25)" }
-                  }
-                >
-                  {saveState === "saving" ? (
-                    <><Loader2 size={9} className="animate-spin" /> Saving…</>
-                  ) : saveState === "saved" ? (
-                    <><Check size={9} /> Saved to Council</>
-                  ) : (
-                    <><BookmarkPlus size={9} /> Save to Council</>
+      {/* ── BENTO BODY: left advisors (8/12) + right insights (4/12) ── */}
+      <div className="flex-1 min-h-0 grid grid-cols-12 gap-4">
+
+        {/* ── LEFT: Advisor 2×2 grid ── */}
+        <div className="col-span-8 h-full flex flex-col min-h-0 gap-3">
+          <div className="flex-1 min-h-0 grid grid-cols-2 gap-3">
+            {PERSONAS.map(persona => (
+              <PersonaCard
+                key={persona.key}
+                persona={persona}
+                state={cardStates[persona.key]}
+                response={responses[persona.key]}
+                isExpanded={expandedCard === persona.key}
+                anyExpanded={expandedCard !== null}
+                onExpand={() => setExpandedCard(persona.key)}
+                onCollapse={() => setExpandedCard(null)}
+                onFullscreen={() => setFullscreenPersona(persona.key)}
+                floatingEmojis={floatingEmojis[persona.key]}
+                userId={user?.id}
+                sessionId={sessionIdRef.current}
+              />
+            ))}
+          </div>
+
+          {/* Action Plan — below advisor grid, only when revealed */}
+          <AnimatePresence>
+            {allRevealed && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="shrink-0 rounded-2xl border border-border/50 bg-card/70 backdrop-blur-xl p-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">✦ Action Plan</h3>
+                  {user && (
+                    <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                      onClick={handleSaveToCouncil} disabled={saveState !== "idle"}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[9px] font-semibold transition-all disabled:opacity-70"
+                      style={saveState === "saved"
+                        ? { background: "rgba(52,211,153,0.15)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }
+                        : { background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.25)" }}
+                    >
+                      {saveState === "saving" ? <><Loader2 size={8} className="animate-spin" /> Saving…</>
+                        : saveState === "saved" ? <><Check size={8} /> Saved</>
+                        : <><BookmarkPlus size={8} /> Save</>}
+                    </motion.button>
                   )}
-                </motion.button>
+                </div>
+                <ol className="space-y-1">
+                  {actionPlan.map((step, i) => (
+                    <motion.li key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.1 }}
+                      className="flex gap-2 text-[10px] text-foreground/70 leading-snug">
+                      <span className="shrink-0 w-3.5 h-3.5 rounded-full bg-secondary flex items-center justify-center text-[8px] font-bold text-muted-foreground mt-0.5">{i + 1}</span>
+                      {step}
+                    </motion.li>
+                  ))}
+                </ol>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* ── RIGHT: Insights panel ── */}
+        <div className="col-span-4 h-full flex flex-col gap-3 min-h-0 overflow-hidden">
+
+          {/* Consensus meter */}
+          <motion.div
+            initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
+            className="shrink-0 px-4 py-3 rounded-2xl border backdrop-blur-sm overflow-hidden relative"
+            style={{ background: `linear-gradient(135deg, ${consensus.color}06, ${consensus.color}03)`, borderColor: `${consensus.color}25` }}
+          >
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: `radial-gradient(ellipse at 20% 50%, ${consensus.color}08, transparent 70%)` }} />
+            <div className="relative flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-base leading-none">{consensus.emoji}</span>
+                <div>
+                  <p className="text-[11px] font-bold" style={{ color: consensus.color }}>{consensus.label}</p>
+                  <p className="text-[8px] text-muted-foreground/60 leading-tight">{consensus.sublabel}</p>
+                </div>
+              </div>
+              <motion.p key={avgRing} initial={{ scale: 1.2, opacity: 0.5 }} animate={{ scale: 1, opacity: 1 }}
+                className="text-[20px] font-black tabular-nums leading-none" style={{ color: consensus.color }}>
+                {avgRing}%
+              </motion.p>
+            </div>
+            {/* Per-advisor mini bars */}
+            <div className="flex gap-1 mb-1.5">
+              {PERSONAS.map(p => {
+                const conf = responses[p.key]?.confidence ?? (cardStates[p.key] === "idle" ? 0 : p.ringPct);
+                const pColor = SENTIMENT_COLORS[p.sentiment];
+                return (
+                  <div key={p.key} className="flex-1 flex flex-col gap-0.5">
+                    <div className="h-1 rounded-full bg-muted/50 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: cardStates[p.key] === "revealed" ? `${conf}%` : "0%" }}
+                        transition={{ duration: 1.0, ease: "easeOut", delay: p.delay / 1000 }}
+                        className="h-full rounded-full" style={{ background: pColor }}
+                      />
+                    </div>
+                    <p className="text-[7px] text-muted-foreground/40 text-center truncate">{p.initials}</p>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="h-1 rounded-full bg-muted/50 overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${avgRing}%` }} transition={{ duration: 1.4, ease: "easeOut" }}
+                className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${consensus.color}70, ${consensus.color})` }} />
+            </div>
+          </motion.div>
+
+          {/* Key metrics */}
+          <motion.div
+            initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4, delay: 0.08 }}
+            className="shrink-0 grid grid-cols-3 gap-2"
+          >
+            {[
+              { label: "Sessions", value: savedSessions.length, color: "#a78bfa" },
+              { label: "Avg Score", value: savedSessions.length ? `${Math.round(savedSessions.reduce((a, s) => a + (s.consensus_score ?? 0), 0) / savedSessions.length)}%` : "—", color: "#34d399" },
+              { label: "This Score", value: `${avgRing}%`, color: consensus.color },
+            ].map(s => (
+              <div key={s.label} className="rounded-2xl p-2.5 border border-border/30 flex flex-col gap-1 bg-card/60">
+                <p className="text-[13px] font-bold leading-none" style={{ color: s.color }}>{s.value}</p>
+                <p className="text-[8px] text-muted-foreground/50 uppercase tracking-wider">{s.label}</p>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* Recent sessions list — flex-1 scrollable */}
+          <motion.div
+            initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4, delay: 0.14 }}
+            className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/30 bg-card/60 backdrop-blur-sm overflow-hidden"
+          >
+            <div className="px-3 py-2.5 border-b border-border/20 flex items-center justify-between shrink-0">
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Recent Sessions</p>
+              {isReplaying && (
+                <span className="flex items-center gap-1 text-[8px] text-primary/70 animate-pulse">
+                  <span className="w-1 h-1 rounded-full bg-primary animate-pulse" /> Replaying…
+                </span>
               )}
             </div>
-            <ol className="space-y-2">
-              {actionPlan.map((step, i) => (
-                <motion.li
-                  key={i}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + i * 0.15 }}
-                  className="flex gap-2.5 text-[11px] text-foreground/70 leading-snug"
-                >
-                  <span className="shrink-0 w-4 h-4 rounded-full bg-secondary flex items-center justify-center text-[9px] font-bold text-muted-foreground mt-0.5">
-                    {i + 1}
-                  </span>
-                  {step}
-                </motion.li>
-              ))}
-            </ol>
+            <div className="flex-1 overflow-y-auto council-hidden-scrollbar p-2 space-y-1">
+              {!user ? (
+                <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-3">
+                  <p className="text-[10px] text-muted-foreground/40">Sign in to save &amp; restore sessions</p>
+                </div>
+              ) : savedSessions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-3">
+                  <p className="text-[10px] text-muted-foreground/30">No saved sessions yet</p>
+                  <p className="text-[9px] text-muted-foreground/20">Consult the board and save your analysis</p>
+                </div>
+              ) : savedSessions.map(s => {
+                const sc = s.consensus_score ?? 0;
+                const sessionColor = sc >= 70 ? "#34d399" : sc >= 40 ? "#fbbf24" : "#f87171";
+                return (
+                  <motion.button
+                    key={s.id}
+                    initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
+                    onClick={() => {
+                      if (onRestoreIdea) {
+                        supabase.from("council_responses").select("persona_key, vote_score, analysis")
+                          .eq("idea_id", s.id)
+                          .then(({ data }) => {
+                            if (data) onRestoreIdea({ id: s.id, content: s.content, responses: data.map(r => ({ persona_key: r.persona_key, vote_score: r.vote_score, analysis: r.analysis })) });
+                          });
+                      }
+                    }}
+                    className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-secondary/60 transition-colors group"
+                  >
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-[9px] font-bold"
+                      style={{ background: `${sessionColor}15`, color: sessionColor }}>
+                      {sc}%
+                    </div>
+                    <p className="flex-1 text-[10px] text-foreground/60 leading-snug line-clamp-2 min-w-0 group-hover:text-foreground/80 transition-colors">
+                      {s.content}
+                    </p>
+                    <RotateCcw size={8} className="shrink-0 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors" />
+                  </motion.button>
+                );
+              })}
+            </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      </div>
 
       {/* Export modal */}
       <AnimatePresence>
@@ -1826,77 +1816,51 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       <AnimatePresence>
         {showDigest && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xl"
             onClick={() => setShowDigest(false)}
           >
             <motion.div
-              initial={{ scale: 0.93, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.93, opacity: 0, y: 20 }}
-              transition={{ duration: 0.25 }}
+              initial={{ scale: 0.93, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.93, opacity: 0, y: 20 }} transition={{ duration: 0.25 }}
               onClick={e => e.stopPropagation()}
-               className="w-full max-w-lg rounded-3xl overflow-hidden border border-accent/30 bg-card shadow-2xl"
+              className="w-full max-w-lg rounded-3xl overflow-hidden border border-accent/30 bg-card shadow-2xl"
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
                 <div className="flex items-center gap-2">
                   <FileText size={13} className="text-accent/70" />
                   <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Council Digest</p>
                 </div>
-                <button onClick={() => setShowDigest(false)} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-                  <X size={12} />
-                </button>
+                <button onClick={() => setShowDigest(false)} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"><X size={12} /></button>
               </div>
               <div className="p-5 space-y-3">
                 <p className="text-[10px] text-muted-foreground">Copy this digest to paste into email, Notion, Slack, or anywhere you need a formatted summary.</p>
-                <pre
-                  className="w-full p-4 rounded-2xl text-[10px] leading-relaxed text-foreground/70 overflow-auto max-h-60 font-mono bg-secondary border border-border/40"
-                  style={{ whiteSpace: "pre-wrap" }}
-                >
+                <pre className="w-full p-4 rounded-2xl text-[10px] leading-relaxed text-foreground/70 overflow-auto max-h-60 font-mono bg-secondary border border-border/40" style={{ whiteSpace: "pre-wrap" }}>
                   {digestText}
                 </pre>
-                 <div className="flex gap-2">
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(digestText); toast.success("Digest copied to clipboard!"); }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-accent-foreground transition-colors bg-accent/20 hover:bg-accent/30 border border-accent/30"
-                  >
+                <div className="flex gap-2">
+                  <button onClick={() => { navigator.clipboard.writeText(digestText); toast.success("Digest copied to clipboard!"); }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-accent-foreground transition-colors bg-accent/20 hover:bg-accent/30 border border-accent/30">
                     <Copy size={11} /> Copy Digest
                   </button>
-                  <button
-                    onClick={handleSendToNotion}
-                    disabled={isSendingNotion}
+                  <button onClick={handleSendToNotion} disabled={isSendingNotion}
                     className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors disabled:opacity-60"
-                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.65)" }}
-                    title="Send to Notion as a formatted page (requires Notion API key in settings)"
-                  >
+                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.65)" }}>
                     {isSendingNotion ? <Loader2 size={11} className="animate-spin" /> : <FileText size={11} />}
                     {isSendingNotion ? "Sending…" : "Send to Notion"}
                   </button>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(notionText); toast.success("Notion markdown copied!"); }}
+                  <button onClick={() => { navigator.clipboard.writeText(notionText); toast.success("Notion markdown copied!"); }}
                     className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs transition-colors"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}
-                    title="Copy Notion-formatted markdown"
-                  >
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}>
                     <Copy size={10} />
                   </button>
-                  <button
-                    onClick={() => { handleExportPDF(); setShowDigest(false); }}
-                    disabled={isExportingPDF}
+                  <button onClick={() => { handleExportPDF(); setShowDigest(false); }} disabled={isExportingPDF}
                     className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white/40 hover:text-white/70 transition-colors"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  >
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     {isExportingPDF ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
                     PDF
                   </button>
-                  <button
-                    onClick={() => setShowDigest(false)}
-                    className="px-4 py-2.5 rounded-xl text-xs text-white/25 hover:text-white/50 transition-colors"
-                  >
-                    Done
-                  </button>
+                  <button onClick={() => setShowDigest(false)} className="px-4 py-2.5 rounded-xl text-xs text-white/25 hover:text-white/50 transition-colors">Done</button>
                 </div>
               </div>
             </motion.div>
@@ -1907,13 +1871,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       {/* Fullscreen persona modal */}
       <AnimatePresence>
         {fullscreenP && fullscreenR && (
-          <FullscreenModal
-            persona={fullscreenP}
-            response={fullscreenR}
-            savedIdeaId={savedIdeaId}
-            userId={user?.id ?? null}
-            onClose={() => setFullscreenPersona(null)}
-          />
+          <FullscreenModal persona={fullscreenP} response={fullscreenR} savedIdeaId={savedIdeaId} userId={user?.id ?? null} onClose={() => setFullscreenPersona(null)} />
         )}
       </AnimatePresence>
     </div>
