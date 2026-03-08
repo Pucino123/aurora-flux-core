@@ -393,7 +393,9 @@ const BackgroundEngine = ({
       <div className={`${embedded ? "absolute" : "fixed"} inset-0 z-0 overflow-hidden`} onMouseMove={handleMouseMove}>
         <AnimatePresence mode="wait">
           <motion.div key={currentBackground} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.2, ease: "easeInOut" }} className="absolute inset-0">
-            {builtinBg?.type === "video" && builtinBg.youtubeId ? (
+            {isSolid && solidColor ? (
+              <div className="absolute inset-0" style={{ background: `hsl(${solidColor})` }} />
+            ) : builtinBg?.type === "video" && builtinBg.youtubeId ? (
               <YouTubeBackground youtubeId={builtinBg.youtubeId} posterUrl={builtinBg.src} volume={youtubeVolume} />
             ) : builtinBg?.type === "gradient" && builtinBg.colors ? (
               <GradientBackground colors={builtinBg.colors} />
