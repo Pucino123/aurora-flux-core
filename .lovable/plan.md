@@ -1,119 +1,77 @@
 
-## Summary of all 7 tasks and my implementation plan
+## SEO Optimization Plan for Dashiii
 
-### Task 1: Fix Pagination Dots (INVISIBLE)
+### Current State Analysis
 
-**Root cause identified**: The dots ARE rendering in `GridDashboard.tsx` at line 509–573. They live inside `<div className="shrink-0 flex items-center justify-center gap-2 py-3 border-t border-border/20">` at the very bottom of a `flex-1 flex flex-col min-h-0 overflow-hidden` container. The problem is that the GridDashboard is rendered inside `Canvas.tsx`, which may have `overflow-hidden` clipping it, and the overall container in `Dashboard.tsx` uses `flex-1 flex flex-col min-h-screen` — the dots get pushed off screen or clipped.
+**What exists:**
+- `SEO.tsx` component with react-helmet-async — handles title, description, og tags, twitter cards, and JSON-LD schema
+- `index.html` — has good baseline meta tags with OG image, but inconsistent branding (mixes "Dashiii" and "Flux Workspace")
+- `public/robots.txt` — exists and allows all bots
+- Only 4 views use `<SEO>`: InboxView, MultitaskingView, CommunityBoardView, CommunityAdminView
 
-**Fix**: Replace the in-flow bottom bar dots with a `fixed` positioned pill component that renders as a portal or at root level in `Dashboard.tsx`, completely outside the scroll containers. Place it directly in `Dashboard.tsx` alongside `<CommHub />` and other root-level elements. Use `z-[9999]` and `fixed bottom-28 left-1/2 -translate-x-1/2`.
+**Critical gaps:**
+1. **Missing SEO on 10+ views** — Dashboard (canvas), Council, Calendar, Tasks, Analytics, Projects, Documents, Settings, CRM, Billing, Focus, Auth — none import or use `<SEO>`
+2. **Brand inconsistency** — `SEO.tsx` says "Flux Workspace" but `index.html` says "Dashiii". The default title constant needs updating.
+3. **No sitemap.xml** — search engines need this for proper indexing
+4. **No canonical URL tag** — duplicate content risk
+5. **`robots.txt` missing Sitemap reference** — should point to sitemap
+6. **`index.html` missing `og:url`** — blank in current file
+7. **Default OG image** — uses `/favicon.png` (tiny icon) — should point to the actual OG screenshot image already in the HTML
+8. **No `<html lang>` attribute matters** — it's `en` which is fine
 
-Changes:
-- `src/components/GridDashboard.tsx`: Remove the in-flow pagination bar from lines 509–573. Export a `usePaginationState` hook or lift state up so Dashboard can access `pages`, `currentPage`, `goToPage`.
-- `src/components/Dashboard.tsx`: Conditionally render a `<PaginationPill>` component when `effectiveView === "canvas"` (or wherever GridDashboard shows).
+### Implementation Plan
 
-**Simpler approach**: Keep state in GridDashboard but render the dots via `createPortal(document.body)` from within GridDashboard itself, with `fixed bottom-28 left-1/2 -translate-x-1/2 z-[9999]`. This avoids prop drilling.
+#### 1. Fix `SEO.tsx` — unify branding + canonical + better defaults
+- Change `DEFAULT_TITLE` from "Flux Workspace" → "Dashiii"
+- Add canonical `<link rel="canonical">` tag
+- Update `DEFAULT_IMAGE` to use the full OG image URL already in `index.html`
+- Add `keywords` meta tag
+- Fix JSON-LD name to "Dashiii"
 
-### Task 2: CRM Contact Email/Phone + Invoice Payment Details
+#### 2. Add `<SEO>` to every view that lacks it
+Wire per-view SEO tags directly into the view components (since they are the ones rendered in `Dashboard.tsx`'s switch):
 
-**CRM Form** (`src/pages/CRMPage.tsx` — `DealForm`):
-- Add `email` and `phone` fields to the form state
-- Pass them through `onSave` → `addDeal` / `updateDeal`
-- Show email/phone in the table row (replace or add a column)
+| View component | Title | Description |
+|---|---|---|
+| `Canvas` (GridDashboard) | `Dashboard` | Your AI-powered command center |
+| `TheCouncil` | `The Council` | AI advisory board for smarter decisions |
+| `FullCalendarView` | `Calendar` | Smart scheduling and time management |
+| `AITaskManager` | `Tasks` | AI-powered task and project management |
+| `AnalyticsView` | `Analytics` | Revenue, productivity and insights dashboard |
+| `ProjectsOverview` | `Projects` | Track and manage your projects |
+| `DocumentsView` | `Documents` | Smart document editor with AI tools |
+| `SettingsView` | `Settings` | Preferences, profile and workspace settings |
+| `CRMPage` | `CRM` | Contacts, pipeline and invoice management |
+| `BillingView` | `Billing` | Plans, Sparks and subscription management |
+| `Auth` page | `Sign In` | Sign in to your Dashiii workspace |
+| `Focus` page | `Focus Mode` | Deep work and focus session |
+| `LandingPage` | root title (already in index.html) | handled by index.html |
 
-**CRMContext** (`src/context/CRMContext.tsx`):
-- `CRMContact` already has `email?: string` and `phone?: string` — they just aren't captured in the form
+#### 3. Create `public/sitemap.xml`
+Static sitemap pointing to the canonical public routes: `/`, `/auth`, `/focus`, `/calendar` (if public).
 
-**Invoice Payment Details** (`src/components/crm/InvoiceModal.tsx`):
-- Add state: `paymentDetails` (bankName, iban, swift)
-- Add a "Payment Instructions" section in the left editor column
-- Add a "Save as default" checkbox that persists to localStorage
-- Render in the right A4 preview as a shaded footer box
+#### 4. Update `public/robots.txt`
+Add `Sitemap: https://aurora-flux-core.lovable.app/sitemap.xml` reference.
 
-### Task 3: Fix Sparks Exit Strategy
+#### 5. Fix `index.html`
+- Add missing `og:url` meta tag
+- Fix the `og:image` to use the proper absolute URL (already has it, just ensure it's not blank)
+- Keep "Dashiii | Your AI Workspace" title (already correct)
 
-**Issue**: `SparksCheckoutModal` already has a close button and backdrop click. But the `OutOfSparksModal` / any inline Sparks panel opened via sidebar click (`openBilling` → sets `billingOpen` → routes to `BillingView`) has no dedicated modal close — user must navigate away.
-
-**The real issue**: Clicking the Sparks balance in the sidebar calls `openBilling()` which sets `billingOpen: true`, which makes `effectiveView` become `"billing"`, routing to `BillingView` (a full page). There's no easy close button because it's a full routed view.
-
-**Fix**: Add a close/back button to `BillingView` that calls `closeBilling()`. Also wrap `SparksCheckoutModal` with an Escape key listener.
-
-Changes:
-- `src/components/billing/BillingView.tsx`: Add an `X` button at the top that calls `closeBilling()` from `useMonetization()`
-- `src/components/billing/SparksCheckoutModal.tsx`: Add `useEffect` for `Escape` key
-- `src/context/MonetizationContext.tsx`: Already has `closeBilling` — just needs to be wired in the UI
-
-### Task 4: Global Notification System
-
-**Already implemented** in `src/components/NotificationBell.tsx`! The bell has: unread indicator, dropdown with mark-all-read, delete individual, localStorage persistence, and overdue task triggers.
-
-**Gap**: Need to wire `pushNotification()` into:
-- Task creation in `FluxContext` → push `"general"` notification
-- Invoice send in `InvoiceModal` → push `"general"` notification
-
-Changes:
-- `src/components/crm/InvoiceModal.tsx`: Import `pushNotification` and call it on send success
-- `src/context/FluxContext.tsx`: In `createTask`, call `pushNotification` after inserting
-
-### Task 5: Power-User Feature Expansion (Kanban, CRM Pipeline, Calendar Timeblocking, Slash Commands)
-
-This is the largest task. Breaking into parts:
-
-**a) Tasks Kanban** (`src/pages/AITaskManager.tsx`):
-- Add a "Board/List" toggle tab
-- Board view: 3-column layout (Todo / In Progress / Done)
-- Use `@dnd-kit/core` and `@dnd-kit/sortable` (already installed) for drag-and-drop
-- Dragging updates `task.status` via `updateTask()`
-
-**b) CRM Pipeline View** (`src/pages/CRMPage.tsx`):
-- Add "Table/Pipeline" view toggle  
-- Pipeline view: 4-column Kanban by `stage`
-- Use `@dnd-kit` drag-and-drop to move deals between stage columns
-- Show "Total Value" per column header
-
-**c) Document Slash Commands** (`src/components/documents/DocumentView.tsx` / TextEditor):
-- Listen for `/` keydown in the editor
-- Show a floating popover with H1, H2, Bullet, Ask Aura options
-- Arrow key navigation, Enter to select, Escape to close
-
-**d) Calendar Timeblocking** (`src/pages/FullCalendarView.tsx`):
-- Add collapsible right drawer for "Unscheduled Tasks"
-- Drag task from drawer → time slot creates a calendar block
-
-### Task 6: The Council Redesign
-
-**File**: `src/components/council/CouncilBoardroom.tsx` (1871 lines)
-
-Changes:
-- Wrap the page in `min-h-screen bg-slate-950 relative overflow-hidden`
-- Add 3 ambient orb `<div>`s (emerald top-left, violet bottom-right, cyan center)
-- Force all cards to `bg-slate-900/40 backdrop-blur-2xl border border-white/5 shadow-2xl rounded-2xl`
-- Override persona card backgrounds and text colors with slate palette
-
-### Task 7: Remove Onboarding Accent/Color Step
-
-**File**: `src/components/onboarding/OnboardingFlow.tsx`
-
-Changes:
-- Remove the `"accent"` phase entirely
-- Remove `ACCENTS` array, `selectedAccent` state
-- Change `"systems"` button from `setPhase("accent")` → `setPhase("reward")`
-- Remove `{phase === "accent" && ...}` block
-- Update `type Phase` to remove `"accent"`
-- Keep default emerald theme (no CSS variable override needed since it's already the default)
-
----
-
-## File change list
-
-| File | Change |
-|---|---|
-| `src/components/GridDashboard.tsx` | Replace in-flow dots with `createPortal` fixed pill at z-9999 |
-| `src/pages/CRMPage.tsx` | Add email/phone fields to DealForm; add Pipeline kanban view |
-| `src/components/crm/InvoiceModal.tsx` | Add payment instructions editor + preview; push notification on send |
-| `src/context/CRMContext.tsx` | Ensure email/phone flow through addDeal/updateDeal |
-| `src/components/billing/BillingView.tsx` | Add X close button calling closeBilling() |
-| `src/components/billing/SparksCheckoutModal.tsx` | Add Escape key listener |
-| `src/context/FluxContext.tsx` | Call pushNotification on createTask |
-| `src/pages/AITaskManager.tsx` | Add Board/List toggle + dnd-kit Kanban |
-| `src/components/council/CouncilBoardroom.tsx` | Full bg redesign: ambient orbs + glass cards |
-| `src/components/onboarding/OnboardingFlow.tsx` | Remove accent step, wire systems → reward directly |
+### Files to change
+1. `src/components/SEO.tsx` — fix branding, add canonical, add keywords
+2. `src/components/Canvas.tsx` — add `<SEO>`
+3. `src/components/TheCouncil.tsx` — add `<SEO>`
+4. `src/pages/FullCalendarView.tsx` — add `<SEO>`
+5. `src/pages/AITaskManager.tsx` — add `<SEO>`
+6. `src/components/AnalyticsView.tsx` — add `<SEO>`
+7. `src/components/ProjectsOverview.tsx` — add `<SEO>`
+8. `src/components/DocumentsView.tsx` — add `<SEO>`
+9. `src/components/SettingsView.tsx` — add `<SEO>`
+10. `src/pages/CRMPage.tsx` — add `<SEO>`
+11. `src/components/billing/BillingView.tsx` — add `<SEO>`
+12. `src/pages/Auth.tsx` — add `<SEO>`
+13. `src/pages/Focus.tsx` — add `<SEO>`
+14. `public/sitemap.xml` — create
+15. `public/robots.txt` — add sitemap reference
+16. `index.html` — add missing `og:url`
