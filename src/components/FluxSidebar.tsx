@@ -1,5 +1,5 @@
 import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase, Settings } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
@@ -10,7 +10,6 @@ import { useMonetization } from "@/context/MonetizationContext";
 import { t } from "@/lib/i18n";
 import { PERSONAS } from "./TheCouncil";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFocusMode } from "@/context/FocusModeContext";
 import { useAvatar } from "@/context/AvatarContext";
