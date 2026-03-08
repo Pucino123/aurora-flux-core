@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import SEO from "./SEO";
 import { useDocuments } from "@/hooks/useDocuments";
 import { FileText, Table, Plus, Trash2, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,6 +30,7 @@ const DocumentsView = () => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+      <SEO title="Documents" description="Smart document and spreadsheet editor with AI writing tools and slash commands." url="/" keywords="documents, smart editor, AI writing, spreadsheet, collaboration" />
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold font-display flex items-center gap-2"><FileText size={22} /> Documents</h2>

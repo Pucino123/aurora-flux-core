@@ -1,77 +1,27 @@
 
-## SEO Optimization Plan for Dashiii
+## Problem Analysis
 
-### Current State Analysis
+The user wants:
+- ✅ The background behind the document **remains blurred** (restore `backdrop-blur-md` on the backdrop)
+- ✅ When clicking Aura inside a document, **Aura appears sharp** (not blurred by the backdrop)
+- ✅ Clicking the Aura button again closes/blurs Aura back out
 
-**What exists:**
-- `SEO.tsx` component with react-helmet-async — handles title, description, og tags, twitter cards, and JSON-LD schema
-- `index.html` — has good baseline meta tags with OG image, but inconsistent branding (mixes "Dashiii" and "Flux Workspace")
-- `public/robots.txt` — exists and allows all bots
-- Only 4 views use `<SEO>`: InboxView, MultitaskingView, CommunityBoardView, CommunityAdminView
+### Root Cause
 
-**Critical gaps:**
-1. **Missing SEO on 10+ views** — Dashboard (canvas), Council, Calendar, Tasks, Analytics, Projects, Documents, Settings, CRM, Billing, Focus, Auth — none import or use `<SEO>`
-2. **Brand inconsistency** — `SEO.tsx` says "Flux Workspace" but `index.html` says "Dashiii". The default title constant needs updating.
-3. **No sitemap.xml** — search engines need this for proper indexing
-4. **No canonical URL tag** — duplicate content risk
-5. **`robots.txt` missing Sitemap reference** — should point to sitemap
-6. **`index.html` missing `og:url`** — blank in current file
-7. **Default OG image** — uses `/favicon.png` (tiny icon) — should point to the actual OG screenshot image already in the HTML
-8. **No `<html lang>` attribute matters** — it's `en` which is fine
+The document backdrop div (`z-[100]`) had `backdrop-blur-md` removed in the last fix. The user wants it back.
 
-### Implementation Plan
+The reason Aura appeared blurred: CSS `backdrop-filter` on the backdrop element creates a compositing layer. Elements with higher z-index that sit above the backdrop can appear to have blur applied to them because they're being composited on top of the blurred layer — but only if the Aura portal element itself has `backdrop-filter` or `filter` styles inherited.
 
-#### 1. Fix `SEO.tsx` — unify branding + canonical + better defaults
-- Change `DEFAULT_TITLE` from "Flux Workspace" → "Dashiii"
-- Add canonical `<link rel="canonical">` tag
-- Update `DEFAULT_IMAGE` to use the full OG image URL already in `index.html`
-- Add `keywords` meta tag
-- Fix JSON-LD name to "Dashiii"
+Looking at the portal div in `AuraWidget.tsx` (line 1045): the processing pill has `backdropFilter: "none"` already. The input/response pill at line 1052 does NOT — it just uses `background: rgba(20,20,30,0.85)`.
 
-#### 2. Add `<SEO>` to every view that lacks it
-Wire per-view SEO tags directly into the view components (since they are the ones rendered in `Dashboard.tsx`'s switch):
+The actual Aura widget when portalled renders inside a `DraggableWidget` which may apply styles, OR the issue is the main `widget` variable (the DraggableWidget) is being rendered at both `{widget}` AND in the portal — causing duplication.
 
-| View component | Title | Description |
-|---|---|---|
-| `Canvas` (GridDashboard) | `Dashboard` | Your AI-powered command center |
-| `TheCouncil` | `The Council` | AI advisory board for smarter decisions |
-| `FullCalendarView` | `Calendar` | Smart scheduling and time management |
-| `AITaskManager` | `Tasks` | AI-powered task and project management |
-| `AnalyticsView` | `Analytics` | Revenue, productivity and insights dashboard |
-| `ProjectsOverview` | `Projects` | Track and manage your projects |
-| `DocumentsView` | `Documents` | Smart document editor with AI tools |
-| `SettingsView` | `Settings` | Preferences, profile and workspace settings |
-| `CRMPage` | `CRM` | Contacts, pipeline and invoice management |
-| `BillingView` | `Billing` | Plans, Sparks and subscription management |
-| `Auth` page | `Sign In` | Sign in to your Dashiii workspace |
-| `Focus` page | `Focus Mode` | Deep work and focus session |
-| `LandingPage` | root title (already in index.html) | handled by index.html |
+### Fix Plan
 
-#### 3. Create `public/sitemap.xml`
-Static sitemap pointing to the canonical public routes: `/`, `/auth`, `/focus`, `/calendar` (if public).
+**File: `src/components/focus/DesktopDocumentViewer.tsx`**
+- Restore `backdrop-blur-md` on the backdrop div (line 85): change back to `className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md"`
 
-#### 4. Update `public/robots.txt`
-Add `Sitemap: https://aurora-flux-core.lovable.app/sitemap.xml` reference.
-
-#### 5. Fix `index.html`
-- Add missing `og:url` meta tag
-- Fix the `og:image` to use the proper absolute URL (already has it, just ensure it's not blank)
-- Keep "Dashiii | Your AI Workspace" title (already correct)
-
-### Files to change
-1. `src/components/SEO.tsx` — fix branding, add canonical, add keywords
-2. `src/components/Canvas.tsx` — add `<SEO>`
-3. `src/components/TheCouncil.tsx` — add `<SEO>`
-4. `src/pages/FullCalendarView.tsx` — add `<SEO>`
-5. `src/pages/AITaskManager.tsx` — add `<SEO>`
-6. `src/components/AnalyticsView.tsx` — add `<SEO>`
-7. `src/components/ProjectsOverview.tsx` — add `<SEO>`
-8. `src/components/DocumentsView.tsx` — add `<SEO>`
-9. `src/components/SettingsView.tsx` — add `<SEO>`
-10. `src/pages/CRMPage.tsx` — add `<SEO>`
-11. `src/components/billing/BillingView.tsx` — add `<SEO>`
-12. `src/pages/Auth.tsx` — add `<SEO>`
-13. `src/pages/Focus.tsx` — add `<SEO>`
-14. `public/sitemap.xml` — create
-15. `public/robots.txt` — add sitemap reference
-16. `index.html` — add missing `og:url`
+**File: `src/components/focus/AuraWidget.tsx`**
+- The portal wrapper div (line 1011) needs `filter: "none"` added to its style to break out of any compositing chain
+- Remove the duplicate `{widget}` render at line 1009 — currently when `injectedDocContext && isActive`, it renders BOTH the normal widget position AND the portal. Remove `{widget}` so only the portal version shows.
+- Add `filter: "none"` and `WebkitFilter: "none"` to the portal wrapper to ensure no blur bleeds through

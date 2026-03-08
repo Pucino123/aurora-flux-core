@@ -1,4 +1,5 @@
 import React from "react";
+import SEO from "./SEO";
 import { useFlux } from "@/context/FluxContext";
 import { Folder, CheckCircle2, Circle, Plus } from "lucide-react";
 import { motion } from "framer-motion";
@@ -14,6 +15,7 @@ const ProjectsOverview = () => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+      <SEO title="Projects" description="Track and manage all your project folders, tasks and milestones in one view." url="/" keywords="projects, project management, folders, milestones, tracking" />
       <div className="mb-6">
         <h2 className="text-xl font-bold font-display flex items-center gap-2"><Folder size={22} /> Projects</h2>
         <p className="text-sm text-muted-foreground">All your project folders</p>

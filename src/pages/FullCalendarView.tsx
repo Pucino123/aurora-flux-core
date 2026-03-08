@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import SEO from "@/components/SEO";
 import { useFlux } from "@/context/FluxContext";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday,
@@ -139,6 +140,7 @@ const FullCalendarView = () => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+      <SEO title="Calendar" description="Smart scheduling and time management with drag-and-drop calendar and Google Calendar sync." url="/" keywords="calendar, scheduling, time blocking, productivity, Google Calendar sync" />
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>

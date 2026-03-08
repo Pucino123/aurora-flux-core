@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import SEO from "@/components/SEO";
 import { useFlux } from "@/context/FluxContext";
 import { format, isToday, isTomorrow, isPast, parseISO } from "date-fns";
 import {
@@ -629,6 +630,7 @@ const AITaskManager = () => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
+      <SEO title="Tasks" description="AI-powered task and project management with Kanban boards, priorities and smart scheduling." url="/" keywords="task manager, kanban board, project management, to-do list, productivity" />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

@@ -3,6 +3,7 @@ import ProjectBoard from "./ProjectBoard";
 import FitnessTracker from "./FitnessTracker";
 import InboxView from "./InboxView";
 import { motion } from "framer-motion";
+import SEO from "./SEO";
 
 const FITNESS_TYPES = ["fitness", "health"];
 const FINANCE_TYPES = ["finance"];
@@ -18,6 +19,7 @@ const Canvas = () => {
   if (!folder) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        <SEO title="Dashboard" description="Your AI-powered command center for tasks, projects and productivity." url="/" />
         Folder not found
       </div>
     );
@@ -34,6 +36,7 @@ const Canvas = () => {
   if (isFitness) {
     return (
       <motion.div key={folder.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+        <SEO title="Dashboard" description="Your AI-powered command center for tasks, projects and productivity." url="/" />
         <FitnessTracker folderId={folder.id} />
       </motion.div>
     );
@@ -42,6 +45,7 @@ const Canvas = () => {
   if (isFinance) {
     return (
       <motion.div key={folder.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+        <SEO title="Dashboard" description="Your AI-powered command center for tasks, projects and productivity." url="/" />
         <ProjectBoard folderId={folder.id} />
       </motion.div>
     );
@@ -49,6 +53,7 @@ const Canvas = () => {
 
   return (
     <motion.div key={folder.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+      <SEO title="Dashboard" description="Your AI-powered command center for tasks, projects and productivity." url="/" />
       <ProjectBoard folderId={folder.id} />
     </motion.div>
   );

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, Trash2, Pencil, X, Check, Building2, DollarSign, User, Receipt } from "lucide-react";
 import { useCRM, CRMDeal, Stage } from "@/context/CRMContext";
@@ -100,6 +101,7 @@ const CRMPage: React.FC = () => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+      <SEO title="CRM" description="Manage contacts, deals, sales pipeline and send professional invoices from one place." url="/" keywords="CRM, contacts, sales pipeline, invoice generator, deals management" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
