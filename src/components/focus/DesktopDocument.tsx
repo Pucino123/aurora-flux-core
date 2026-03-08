@@ -111,7 +111,6 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
       _updatePos(doc.id, { x: nx, y: ny });
       onDragStateChange?.({ id: doc.id, x: e.clientX, y: e.clientY });
     };
-...
     window.addEventListener("pointerup", onUp);
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
   }, [doc.id, _updatePos]);

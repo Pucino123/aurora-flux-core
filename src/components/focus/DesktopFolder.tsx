@@ -141,13 +141,11 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
       _updatePos(folder.id, { x: nx, y: ny });
       onDragStateChange?.({ id: folder.id, x: e.clientX, y: e.clientY });
     };
-...
     window.addEventListener("pointerup", onUp);
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
   }, [folder.id, _updatePos, onDragStateChange]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
-...
     if (newFolder) {
       const srcPos = desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };
       _updatePos(newFolder.id, { x: srcPos.x + 30, y: srcPos.y + 30 });
