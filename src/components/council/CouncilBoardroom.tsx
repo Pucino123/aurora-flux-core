@@ -950,9 +950,6 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-  const avgRing = Math.round(
-    PERSONAS.reduce((a, p) => a + (responses[p.key]?.confidence ?? p.ringPct), 0) / PERSONAS.length
-  );
 
   const getConsensusLabel = () => {
     if (avgRing >= 70) return { label: "Strong Consensus — Proceed", color: "#34d399" };
