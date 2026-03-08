@@ -1119,7 +1119,11 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     let finalActionPlan: string[] = DEFAULT_ACTION_PLAN;
     try {
       const { data, error } = await supabase.functions.invoke("flux-ai", {
-        body: { type: "boardroom-consult", idea: idea || "Should I start a new business?" },
+        body: {
+          type: "boardroom-consult",
+          idea: idea || "Should I start a new business?",
+          personality_sliders: personalitySliders,
+        },
       });
       if (!error && data?.personas && Array.isArray(data.personas)) {
         data.personas.forEach((p: { key: string; analysis: string; question: string; confidence: number }) => {
