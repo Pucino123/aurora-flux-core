@@ -942,7 +942,6 @@ const FocusContent = () => {
 
   const handleCreateDocument = useCallback(async (type: "text" | "spreadsheet") => {
     const pos = contextMenuPosRef.current;
-    setShowDocPicker(false);
     setContextMenu(null);
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
     const doc = await createDocument(title, type, null);
