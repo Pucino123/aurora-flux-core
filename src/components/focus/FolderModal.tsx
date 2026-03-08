@@ -9,6 +9,7 @@ import {
 
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { useDocuments, DbDocument } from "@/hooks/useDocuments";
+import { useTrash } from "@/context/TrashContext";
 import { FOLDER_ICONS } from "@/components/CreateFolderModal";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import FolderContents from "./FolderContents";
