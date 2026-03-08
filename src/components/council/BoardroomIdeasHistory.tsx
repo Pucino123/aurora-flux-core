@@ -26,7 +26,7 @@ export interface BoardroomIdea {
 
 interface Props {
   userId: string;
-  onRestoreIdea: (idea: BoardroomIdea) => void;
+  onRestoreIdea: (idea: BoardroomIdea, replay?: boolean) => void;
 }
 
 // ── Filter bar ──
