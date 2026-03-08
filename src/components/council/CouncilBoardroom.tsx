@@ -1363,7 +1363,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       realtimeChannelRef.current.track({ displayName, isConsulting: true }).catch(() => {});
     }
 
-    let aiPersonas: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+    let aiPersonas: Record<string, BoardroomPersonaResponse | null> = { strategist: null, operator: null, skeptic: null, advocate: null };
     let finalActionPlan: string[] = DEFAULT_ACTION_PLAN;
     try {
       const { data, error } = await supabase.functions.invoke("flux-ai", {
