@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Send, Loader2, Building2, User, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { useCRM, CRMContact } from "@/context/CRMContext";
+import { pushNotification } from "@/components/NotificationBell";
 
 interface LineItem {
   id: string;
