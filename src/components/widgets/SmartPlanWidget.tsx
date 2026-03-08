@@ -37,25 +37,41 @@ interface ScheduleBlock {
   scheduledDate: string; // YYYY-MM-DD
 }
 
+const TODAY = new Date().toISOString().slice(0, 10);
+
 // ── Defaults ───────────────────────────────────────────────────────────────
 const FALLBACK_BLOCKS: Omit<ScheduleBlock, "id">[] = [
-  { time: "08:00", endTime: "08:30", title: "Morning Review",           type: "work",    isAI: true,  sort_order: 0 },
-  { time: "09:00", endTime: "10:30", title: "Deep Work: Product Roadmap", type: "work",  sort_order: 1 },
-  { time: "10:30", endTime: "10:45", title: "Break — Stretch & Water",  type: "break",   isAI: true,  sort_order: 2 },
-  { time: "11:00", endTime: "12:00", title: "Team Standup + Planning",  type: "meeting", sort_order: 3 },
-  { time: "13:00", endTime: "14:30", title: "Focus: Feature Development", type: "work",  sort_order: 4 },
-  { time: "15:00", endTime: "15:30", title: "Email & Async Comms",      type: "work",    sort_order: 5 },
-  { time: "16:00", endTime: "17:00", title: "Weekly Review",            type: "work",    isAI: true,  sort_order: 6 },
+  { time: "08:00", endTime: "08:30", title: "Morning Review",             type: "work",    isAI: true,  sort_order: 0, scheduledDate: TODAY },
+  { time: "09:00", endTime: "10:30", title: "Deep Work: Product Roadmap", type: "work",                 sort_order: 1, scheduledDate: TODAY },
+  { time: "10:30", endTime: "10:45", title: "Break — Stretch & Water",    type: "break",   isAI: true,  sort_order: 2, scheduledDate: TODAY },
+  { time: "11:00", endTime: "12:00", title: "Team Standup + Planning",    type: "meeting",              sort_order: 3, scheduledDate: TODAY },
+  { time: "13:00", endTime: "14:30", title: "Focus: Feature Development", type: "work",                 sort_order: 4, scheduledDate: TODAY },
+  { time: "15:00", endTime: "15:30", title: "Email & Async Comms",        type: "work",                 sort_order: 5, scheduledDate: TODAY },
+  { time: "16:00", endTime: "17:00", title: "Weekly Review",              type: "work",    isAI: true,  sort_order: 6, scheduledDate: TODAY },
 ];
 
 const TYPE_STYLE: Record<BlockType, { bg: string; dot: string; text: string }> = {
-  work:    { bg: "bg-blue-400/10 border-blue-400/20",   dot: "bg-blue-400",    text: "text-blue-300"    },
-  meeting: { bg: "bg-amber-400/10 border-amber-400/20", dot: "bg-amber-400",   text: "text-amber-300"   },
+  work:    { bg: "bg-blue-400/10 border-blue-400/20",       dot: "bg-blue-400",    text: "text-blue-300"    },
+  meeting: { bg: "bg-amber-400/10 border-amber-400/20",     dot: "bg-amber-400",   text: "text-amber-300"   },
   break:   { bg: "bg-emerald-400/10 border-emerald-400/20", dot: "bg-emerald-400", text: "text-emerald-300" },
-  ai:      { bg: "bg-violet-400/10 border-violet-400/30", dot: "bg-violet-400", text: "text-violet-300"  },
+  ai:      { bg: "bg-violet-400/10 border-violet-400/30",   dot: "bg-violet-400",  text: "text-violet-300"  },
 };
 
-const TODAY = new Date().toISOString().slice(0, 10);
+/** Human-friendly label for a future scheduled date */
+function dateBadgeLabel(dateStr: string): string | null {
+  if (dateStr === TODAY) return null; // same day — no badge needed
+  try {
+    const d = parseISO(dateStr);
+    if (isToday(d)) return null;
+    if (isTomorrow(d)) return "Tomorrow";
+    const days = differenceInDays(d, new Date());
+    if (days < 0) return null; // past
+    if (days <= 6) return format(d, "EEEE"); // e.g. "Friday"
+    return format(d, "MMM d");
+  } catch {
+    return null;
+  }
+}
 
 // ── Sortable row ───────────────────────────────────────────────────────────
 function SortableBlock({
@@ -87,8 +103,14 @@ function SortableBlock({
     setEditing(false);
   };
 
-  const s = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.45 : 1, zIndex: isDragging ? 50 : "auto" as const };
+  const s = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.45 : 1,
+    zIndex: isDragging ? 50 : "auto" as const,
+  };
   const ts = TYPE_STYLE[block.isAI ? "ai" : block.type];
+  const dateBadge = dateBadgeLabel(block.scheduledDate);
 
   return (
     <motion.div
@@ -131,7 +153,14 @@ function SortableBlock({
             {block.title}
           </p>
         )}
-        <p className={`text-[9px] ${ts.text}`}>{block.time} — {block.endTime}</p>
+        <div className="flex items-center gap-1.5">
+          <p className={`text-[9px] ${ts.text}`}>{block.time} — {block.endTime}</p>
+          {dateBadge && (
+            <span className="flex items-center gap-0.5 text-[8px] text-white/35 bg-white/5 px-1 py-0.5 rounded-full border border-white/8">
+              <CalendarDays size={7} /> {dateBadge}
+            </span>
+          )}
+        </div>
       </div>
       {block.isAI && (
         <span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 text-[8px]">
@@ -156,27 +185,37 @@ interface AddBlockModalProps {
 }
 
 function AddBlockModal({ onClose, onAdd }: AddBlockModalProps) {
-  const [title, setTitle]     = useState("");
-  const [startTime, setStart] = useState("09:00");
-  const [endTime, setEnd]     = useState("10:00");
-  const [type, setType]       = useState<BlockType>("work");
-  const [saving, setSaving]   = useState(false);
+  const [title, setTitle]         = useState("");
+  const [startTime, setStart]     = useState("09:00");
+  const [endTime, setEnd]         = useState("10:00");
+  const [type, setType]           = useState<BlockType>("work");
+  const [date, setDate]           = useState<Date>(new Date());
+  const [dateOpen, setDateOpen]   = useState(false);
+  const [saving, setSaving]       = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     setSaving(true);
-    await onAdd({ title: title.trim(), time: startTime, endTime, type });
+    await onAdd({
+      title: title.trim(),
+      time: startTime,
+      endTime,
+      type,
+      scheduledDate: format(date, "yyyy-MM-dd"),
+    });
     setSaving(false);
     onClose();
   };
 
   const TYPE_OPTIONS: { value: BlockType; label: string; color: string }[] = [
-    { value: "work",    label: "Work",    color: "bg-blue-400/30 text-blue-300 border-blue-400/30"    },
-    { value: "meeting", label: "Meeting", color: "bg-amber-400/30 text-amber-300 border-amber-400/30" },
+    { value: "work",    label: "Work",    color: "bg-blue-400/30 text-blue-300 border-blue-400/30"        },
+    { value: "meeting", label: "Meeting", color: "bg-amber-400/30 text-amber-300 border-amber-400/30"     },
     { value: "break",   label: "Break",   color: "bg-emerald-400/30 text-emerald-300 border-emerald-400/30" },
-    { value: "ai",      label: "AI",      color: "bg-violet-400/30 text-violet-300 border-violet-400/30" },
+    { value: "ai",      label: "AI",      color: "bg-violet-400/30 text-violet-300 border-violet-400/30"  },
   ];
+
+  const dateLabel = isToday(date) ? "Today" : isTomorrow(date) ? "Tomorrow" : format(date, "MMM d");
 
   return (
     <motion.div
@@ -202,8 +241,35 @@ function AddBlockModal({ onClose, onAdd }: AddBlockModalProps) {
           className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-[11px] text-white/80 placeholder:text-white/25 outline-none focus:border-violet-400/50 transition-colors"
         />
 
-        {/* Time row */}
+        {/* Date + Time row */}
         <div className="flex gap-2">
+          {/* Date picker */}
+          <div className="flex-1">
+            <p className="text-[9px] text-white/30 mb-1 uppercase tracking-wider">Date</p>
+            <Popover open={dateOpen} onOpenChange={setDateOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white/70 outline-none hover:border-violet-400/40 transition-colors flex items-center gap-1.5 justify-start",
+                    dateOpen && "border-violet-400/50"
+                  )}
+                >
+                  <CalendarDays size={10} className="text-violet-300 shrink-0" />
+                  {dateLabel}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-50" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={d => { if (d) { setDate(d); setDateOpen(false); } }}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
           <div className="flex-1">
             <p className="text-[9px] text-white/30 mb-1 uppercase tracking-wider">Start</p>
             <input
@@ -281,33 +347,38 @@ const SmartPlanWidget = () => {
 
   // ── DB helpers ─────────────────────────────────────────────────────────
   const dbRowToBlock = (row: Record<string, unknown>, i: number): ScheduleBlock => ({
-    id:        row.id as string,
-    time:      row.time as string,
-    endTime:   (row.end_time as string) ?? "",
-    title:     row.title as string,
-    type:      (row.type as BlockType) ?? "work",
-    isAI:      (row.is_ai as boolean) ?? false,
-    sort_order: (row.sort_order as number) ?? i,
+    id:            row.id as string,
+    time:          row.time as string,
+    endTime:       (row.end_time as string) ?? "",
+    title:         row.title as string,
+    type:          (row.type as BlockType) ?? "work",
+    isAI:          (row.is_ai as boolean) ?? false,
+    sort_order:    (row.sort_order as number) ?? i,
+    scheduledDate: (row.scheduled_date as string) ?? TODAY,
   });
 
   // ── Load ────────────────────────────────────────────────────────────────
   const loadBlocks = useCallback(async () => {
-    if (!user) { setBlocks(FALLBACK_BLOCKS.map((b, i) => ({ ...b, id: String(i + 1) }))); setLoading(false); return; }
+    if (!user) {
+      setBlocks(FALLBACK_BLOCKS.map((b, i) => ({ ...b, id: String(i + 1) })));
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data } = await supabase
       .from("schedule_blocks")
       .select("*")
       .eq("user_id", user.id)
-      .eq("scheduled_date", TODAY)
+      .gte("scheduled_date", TODAY)
+      .order("scheduled_date", { ascending: true })
       .order("sort_order", { ascending: true });
 
     if (!data || data.length === 0) {
-      // Seed defaults
       const { data: inserted } = await supabase
         .from("schedule_blocks")
         .insert(FALLBACK_BLOCKS.map(b => ({
           user_id: user.id,
-          scheduled_date: TODAY,
+          scheduled_date: b.scheduledDate,
           time: b.time,
           end_time: b.endTime,
           title: b.title,
@@ -356,7 +427,7 @@ const SmartPlanWidget = () => {
         .from("schedule_blocks")
         .insert({
           user_id: user.id,
-          scheduled_date: TODAY,
+          scheduled_date: block.scheduledDate,
           time: block.time,
           end_time: block.endTime,
           title: block.title,
@@ -370,13 +441,17 @@ const SmartPlanWidget = () => {
       if (data) {
         setBlocks(prev => {
           const updated = [...prev, dbRowToBlock(data as Record<string, unknown>, prev.length)];
-          return updated.sort((a, b) => a.time.localeCompare(b.time)).map((b, i) => ({ ...b, sort_order: i }));
+          return updated
+            .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate) || a.time.localeCompare(b.time))
+            .map((b, i) => ({ ...b, sort_order: i }));
         });
       }
     } else {
       setBlocks(prev => {
         const updated = [...prev, { ...block, id: "local-" + Date.now(), sort_order: sortOrder }];
-        return updated.sort((a, b) => a.time.localeCompare(b.time)).map((b, i) => ({ ...b, sort_order: i }));
+        return updated
+          .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate) || a.time.localeCompare(b.time))
+          .map((b, i) => ({ ...b, sort_order: i }));
       });
     }
   }, [user, blocks.length]);
@@ -401,7 +476,14 @@ const SmartPlanWidget = () => {
   const optimize = async () => {
     setOptimizing(true);
     await new Promise(r => setTimeout(r, 900));
-    await handleAddBlock({ title: "AI Suggested: Mindful Break", time: "14:30", endTime: "14:45", type: "break", isAI: true });
+    await handleAddBlock({
+      title: "AI Suggested: Mindful Break",
+      time: "14:30",
+      endTime: "14:45",
+      type: "break",
+      isAI: true,
+      scheduledDate: TODAY,
+    });
     setOptimizing(false);
   };
 
@@ -464,7 +546,13 @@ const SmartPlanWidget = () => {
               <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                 <motion.div key="blocks" className="space-y-1.5">
                   {blocks.map((block, idx) => (
-                    <SortableBlock key={block.id} block={block} idx={idx} onDelete={handleDeleteBlock} onRename={handleRenameBlock} />
+                    <SortableBlock
+                      key={block.id}
+                      block={block}
+                      idx={idx}
+                      onDelete={handleDeleteBlock}
+                      onRename={handleRenameBlock}
+                    />
                   ))}
                 </motion.div>
               </SortableContext>
