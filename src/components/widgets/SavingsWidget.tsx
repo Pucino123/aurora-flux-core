@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Minus, Check, Sparkles, Trash2, Loader2, CalendarDays, ArrowUpDown, TrendingUp, X } from "lucide-react";
+import { Plus, Minus, Check, Sparkles, Trash2, Loader2, CalendarDays, ArrowUpDown, TrendingUp, X, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +65,29 @@ function savingsForecast(current: number, target: number, deadline: string | nul
   if (monthsLeft < 0.1) return null;
   const perMonth = remaining / monthsLeft;
   return fmt(Math.ceil(perMonth));
+}
+
+/** Export goals to CSV and trigger browser download */
+function exportGoalsCSV(goals: SavingsGoal[]) {
+  const header = ["Name", "Current ($)", "Target ($)", "Progress (%)", "Deadline"];
+  const rows = goals.map(g => {
+    const pct = g.target > 0 ? Math.min(Math.round((g.current / g.target) * 100), 100) : 0;
+    return [
+      `"${g.name.replace(/"/g, '""')}"`,
+      g.current.toFixed(2),
+      g.target.toFixed(2),
+      pct,
+      g.deadline ?? "",
+    ].join(",");
+  });
+  const csv = [header.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `savings-goals-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /** Sort goals by deadline: soonest first, no-deadline last */
@@ -418,6 +441,13 @@ const SavingsWidget = () => {
             )}
           >
             <ArrowUpDown size={10} />
+          </button>
+          <button
+            onClick={() => exportGoalsCSV(goals)}
+            title="Export as CSV"
+            className="w-6 h-6 rounded-full bg-white/8 text-white/30 hover:bg-emerald-400/20 hover:text-emerald-300 flex items-center justify-center transition-all"
+          >
+            <Download size={10} />
           </button>
           <button
             onClick={() => setAdding(v => !v)}

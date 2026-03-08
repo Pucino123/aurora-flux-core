@@ -437,6 +437,33 @@ export type Database = {
           },
         ]
       }
+      focus_leaderboard: {
+        Row: {
+          id: string
+          updated_at: string
+          user_id: string
+          username: string
+          week_start: string
+          weekly_minutes: number
+        }
+        Insert: {
+          id?: string
+          updated_at?: string
+          user_id: string
+          username?: string
+          week_start?: string
+          weekly_minutes?: number
+        }
+        Update: {
+          id?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+          week_start?: string
+          weekly_minutes?: number
+        }
+        Relationships: []
+      }
       focus_sessions: {
         Row: {
           created_at: string

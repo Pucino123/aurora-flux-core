@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check, CalendarDays, LayoutList, Calendar as CalendarIcon } from "lucide-react";
+import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check, CalendarDays, LayoutList, Calendar as CalendarIcon, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, isToday, isTomorrow, differenceInDays, parseISO, startOfDay } from "date-fns";
 import {
@@ -509,6 +509,27 @@ const SmartPlanWidget = () => {
     }
   }, [user, blocks.length]);
 
+  // ── Focus Block quick-add (90 min deep work at next round hour today) ──
+  const addFocusBlock = useCallback(async () => {
+    const now = new Date();
+    // Round up to next full hour
+    const nextHour = new Date(now);
+    nextHour.setMinutes(0, 0, 0);
+    nextHour.setHours(now.getMinutes() > 0 ? now.getHours() + 1 : now.getHours());
+    const startStr = `${String(nextHour.getHours()).padStart(2, "0")}:00`;
+    const endHour  = new Date(nextHour);
+    endHour.setMinutes(90);
+    const endStr   = `${String(Math.floor(endHour.getTime() / 3_600_000) % 24).padStart(2, "0")}:${String(endHour.getMinutes()).padStart(2, "0")}`;
+    await handleAddBlock({
+      title: "⚡ Deep Work — Focus Block",
+      time: startStr,
+      endTime: endStr,
+      type: "work",
+      isAI: false,
+      scheduledDate: TODAY,
+    });
+  }, [handleAddBlock]);
+
   // ── Delete block ────────────────────────────────────────────────────────
   const handleDeleteBlock = useCallback(async (blockId: string) => {
     setBlocks(prev => prev.filter(b => b.id !== blockId));
@@ -565,7 +586,7 @@ const SmartPlanWidget = () => {
         </button>
       </div>
 
-      {/* Suggestion chips */}
+      {/* Suggestion chips + Focus Block shortcut */}
       <div className="flex gap-1.5 shrink-0 flex-wrap">
         {["✨ Optimize Schedule", "✨ Find Focus Time", "+ Add Break"].map(chip => (
           <button
@@ -576,6 +597,14 @@ const SmartPlanWidget = () => {
             {chip}
           </button>
         ))}
+        {/* ⚡ Focus Block one-click shortcut */}
+        <button
+          onClick={addFocusBlock}
+          title="Add 90-min deep work block at next round hour"
+          className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/20 text-[10px] text-blue-300 hover:bg-blue-500/30 hover:border-blue-400/40 transition-all"
+        >
+          <Zap size={9} /> Focus Block
+        </button>
       </div>
 
       {/* Today vs Scheduled toggle + date header */}
