@@ -55,14 +55,33 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 // ── Sortable row ───────────────────────────────────────────────────────────
 function SortableBlock({
-  block, idx, onDelete,
+  block, idx, onDelete, onRename,
 }: {
   block: ScheduleBlock;
   idx: number;
   onDelete: (id: string) => void;
+  onRename: (id: string, title: string) => Promise<void>;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: block.id });
+
+  const [editing, setEditing] = useState(false);
+  const [editVal, setEditVal] = useState(block.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const startEdit = () => {
+    setEditVal(block.title);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.select(), 30);
+  };
+
+  const commitEdit = async () => {
+    const trimmed = editVal.trim();
+    if (trimmed && trimmed !== block.title) {
+      await onRename(block.id, trimmed);
+    }
+    setEditing(false);
+  };
 
   const s = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.45 : 1, zIndex: isDragging ? 50 : "auto" as const };
   const ts = TYPE_STYLE[block.isAI ? "ai" : block.type];
@@ -86,7 +105,28 @@ function SortableBlock({
       </button>
       <div className={`w-1.5 h-1.5 rounded-full ${ts.dot} shrink-0`} />
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-medium text-white/80 leading-tight truncate">{block.title}</p>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={editVal}
+            autoFocus
+            onChange={e => setEditVal(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={e => {
+              if (e.key === "Enter") commitEdit();
+              if (e.key === "Escape") setEditing(false);
+            }}
+            className="w-full bg-white/10 border border-violet-400/40 rounded px-1.5 py-0.5 text-[11px] font-medium text-white/90 outline-none leading-tight"
+          />
+        ) : (
+          <p
+            className="text-[11px] font-medium text-white/80 leading-tight truncate cursor-text hover:text-white/95 transition-colors"
+            onDoubleClick={startEdit}
+            title="Double-click to rename"
+          >
+            {block.title}
+          </p>
+        )}
         <p className={`text-[9px] ${ts.text}`}>{block.time} — {block.endTime}</p>
       </div>
       {block.isAI && (
