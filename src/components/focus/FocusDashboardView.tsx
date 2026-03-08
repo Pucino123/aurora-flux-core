@@ -369,6 +369,11 @@ const FocusContent = () => {
   // Build-mode pagination settings
   const [paginationSettings, setPaginationSettings] = useState<PaginationSettings>(loadPaginationSettings);
   const [showPillSettings, setShowPillSettings] = useState(false);
+  const [pillStyle, setPillStyleState] = useState<PillStyle>(loadPillStyle);
+  const updatePillStyle = React.useCallback((patch: Partial<PillStyle>) => {
+    setPillStyleState(prev => { const next = { ...prev, ...patch }; savePillStyle(next); return next; });
+  }, []);
+  const resetPillStyle = React.useCallback(() => { setPillStyleState(DEFAULT_PILL_STYLE); savePillStyle(DEFAULT_PILL_STYLE); }, []);
   // Pill drag-to-reposition
   const pillRef = useRef<HTMLDivElement>(null);
   const pillDragOrigin = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
