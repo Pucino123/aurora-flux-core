@@ -253,7 +253,7 @@ const IdeaCanvas = ({
   return (
     <div className="flex-1 relative h-full w-full">
       <ReactFlow
-        nodes={nodes.map(n => ({
+        nodes={nodesWithLight.map(n => ({
           ...n,
           style: markedNodes.has(n.id)
             ? { ...((n.style as object) || {}), outline: "2px solid #3b82f6", outlineOffset: "3px" }
