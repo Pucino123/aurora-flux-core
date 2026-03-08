@@ -883,10 +883,10 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const { user } = useAuth();
   const [idea, setIdea] = useState("");
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({
-    elena: "idle", helen: "idle", anton: "idle", margot: "idle",
+    strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle",
   });
   const [responses, setResponses] = useState<Record<string, BoardroomPersonaResponse | null>>({
-    elena: null, helen: null, anton: null, margot: null,
+    strategist: null, operator: null, skeptic: null, advocate: null,
   });
   const [actionPlan, setActionPlan] = useState<string[]>(DEFAULT_ACTION_PLAN);
   const [isConsulting, setIsConsulting] = useState(false);
