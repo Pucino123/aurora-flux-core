@@ -409,16 +409,6 @@ const CommunityBoardView = () => {
             Discover projects from the Flux community. Claim a space to promote your own startup.
           </p>
         </div>
-        <button
-          onClick={() => setAdminMode((v) => !v)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-            adminMode
-              ? "bg-primary/10 border-primary/30 text-primary"
-              : "border-border text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {adminMode ? "Exit Admin" : "Admin Mode"}
-        </button>
       </div>
 
       {/* Admin Pending Queue */}
