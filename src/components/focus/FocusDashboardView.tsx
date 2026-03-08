@@ -890,46 +890,83 @@ const FocusContent = () => {
 
       <ToolDrawer />
 
-      {/* ── iOS-style Dashboard Pagination Pill ── */}
-      <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-4 py-2 rounded-full"
-        style={{
-          background: "rgba(15,12,25,0.80)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255,255,255,0.18)",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
-        }}
+      {/* ── iOS-style Dashboard Pagination ── positioned just above ToolDrawer (~60px from bottom) */}
+      <div className="fixed left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-1.5"
+        style={{ bottom: "68px" }}
       >
-        {dashboardPages.map((page, i) => (
-          <button
-            key={page.id}
-            onClick={() => goToPage(i)}
-            className="transition-all duration-300"
-            style={{
-              width: i === activePageIndex ? 24 : 8,
-              height: 8,
-              borderRadius: 9999,
-              background: i === activePageIndex
-                ? "rgba(255,255,255,1)"
-                : "rgba(255,255,255,0.35)",
-              boxShadow: i === activePageIndex ? "0 0 10px rgba(255,255,255,0.7)" : "none",
-              flexShrink: 0,
-            }}
-          />
-        ))}
-        {/* Divider */}
-        <div className="w-px h-4 bg-white/20 mx-0.5" />
-        {/* Plus button */}
-        <button
-          onClick={addPage}
-          className="flex items-center justify-center transition-colors duration-150"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
-          title="Add page"
+        {/* Page labels row — show only active page label (or inline edit) */}
+        <div className="flex items-center gap-3 h-5">
+          {dashboardPages.map((page, i) => {
+            if (i !== activePageIndex) return null;
+            if (editingLabelIdx === i) {
+              return (
+                <input
+                  key={page.id}
+                  ref={labelInputRef}
+                  value={editingLabelValue}
+                  onChange={e => setEditingLabelValue(e.target.value)}
+                  onBlur={commitLabelEdit}
+                  onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
+                  className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 text-white w-24"
+                  maxLength={20}
+                  autoFocus
+                />
+              );
+            }
+            return (
+              <span
+                key={page.id}
+                className="text-[11px] font-medium text-white/70 cursor-default select-none"
+                onDoubleClick={() => startLabelEdit(i)}
+                title="Double-click to rename"
+              >
+                {page.label || "Home"}
+              </span>
+            );
+          })}
+        </div>
+
+        {/* Pill — dots + plus */}
+        <div
+          className="flex items-center gap-2.5 px-4 py-2 rounded-full"
+          style={{
+            background: "rgba(15,12,25,0.82)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
+          }}
         >
-          <Plus size={14} strokeWidth={2.5} />
-        </button>
+          {dashboardPages.map((page, i) => (
+            <button
+              key={page.id}
+              onClick={() => goToPage(i)}
+              onDoubleClick={() => startLabelEdit(i)}
+              className="transition-all duration-300 flex-shrink-0"
+              title={page.label || `Page ${i + 1}`}
+              style={{
+                width: i === activePageIndex ? 24 : 8,
+                height: 8,
+                borderRadius: 9999,
+                background: i === activePageIndex ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.35)",
+                boxShadow: i === activePageIndex ? "0 0 10px rgba(255,255,255,0.7)" : "none",
+              }}
+            />
+          ))}
+          {/* Divider */}
+          <div className="w-px h-4 bg-white/20" />
+          {/* Plus */}
+          <button
+            onClick={addPage}
+            className="flex items-center justify-center transition-colors duration-150"
+            style={{ color: "rgba(255,255,255,0.5)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.5)")}
+            title="Add page"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+          </button>
+        </div>
       </div>
     </div>
     </StyleEditorProvider>
