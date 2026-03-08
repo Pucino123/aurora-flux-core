@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, BarChart2, Send, Loader2, Share2, X, MessageSquare, TrendingUp, AlertTriangle,
-  Lightbulb, Star, Reply, Maximize2, BookmarkPlus, Check,
+  Lightbulb, Star, Reply, Maximize2, BookmarkPlus, Check, RotateCcw, Download, Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import html2canvas from "html2canvas";
 
 // ── Types ──
 
@@ -890,11 +891,65 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
+  // Realtime presence: collaborators watching the boardroom
+  const [collaborators, setCollaborators] = useState<{ userId: string; displayName: string; isConsulting: boolean }[]>([]);
+  const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // PDF export ref
+  const boardroomRef = useRef<HTMLDivElement>(null);
 
   const allRevealed = revealedCount === 4;
   const avgRing = Math.round(
     PERSONAS.reduce((a, p) => a + (responses[p.key]?.confidence ?? p.ringPct), 0) / PERSONAS.length
   );
+
+  // ── Realtime presence: join/leave channel ──
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel("boardroom-presence", {
+      config: { presence: { key: user.id } },
+    });
+    realtimeChannelRef.current = channel;
+
+    const displayName = user.email?.split("@")[0] || "Anonymous";
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState<{ displayName: string; isConsulting: boolean }>();
+        const colabs = Object.entries(state)
+          .filter(([uid]) => uid !== user.id)
+          .map(([uid, presenceArr]) => {
+            const latest = (presenceArr as any[])[0] || {};
+            return { userId: uid, displayName: latest.displayName || uid.slice(0,6), isConsulting: !!latest.isConsulting };
+          });
+        setCollaborators(colabs);
+      })
+      .on("broadcast", { event: "boardroom-consult" }, ({ payload }) => {
+        // Another team member consulted the board — show their results live
+        if (payload?.userId !== user.id && payload?.responses) {
+          const restored: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+          (payload.responses as { key: string; analysis: string; question: string; confidence: number }[]).forEach(r => {
+            if (r.key) restored[r.key] = { analysis: r.analysis, question: r.question, confidence: r.confidence };
+          });
+          setResponses(restored);
+          setCardStates({ elena: "revealed", helen: "revealed", anton: "revealed", margot: "revealed" });
+          setRevealedCount(4);
+          revealedCountRef.current = 4;
+          if (payload.idea) setIdea(payload.idea);
+          if (payload.actionPlan) setActionPlan(payload.actionPlan);
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ displayName, isConsulting: false });
+        }
+      });
+
+    return () => {
+      channel.unsubscribe();
+      realtimeChannelRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const getConsensusLabel = () => {
     if (avgRing >= 70) return { label: "Strong Consensus — Proceed", color: "#34d399" };
@@ -975,6 +1030,66 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     }
   }, [onRestoreIdea, handleRestore]);
 
+  // ── New Session: reset everything ──
+  const handleNewSession = useCallback(() => {
+    setIdea("");
+    setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
+    setResponses({ elena: null, helen: null, anton: null, margot: null });
+    setActionPlan(DEFAULT_ACTION_PLAN);
+    setRevealedCount(0);
+    revealedCountRef.current = 0;
+    setExpandedCard(null);
+    setFullscreenPersona(null);
+    setSavedIdeaId(null);
+    setSaveState("idle");
+    setFloatingEmojis({ elena: [], helen: [], anton: [], margot: [] });
+    sessionIdRef.current = resetSessionId();
+  }, []);
+
+  // ── PDF Export ──
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const handleExportPDF = useCallback(async () => {
+    if (!boardroomRef.current || isExportingPDF) return;
+    setIsExportingPDF(true);
+    try {
+      const canvas = await html2canvas(boardroomRef.current, {
+        backgroundColor: "#0a0814",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        ignoreElements: (el) => {
+          // Skip buttons/inputs that don't render well in PDF
+          return el.tagName === "BUTTON" && (el as HTMLButtonElement).type === "button" && (el as HTMLElement).dataset.noPdf === "true";
+        },
+      });
+      const imgData = canvas.toDataURL("image/png");
+      // Build a simple print page
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Boardroom — ${idea.slice(0, 60) || "Analysis"}</title>
+              <style>
+                body { margin: 0; background: #0a0814; display: flex; justify-content: center; align-items: flex-start; padding: 24px; }
+                img { max-width: 100%; border-radius: 16px; box-shadow: 0 0 60px rgba(139,92,246,0.4); }
+              </style>
+            </head>
+            <body>
+              <img src="${imgData}" alt="Boardroom Export" />
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => printWindow.print(), 800);
+      }
+    } catch (e) {
+      console.error("PDF export failed:", e);
+    }
+    setIsExportingPDF(false);
+  }, [idea, isExportingPDF]);
+
   const handleConsult = async () => {
     if (isConsulting) return;
     setIsConsulting(true);
@@ -988,8 +1103,14 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     setSaveState("idle");
     // Fresh session for new consult
     sessionIdRef.current = resetSessionId();
+    // Broadcast "consulting" presence state
+    if (realtimeChannelRef.current && user) {
+      const displayName = user.email?.split("@")[0] || "Anonymous";
+      realtimeChannelRef.current.track({ displayName, isConsulting: true }).catch(() => {});
+    }
 
     let aiPersonas: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+    let finalActionPlan: string[] = DEFAULT_ACTION_PLAN;
     try {
       const { data, error } = await supabase.functions.invoke("flux-ai", {
         body: { type: "boardroom-consult", idea: idea || "Should I start a new business?" },
@@ -999,11 +1120,25 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
           if (p.key) aiPersonas[p.key] = { analysis: p.analysis, question: p.question, confidence: p.confidence };
         });
         if (data.action_plan && Array.isArray(data.action_plan)) {
-          setActionPlan(data.action_plan);
+          finalActionPlan = data.action_plan;
+          setActionPlan(finalActionPlan);
         }
       }
     } catch {
       // fallback to mock
+    }
+
+    // Broadcast results to team members watching the boardroom
+    if (realtimeChannelRef.current && user) {
+      const broadcastPayload = {
+        userId: user.id,
+        idea: idea || "Should I start a new business?",
+        responses: PERSONAS.map(p => ({ key: p.key, ...(aiPersonas[p.key] || MOCK_RESPONSES[p.key]) })),
+        actionPlan: finalActionPlan,
+      };
+      realtimeChannelRef.current.send({ type: "broadcast", event: "boardroom-consult", payload: broadcastPayload }).catch(() => {});
+      const displayName = user.email?.split("@")[0] || "Anonymous";
+      realtimeChannelRef.current.track({ displayName, isConsulting: false }).catch(() => {});
     }
 
     await revealPersonaSequence(aiPersonas);
@@ -1047,7 +1182,31 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const fullscreenR = fullscreenPersona ? responses[fullscreenPersona] : null;
 
   return (
-    <div className="flex flex-col h-full min-h-0 gap-4">
+    <div ref={boardroomRef} className="flex flex-col h-full min-h-0 gap-4">
+      {/* Realtime collaborators pill */}
+      <AnimatePresence>
+        {collaborators.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full self-start"
+            style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.15)" }}
+          >
+            <Users size={10} className="text-cyan-400/70" />
+            <span className="text-[9px] text-cyan-400/70 font-medium">
+              {collaborators.map(c => (
+                <span key={c.userId} className="inline-flex items-center gap-1 mr-2">
+                  {c.isConsulting && <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />}
+                  {c.displayName}
+                </span>
+              ))}
+              {collaborators.some(c => c.isConsulting) ? "is consulting the board…" : "watching live"}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Pitch area */}
       <div className="space-y-3 shrink-0">
         <div className="flex gap-2">
@@ -1058,6 +1217,15 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
             placeholder="Idea: Should I start an eco-friendly coffee shop?"
             className="flex-1 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/20 transition-colors"
           />
+          {/* New Session button */}
+          <button
+            onClick={handleNewSession}
+            disabled={isConsulting}
+            title="New Session"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/8 transition-colors shrink-0 disabled:opacity-30"
+          >
+            <RotateCcw size={14} />
+          </button>
           <motion.button
             onClick={handleConsult}
             disabled={isConsulting}
@@ -1072,10 +1240,19 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
             {isConsulting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
             {isConsulting ? "Consulting…" : "Consult Board"}
           </motion.button>
+          {/* Export PDF button */}
+          <button
+            onClick={handleExportPDF}
+            disabled={isExportingPDF || !allRevealed}
+            title="Export PDF"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0 disabled:opacity-30"
+          >
+            {isExportingPDF ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+          </button>
           <button
             onClick={() => setShowExport(true)}
             className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0"
-            title="Export Verdict"
+            title="Share Verdict"
           >
             <Share2 size={15} />
           </button>
