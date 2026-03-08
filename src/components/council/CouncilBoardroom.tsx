@@ -1507,12 +1507,12 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}
           >
             <div className="flex items-center gap-2">
-              <Eye size={12} className="text-purple-400/70 shrink-0" />
+              <Eye size={12} className="text-accent/70 shrink-0" />
               <div>
-                <p className="text-[11px] font-semibold text-purple-300">
+                <p className="text-[11px] font-semibold text-accent">
                   {sharedByName ? `Shared by ${sharedByName}` : "Shared Boardroom analysis"}
                 </p>
-                <p className="text-[9px] text-white/35">
+                <p className="text-[9px] text-muted-foreground">
                   {sharedByName
                     ? `${sharedByName} shared this council analysis with you. Sign up to save your own sessions.`
                     : "This analysis was shared with you. Sign up to save your own sessions and consult the board."}
