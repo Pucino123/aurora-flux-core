@@ -444,19 +444,16 @@ const FocusContent = () => {
       { key: "yellow" }, { key: "purple" }, { key: "green" }, { key: "blue" },
       { key: "pink" }, { key: "orange" }, { key: "coral" }, { key: "mint" },
     ];
-    const color = COLORS[focusStickyNotes.length % COLORS.length];
+    const color = COLORS[pageStickyNotes.length % COLORS.length];
     const rotation = Math.round((Math.random() - 0.5) * 8);
     const baseX = pos ? pos.x : 40 + Math.random() * Math.min(window.innerWidth - 200, 500);
     const baseY = pos ? pos.y : 60 + Math.random() * Math.min(window.innerHeight - 250, 400);
-    setFocusStickyNotes([
-      ...focusStickyNotes,
+    setPageStickyNotes([
+      ...pageStickyNotes,
       { id: `fn-${Date.now()}`, text: "", color: color.key, x: baseX, y: baseY, rotation, opacity: 1 },
     ]);
     contextMenuPosRef.current = null;
-    if (!activeWidgets.includes("notes")) {
-      // Toggle it on via the store if possible
-    }
-  }, [focusStickyNotes, setFocusStickyNotes, activeWidgets]);
+  }, [pageStickyNotes, setPageStickyNotes]);
 
   const handleDragStateChange = useCallback((state: { id: string; x: number; y: number } | null) => {
     if (state === null && dragStateRef.current) {
