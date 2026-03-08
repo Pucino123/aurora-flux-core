@@ -829,6 +829,48 @@ const FocusContent = () => {
       )}
 
       <ToolDrawer />
+
+      {/* ── iOS-style Dashboard Pagination Pill ── */}
+      <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-4 py-2 rounded-full"
+        style={{
+          background: "rgba(15,12,25,0.80)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: "1px solid rgba(255,255,255,0.18)",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+        }}
+      >
+        {dashboardPages.map((page, i) => (
+          <button
+            key={page.id}
+            onClick={() => goToPage(i)}
+            className="transition-all duration-300"
+            style={{
+              width: i === activePageIndex ? 24 : 8,
+              height: 8,
+              borderRadius: 9999,
+              background: i === activePageIndex
+                ? "rgba(255,255,255,1)"
+                : "rgba(255,255,255,0.35)",
+              boxShadow: i === activePageIndex ? "0 0 10px rgba(255,255,255,0.7)" : "none",
+              flexShrink: 0,
+            }}
+          />
+        ))}
+        {/* Divider */}
+        <div className="w-px h-4 bg-white/20 mx-0.5" />
+        {/* Plus button */}
+        <button
+          onClick={addPage}
+          className="flex items-center justify-center transition-colors duration-150"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+          title="Add page"
+        >
+          <Plus size={14} strokeWidth={2.5} />
+        </button>
+      </div>
     </div>
     </StyleEditorProvider>
   );
