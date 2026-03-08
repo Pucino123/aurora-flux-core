@@ -50,12 +50,16 @@ const FALLBACK_BLOCKS: Omit<ScheduleBlock, "id">[] = [
   { time: "16:00", endTime: "17:00", title: "Weekly Review",              type: "work",    isAI: true,  sort_order: 6, scheduledDate: TODAY },
 ];
 
-const TYPE_STYLE: Record<BlockType, { bg: string; dot: string; text: string }> = {
+const TYPE_STYLE: Record<string, { bg: string; dot: string; text: string }> = {
   work:    { bg: "bg-blue-400/10 border-blue-400/20",       dot: "bg-blue-400",    text: "text-blue-300"    },
   meeting: { bg: "bg-amber-400/10 border-amber-400/20",     dot: "bg-amber-400",   text: "text-amber-300"   },
   break:   { bg: "bg-emerald-400/10 border-emerald-400/20", dot: "bg-emerald-400", text: "text-emerald-300" },
   ai:      { bg: "bg-violet-400/10 border-violet-400/30",   dot: "bg-violet-400",  text: "text-violet-300"  },
+  deep:    { bg: "bg-blue-400/10 border-blue-400/20",       dot: "bg-blue-400",    text: "text-blue-300"    },
+  admin:   { bg: "bg-amber-400/10 border-amber-400/20",     dot: "bg-amber-400",   text: "text-amber-300"   },
+  personal:{ bg: "bg-emerald-400/10 border-emerald-400/20", dot: "bg-emerald-400", text: "text-emerald-300" },
 };
+const DEFAULT_TYPE_STYLE = { bg: "bg-white/5 border-white/10", dot: "bg-white/40", text: "text-muted-foreground" };
 
 /** Human-friendly label for a future scheduled date */
 function dateBadgeLabel(dateStr: string): string | null {
