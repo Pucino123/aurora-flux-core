@@ -278,7 +278,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
 
   // ── Layout classes ─────────────────────────────────────────────────────────
   const layoutClasses = useMemo(() => {
-    const base = "absolute rounded-2xl bg-card/90 backdrop-blur-2xl border overflow-hidden flex flex-col";
+    const base = "absolute rounded-2xl bg-card/90 backdrop-blur-2xl border overflow-hidden flex flex-col pointer-events-auto";
     const focusRing = focused
       ? "border-primary/60 shadow-[0_0_0_2px_hsl(var(--primary)/0.35),0_8px_40px_rgba(0,0,0,0.55)]"
       : "border-border/20 shadow-2xl";
