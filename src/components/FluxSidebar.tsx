@@ -38,7 +38,7 @@ const UserSection = () => {
     if (!file || !user) return;
     setUploading(true);
     const ext = file.name.split(".").pop();
-    const path = `avatars/${user.id}.${ext}`;
+    const path = `${user.id}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage.from("document-images").upload(path, file, { upsert: true });
     if (uploadError) { toast.error("Failed to upload avatar"); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from("document-images").getPublicUrl(path);
