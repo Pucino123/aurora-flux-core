@@ -170,6 +170,7 @@ interface FluxContextValue {
   updateBlock: (id: string, data: Partial<DbScheduleBlock>) => Promise<void>;
   removeBlock: (id: string) => Promise<void>;
   replaceBlocksForDate: (date: string, blocks: Omit<DbScheduleBlock, "id" | "user_id" | "created_at">[]) => Promise<void>;
+  scheduleTask: (taskId: string, startTime: string, date?: string) => Promise<void>;
 
   // Helpers
   findFolderNode: (id: string) => FolderNode | undefined;
