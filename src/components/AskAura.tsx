@@ -379,10 +379,11 @@ const AskAura = () => {
                     <button
                       onClick={send}
                       disabled={!input.trim() || loading}
-                      className="p-1.5 rounded-lg transition-all shrink-0 disabled:opacity-40"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all shrink-0 disabled:opacity-40 text-white text-[11px] font-semibold"
                       style={{ background: "linear-gradient(135deg, hsl(var(--aurora-violet)), hsl(var(--aurora-blue)))" }}
                     >
-                      <Send size={13} className="text-white" />
+                      <Send size={11} className="text-white" />
+                      <span>−1 ✨</span>
                     </button>
                   </div>
                   <div className="flex items-center justify-between mt-1.5">

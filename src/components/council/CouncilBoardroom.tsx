@@ -622,13 +622,12 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
       animate={{
         flex: isExpanded ? 7 : 1,
         opacity: isCollapsed ? 0.5 : 1,
-        boxShadow: state !== "idle" ? `0 0 30px ${persona.glow}, 0 0 60px ${persona.glow}` : `0 0 12px rgba(0,0,0,0.3)`,
+        boxShadow: state !== "idle" ? `0 0 30px ${persona.glow}, 0 0 60px ${persona.glow}` : undefined,
       }}
       transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
-      className="relative rounded-3xl border overflow-hidden backdrop-blur-xl min-w-0"
+      className="relative rounded-3xl border overflow-hidden backdrop-blur-xl min-w-0 bg-card/60 dark:bg-white/4"
       style={{
-        background: "rgba(255,255,255,0.04)",
-        borderColor: state !== "idle" ? persona.glowBorder : "rgba(255,255,255,0.1)",
+        borderColor: state !== "idle" ? persona.glowBorder : undefined,
       }}
     >
       {state === "idle" && (
@@ -653,11 +652,11 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white/90 truncate">{persona.name}</p>
-            <p className="text-[10px] text-white/40">{persona.title}</p>
+            <p className="text-sm font-bold text-foreground truncate">{persona.name}</p>
+            <p className="text-[10px] text-muted-foreground">{persona.title}</p>
             {state === "revealed" && (
               <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-1 mt-1">
-                <div className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${color}20`, color }}>
+                <div className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${color}25`, color }}>
                   {response?.confidence ?? persona.ringPct}%
                 </div>
               </motion.div>
@@ -665,29 +664,29 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
           </div>
           <div className="flex gap-1 shrink-0">
             <div className="relative group">
-              <button className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+              <button className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                 <BarChart2 size={12} />
               </button>
-              <div className="absolute right-0 bottom-full mb-1 px-2 py-1.5 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-[9px] text-white/60 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
+              <div className="absolute right-0 bottom-full mb-1 px-2 py-1.5 rounded-xl bg-popover backdrop-blur-xl border border-border text-[9px] text-muted-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg">
                 {persona.stat}
               </div>
             </div>
             {state === "revealed" && !isExpanded && (
               <>
-                <button onClick={onExpand} title="1-on-1 Deep Dive" className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+                <button onClick={onExpand} title="1-on-1 Deep Dive (−1 ✨)" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <MessageSquare size={12} />
                 </button>
-                <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+                <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <Maximize2 size={11} />
                 </button>
               </>
             )}
             {isExpanded && (
               <>
-                <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+                <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <Maximize2 size={11} />
                 </button>
-                <button onClick={onCollapse} className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+                <button onClick={onCollapse} className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <X size={12} />
                 </button>
               </>
@@ -702,7 +701,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
               animate={{ scale: [1, 1.08, 1], opacity: [0.35, 0.6, 0.35] }}
               transition={{ duration: 2.8, repeat: Infinity }}
             >
-              {React.createElement(Icon as React.ComponentType<{ size?: number; style?: React.CSSProperties }>, { size: 22, style: { color: `${color}60` } })}
+              {React.createElement(Icon as React.ComponentType<{ size?: number; style?: React.CSSProperties }>, { size: 22, style: { color: `${color}90` } })}
             </motion.div>
           </div>
         )}
@@ -711,32 +710,32 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
 
         {state === "revealed" && response && (
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-            <div className="flex-1 overflow-y-auto council-hidden-scrollbar text-[11px] text-white/65 leading-relaxed space-y-2">
+            <div className="flex-1 overflow-y-auto council-hidden-scrollbar text-[11px] text-foreground/70 leading-relaxed space-y-2">
               {banterTarget && <BanterChip referencedName={banterTarget} color={banterTargetColor} />}
               <p>{renderBoldTerms(response.analysis, color, showTooltip, setShowTooltip)}</p>
-              <p className="font-bold text-white/80 mt-1">{response.question}</p>
+              <p className="font-bold text-foreground/85 mt-1">{response.question}</p>
             </div>
 
             {isExpanded && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                className="mt-3 border-t border-white/8 pt-3 flex flex-col gap-2"
+                className="mt-3 border-t border-border/40 pt-3 flex flex-col gap-2"
               >
-                <p className="text-[9px] text-white/30 uppercase tracking-widest mb-1">1-on-1 Deep Dive with {persona.name.split(" ")[0]}</p>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">1-on-1 Deep Dive with {persona.name.split(" ")[0]} (−1 ✨ / msg)</p>
                 <div className="max-h-[140px] overflow-y-auto council-hidden-scrollbar space-y-2">
                   {chatMessages.map((m, i) => (
                     <div
                       key={i}
                       className={`text-[10px] rounded-xl px-2.5 py-1.5 leading-snug ${
                         m.role === "user"
-                          ? "bg-white/10 text-white/80 ml-6"
-                          : "bg-white/5 text-white/60 mr-6"
+                          ? "bg-secondary text-foreground/85 ml-6"
+                          : "bg-card text-foreground/65 mr-6 border border-border/40"
                       }`}
                     >
                       {m.text}
                       {m.role === "ai" && i === chatMessages.length - 1 && chatLoading && (
-                        <span className="inline-block w-1 h-3 bg-white/40 animate-pulse ml-0.5 align-middle" />
+                        <span className="inline-block w-1 h-3 bg-foreground/40 animate-pulse ml-0.5 align-middle" />
                       )}
                     </div>
                   ))}
@@ -749,12 +748,12 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
                     onChange={e => setChatInput(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && sendChat()}
                     placeholder={`Ask ${persona.name.split(" ")[0]}…`}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] text-white placeholder:text-white/20 outline-none focus:border-white/20"
+                    className="flex-1 bg-secondary border border-border rounded-xl px-2.5 py-1.5 text-[10px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/40"
                   />
                   <button
                     onClick={sendChat}
                     disabled={chatLoading}
-                    className="w-7 h-7 flex items-center justify-center rounded-xl"
+                    className="w-7 h-7 flex items-center justify-center rounded-xl transition-colors"
                     style={{ background: `${color}30` }}
                   >
                     {chatLoading ? <Loader2 size={10} className="animate-spin" style={{ color }} /> : <Send size={10} style={{ color }} />}
@@ -1508,12 +1507,12 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}
           >
             <div className="flex items-center gap-2">
-              <Eye size={12} className="text-purple-400/70 shrink-0" />
+              <Eye size={12} className="text-accent/70 shrink-0" />
               <div>
-                <p className="text-[11px] font-semibold text-purple-300">
+                <p className="text-[11px] font-semibold text-accent">
                   {sharedByName ? `Shared by ${sharedByName}` : "Shared Boardroom analysis"}
                 </p>
-                <p className="text-[9px] text-white/35">
+                <p className="text-[9px] text-muted-foreground">
                   {sharedByName
                     ? `${sharedByName} shared this council analysis with you. Sign up to save your own sessions.`
                     : "This analysis was shared with you. Sign up to save your own sessions and consult the board."}
@@ -1524,13 +1523,12 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
               {!user && (
                 <a
                   href="/auth"
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-purple-200 transition-colors"
-                  style={{ background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.35)" }}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-accent-foreground transition-colors bg-accent/20 border border-accent/30 hover:bg-accent/30"
                 >
                   <Sparkles size={9} /> Sign up free
                 </a>
               )}
-              <button onClick={() => setIsSharedView(false)} className="w-5 h-5 flex items-center justify-center text-white/25 hover:text-white/50 transition-colors">
+              <button onClick={() => setIsSharedView(false)} className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
                 <X size={11} />
               </button>
             </div>
@@ -1545,14 +1543,13 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full self-start"
-            style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.15)" }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full self-start bg-primary/10 border border-primary/20"
           >
-            <Users size={10} className="text-cyan-400/70" />
-            <span className="text-[9px] text-cyan-400/70 font-medium">
+            <Users size={10} className="text-primary/70" />
+            <span className="text-[9px] text-primary/70 font-medium">
               {collaborators.map(c => (
                 <span key={c.userId} className="inline-flex items-center gap-1 mr-2">
-                  {c.isConsulting && <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />}
+                  {c.isConsulting && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
                   {c.displayName}
                 </span>
               ))}
@@ -1564,20 +1561,20 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
       {/* Pitch area */}
       <div className="space-y-3 shrink-0">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
           <input
             value={idea}
             onChange={e => setIdea(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleConsult()}
             placeholder="Idea: Should I start an eco-friendly coffee shop?"
-            className="flex-1 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/20 transition-colors"
+            className="flex-1 px-4 py-3 rounded-2xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/40 transition-colors"
           />
           {/* New Session button */}
           <button
             onClick={handleNewSession}
             disabled={isConsulting}
             title="New Session"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/8 transition-colors shrink-0 disabled:opacity-30"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30"
           >
             <RotateCcw size={14} />
           </button>
@@ -1593,14 +1590,14 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             }}
           >
             {isConsulting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {isConsulting ? "Consulting…" : "Consult Board"}
+            {isConsulting ? "Consulting…" : "Consult Board (−5 ✨)"}
           </motion.button>
           {/* Export PDF button */}
           <button
             onClick={handleExportPDF}
             disabled={isExportingPDF || !allRevealed}
             title="Export PDF"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0 disabled:opacity-30"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30"
           >
             {isExportingPDF ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           </button>
@@ -1609,14 +1606,14 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             onClick={handleShareSession}
             disabled={!allRevealed}
             title="Copy Shareable Link"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0 disabled:opacity-30"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30"
           >
             <Link size={14} />
           </button>
           {/* Share verdict card */}
           <button
             onClick={() => setShowExport(true)}
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0"
             title="Share Verdict Card"
           >
             <Share2 size={15} />
@@ -1625,7 +1622,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
           <button
             onClick={() => setShowTour(true)}
             title="How to use the Boardroom"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/20 hover:text-white/50 hover:bg-white/8 transition-colors shrink-0"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground/50 hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0"
           >
             <span className="text-[13px] font-bold">?</span>
           </button>
@@ -1645,12 +1642,12 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="px-4 py-3 rounded-2xl bg-white/4 border border-white/8">
+              <div className="px-4 py-3 rounded-2xl bg-secondary/60 border border-border/50">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider">Board Consensus</span>
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Board Consensus</span>
                   <span className="text-[11px] font-bold" style={{ color: consensus.color }}>{consensus.label}</span>
                 </div>
-                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${avgRing}%` }}
@@ -1659,7 +1656,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                     style={{ background: `linear-gradient(90deg, ${consensus.color}80, ${consensus.color})` }}
                   />
                 </div>
-                <p className="text-[9px] text-white/25 mt-1">{avgRing}% average confidence across all 4 advisors</p>
+                <p className="text-[9px] text-muted-foreground/60 mt-1">{avgRing}% average confidence across all 4 advisors</p>
               </div>
             </motion.div>
           )}
@@ -1714,10 +1711,10 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ delay: 0.3, duration: 0.5 }}
-            className="shrink-0 rounded-2xl border border-white/10 bg-white/4 backdrop-blur-xl p-4"
+            className="shrink-0 rounded-2xl border border-border/50 bg-card/70 backdrop-blur-xl p-4"
           >
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[11px] font-bold text-white/50 uppercase tracking-widest">
+              <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
                 ✦ Council's Recommended Action Plan
               </h3>
               {user && (
@@ -1729,8 +1726,8 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold transition-all disabled:opacity-70"
                   style={
                     saveState === "saved"
-                      ? { background: "rgba(52,211,153,0.2)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }
-                      : { background: "rgba(139,92,246,0.2)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)" }
+                      ? { background: "rgba(52,211,153,0.15)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }
+                      : { background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.25)" }
                   }
                 >
                   {saveState === "saving" ? (
@@ -1750,9 +1747,9 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 + i * 0.15 }}
-                  className="flex gap-2.5 text-[11px] text-white/65 leading-snug"
+                  className="flex gap-2.5 text-[11px] text-foreground/70 leading-snug"
                 >
-                  <span className="shrink-0 w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-bold text-white/50 mt-0.5">
+                  <span className="shrink-0 w-4 h-4 rounded-full bg-secondary flex items-center justify-center text-[9px] font-bold text-muted-foreground mt-0.5">
                     {i + 1}
                   </span>
                   {step}
@@ -1786,31 +1783,29 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
               exit={{ scale: 0.93, opacity: 0, y: 20 }}
               transition={{ duration: 0.25 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-lg rounded-3xl overflow-hidden border"
-              style={{ background: "linear-gradient(135deg, rgba(10,8,20,0.98), rgba(20,12,40,0.98))", borderColor: "rgba(139,92,246,0.3)", boxShadow: "0 0 60px rgba(139,92,246,0.2)" }}
+               className="w-full max-w-lg rounded-3xl overflow-hidden border border-accent/30 bg-card shadow-2xl"
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
                 <div className="flex items-center gap-2">
-                  <FileText size={13} className="text-purple-400/70" />
-                  <p className="text-[11px] font-semibold text-white/60 uppercase tracking-widest">Council Digest</p>
+                  <FileText size={13} className="text-accent/70" />
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Council Digest</p>
                 </div>
-                <button onClick={() => setShowDigest(false)} className="w-6 h-6 flex items-center justify-center text-white/30 hover:text-white transition-colors">
+                <button onClick={() => setShowDigest(false)} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
                   <X size={12} />
                 </button>
               </div>
               <div className="p-5 space-y-3">
-                <p className="text-[10px] text-white/35">Copy this digest to paste into email, Notion, Slack, or anywhere you need a formatted summary.</p>
+                <p className="text-[10px] text-muted-foreground">Copy this digest to paste into email, Notion, Slack, or anywhere you need a formatted summary.</p>
                 <pre
-                  className="w-full p-4 rounded-2xl text-[10px] leading-relaxed text-white/60 overflow-auto max-h-60 font-mono"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", whiteSpace: "pre-wrap" }}
+                  className="w-full p-4 rounded-2xl text-[10px] leading-relaxed text-foreground/70 overflow-auto max-h-60 font-mono bg-secondary border border-border/40"
+                  style={{ whiteSpace: "pre-wrap" }}
                 >
                   {digestText}
                 </pre>
                  <div className="flex gap-2">
                   <button
                     onClick={() => { navigator.clipboard.writeText(digestText); toast.success("Digest copied to clipboard!"); }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-purple-200 transition-colors"
-                    style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.3)" }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-accent-foreground transition-colors bg-accent/20 hover:bg-accent/30 border border-accent/30"
                   >
                     <Copy size={11} /> Copy Digest
                   </button>
