@@ -15,7 +15,7 @@ import DocumentsView from "./DocumentsView";
 import SettingsView from "./SettingsView";
 import CreateFolderModal, { suggestIcon } from "./CreateFolderModal";
 import MultitaskingView from "./MultitaskingView";
-import ThinkpadView from "./ThinkpadView";
+import IdeapadView from "./ThinkpadView";
 import CommunityBoardView from "./CommunityBoardView";
 import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
