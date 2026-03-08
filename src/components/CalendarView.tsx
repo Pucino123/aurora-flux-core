@@ -698,7 +698,7 @@ const CalendarView = () => {
   const { tasks, scheduleBlocks, updateTask, createTask, scheduleTask } = useFlux();
   const { deals } = useCRM();
   const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const [pageLight, setPageLight] = useState(false);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalView>("week");
