@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useFocusStore } from "@/context/FocusContext";
-import { ChevronDown, Image, Upload, Plus, X, Palette, Save, Link, Sun } from "lucide-react";
+import { ChevronDown, Image, Upload, Plus, X, Palette, Save, Link, Sun, GripHorizontal, SlidersHorizontal } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 
 // ── Background images (ES6 imports) ──────────────────────────────────
