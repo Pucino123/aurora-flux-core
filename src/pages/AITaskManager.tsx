@@ -375,6 +375,7 @@ const DroppableColumn = ({
 /* ── Main ── */
 const AITaskManager = () => {
   const { tasks, updateTask, createTask, removeTask } = useFlux();
+  const { moveToTrash } = useTrash();
   const { members } = useTeamChat();
   const [newTitle, setNewTitle] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
