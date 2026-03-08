@@ -38,7 +38,7 @@ const AskAura = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { tasks, goals, workouts, folders, pendingDocumentId, createTask, updateTask, removeTask, createBlock } = useFlux();
+  const { tasks, goals, workouts, folders, scheduleBlocks, pendingDocumentId, createTask, updateTask, removeTask, createBlock } = useFlux();
   const { deals } = useCRM();
   const { consumeSparks, sparksBalance } = useMonetization();
 
