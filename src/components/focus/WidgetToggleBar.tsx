@@ -169,7 +169,7 @@ const WidgetToggleBar = () => {
       </motion.div>
 
       <FocusReportModal open={reportOpen} onOpenChange={setReportOpen} />
-      <TrashModal open={trashOpen} onOpenChange={setTrashOpen} />
+      <TrashModal open={trashOpen} onClose={() => setTrashOpen(false)} />
     </>
   );
 };
