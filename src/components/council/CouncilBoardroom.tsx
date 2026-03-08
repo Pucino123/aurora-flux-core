@@ -622,13 +622,12 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
       animate={{
         flex: isExpanded ? 7 : 1,
         opacity: isCollapsed ? 0.5 : 1,
-        boxShadow: state !== "idle" ? `0 0 30px ${persona.glow}, 0 0 60px ${persona.glow}` : `0 0 12px rgba(0,0,0,0.3)`,
+        boxShadow: state !== "idle" ? `0 0 30px ${persona.glow}, 0 0 60px ${persona.glow}` : undefined,
       }}
       transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
-      className="relative rounded-3xl border overflow-hidden backdrop-blur-xl min-w-0"
+      className="relative rounded-3xl border overflow-hidden backdrop-blur-xl min-w-0 bg-card/60 dark:bg-white/4"
       style={{
-        background: "rgba(255,255,255,0.04)",
-        borderColor: state !== "idle" ? persona.glowBorder : "rgba(255,255,255,0.1)",
+        borderColor: state !== "idle" ? persona.glowBorder : undefined,
       }}
     >
       {state === "idle" && (
