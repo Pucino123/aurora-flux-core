@@ -772,6 +772,8 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
 
       <FocusReportModal open={reportOpen} onOpenChange={setReportOpen} />
       <CollabMessagesModal open={collabOpen} onOpenChange={setCollabOpen} />
+      <MissionControl open={missionControlOpen} onClose={() => setMissionControlOpen(false)} />
+      <TrashModal open={trashOpen} onClose={() => setTrashOpen(false)} />
     </>
   );
 };
