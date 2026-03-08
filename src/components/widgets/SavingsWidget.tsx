@@ -443,6 +443,13 @@ const SavingsWidget = () => {
             <ArrowUpDown size={10} />
           </button>
           <button
+            onClick={() => exportGoalsCSV(goals)}
+            title="Export as CSV"
+            className="w-6 h-6 rounded-full bg-white/8 text-white/30 hover:bg-emerald-400/20 hover:text-emerald-300 flex items-center justify-center transition-all"
+          >
+            <Download size={10} />
+          </button>
+          <button
             onClick={() => setAdding(v => !v)}
             className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all text-white/60 hover:text-white/90"
           >
