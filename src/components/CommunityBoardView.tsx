@@ -240,7 +240,6 @@ const CommunityBoardView = () => {
   const [loading, setLoading] = useState(true);
   const [checkoutSlot, setCheckoutSlot] = useState<number | null>(null);
   const [setupSlot, setSetupSlot] = useState<number | null>(null);
-  const [adminMode, setAdminMode] = useState(false);
 
   /* ── Fetch from DB ── */
   const fetchSlots = useCallback(async () => {
