@@ -395,7 +395,7 @@ const CommunityBoardView = () => {
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
       <SEO
         title="Community Board"
-        description="Discover projects from the Flux community and claim your digital space."
+        description="Discover projects from the Dashiii community and claim your digital space."
       />
 
       {/* Header */}
