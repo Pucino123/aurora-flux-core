@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { FileText, Table, Pencil, Trash2, Copy, Type, Upload, Palette, Search, ChevronDown, Share2, CalendarPlus, FolderInput, Clock, BookCopy } from "lucide-react";
+import { FileText, Table, Pencil, Trash2, Copy, Type, Upload, Palette, Search, ChevronDown, Share2, CalendarPlus, FolderInput, Clock, BookCopy, Pin, PinOff } from "lucide-react";
 import { DbDocument } from "@/hooks/useDocuments";
 import { useFocusStore } from "@/context/FocusContext";
 import { useFlux } from "@/context/FluxContext";
@@ -28,6 +28,8 @@ interface DesktopDocumentProps {
   allPages?: { id: string; label: string; index: number }[];
   currentPageIndex?: number;
   onMoveToPage?: (docId: string, targetPageIndex: number) => void;
+  isPinned?: boolean;
+  onTogglePin?: (docId: string) => void;
 }
 
 const ICON_COLORS = [
@@ -52,7 +54,7 @@ const BG_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage }: DesktopDocumentProps) => {
+const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage, isPinned, onTogglePin }: DesktopDocumentProps) => {
   const { user } = useAuth();
   const store = useFocusStore();
   const { folders, createBlock } = useFlux();
@@ -82,6 +84,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const [calTime, setCalTime] = useState("09:00");
   const [showMoveFolder, setShowMoveFolder] = useState(false);
   const [showMoveToPageMenu, setShowMoveToPageMenu] = useState(false);
+  const [flyingOff, setFlyingOff] = useState<{ dir: 1 | -1 } | null>(null);
 
   const rootFolders = useMemo(() => folders.filter(f => !f.parent_id), [folders]);
 
@@ -176,10 +179,26 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const lucideIcon = storedIconName && !storedIconName.startsWith("http") ? FOLDER_ICONS.find(i => i.name === storedIconName) : null;
   const iconSize = 40;
 
+  // Fly-off: animate item flying off-screen in the target page direction
+  const triggerFlyOff = useCallback((targetPageIndex: number, cb: () => void) => {
+    const dir = (targetPageIndex > (currentPageIndex ?? 0) ? 1 : -1) as 1 | -1;
+    setFlyingOff({ dir });
+    setTimeout(() => { cb(); setFlyingOff(null); }, 420);
+  }, [currentPageIndex]);
+
   return (
     <>
-      <div
+      <motion.div
         className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group transition-shadow duration-200 ${!isMarqueeSelected && selected ? "ring-2 ring-primary/60" : ""}`}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={flyingOff
+          ? { x: flyingOff.dir * (window.innerWidth * 0.6), opacity: 0, scale: 0.7, rotate: flyingOff.dir * 12 }
+          : { x: 0, opacity: 1, scale: 1, rotate: 0 }
+        }
+        transition={flyingOff
+          ? { duration: 0.38, ease: [0.4, 0, 1, 1] }
+          : { duration: 0.2 }
+        }
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,
           zIndex: isDraggingActive ? 10000 : isMarqueeSelected ? 9000 : (selected ? 55 : 45),
@@ -196,6 +215,12 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
         onDoubleClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setSelected(false); onOpen(doc); } }}
         onContextMenu={handleContextMenu}
       >
+        {/* Pin badge */}
+        {isPinned && (
+          <div className="absolute -top-1 -right-1 z-20 w-4 h-4 rounded-full bg-primary flex items-center justify-center shadow-md" title="Pinned to all pages">
+            <Pin size={8} className="text-primary-foreground" />
+          </div>
+        )}
         {docOpacity > 0.06 && (
           <div className="absolute inset-0 rounded-2xl" style={{
             background: (() => {
@@ -241,7 +266,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
             </span>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {contextMenu && createPortal(
         <>
@@ -332,7 +357,10 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                           .map(p => (
                             <button
                               key={p.id}
-                              onClick={() => { onMoveToPage?.(doc.id, p.index); setContextMenu(null); }}
+                              onClick={() => {
+                                setContextMenu(null);
+                                triggerFlyOff(p.index, () => onMoveToPage?.(doc.id, p.index));
+                              }}
                               className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] text-foreground hover:bg-secondary/60 rounded-md transition-colors"
                             >
                               <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">{p.index + 1}</span>
@@ -342,6 +370,16 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                       </div>
                     )}
                   </div>
+                )}
+                {/* Show on all pages pin toggle */}
+                {onTogglePin && (
+                  <button
+                    onClick={() => { onTogglePin(doc.id); setContextMenu(null); }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${isPinned ? "text-primary" : "text-foreground"}`}
+                  >
+                    {isPinned ? <PinOff size={13} className="text-primary" /> : <Pin size={13} className="text-muted-foreground" />}
+                    {isPinned ? "Unpin from all pages" : "Show on all pages"}
+                  </button>
                 )}
                 <div className="h-px bg-border mx-2 my-1" />
                 <button onClick={handleDelete} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-destructive hover:bg-destructive/10 transition-colors">
