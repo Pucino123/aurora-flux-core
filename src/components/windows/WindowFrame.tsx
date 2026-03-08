@@ -3,8 +3,19 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import {
   X, Maximize2, PanelLeft, PanelRight, Square, Minus, Sun, Moon,
+  Copy, Group, Ungroup,
 } from "lucide-react";
-import { useWindowManager, AppWindow, WindowLayout } from "@/context/WindowManagerContext";
+import { useWindowManager, AppWindow, WindowLayout, OVERLAY_Z } from "@/context/WindowManagerContext";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
+} from "@/components/ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,9 +47,6 @@ const DEAD_ZONE_LEFT = 110;
 
 const DRAG_SPRING = { stiffness: 900, damping: 50, mass: 0.3 };
 
-// Non-floating layouts must be above the pill (z-9999) and dock (z-10090)
-const OVERLAY_Z = 10200;
-
 const LAYOUT_PILL_BG: Record<WindowLayout, string> = {
   floating:     "hsl(142 71% 45%)",
   fullscreen:   "hsl(217 91% 60%)",
@@ -57,7 +65,7 @@ type Guide = { type: "v"; x: number } | { type: "h"; y: number };
 function SnapGuides({ guides }: { guides: Guide[] }) {
   if (!guides.length) return null;
   return createPortal(
-    <div className="fixed inset-0 pointer-events-none z-[9989]">
+    <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 10200 }}>
       {guides.map((g, i) =>
         g.type === "v" ? (
           <motion.div key={i}
@@ -78,10 +86,26 @@ function SnapGuides({ guides }: { guides: Guide[] }) {
   );
 }
 
+// ── Group badge ───────────────────────────────────────────────────────────────
+function GroupBadge({ groupId }: { groupId: string }) {
+  // Derive a short colour from the group ID for visual identity
+  const hue = Math.abs(groupId.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % 360;
+  return (
+    <span
+      className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[7px] font-bold shrink-0"
+      style={{ background: `hsl(${hue} 70% 55%)`, color: "#fff" }}
+      title="Grouped window"
+    >
+      G
+    </span>
+  );
+}
+
 const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProps) => {
   const {
     closeWindow, setWindowLayout, updateWindowPosition,
     updateWindowSize, bringToFront, minimizeWindow,
+    duplicateWindow, groupWindows, ungroupWindow, windows,
   } = useWindowManager();
 
   const isFloating = win.layout === "floating";
@@ -92,9 +116,9 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const [docTheme, setDocTheme] = useState<"light" | "dark" | null>(null);
   const toggleDocTheme = useCallback(() => {
     setDocTheme(prev => {
-      if (prev === null) return "light";   // system → light
-      if (prev === "light") return "dark"; // light → dark
-      return null;                          // dark → system
+      if (prev === null) return "light";
+      if (prev === "light") return "dark";
+      return null;
     });
   }, []);
 
@@ -218,7 +242,10 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
       if (resizing.current.includes("e")) nw = Math.max(MIN_W, w + dx);
       if (resizing.current.includes("s")) nh = Math.max(MIN_H, h + dy);
       liveSizeRef.current = { w: nw, h: nh };
-      if (frameRef.current) { frameRef.current.style.width = `${nw}px`; frameRef.current.style.height = `${nh}px`; }
+      if (frameRef.current) {
+        frameRef.current.style.width = `${nw}px`;
+        frameRef.current.style.height = `${nh}px`;
+      }
     };
     const onUp = (e: PointerEvent) => {
       if (!resizing.current) return;
@@ -234,7 +261,10 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     };
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
-    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
   }, [win.id, updateWindowSize]);
 
   // ── z-index: non-floating layouts go ABOVE pill + dock ────────────────────
@@ -251,8 +281,8 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
       : "border-border/20 shadow-2xl";
     switch (win.layout) {
       case "floating":    return `${base} ${focusRing}`;
-      case "fullscreen":  return `${base} ${focusRing} inset-0`; // fill entire viewport
-      case "split-left":  return `${base} ${focusRing} inset-y-0 left-0 w-1/2`; // flush, above toolbar
+      case "fullscreen":  return `${base} ${focusRing} inset-0`;
+      case "split-left":  return `${base} ${focusRing} inset-y-0 left-0 w-1/2`;
       case "split-right": return `${base} ${focusRing} inset-y-0 right-0 w-1/2`;
       default:            return `${base} ${focusRing}`;
     }
@@ -263,14 +293,14 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     return { width: size.w, height: size.h };
   }, [win.layout, size.w, size.h]);
 
-  // ── Minimized ghost — flies up to ~40vh so it clears the dock ─────────────
+  // ── Minimized ghost — flies to ~30vh so it clears dock + pill ─────────────
   if (win.minimized) {
     return (
       <motion.div
         layoutId={`window-${win.id}`}
         className="absolute rounded-2xl bg-card/90 backdrop-blur-2xl border border-border/20 overflow-hidden pointer-events-none"
         initial={false}
-        animate={{ opacity: 0, scale: 0.08, y: "40vh" }}
+        animate={{ opacity: 0, scale: 0.08, y: "30vh" }}
         transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.7 }}
         style={{ zIndex: win.zIndex, left: rawX.current, top: rawY.current, width: liveSizeRef.current.w, height: 48 }}
       />
@@ -280,15 +310,108 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const layoutPillBg = LAYOUT_PILL_BG[win.layout];
   const layoutLabel  = LAYOUT_LABEL[win.layout];
 
-  // Theme icon cycle: null=auto, light=☀️, dark=🌙
-  const ThemeIcon = docTheme === "light" ? Sun : docTheme === "dark" ? Moon : Sun;
-  const themeTitle = docTheme === null ? "Theme: system (click for light)" : docTheme === "light" ? "Theme: light (click for dark)" : "Theme: dark (click for system)";
+  const ThemeIcon = docTheme === "dark" ? Moon : Sun;
+  const themeTitle = docTheme === null
+    ? "Theme: system (click for light)"
+    : docTheme === "light"
+    ? "Theme: light (click for dark)"
+    : "Theme: dark (click for system)";
+
+  // Windows available to group with (same layout, not self, not already grouped with this window)
+  const groupCandidates = windows.filter(
+    w => w.id !== win.id && !w.minimized && w.layout === "floating" &&
+    !(w.groupId && w.groupId === win.groupId)
+  );
+
+  const headerContent = (
+    <div
+      className={`relative flex items-center justify-between px-3 py-2 border-b border-border/20 shrink-0 h-9 ${isFloating ? "cursor-grab active:cursor-grabbing" : ""}`}
+      onPointerDown={handleHeaderPointerDown}
+      onPointerMove={handleHeaderPointerMove}
+      onPointerUp={handleHeaderPointerUp}
+      onDoubleClick={handleHeaderDoubleClick}
+    >
+      {/* Left: traffic-lights + layout switcher */}
+      <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
+        <button onClick={() => closeWindow(win.id)}
+          className="group w-3.5 h-3.5 rounded-full bg-red-500/60 hover:bg-red-500 transition-colors flex items-center justify-center" title="Close (⌘W)">
+          <X size={7} className="opacity-0 group-hover:opacity-100 text-red-900" />
+        </button>
+        <button onClick={() => minimizeWindow(win.id)}
+          className="group w-3.5 h-3.5 rounded-full bg-amber-400/60 hover:bg-amber-400 transition-colors flex items-center justify-center" title="Minimize (⌘M)">
+          <Minus size={7} className="opacity-0 group-hover:opacity-100 text-amber-900" />
+        </button>
+        <button onClick={toggleFullscreen}
+          className="group w-3.5 h-3.5 rounded-full bg-emerald-500/60 hover:bg-emerald-500 transition-colors flex items-center justify-center" title={win.layout === "fullscreen" ? "Restore" : "Full Screen"}>
+          <Maximize2 size={7} className="opacity-0 group-hover:opacity-100 text-emerald-900" />
+        </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
+              style={{ background: layoutPillBg, color: "rgba(0,0,0,0.75)" }} title="Change layout"
+            >
+              {layoutLabel}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" sideOffset={8} style={{ zIndex: 10999 }} className="min-w-[160px]">
+            {LAYOUT_OPTIONS.map(opt => (
+              <DropdownMenuItem key={opt.value}
+                onClick={() => {
+                  if (opt.value === "fullscreen" && win.layout !== "fullscreen") enterFullscreen();
+                  else if (opt.value !== "fullscreen" && win.layout === "fullscreen") { prevLayoutRef.current = opt.value; exitFullscreen(); }
+                  else setWindowLayout(win.id, opt.value);
+                }}
+                className={`flex items-center gap-2.5 text-xs ${win.layout === opt.value ? "text-primary font-semibold" : ""}`}
+              >
+                {opt.icon} {opt.label}
+                {win.layout === opt.value && <span className="ml-auto text-primary">✓</span>}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => minimizeWindow(win.id)} className="flex items-center gap-2.5 text-xs">
+              <Minus size={13} /> Minimize <span className="ml-auto text-foreground/30">⌘M</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => closeWindow(win.id)} className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive">
+              <X size={13} /> Close <span className="ml-auto text-foreground/30">⌘W</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Group badge */}
+        {win.groupId && <GroupBadge groupId={win.groupId} />}
+      </div>
+
+      {/* Center: title */}
+      <span className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[36%] pointer-events-none select-none">
+        {win.title}
+      </span>
+
+      {/* Drag hint */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-[11px] w-8 h-1 rounded-full bg-foreground/15 pointer-events-none" />
+
+      {/* Right: theme toggle */}
+      <div className="flex items-center shrink-0" onPointerDown={e => e.stopPropagation()}>
+        <button
+          onClick={toggleDocTheme}
+          title={themeTitle}
+          className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-foreground/10 transition-colors"
+        >
+          <ThemeIcon
+            size={11}
+            className={docTheme === null ? "text-foreground/25" : "text-foreground/60"}
+          />
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <>
       {/* Snap zone overlay */}
       {snapZone && dragging.current && createPortal(
-        <div className="fixed inset-0 pointer-events-none z-[9990] flex">
+        <div className="fixed inset-0 pointer-events-none flex" style={{ zIndex: 10200 }}>
           <AnimatePresence>
             {snapZone === "left" && (
               <motion.div key="snap-left" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }} className="h-full rounded-2xl m-3"
@@ -305,123 +428,134 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
       <AnimatePresence>{guides.length > 0 && <SnapGuides guides={guides} />}</AnimatePresence>
 
       {/* ── Window frame ──────────────────────────────────────────────────── */}
-      <motion.div
-        ref={frameRef as React.Ref<HTMLDivElement>}
-        layoutId={`window-${win.id}`}
-        layout={!isFloating}
-        transition={{ type: "spring", stiffness: 340, damping: 34 }}
-        className={`${layoutClasses} select-none`}
-        style={{ zIndex: effectiveZ, ...(isFloating ? { x: springX, y: springY, ...posStyle } : {}) }}
-        onPointerDownCapture={() => bringToFront(win.id)}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.94 }}
-      >
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div
-          className={`relative flex items-center justify-between px-3 py-2 border-b border-border/20 shrink-0 h-9 ${isFloating ? "cursor-grab active:cursor-grabbing" : ""}`}
-          onPointerDown={handleHeaderPointerDown}
-          onPointerMove={handleHeaderPointerMove}
-          onPointerUp={handleHeaderPointerUp}
-          onDoubleClick={handleHeaderDoubleClick}
-        >
-          {/* Left: traffic-lights + layout switcher */}
-          <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
-            <button onClick={() => closeWindow(win.id)}
-              className="group w-3.5 h-3.5 rounded-full bg-red-500/60 hover:bg-red-500 transition-colors flex items-center justify-center" title="Close (⌘W)">
-              <X size={7} className="opacity-0 group-hover:opacity-100 text-red-900" />
-            </button>
-            <button onClick={() => minimizeWindow(win.id)}
-              className="group w-3.5 h-3.5 rounded-full bg-amber-400/60 hover:bg-amber-400 transition-colors flex items-center justify-center" title="Minimize (⌘M)">
-              <Minus size={7} className="opacity-0 group-hover:opacity-100 text-amber-900" />
-            </button>
-            <button onClick={toggleFullscreen}
-              className="group w-3.5 h-3.5 rounded-full bg-emerald-500/60 hover:bg-emerald-500 transition-colors flex items-center justify-center" title={win.layout === "fullscreen" ? "Restore" : "Full Screen"}>
-              <Maximize2 size={7} className="opacity-0 group-hover:opacity-100 text-emerald-900" />
-            </button>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <motion.div
+            ref={frameRef as React.Ref<HTMLDivElement>}
+            layoutId={`window-${win.id}`}
+            layout={!isFloating}
+            transition={{ type: "spring", stiffness: 340, damping: 34 }}
+            className={`${layoutClasses} select-none`}
+            style={{ zIndex: effectiveZ, ...(isFloating ? { x: springX, y: springY, ...posStyle } : {}) }}
+            onPointerDownCapture={() => bringToFront(win.id)}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.94 }}
+          >
+            {/* ── Header ────────────────────────────────────────────────── */}
+            {headerContent}
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
-                  style={{ background: layoutPillBg, color: "rgba(0,0,0,0.75)" }} title="Change layout"
-                >
-                  {layoutLabel}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={8} className="z-[10999] min-w-[160px]">
-                {LAYOUT_OPTIONS.map(opt => (
-                  <DropdownMenuItem key={opt.value}
-                    onClick={() => {
-                      if (opt.value === "fullscreen" && win.layout !== "fullscreen") enterFullscreen();
-                      else if (opt.value !== "fullscreen" && win.layout === "fullscreen") { prevLayoutRef.current = opt.value; exitFullscreen(); }
-                      else setWindowLayout(win.id, opt.value);
-                    }}
-                    className={`flex items-center gap-2.5 text-xs ${win.layout === opt.value ? "text-primary font-semibold" : ""}`}
-                  >
-                    {opt.icon} {opt.label}
-                    {win.layout === opt.value && <span className="ml-auto text-primary">✓</span>}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => minimizeWindow(win.id)} className="flex items-center gap-2.5 text-xs">
-                  <Minus size={13} /> Minimize <span className="ml-auto text-foreground/30">⌘M</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => closeWindow(win.id)} className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive">
-                  <X size={13} /> Close <span className="ml-auto text-foreground/30">⌘W</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Center: title */}
-          <span className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[36%] pointer-events-none select-none">
-            {win.title}
-          </span>
-
-          {/* Drag hint */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-[11px] w-8 h-1 rounded-full bg-foreground/15 pointer-events-none" />
-
-          {/* Right: theme toggle */}
-          <div className="flex items-center shrink-0" onPointerDown={e => e.stopPropagation()}>
-            <button
-              onClick={toggleDocTheme}
-              title={themeTitle}
-              className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-foreground/10 transition-colors"
+            {/* ── Content — wrapped in scoped theme class ──────────────── */}
+            <div
+              className={`flex-1 min-h-0 overflow-hidden select-text pointer-events-auto ${docTheme === "light" ? "light" : docTheme === "dark" ? "dark" : ""}`}
+              style={docTheme !== null ? {
+                colorScheme: docTheme,
+                background: docTheme === "light" ? "hsl(0 0% 98%)" : "hsl(222 47% 11%)",
+              } : undefined}
             >
-              <ThemeIcon
-                size={11}
-                className={docTheme === null ? "text-foreground/25" : "text-foreground/60"}
-              />
-            </button>
-          </div>
-        </div>
-
-        {/* ── Content — wrapped in scoped theme class ───────────────────────── */}
-        <div
-          className={`flex-1 min-h-0 overflow-hidden select-text pointer-events-auto ${docTheme === "light" ? "light" : docTheme === "dark" ? "dark" : ""}`}
-          style={docTheme !== null ? {
-            colorScheme: docTheme,
-            background: docTheme === "light" ? "hsl(0 0% 98%)" : "hsl(222 47% 11%)",
-          } : undefined}
-        >
-          {children}
-        </div>
-
-        {/* ── Resize handles ──────────────────────────────────────────────── */}
-        {isFloating && (
-          <>
-            <div className="absolute top-0 right-0 w-1.5 h-full cursor-e-resize z-[70] hover:bg-primary/15 transition-colors" onPointerDown={e => handleResizePointerDown(e, "e")} />
-            <div className="absolute bottom-0 left-0 h-1.5 w-full cursor-s-resize z-[70] hover:bg-primary/15 transition-colors" onPointerDown={e => handleResizePointerDown(e, "s")} />
-            <div className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-[71] flex items-end justify-end pr-0.5 pb-0.5" onPointerDown={e => handleResizePointerDown(e, "se")}>
-              <svg width="10" height="10" viewBox="0 0 10 10" className="text-foreground/25">
-                <path d="M10 0 L10 10 L0 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <path d="M10 4 L10 10 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              {children}
             </div>
-          </>
-        )}
-      </motion.div>
+
+            {/* ── Resize handles ──────────────────────────────────────── */}
+            {isFloating && (
+              <>
+                <div className="absolute top-0 right-0 w-1.5 h-full cursor-e-resize z-[70] hover:bg-primary/15 transition-colors" onPointerDown={e => handleResizePointerDown(e, "e")} />
+                <div className="absolute bottom-0 left-0 h-1.5 w-full cursor-s-resize z-[70] hover:bg-primary/15 transition-colors" onPointerDown={e => handleResizePointerDown(e, "s")} />
+                <div className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-[71] flex items-end justify-end pr-0.5 pb-0.5" onPointerDown={e => handleResizePointerDown(e, "se")}>
+                  <svg width="10" height="10" viewBox="0 0 10 10" className="text-foreground/25">
+                    <path d="M10 0 L10 10 L0 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M10 4 L10 10 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </>
+            )}
+          </motion.div>
+        </ContextMenuTrigger>
+
+        {/* ── Right-click context menu ─────────────────────────────────────── */}
+        <ContextMenuContent style={{ zIndex: 10999 }} className="min-w-[200px]">
+          {/* Layout options */}
+          <ContextMenuItem
+            onClick={() => {
+              if (win.layout !== "fullscreen") enterFullscreen();
+              else exitFullscreen();
+            }}
+            className="flex items-center gap-2.5 text-xs"
+          >
+            <Maximize2 size={13} />
+            {win.layout === "fullscreen" ? "Restore" : "Full Screen"}
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => setWindowLayout(win.id, "floating")}
+            className={`flex items-center gap-2.5 text-xs ${win.layout === "floating" ? "text-primary" : ""}`}
+          >
+            <Square size={13} /> Float
+            {win.layout === "floating" && <span className="ml-auto text-primary">✓</span>}
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => setWindowLayout(win.id, "split-left")}
+            className={`flex items-center gap-2.5 text-xs ${win.layout === "split-left" ? "text-primary" : ""}`}
+          >
+            <PanelLeft size={13} /> Split Left
+            {win.layout === "split-left" && <span className="ml-auto text-primary">✓</span>}
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => setWindowLayout(win.id, "split-right")}
+            className={`flex items-center gap-2.5 text-xs ${win.layout === "split-right" ? "text-primary" : ""}`}
+          >
+            <PanelRight size={13} /> Split Right
+            {win.layout === "split-right" && <span className="ml-auto text-primary">✓</span>}
+          </ContextMenuItem>
+
+          <ContextMenuSeparator />
+
+          {/* Window management */}
+          <ContextMenuItem onClick={() => duplicateWindow(win.id)} className="flex items-center gap-2.5 text-xs">
+            <Copy size={13} /> Duplicate
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => minimizeWindow(win.id)} className="flex items-center gap-2.5 text-xs">
+            <Minus size={13} /> Minimize
+            <span className="ml-auto text-foreground/30">⌘M</span>
+          </ContextMenuItem>
+
+          <ContextMenuSeparator />
+
+          {/* Group management */}
+          {groupCandidates.length > 0 && (
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="flex items-center gap-2.5 text-xs">
+                <Group size={13} /> Link to Window…
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent style={{ zIndex: 11000 }} className="min-w-[180px]">
+                {groupCandidates.map(w => (
+                  <ContextMenuItem
+                    key={w.id}
+                    onClick={() => groupWindows(win.id, w.id)}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <span className="truncate max-w-[140px]">{w.title}</span>
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          )}
+          {win.groupId && (
+            <ContextMenuItem onClick={() => ungroupWindow(win.id)} className="flex items-center gap-2.5 text-xs">
+              <Ungroup size={13} /> Unlink from Group
+            </ContextMenuItem>
+          )}
+
+          <ContextMenuSeparator />
+
+          <ContextMenuItem
+            onClick={() => closeWindow(win.id)}
+            className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive"
+          >
+            <X size={13} /> Close
+            <span className="ml-auto text-foreground/30">⌘W</span>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </>
   );
 };

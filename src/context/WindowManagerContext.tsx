@@ -13,13 +13,16 @@ export interface AppWindow {
   position: { x: number; y: number };
   size?: { w: number; h: number };
   minimized?: boolean;
+  groupId?: string; // links two windows into a pair
 }
 
-type PersistedWindow = Pick<AppWindow, 'type' | 'contentId' | 'title' | 'layout' | 'position' | 'size' | 'minimized'>;
+type PersistedWindow = Pick<AppWindow, 'type' | 'contentId' | 'title' | 'layout' | 'position' | 'size' | 'minimized' | 'groupId'>;
 
-const STORAGE_KEY = "flux-windows-v1";
+const STORAGE_KEY = "flux-windows-v2";
 // Documents always render above widgets with a fixed z-offset tier
-const DOC_Z_BOOST = 300;
+const DOC_Z_BOOST = 500;
+// Non-floating layouts (fullscreen/split) must be above the pill (z-9999) and dock (z-10150)
+export const OVERLAY_Z = 10300;
 
 function loadPersistedWindows(): PersistedWindow[] {
   try {
@@ -50,6 +53,9 @@ interface WindowManagerContextType {
   minimizeWindow: (id: string) => void;
   restoreWindow: (id: string) => void;
   closeSwitcher: () => void;
+  duplicateWindow: (id: string) => void;
+  groupWindows: (idA: string, idB: string) => void;
+  ungroupWindow: (id: string) => void;
 }
 
 const WindowManagerContext = createContext<WindowManagerContextType | null>(null);
@@ -67,8 +73,8 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
   // Persist to localStorage on every change
   useEffect(() => {
     const toSave: PersistedWindow[] = windows.map(
-      ({ type, contentId, title, layout, position, size, minimized }) => ({
-        type, contentId, title, layout, position, size, minimized,
+      ({ type, contentId, title, layout, position, size, minimized, groupId }) => ({
+        type, contentId, title, layout, position, size, minimized, groupId,
       })
     );
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -76,7 +82,6 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
 
   const closeSwitcher = useCallback(() => {
     setSwitcherOpen(false);
-    // Bring the targeted window to front when switcher closes
     setSwitcherTargetId(prev => {
       if (prev) {
         setFocusedId(prev);
@@ -126,7 +131,21 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
   }, []);
 
   const updateWindowPosition = useCallback((id: string, x: number, y: number) => {
-    setWindows(prev => prev.map(w => w.id === id ? { ...w, position: { x, y } } : w));
+    setWindows(prev => {
+      const win = prev.find(w => w.id === id);
+      if (!win) return prev;
+      // If window is in a group, move the partner by the same delta
+      if (win.groupId) {
+        const dx = x - win.position.x;
+        const dy = y - win.position.y;
+        return prev.map(w => {
+          if (w.id === id) return { ...w, position: { x, y } };
+          if (w.groupId === win.groupId) return { ...w, position: { x: w.position.x + dx, y: w.position.y + dy } };
+          return w;
+        });
+      }
+      return prev.map(w => w.id === id ? { ...w, position: { x, y } } : w);
+    });
   }, []);
 
   const updateWindowSize = useCallback((id: string, w: number, h: number) => {
@@ -160,6 +179,36 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
       const boost = win?.type === 'document' ? DOC_Z_BOOST : 0;
       return prev.map(w => w.id === id ? { ...w, minimized: false, zIndex: maxZ + 1 + boost } : w);
     });
+  }, []);
+
+  const duplicateWindow = useCallback((id: string) => {
+    setWindows(prev => {
+      const win = prev.find(w => w.id === id);
+      if (!win) return prev;
+      const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), 0);
+      const boost = win.type === 'document' ? DOC_Z_BOOST : 0;
+      const newId = `win-dup-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
+      setFocusedId(newId);
+      return [...prev, {
+        ...win,
+        id: newId,
+        groupId: undefined,
+        zIndex: maxZ + 1 + boost,
+        minimized: false,
+        position: { x: win.position.x + 32, y: win.position.y + 32 },
+      }];
+    });
+  }, []);
+
+  const groupWindows = useCallback((idA: string, idB: string) => {
+    const groupId = `group-${Date.now()}`;
+    setWindows(prev => prev.map(w =>
+      w.id === idA || w.id === idB ? { ...w, groupId } : w
+    ));
+  }, []);
+
+  const ungroupWindow = useCallback((id: string) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, groupId: undefined } : w));
   }, []);
 
   // ── Global keyboard shortcuts ──────────────────────────────────────────────
@@ -202,7 +251,6 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
       // ⌘` — open/cycle window switcher
       if (e.key === "`") {
         e.preventDefault();
-        // Clear auto-close timer
         if (switcherTimerRef.current) clearTimeout(switcherTimerRef.current);
 
         setWindows(prev => {
@@ -212,12 +260,10 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
           setSwitcherOpen(true);
           setSwitcherTargetId(current => {
             const idx = all.findIndex(w => w.id === current);
-            // Cycle backwards (most recent → older)
             const nextIdx = idx <= 0 ? all.length - 1 : idx - 1;
             return all[nextIdx]?.id ?? all[0].id;
           });
 
-          // Auto-close switcher after 1.5s of inactivity
           switcherTimerRef.current = setTimeout(() => {
             setSwitcherOpen(false);
             setSwitcherTargetId(target => {
@@ -254,6 +300,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
       openWindow, closeWindow, setWindowLayout,
       updateWindowPosition, updateWindowSize, bringToFront,
       minimizeWindow, restoreWindow, closeSwitcher,
+      duplicateWindow, groupWindows, ungroupWindow,
     }}>
       {children}
     </WindowManagerContext.Provider>
