@@ -639,10 +639,11 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
             </motion.div>
           )}
         </AnimatePresence>
-        <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
-        <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
       </div>
+      <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
+      <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
     </div>
+  </div>
   );
 };
 
