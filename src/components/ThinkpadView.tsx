@@ -178,9 +178,11 @@ const IconPicker = ({ onPick, onClose }: { onPick: (key: string, color: string) 
 const IdeaCanvas = ({
   track,
   onSave,
+  isLight,
 }: {
   track: IdeaTrack;
   onSave: (nodes: Node[], edges: Edge[]) => void;
+  isLight: boolean;
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(track.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(track.edges);
@@ -195,6 +197,9 @@ const IdeaCanvas = ({
     setNodes(track.nodes);
     setEdges(track.edges);
   }, [track.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Propagate isLight into all node data so IdeaNode can style itself
+  const nodesWithLight = nodes.map(n => ({ ...n, data: { ...n.data, isLight } }));
 
   const onConnect = useCallback(
     (params: Connection) =>
