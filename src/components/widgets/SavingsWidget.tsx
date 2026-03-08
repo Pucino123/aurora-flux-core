@@ -463,6 +463,8 @@ const SavingsWidget = () => {
     const newAmount = Math.max(0, goal.current + (inputMode === "deposit" ? val : -val));
     const wasComplete = goal.current >= goal.target;
     const nowComplete = newAmount >= goal.target;
+    const oldPct = goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
+    const newPct = goal.target > 0 ? (newAmount / goal.target) * 100 : 0;
     setGoals(prev => prev.map(g => g.id === goalId ? { ...g, current: newAmount } : g));
     setPulseId(goalId); setTimeout(() => setPulseId(null), 600);
     setActiveCard(null); setInputMode(null); setInputVal("");
@@ -471,7 +473,23 @@ const SavingsWidget = () => {
     if (!wasComplete && nowComplete && !celebratedRef.current.has(goalId)) {
       celebratedRef.current.add(goalId);
       setCelebratingGoal({ ...goal, current: newAmount });
+      pushNotification({
+        type: "goal_reached",
+        title: "🏆 Goal Achieved!",
+        body: `${goal.emoji} ${goal.name} is 100% funded!`,
+        icon: "🏆",
+      });
     }
+    // Push milestone notifications (25%, 50%, 75%)
+    const milestoneHit = MILESTONES.filter(m => m.pct < 100 && oldPct < m.pct && newPct >= m.pct);
+    milestoneHit.forEach(m => {
+      pushNotification({
+        type: "savings_milestone",
+        title: `${m.badge} ${m.label}!`,
+        body: `${goal.emoji} ${goal.name} just hit ${m.pct}%`,
+        icon: m.badge,
+      });
+    });
   };
 
   // ── Rename ────────────────────────────────────────────────────────────────
