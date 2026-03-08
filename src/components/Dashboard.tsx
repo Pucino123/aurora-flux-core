@@ -173,7 +173,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       )}
 
       <MobileNav />
-      
+      {effectiveView !== "focus" && effectiveView !== "stream" && <CommHub />}
 
       {/* Global Modals */}
       <UpgradeModal />
