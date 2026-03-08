@@ -79,7 +79,7 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
       rightRotate = -18;
       leftEyeCX  = cx - baseSpread * 0.9;
       rightEyeCX = cx + baseSpread * 0.9;
-      barPath = `M ${leftEyeCX} ${barY + S * 0.01} L ${rightEyeCX} ${barY + S * 0.01}`;
+      barPath = `M ${leftEyeCX} ${barY + S * 0.06} Q ${cx} ${barY - S * 0.02} ${rightEyeCX} ${barY + S * 0.06}`;
       break;
     }
     case "straight":
