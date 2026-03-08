@@ -526,36 +526,38 @@ const TheCouncil = () => {
                   </AnimatePresence>
                 </motion.div>
               ) : (
-                /* ═══ 3-COLUMN RESULTS LAYOUT ═══ */
+                /* ═══ 3-COLUMN RESULTS LAYOUT — zero outer scroll ═══ */
                 <motion.div
                   key="results-layout"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.4 }}
-                  className="px-3 sm:px-4 md:px-6 lg:px-8 pb-8 pt-4 md:pt-6"
+                  className="px-3 sm:px-4 md:px-6 flex flex-col"
+                  style={{ height: "calc(100vh - 140px)" }}
                 >
-                  {/* Question title — prominent at top */}
+                  {/* Compact top bar: question + new idea button */}
                   {activeIdeaContent && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mb-5 md:mb-6"
-                    >
+                    <div className="flex items-center gap-2 mb-3 shrink-0">
                       <button
                         onClick={handleBackToInput}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium bg-black/8 text-foreground/70 hover:bg-black/12 backdrop-blur-md transition-all border border-black/10 mb-3"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium backdrop-blur-md transition-all border shrink-0"
+                        style={{ background: "rgba(0,0,0,0.12)", borderColor: "rgba(0,0,0,0.1)", color: "hsl(var(--foreground)/0.7)" }}
                       >
                         <X size={12} />
                         Ny idé
                       </button>
-                      <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold font-display leading-snug max-w-3xl" style={{ background: "linear-gradient(135deg, hsl(270 60% 40%), hsl(330 60% 45%), hsl(217 70% 45%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                        {activeIdeaContent}
-                      </h1>
-                    </motion.div>
+                      <p className="text-sm font-semibold text-foreground/70 truncate min-w-0">{activeIdeaContent}</p>
+                      {consensusScore !== null && (
+                        <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ml-auto"
+                          style={{ background: `${getGaugeLabel(consensusScore).color}20`, color: getGaugeLabel(consensusScore).color }}>
+                          {getGaugeLabel(consensusScore).label}
+                        </span>
+                      )}
+                    </div>
                   )}
 
-                  {/* 3-column grid */}
-                  <div className={`grid gap-4 md:gap-5 ${isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-3"}`}>
+                  {/* 3-column grid — each column scrolls independently */}
+                  <div className={`flex-1 min-h-0 grid gap-4 md:gap-5 ${isMobile ? "grid-cols-1 overflow-y-auto" : "grid-cols-3"}`}>
                     {/* ═══ LEFT COLUMN: Input + Idea ═══ */}
                     <div className="space-y-4">
                       {/* Compact input card */}
