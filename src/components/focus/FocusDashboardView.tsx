@@ -1054,8 +1054,10 @@ const FocusContent = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Desktop Folders */}
-          {folderTree.map((folder) => (
+          {/* Desktop Folders — only show folders registered to this page (or legacy: all if none registered yet) */}
+          {folderTree
+            .filter(folder => !currentPage?.visibleFolderIds || currentPage.visibleFolderIds.includes(folder.id))
+            .map((folder) => (
             <DesktopFolder
               key={folder.id}
               folder={folder}
@@ -1073,8 +1075,10 @@ const FocusContent = () => {
             />
           ))}
 
-          {/* Desktop Documents (unfiled) */}
-          {desktopDocs.map((doc) => (
+          {/* Desktop Documents (unfiled) — only show docs registered to this page */}
+          {desktopDocs
+            .filter(doc => !currentPage?.visibleDocIds || currentPage.visibleDocIds.includes(doc.id))
+            .map((doc) => (
             <DesktopDocument
               key={doc.id}
               doc={doc}
