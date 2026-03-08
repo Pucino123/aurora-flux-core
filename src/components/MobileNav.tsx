@@ -104,10 +104,16 @@ const MobileNav = () => {
                     <span className="text-sm font-semibold text-foreground">{t("app.name")}</span>
                     <button
                       onClick={openBilling}
-                      className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 border border-primary/20"
+                      className={`flex items-center gap-1 px-2 py-1 rounded-full border transition-colors ${
+                        sparksBalance < 5
+                          ? "bg-destructive/10 border-destructive/40 animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]"
+                          : "bg-primary/10 border-primary/20"
+                      }`}
                     >
-                      <Zap size={10} className="text-primary" />
-                      <span className="text-[10px] font-semibold text-primary">{sparksBalance} ✨</span>
+                      <Zap size={10} className={sparksBalance < 5 ? "text-destructive" : "text-primary"} />
+                      <span className={`text-[10px] font-semibold ${sparksBalance < 5 ? "text-destructive" : "text-primary"}`}>
+                        {sparksBalance < 5 ? `⚠ ${sparksBalance}` : `${sparksBalance} ✨`}
+                      </span>
                     </button>
                   </div>
                   <div className="flex items-center gap-2">

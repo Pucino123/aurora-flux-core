@@ -31,7 +31,7 @@ async function handleClassify(messages: any[], context: any, apiKey: string) {
       messages: [
         {
           role: "system",
-          content: `You are an Intelligent Dashboard Architect for a productivity app called Flux.
+          content: `You are an Intelligent Dashboard Architect for a productivity app called Dashiii.
 
 You are NOT a chatbot. You are a structured system that thinks before acting.
 
@@ -194,7 +194,7 @@ NEVER generate a "note" for structured requests like savings goals, budgets, or 
 
 async function handlePlan(context: any, apiKey: string) {
   const today = context?.today || new Date().toISOString().split("T")[0];
-  const systemPrompt = `You are a world-class daily planning assistant for Flux, inspired by Motion and Notion AI.
+  const systemPrompt = `You are a world-class daily planning assistant for Dashiii, inspired by Motion and Notion AI.
 
 You are a Proactive Productivity Strategist. You must think before generating.
 
@@ -357,7 +357,7 @@ ${documentContent}
 }
 
 async function handleChat(messages: any[], apiKey: string) {
-  const systemPrompt = "You are Flux, a helpful productivity assistant. Keep answers clear, concise, and actionable.";
+  const systemPrompt = "You are Aura, a helpful productivity assistant inside Dashiii. Keep answers clear, concise, and actionable.";
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",

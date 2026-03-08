@@ -122,14 +122,20 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
               </div>
             </div>
 
-            {/* Sparks pill */}
+            {/* Sparks pill — low-balance warning when < 5 */}
             <div className="px-3 mb-2">
               <button
                 onClick={openBilling}
-                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/8 border border-primary/15 hover:bg-primary/12 transition-colors"
+                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-colors ${
+                  sparksBalance < 5
+                    ? "bg-destructive/8 border-destructive/40 hover:bg-destructive/12 animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]"
+                    : "bg-primary/8 border-primary/15 hover:bg-primary/12"
+                }`}
               >
-                <Zap size={12} className="text-primary shrink-0" />
-                <span className="text-xs font-semibold text-primary flex-1 text-left">{sparksBalance} Sparks ✨</span>
+                <Zap size={12} className={`shrink-0 ${sparksBalance < 5 ? "text-destructive" : "text-primary"}`} />
+                <span className={`text-xs font-semibold flex-1 text-left ${sparksBalance < 5 ? "text-destructive" : "text-primary"}`}>
+                  {sparksBalance < 5 ? `⚠ Only ${sparksBalance} Sparks left!` : `${sparksBalance} Sparks ✨`}
+                </span>
                 <CreditCard size={11} className="text-muted-foreground" />
               </button>
             </div>
