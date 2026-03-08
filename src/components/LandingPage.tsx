@@ -77,7 +77,6 @@ const FeatureMarquee = ({ isDark }: { isDark: boolean }) => (
   </div>
 );
 
-/* ── Feature Slideshow ── */
 const SLIDES = [
   {
     tag: "🧠 The Council",
