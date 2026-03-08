@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { SlidersHorizontal, Focus } from "lucide-react";
 import FluxSidebar from "./FluxSidebar";
 import GridDashboard from "./GridDashboard";
 import Scheduler from "./Scheduler";
@@ -14,21 +15,21 @@ import ProjectsOverview from "./ProjectsOverview";
 import DocumentsView from "./DocumentsView";
 import SettingsView from "./SettingsView";
 import CreateFolderModal, { suggestIcon } from "./CreateFolderModal";
-
 import MultitaskingView from "./MultitaskingView";
 import CommunityBoardView from "./CommunityBoardView";
 import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
 import { UpgradeModal, OutOfSparksModal } from "./billing/BillingView";
 import CRMPage from "../pages/CRMPage";
+import ControlCenter from "./ControlCenter";
 import { useFlux } from "@/context/FluxContext";
 import { useMonetization } from "@/context/MonetizationContext";
+import { useFocusMode } from "@/context/FocusModeContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { t } from "@/lib/i18n";
 import OnboardingFlow from "./onboarding/OnboardingFlow";
 import CommHub from "./CommHub";
-
 
 interface DashboardProps {
   initialPrompt?: string;
@@ -49,15 +50,16 @@ function deriveFolderName(text: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-// InputBar is completely removed — all views suppress it
 const VIEWS_WITHOUT_INPUT = ["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing", "canvas"];
 const VIEWS_WITHOUT_SCHEDULER = [...VIEWS_WITHOUT_INPUT];
 
 const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible, onToggleSidebar, focusMode }: DashboardProps) => {
   const { activeView, createTask, createFolder, createBlock, setActiveFolder, setActiveView } = useFlux();
   const { billingOpen, closeBilling } = useMonetization();
+  const { isFocusModeActive, disableFocusMode } = useFocusMode();
   const [lastSubmitted, setLastSubmitted] = useState<string | undefined>(undefined);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [controlCenterOpen, setControlCenterOpen] = useState(false);
   const planProcessed = useRef(false);
 
   useEffect(() => {
@@ -71,6 +73,13 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
   useEffect(() => {
     if (billingOpen) setActiveView("billing" as any);
   }, [billingOpen, setActiveView]);
+
+  // Listen for Control Center toggle from keyboard or other triggers
+  useEffect(() => {
+    const handler = () => setControlCenterOpen(p => !p);
+    window.addEventListener("open-control-center", handler);
+    return () => window.removeEventListener("open-control-center", handler);
+  }, []);
 
   const handlePlanSubmit = useCallback(async (plan: any) => {
     if (!plan.steps?.length) return;
@@ -113,13 +122,41 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}
       className="relative z-10 flex min-h-screen w-full">
-      {/* Sidebar — desktop only */}
-      <div className="hidden md:block">
-        <FluxSidebar visible={sidebarVisible} onToggle={onToggleSidebar} onRequestCreateFolder={() => setShowCreateModal(true)} />
-      </div>
 
-      {/* Center stage — animated view transitions */}
+      {/* Sidebar — hidden in Focus Mode */}
+      <motion.div
+        className="hidden md:block"
+        animate={{
+          opacity: isFocusModeActive ? 0 : 1,
+          x: isFocusModeActive ? -20 : 0,
+          pointerEvents: isFocusModeActive ? "none" : "auto",
+        }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        style={{ pointerEvents: isFocusModeActive ? "none" : undefined }}
+      >
+        <FluxSidebar visible={sidebarVisible} onToggle={onToggleSidebar} onRequestCreateFolder={() => setShowCreateModal(true)} />
+      </motion.div>
+
+      {/* Center stage */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-[64px] md:pb-0 overflow-hidden">
+
+        {/* Control Center trigger button — top right */}
+        <div className="absolute top-3 right-3 z-[200] flex items-center gap-2">
+          <motion.button
+            onClick={() => setControlCenterOpen(p => !p)}
+            title="Control Center"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all duration-200 ${
+              controlCenterOpen
+                ? "bg-primary/20 border-primary/40 text-primary shadow-[0_0_12px_hsl(var(--primary)/0.3)]"
+                : "bg-background/60 border-border/30 text-muted-foreground hover:text-foreground hover:bg-background/80 backdrop-blur-md"
+            }`}
+          >
+            <SlidersHorizontal size={15} />
+          </motion.button>
+        </div>
+
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={effectiveView}
@@ -179,8 +216,39 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       <UpgradeModal />
       <OutOfSparksModal />
       <OnboardingFlow />
-
       <CreateFolderModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onCreate={handleCreateFolder} />
+
+      {/* Focus Mode exit button — floats at top when active */}
+      <AnimatePresence>
+        {isFocusModeActive && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ type: "spring", stiffness: 500, damping: 36 }}
+            className="fixed top-3 left-1/2 -translate-x-1/2 z-[9480] flex items-center gap-2 px-4 py-2 rounded-full"
+            style={{
+              background: "hsl(270 76% 65% / 0.15)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid hsl(270 76% 65% / 0.35)",
+              boxShadow: "0 4px 24px hsl(270 76% 65% / 0.2)",
+            }}
+          >
+            <Focus size={13} className="text-violet-400" />
+            <span className="text-xs font-medium text-violet-300">Focus Mode</span>
+            <button
+              onClick={disableFocusMode}
+              className="ml-2 text-[11px] text-violet-400/70 hover:text-violet-200 transition-colors border-l border-violet-500/30 pl-2"
+            >
+              Exit
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Control Center */}
+      <ControlCenter open={controlCenterOpen} onClose={() => setControlCenterOpen(false)} />
     </motion.div>
   );
 };
