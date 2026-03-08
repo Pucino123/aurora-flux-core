@@ -361,7 +361,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         </motion.div>
       </section>
 
-      <footer className="relative z-10 text-center pb-10 text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>© 2025 Flux. Built for deep work.</footer>
+      <footer className="relative z-10 text-center pb-10 text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>© 2025 Dashiii. Built for deep work.</footer>
     </div>
   );
 };
