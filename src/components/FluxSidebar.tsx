@@ -189,6 +189,15 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                 <Grid size={18} className="shrink-0" />
                 <span>Community Board</span>
               </button>
+
+              {/* Community Admin */}
+              <button
+                onClick={() => { setActiveFolder(null); setActiveView("community-admin" as any); }}
+                className={`sidebar-item w-full ${activeView === ("community-admin" as any) ? "sidebar-item-active" : ""}`}
+              >
+                <ShieldCheck size={18} className="shrink-0" />
+                <span>Community Admin</span>
+              </button>
             </div>
 
             <div className="sidebar-separator" />
