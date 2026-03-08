@@ -629,7 +629,7 @@ const TEMPLATES: Template[] = [
 ];
 
 const CATEGORIES = [
-  "All", "Blank", "Basic", "Business & Finance",
+  "Favorites", "All", "Blank", "Basic", "Business & Finance",
   "Project Management", "Notes & Meetings", "CRM & Sales",
 ];
 
@@ -642,18 +642,40 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("blank-text");
   const [previewTheme, setPreviewTheme] = useState<PreviewTheme>("light");
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(LS_FAVORITES) || "[]"); } catch { return []; }
+  });
   const modalRef = useRef<HTMLDivElement>(null);
 
-  const filtered = selectedCategory === "All" ? TEMPLATES : TEMPLATES.filter(t => t.category === selectedCategory);
+  const toggleFavorite = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavorites(prev => {
+      const next = prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id];
+      localStorage.setItem(LS_FAVORITES, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const filteredBase = selectedCategory === "All"
+    ? TEMPLATES
+    : selectedCategory === "Favorites"
+    ? TEMPLATES.filter(t => favorites.includes(t.id))
+    : TEMPLATES.filter(t => t.category === selectedCategory);
+
+  const filtered = filteredBase;
   const selectedTemplate = TEMPLATES.find(t => t.id === selectedTemplateId) ?? TEMPLATES[0];
 
   const handleCategoryChange = useCallback((cat: string) => {
     setSelectedCategory(cat);
-    const newFiltered = cat === "All" ? TEMPLATES : TEMPLATES.filter(t => t.category === cat);
+    const newFiltered = cat === "All"
+      ? TEMPLATES
+      : cat === "Favorites"
+      ? TEMPLATES.filter(t => favorites.includes(t.id))
+      : TEMPLATES.filter(t => t.category === cat);
     if (newFiltered.length > 0 && !newFiltered.find(t => t.id === selectedTemplateId)) {
       setSelectedTemplateId(newFiltered[0].id);
     }
-  }, [selectedTemplateId]);
+  }, [selectedTemplateId, favorites]);
 
   const handleCreate = useCallback(() => {
     onCreateDocument(selectedTemplate.title, selectedTemplate.type, selectedTemplate.content);
