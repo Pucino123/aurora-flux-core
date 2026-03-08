@@ -895,13 +895,17 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const [savedIdeaId, setSavedIdeaId] = useState<string | null>(null);
   // Personality sliders per advisor
   const [personalitySliders, setPersonalitySliders] = useState<AllSliders>(DEFAULT_ALL_SLIDERS);
+  // Shared session banner (viewing someone else's link)
+  const [isSharedView, setIsSharedView] = useState(false);
+  // Council Digest modal (shown after saving)
+  const [showDigest, setShowDigest] = useState(false);
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
   // Realtime presence: collaborators watching the boardroom
   const [collaborators, setCollaborators] = useState<{ userId: string; displayName: string; isConsulting: boolean }[]>([]);
   const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  // PDF export ref
+  // PDF export ref (not used for jsPDF but kept for future screenshots)
   const boardroomRef = useRef<HTMLDivElement>(null);
 
   const allRevealed = revealedCount === 4;
