@@ -419,10 +419,26 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
         {win.groupId && <GroupBadge groupId={win.groupId} />}
       </div>
 
-      {/* Center: title */}
-      <span className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[36%] pointer-events-none select-none">
-        {win.title}
-      </span>
+      {/* Center: title — tappable for rename */}
+      {isRenaming ? (
+        <input
+          ref={renameInputRef}
+          value={renameValue}
+          onChange={e => setRenameValue(e.target.value)}
+          onKeyDown={handleRenameKey}
+          onBlur={commitRename}
+          onClick={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+          className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold bg-transparent border-b border-primary outline-none text-foreground/90 truncate max-w-[36%] text-center"
+          style={{ minWidth: 80 }}
+        />
+      ) : (
+        <span
+          className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[36%] pointer-events-none select-none"
+          title="Double-click header to fullscreen; right-click for more">
+          {win.title}
+        </span>
+      )}
 
       {/* Drag hint */}
       <div className="absolute left-1/2 -translate-x-1/2 top-[11px] w-8 h-1 rounded-full bg-foreground/15 pointer-events-none" />
