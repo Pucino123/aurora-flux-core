@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { t } from "@/lib/i18n";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { FOLDER_ICONS } from "./CreateFolderModal";
 
 const FOLDER_COLORS = [
