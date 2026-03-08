@@ -1075,51 +1075,61 @@ const FocusContent = () => {
                 onNotesChange={setPageStickyNotes}
               />
             </AnimatePresence>
+
+              {/* Desktop Folders — strictly scoped to this page. Legacy pages (undefined list) show all. */}
+              {folderTree
+                .filter(folder => currentPage?.visibleFolderIds === undefined
+                  ? true
+                  : currentPage.visibleFolderIds.includes(folder.id))
+                .map((folder) => (
+                <DesktopFolder
+                  key={folder.id}
+                  folder={folder}
+                  onOpenModal={setOpenFolderId}
+                  dragState={dragState}
+                  docDragState={docDragState}
+                  onDragStateChange={handleDragStateChange}
+                  onDocDropped={refetchDesktopDocs}
+                  isMarqueeSelected={selectedIds.has(folder.id)}
+                  onGroupDragStart={handleGroupDragStart}
+                  onSingleSelect={handleSingleSelect}
+                  onBulkContextMenu={handleBulkContextMenu}
+                  positionOverride={pageFolderPositions[folder.id]}
+                  onPositionChange={updatePageFolderPosition}
+                  allPages={dashboardPages.map((p, i) => ({ id: p.id, label: p.label, index: i }))}
+                  currentPageIndex={activePageIndex}
+                  onMoveToPage={(id, idx) => handleMoveToPage(id, 'folder', idx)}
+                />
+              ))}
+
+              {/* Desktop Documents — strictly scoped to this page. Legacy pages (undefined list) show all. */}
+              {desktopDocs
+                .filter(doc => currentPage?.visibleDocIds === undefined
+                  ? true
+                  : currentPage.visibleDocIds.includes(doc.id))
+                .map((doc) => (
+                <DesktopDocument
+                  key={doc.id}
+                  doc={doc}
+                  onOpen={(d) => setOpenDesktopDoc(d)}
+                  onDelete={(id) => { removeDesktopDoc(id); }}
+                  onRefetch={refetchDesktopDocs}
+                  dragState={docDragState}
+                  onDragStateChange={handleDocDragStateChange}
+                  isMarqueeSelected={selectedIds.has(doc.id)}
+                  onGroupDragStart={handleGroupDragStart}
+                  onSingleSelect={handleSingleSelect}
+                  onBulkContextMenu={handleBulkContextMenu}
+                  positionOverride={pageDocPositions[doc.id]}
+                  onPositionChange={updatePageDocPosition}
+                  allPages={dashboardPages.map((p, i) => ({ id: p.id, label: p.label, index: i }))}
+                  currentPageIndex={activePageIndex}
+                  onMoveToPage={(id, idx) => handleMoveToPage(id, 'doc', idx)}
+                />
+              ))}
               </div>
             </motion.div>
           </AnimatePresence>
-
-          {/* Desktop Folders — only show folders registered to this page (or legacy: all if none registered yet) */}
-          {folderTree
-            .filter(folder => !currentPage?.visibleFolderIds || currentPage.visibleFolderIds.includes(folder.id))
-            .map((folder) => (
-            <DesktopFolder
-              key={folder.id}
-              folder={folder}
-              onOpenModal={setOpenFolderId}
-              dragState={dragState}
-              docDragState={docDragState}
-              onDragStateChange={handleDragStateChange}
-              onDocDropped={refetchDesktopDocs}
-              isMarqueeSelected={selectedIds.has(folder.id)}
-              onGroupDragStart={handleGroupDragStart}
-              onSingleSelect={handleSingleSelect}
-              onBulkContextMenu={handleBulkContextMenu}
-              positionOverride={pageFolderPositions[folder.id]}
-              onPositionChange={updatePageFolderPosition}
-            />
-          ))}
-
-          {/* Desktop Documents (unfiled) — only show docs registered to this page */}
-          {desktopDocs
-            .filter(doc => !currentPage?.visibleDocIds || currentPage.visibleDocIds.includes(doc.id))
-            .map((doc) => (
-            <DesktopDocument
-              key={doc.id}
-              doc={doc}
-              onOpen={(d) => setOpenDesktopDoc(d)}
-              onDelete={(id) => { removeDesktopDoc(id); }}
-              onRefetch={refetchDesktopDocs}
-              dragState={docDragState}
-              onDragStateChange={handleDocDragStateChange}
-              isMarqueeSelected={selectedIds.has(doc.id)}
-              onGroupDragStart={handleGroupDragStart}
-              onSingleSelect={handleSingleSelect}
-              onBulkContextMenu={handleBulkContextMenu}
-              positionOverride={pageDocPositions[doc.id]}
-              onPositionChange={updatePageDocPosition}
-            />
-          ))}
 
           {/* Marquee selection rectangle */}
           {marqueeRect && marqueeRect.width > 2 && marqueeRect.height > 2 && (
