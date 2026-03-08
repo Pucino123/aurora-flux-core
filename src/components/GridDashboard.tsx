@@ -359,7 +359,7 @@ const GridDashboard = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 flex flex-col">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold font-display">{t("dashboard.title")}</h2>
