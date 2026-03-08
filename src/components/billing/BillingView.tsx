@@ -155,7 +155,7 @@ export function CheckoutOverlay({ plan, onClose, onSuccess }: {
 
 /* ─── Billing View ─── */
 const BillingView = () => {
-  const { userPlan, sparksBalance, setUserPlan, addSparks, hasBYOK, setBYOK } = useMonetization();
+  const { userPlan, sparksBalance, setUserPlan, addSparks, hasBYOK, setBYOK, closeBilling } = useMonetization();
   const [billingTab, setBillingTab] = useState<"plans" | "sparks">("plans");
   const [checkout, setCheckout] = useState<{ name: string; price: string } | null>(null);
   const [checkoutType, setCheckoutType] = useState<"plan" | "sparks">("plan");
