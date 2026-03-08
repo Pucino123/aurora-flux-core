@@ -63,6 +63,49 @@ const FitnessTracker = ({ folderId }: FitnessTrackerProps) => {
     toast.success(t("fit.updated"));
   };
 
+  const captureHeatmap = async (): Promise<HTMLCanvasElement | null> => {
+    if (!heatmapRef.current) return null;
+    setShareLoading(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(heatmapRef.current, {
+        backgroundColor: "#0f0f14",
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      });
+      return canvas;
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    const canvas = await captureHeatmap();
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = `flux-streak-${new Date().toISOString().split("T")[0]}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    toast.success("Streak card downloaded!");
+    setShowShareModal(false);
+  };
+
+  const handleCopyToClipboard = async () => {
+    const canvas = await captureHeatmap();
+    if (!canvas) return;
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        toast.success("Copied to clipboard!");
+      } catch {
+        toast.error("Clipboard not supported in this browser.");
+      }
+    }, "image/png");
+    setShowShareModal(false);
+  };
+
   const handleDelete = async (id: string) => {
     const workout = workouts.find((w) => w.id === id);
     await removeWorkout(id);
