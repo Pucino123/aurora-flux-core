@@ -66,6 +66,38 @@ const FocusContent = () => {
   const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
+
+  // iOS-style dashboard pages state
+  const [dashboardPages, setDashboardPages] = useState<{ id: string }[]>(() => {
+    try {
+      const raw = localStorage.getItem("flux-dashboard-pages");
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [{ id: "page-1" }];
+  });
+  const [activePageIndex, setActivePageIndex] = useState(0);
+  const [pageDir, setPageDir] = useState<1 | -1>(1);
+
+  // Persist pages
+  useEffect(() => {
+    localStorage.setItem("flux-dashboard-pages", JSON.stringify(dashboardPages));
+  }, [dashboardPages]);
+
+  const goToPage = useCallback((idx: number) => {
+    setPageDir(idx > activePageIndex ? 1 : -1);
+    setActivePageIndex(idx);
+  }, [activePageIndex]);
+
+  const addPage = useCallback(() => {
+    const newPage = { id: `page-${Date.now()}` };
+    setDashboardPages(prev => {
+      const next = [...prev, newPage];
+      localStorage.setItem("flux-dashboard-pages", JSON.stringify(next));
+      return next;
+    });
+    setPageDir(1);
+    setActivePageIndex(dashboardPages.length);
+  }, [dashboardPages.length]);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
