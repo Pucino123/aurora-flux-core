@@ -599,7 +599,7 @@ const IdeapadView = () => {
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-screen"
-      style={{ background: isLight ? "#f3f4f8" : "#06080f" }}>
+      style={{ background: pageLight ? "#f3f4f8" : "#06080f" }}>
       <SEO title="Ideapad" description="Multi-track infinite canvas for idea mapping." />
 
       {/* Tab bar with theme toggle */}
