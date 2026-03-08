@@ -121,7 +121,7 @@ const WidgetToggleBar = () => {
                 const isFocused   = win.id === focusedId && !isMinimized;
                 const isHovered   = hoveredWin === win.id;
                 return (
-                  <motion.div key={win.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.15 }}
+                  <motion.div key={win.id} layoutId={`window-${win.id}`} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.15, layout: { duration: 0.3, ease: "easeInOut" } }}
                     className="relative shrink-0"
                     onMouseEnter={() => setHoveredWin(win.id)}
                     onMouseLeave={() => setHoveredWin(null)}>
