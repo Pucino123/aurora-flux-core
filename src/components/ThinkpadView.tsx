@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash2, Save, Lightbulb, Zap, Target, Rocket,
   Code, Database, Star, Heart, Brain, LayoutTemplate, X, Pencil, Check, Sun, Moon,
-  ZoomIn, ZoomOut, Bookmark, Lock, Unlock
+  ZoomIn, ZoomOut, Bookmark, Lock, Unlock, Maximize2
 } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
@@ -168,7 +168,7 @@ const IdeaCanvas = ({
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [markedNodes, setMarkedNodes] = useState<Set<string>>(new Set());
-  const { screenToFlowPosition, zoomIn, zoomOut, setCenter, getNode } = useReactFlow();
+  const { screenToFlowPosition, zoomIn, zoomOut, setCenter, fitView } = useReactFlow();
   const nodeIdRef = useRef(200);
 
   // Sync when track changes
@@ -307,6 +307,17 @@ const IdeaCanvas = ({
             style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
           >
             <ZoomOut size={15} />
+          </motion.button>
+
+          {/* Fit to view / home */}
+          <motion.button
+            onClick={() => fitView({ duration: 500, padding: 0.15 })}
+            whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
+            title="Fit all nodes in view"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+          >
+            <Maximize2 size={14} />
           </motion.button>
 
           <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
