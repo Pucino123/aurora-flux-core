@@ -173,6 +173,10 @@ const FocusContent = () => {
           stickyNotes: p.stickyNotes,
           background: p.background,
           spaceSettings: p.spaceSettings,
+          folderPositions: p.folderPositions,
+          docPositions: p.docPositions,
+          visibleFolderIds: p.visibleFolderIds,
+          visibleDocIds: p.visibleDocIds,
         })));
       }
     })();
