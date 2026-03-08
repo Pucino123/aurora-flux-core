@@ -1,12 +1,14 @@
 /**
  * InvoiceModal — two-column invoice generator with payment details
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Send, Loader2, Building2, CreditCard, ToggleLeft, ToggleRight, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCRM, CRMContact } from "@/context/CRMContext";
 import { pushNotification } from "@/components/NotificationBell";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 // ── Payment profile helpers ───────────────────────────────────────────────────
 const PROFILE_KEY = "crm_payment_profile";
