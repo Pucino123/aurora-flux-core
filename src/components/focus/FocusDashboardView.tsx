@@ -1321,18 +1321,19 @@ const FocusContent = () => {
               background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
+              border: systemMode === "build" ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
+              boxShadow: isDraggingPill
+                ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
+                : "0 8px 32px rgba(0,0,0,0.55)",
             }}
           >
-            {/* ← → keyboard hint — visible on hover when no dot is hovered */}
+            {/* ← → keyboard hint — only in focus mode, visible on group hover when no dot hovered */}
             <AnimatePresence>
-              {hoverDotIdx === null && dashboardPages.length > 1 && (
+              {systemMode !== "build" && hoverDotIdx === null && dashboardPages.length > 1 && (
                 <motion.div
                   key="key-hint"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 0, y: 0 }}
-                  whileHover={{ opacity: 1 }}
                   exit={{ opacity: 0, y: 4 }}
                   transition={{ duration: 0.15 }}
                   className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -1343,6 +1344,25 @@ const FocusContent = () => {
                     <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">→</span>
                   </div>
                   <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.85)", borderRight: "1px solid rgba(255,255,255,0.1)", borderBottom: "1px solid rgba(255,255,255,0.1)" }} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {/* Build mode drag hint — shows on pill hover */}
+            <AnimatePresence>
+              {systemMode === "build" && !isDraggingPill && hoverDotIdx === null && (
+                <motion.div
+                  key="build-drag-hint"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 0, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+                >
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: "rgba(10,8,20,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
+                    <span className="text-[10px] text-white/40">✥ drag pill</span>
+                    <span className="text-[9px] text-white/20">·</span>
+                    <span className="text-[10px] text-white/40">grab dot to reorder</span>
+                  </div>
+                  <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.88)", borderRight: "1px solid rgba(255,255,255,0.15)", borderBottom: "1px solid rgba(255,255,255,0.15)" }} />
                 </motion.div>
               )}
             </AnimatePresence>
