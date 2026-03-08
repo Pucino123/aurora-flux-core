@@ -502,13 +502,19 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       {/* Final CTA */}
       <section className="relative z-10 px-4 md:px-6 pb-24">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="max-w-2xl mx-auto rounded-3xl p-10 text-center shadow-2xl"
-          style={{ background: "linear-gradient(135deg, rgba(100,60,200,0.35), rgba(60,140,240,0.35))", backdropFilter: "blur(32px)", border: "1.5px solid rgba(255,255,255,0.15)" }}>
-          <div className="text-3xl mb-3">✨</div>
+          className="max-w-2xl mx-auto rounded-3xl p-10 text-center"
+          style={{
+            background: isDark ? "rgba(12,10,18,0.72)" : "rgba(255,255,255,0.10)",
+            backdropFilter: "blur(40px)",
+            WebkitBackdropFilter: "blur(40px)",
+            border: isDark ? "1.5px solid rgba(255,255,255,0.10)" : "1.5px solid rgba(255,255,255,0.28)",
+            boxShadow: "0 32px 80px rgba(0,0,0,0.35)",
+          }}>
+          <div className="text-3xl mb-4">✨</div>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
             Ready to upgrade your workflow?
           </h2>
-          <p className="text-base text-white/70 mb-8">Claim your first 50 Sparks ✨ and start consulting The Council.</p>
+          <p className="text-sm md:text-base text-white/55 mb-8 max-w-sm mx-auto leading-relaxed">Claim your first 50 Sparks ✨ and start consulting The Council.</p>
           <button onClick={handleCTA} className="inline-flex items-center gap-2 bg-white text-slate-800 font-bold px-10 py-4 rounded-full shadow-2xl hover:scale-[1.03] active:scale-[0.98] transition-all text-base">
             Get Started for Free <ArrowRight size={16} />
           </button>
