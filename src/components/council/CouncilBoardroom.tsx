@@ -1089,17 +1089,10 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   // ── New Session: reset everything including personality sliders ──
   const handleNewSession = useCallback(() => {
     setIdea("");
-    setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
-    setResponses({ elena: null, helen: null, anton: null, margot: null });
-    setActionPlan(DEFAULT_ACTION_PLAN);
-    setRevealedCount(0);
-    revealedCountRef.current = 0;
-    setExpandedCard(null);
-    setFullscreenPersona(null);
-    setSavedIdeaId(null);
-    setSaveState("idle");
-    setIsSharedView(false);
-    setFloatingEmojis({ elena: [], helen: [], anton: [], margot: [] });
+    setCardStates({ strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" });
+    setResponses({ strategist: null, operator: null, skeptic: null, advocate: null });
+...
+    setFloatingEmojis({ strategist: [], operator: [], skeptic: [], advocate: [] });
     sessionIdRef.current = resetSessionId();
     // Reset personality sliders to per-advisor defaults
     setPersonalitySliders(DEFAULT_ALL_SLIDERS);
