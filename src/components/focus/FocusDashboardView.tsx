@@ -1693,7 +1693,7 @@ const FocusContent = () => {
                 key={page.id}
                 onClick={() => { if (draggingDotIdx === null) goToPage(i); }}
                 onDoubleClick={() => startLabelEdit(i)}
-                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: i, x: e.clientX, y: e.clientY - 80 }); }}
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: i, x: e.clientX, y: e.clientY }); }}
                 onTouchStart={(e) => handleDotTouchStart(i, e)}
                 onTouchEnd={handleDotTouchEnd}
                 onMouseEnter={() => setHoverDotIdx(i)}
