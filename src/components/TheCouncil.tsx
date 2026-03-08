@@ -302,7 +302,8 @@ const TheCouncil = () => {
 
         {/* Classic council view */}
         {activeTab === "council" && (
-          <>{/* Dashboard view */}
+          <>
+          {/* Dashboard view */}
         {showDashboard && (
           <div className="relative z-10 px-4 md:px-8 pb-8 pt-6 max-w-4xl mx-auto">
             <button
