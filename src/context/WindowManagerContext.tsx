@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useRef } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode, useRef, useEffect } from "react";
 
 export type WindowLayout = 'floating' | 'fullscreen' | 'split-left' | 'split-right';
 export type WindowContentType = 'document' | 'widget';
@@ -12,6 +12,27 @@ export interface AppWindow {
   zIndex: number;
   position: { x: number; y: number };
   size?: { w: number; h: number };
+  minimized?: boolean;
+}
+
+// Only persist the fields we need to reopen windows
+type PersistedWindow = Pick<AppWindow, 'type' | 'contentId' | 'title' | 'layout' | 'position' | 'size' | 'minimized'>;
+
+const STORAGE_KEY = "flux-windows-v1";
+
+function loadPersistedWindows(): PersistedWindow[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function hydrateWindows(persisted: PersistedWindow[]): AppWindow[] {
+  return persisted.map((p, i) => ({
+    id: `win-restored-${i}-${Date.now()}`,
+    zIndex: 100 + i,
+    ...p,
+  }));
 }
 
 interface WindowManagerContextType {
@@ -22,25 +43,41 @@ interface WindowManagerContextType {
   updateWindowPosition: (id: string, x: number, y: number) => void;
   updateWindowSize: (id: string, w: number, h: number) => void;
   bringToFront: (id: string) => void;
+  minimizeWindow: (id: string) => void;
+  restoreWindow: (id: string) => void;
 }
 
 const WindowManagerContext = createContext<WindowManagerContextType | null>(null);
 
 export const WindowManagerProvider = ({ children }: { children: ReactNode }) => {
-  const [windows, setWindows] = useState<AppWindow[]>([]);
-  const counterRef = useRef(100);
+  const [windows, setWindows] = useState<AppWindow[]>(() =>
+    hydrateWindows(loadPersistedWindows())
+  );
+  const counterRef = useRef(200);
+
+  // Persist to localStorage on every change
+  useEffect(() => {
+    const toSave: PersistedWindow[] = windows.map(({ type, contentId, title, layout, position, size, minimized }) => ({
+      type, contentId, title, layout, position, size, minimized,
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  }, [windows]);
 
   const openWindow = useCallback((payload: Omit<AppWindow, 'id' | 'zIndex'>): string => {
     const id = `win-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setWindows(prev => {
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), counterRef.current);
       counterRef.current = maxZ + 1;
-      // If a window with same contentId+type already open, bring it to front instead
+      // If already open with same contentId+type, bring to front and restore if minimized
       const existing = prev.find(w => w.contentId === payload.contentId && w.type === payload.type);
       if (existing) {
-        return prev.map(w => w.id === existing.id ? { ...w, zIndex: counterRef.current } : w);
+        return prev.map(w =>
+          w.id === existing.id
+            ? { ...w, zIndex: counterRef.current, minimized: false }
+            : w
+        );
       }
-      return [...prev, { ...payload, id, zIndex: counterRef.current }];
+      return [...prev, { ...payload, id, zIndex: counterRef.current, minimized: false }];
     });
     return id;
   }, []);
@@ -68,8 +105,23 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     });
   }, []);
 
+  const minimizeWindow = useCallback((id: string) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, minimized: true } : w));
+  }, []);
+
+  const restoreWindow = useCallback((id: string) => {
+    setWindows(prev => {
+      const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), 0);
+      return prev.map(w => w.id === id ? { ...w, minimized: false, zIndex: maxZ + 1 } : w);
+    });
+  }, []);
+
   return (
-    <WindowManagerContext.Provider value={{ windows, openWindow, closeWindow, setWindowLayout, updateWindowPosition, updateWindowSize, bringToFront }}>
+    <WindowManagerContext.Provider value={{
+      windows, openWindow, closeWindow, setWindowLayout,
+      updateWindowPosition, updateWindowSize, bringToFront,
+      minimizeWindow, restoreWindow,
+    }}>
       {children}
     </WindowManagerContext.Provider>
   );

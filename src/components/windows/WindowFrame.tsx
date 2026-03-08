@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useEffect, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MoreHorizontal, Maximize2, PanelLeft, PanelRight, Square } from "lucide-react";
+import { X, MoreHorizontal, Maximize2, PanelLeft, PanelRight, Square, Minus } from "lucide-react";
 import { useWindowManager, AppWindow, WindowLayout } from "@/context/WindowManagerContext";
 import {
   DropdownMenu,
@@ -23,14 +23,14 @@ const LAYOUT_OPTIONS: { label: string; value: WindowLayout; icon: React.ReactNod
   { label: "Split Right", value: "split-right", icon: <PanelRight size={13} /> },
 ];
 
-const SNAP_THRESHOLD = 100; // px from edge to trigger snap
+const SNAP_THRESHOLD = 100;
 const MIN_W = 320;
 const MIN_H = 240;
 const DEFAULT_W = 820;
 const DEFAULT_H = 620;
 
 const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
-  const { closeWindow, setWindowLayout, updateWindowPosition, updateWindowSize, bringToFront } = useWindowManager();
+  const { closeWindow, setWindowLayout, updateWindowPosition, updateWindowSize, bringToFront, minimizeWindow } = useWindowManager();
 
   // ── Drag state ──────────────────────────────────────────────────────────────
   const dragging = useRef(false);
@@ -41,7 +41,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
 
   // ── Size state ──────────────────────────────────────────────────────────────
   const [size, setSize] = useState({ w: win.size?.w ?? DEFAULT_W, h: win.size?.h ?? DEFAULT_H });
-  const resizing = useRef<string | null>(null); // 'se' | 's' | 'e'
+  const resizing = useRef<string | null>(null);
   const resizeStart = useRef({ mouseX: 0, mouseY: 0, w: 0, h: 0 });
 
   // Keep pos in sync when layout snaps back to floating
@@ -64,7 +64,6 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     const nx = e.clientX - offset.current.x;
     const ny = Math.max(0, e.clientY - offset.current.y);
     setPos({ x: nx, y: ny });
-    // Snap zone detection
     if (e.clientX < SNAP_THRESHOLD) setSnapZone('left');
     else if (e.clientX > window.innerWidth - SNAP_THRESHOLD) setSnapZone('right');
     else setSnapZone(null);
@@ -83,7 +82,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     setSnapZone(null);
   }, [win.id, updateWindowPosition, setWindowLayout, snapZone]);
 
-  // ── RESIZE handlers (global pointermove/up) ───────────────────────────────
+  // ── RESIZE handlers ───────────────────────────────────────────────────────
   const handleResizePointerDown = useCallback((e: React.PointerEvent, dir: string) => {
     if (!isFloating) return;
     e.stopPropagation();
@@ -124,20 +123,15 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     };
   }, [win.id, updateWindowSize]);
 
-  // ── Layout-dependent Tailwind classes ────────────────────────────────────────
+  // ── Layout classes ────────────────────────────────────────────────────────────
   const layoutClasses = useMemo(() => {
     const base = "absolute rounded-2xl shadow-2xl bg-card/90 backdrop-blur-2xl border border-border/20 overflow-hidden flex flex-col";
     switch (win.layout) {
-      case "floating":
-        return `${base}`;
-      case "fullscreen":
-        return `${base} inset-4`;
-      case "split-left":
-        return `${base} top-4 left-4 bottom-4 w-[calc(50%-1.25rem)]`;
-      case "split-right":
-        return `${base} top-4 right-4 bottom-4 w-[calc(50%-1.25rem)]`;
-      default:
-        return base;
+      case "floating": return base;
+      case "fullscreen": return `${base} inset-4`;
+      case "split-left": return `${base} top-4 left-4 bottom-4 w-[calc(50%-1.25rem)]`;
+      case "split-right": return `${base} top-4 right-4 bottom-4 w-[calc(50%-1.25rem)]`;
+      default: return base;
     }
   }, [win.layout]);
 
@@ -146,9 +140,12 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     return { left: pos.x, top: pos.y, width: size.w, height: size.h };
   }, [win.layout, pos.x, pos.y, size.w, size.h]);
 
+  // Don't render the frame body when minimized — just keep it mounted to preserve state
+  if (win.minimized) return null;
+
   return (
     <>
-      {/* ── Snap zone overlay (portal) ───────────────────────────────────────── */}
+      {/* ── Snap zone overlay ───────────────────────────────────────────────── */}
       {snapZone && dragging.current && createPortal(
         <div className="fixed inset-0 pointer-events-none z-[9990] flex">
           <AnimatePresence>
@@ -162,9 +159,9 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
                 className="h-full rounded-2xl m-3"
                 style={{
                   width: "calc(50% - 20px)",
-                  background: "rgba(99,102,241,0.18)",
-                  border: "2px solid rgba(129,140,248,0.6)",
-                  boxShadow: "inset 0 0 40px rgba(99,102,241,0.1)",
+                  background: "hsl(var(--primary) / 0.14)",
+                  border: "2px solid hsl(var(--primary) / 0.55)",
+                  boxShadow: "inset 0 0 40px hsl(var(--primary) / 0.08)",
                 }}
               />
             )}
@@ -178,9 +175,9 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
                 className="h-full rounded-2xl m-3 ml-auto"
                 style={{
                   width: "calc(50% - 20px)",
-                  background: "rgba(99,102,241,0.18)",
-                  border: "2px solid rgba(129,140,248,0.6)",
-                  boxShadow: "inset 0 0 40px rgba(99,102,241,0.1)",
+                  background: "hsl(var(--primary) / 0.14)",
+                  border: "2px solid hsl(var(--primary) / 0.55)",
+                  boxShadow: "inset 0 0 40px hsl(var(--primary) / 0.08)",
                 }}
               />
             )}
@@ -189,7 +186,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
         document.body
       )}
 
-      {/* ── Window frame ─────────────────────────────────────────────────────── */}
+      {/* ── Window frame ──────────────────────────────────────────────────────── */}
       <motion.div
         layout
         transition={{ type: "spring", stiffness: 340, damping: 34 }}
@@ -200,14 +197,36 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.94 }}
       >
-        {/* ── Window chrome header ─────────────────────────── */}
+        {/* ── Header ──────────────────────────────────────────────────────────── */}
         <div className="relative flex items-center justify-between px-3 py-2 border-b border-border/20 shrink-0">
-          {/* Title */}
-          <span className="text-xs font-semibold text-foreground/80 truncate max-w-[55%]">{win.title}</span>
+          {/* Traffic-light buttons (left side) */}
+          <div className="flex items-center gap-1.5">
+            {/* Close — red */}
+            <button
+              onClick={() => closeWindow(win.id)}
+              className="group w-3.5 h-3.5 rounded-full bg-[hsl(0_72%_50%)/0.6] hover:bg-[hsl(0_72%_50%)] transition-colors flex items-center justify-center"
+              title="Close"
+            >
+              <X size={7} className="opacity-0 group-hover:opacity-100 text-[hsl(0_72%_20%)]" />
+            </button>
+            {/* Minimize — amber */}
+            <button
+              onClick={() => minimizeWindow(win.id)}
+              className="group w-3.5 h-3.5 rounded-full bg-[hsl(38_92%_50%)/0.6] hover:bg-[hsl(38_92%_50%)] transition-colors flex items-center justify-center"
+              title="Minimize"
+            >
+              <Minus size={7} className="opacity-0 group-hover:opacity-100 text-[hsl(38_92%_20%)]" />
+            </button>
+          </div>
 
-          {/* ── Center Pill (drag handle + menu) ── */}
+          {/* Title (center) */}
+          <span className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[40%] pointer-events-none">
+            {win.title}
+          </span>
+
+          {/* ── Center Pill — drag + layout menu ── */}
           <div
-            className={`absolute left-1/2 -translate-x-1/2 top-1.5 flex items-center justify-center w-12 h-5 bg-foreground/10 hover:bg-foreground/18 rounded-full transition-colors z-[60] ${isFloating ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
+            className={`absolute left-1/2 -translate-x-1/2 top-0.5 flex items-center justify-center w-10 h-4 bg-foreground/8 hover:bg-foreground/15 rounded-full transition-colors z-[60] mt-1 ${isFloating ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
             onPointerDown={handlePillPointerDown}
             onPointerMove={handlePillPointerMove}
             onPointerUp={handlePillPointerUp}
@@ -219,7 +238,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <MoreHorizontal size={12} className="text-foreground/50" />
+                  <MoreHorizontal size={11} className="text-foreground/40" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" sideOffset={8} className="z-[9999] min-w-[160px]">
@@ -236,6 +255,12 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
+                  onClick={() => minimizeWindow(win.id)}
+                  className="flex items-center gap-2.5 text-xs"
+                >
+                  <Minus size={13} /> Minimize
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={() => closeWindow(win.id)}
                   className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive"
                 >
@@ -244,17 +269,9 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-
-          {/* Close button */}
-          <button
-            onClick={() => closeWindow(win.id)}
-            className="flex items-center justify-center w-5 h-5 rounded-full bg-destructive/20 hover:bg-destructive/80 text-destructive hover:text-destructive-foreground transition-colors z-[60]"
-          >
-            <X size={10} />
-          </button>
         </div>
 
-        {/* ── Content area ─────────────────────────── */}
+        {/* ── Content ───────────────────────────────────────────────────────── */}
         <div className="flex-1 min-h-0 overflow-hidden select-text pointer-events-auto">
           {children}
         </div>
@@ -262,22 +279,19 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
         {/* ── Resize handles (floating only) ───────────────────────────────── */}
         {isFloating && (
           <>
-            {/* Right edge */}
             <div
-              className="absolute top-0 right-0 w-1.5 h-full cursor-e-resize z-[70] hover:bg-primary/20 transition-colors"
+              className="absolute top-0 right-0 w-1.5 h-full cursor-e-resize z-[70] hover:bg-primary/15 transition-colors"
               onPointerDown={(e) => handleResizePointerDown(e, 'e')}
             />
-            {/* Bottom edge */}
             <div
-              className="absolute bottom-0 left-0 h-1.5 w-full cursor-s-resize z-[70] hover:bg-primary/20 transition-colors"
+              className="absolute bottom-0 left-0 h-1.5 w-full cursor-s-resize z-[70] hover:bg-primary/15 transition-colors"
               onPointerDown={(e) => handleResizePointerDown(e, 's')}
             />
-            {/* SE corner */}
             <div
               className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-[71] flex items-end justify-end pr-0.5 pb-0.5"
               onPointerDown={(e) => handleResizePointerDown(e, 'se')}
             >
-              <svg width="10" height="10" viewBox="0 0 10 10" className="opacity-30">
+              <svg width="10" height="10" viewBox="0 0 10 10" className="text-foreground/25">
                 <path d="M10 0 L10 10 L0 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 <path d="M10 4 L10 10 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
