@@ -510,11 +510,23 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
       {splitViewButton && (
         <div className="flex justify-end px-3 py-1 border-b border-border/10">{splitViewButton}</div>
       )}
-      <div className="relative flex-1 flex flex-col min-h-0">
+      {/* ── A4 scrollable canvas ── */}
+      <div
+        className="relative flex-1 min-h-0 overflow-y-auto"
+        style={{
+          background: lm ? "hsl(var(--muted))" : "hsl(220 27% 8%)",
+          padding: studioMode ? "0" : "24px 24px 48px",
+        }}
+      >
+        {/* Ghost text overlay sits on the page */}
         {ghostText && (
           <div
-            className="absolute inset-0 px-6 py-4 pointer-events-none z-10 text-sm leading-relaxed whitespace-pre-wrap font-mono select-none"
-            style={{ color: lm ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.18)", zoom: `${zoom}%` }}
+            className="absolute z-10 pointer-events-none text-sm leading-relaxed whitespace-pre-wrap font-mono select-none"
+            style={{
+              color: lm ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.18)",
+              zoom: `${zoom}%`,
+              top: 24 + 48, left: 24 + 48, right: 24 + 48,
+            }}
           >
             {ghostText}
             <span
@@ -524,6 +536,24 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
             >Tab to accept</span>
           </div>
         )}
+
+        {/* A4 page container */}
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "21cm",
+            minHeight: "29.7cm",
+            margin: "0 auto 32px",
+            background: lm ? "#ffffff" : "hsl(var(--card))",
+            boxShadow: lm
+              ? "0 4px 32px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06)"
+              : "0 4px 32px rgba(0,0,0,0.5)",
+            border: lm ? "1px solid hsl(var(--border))" : "1px solid hsl(var(--border)/0.15)",
+            borderRadius: 4,
+            overflow: "visible",
+            zoom: `${zoom}%`,
+          }}
+        >
         <div
           ref={editorRef}
           contentEditable
@@ -532,8 +562,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => { handleClick(e); editorRef.current?.focus(); }}
           onKeyDown={handleKeyDown}
-          style={{ zoom: `${zoom}%` }}
-          className={`flex-1 min-h-[300px] outline-none text-sm leading-relaxed prose max-w-none px-6 py-4 bg-transparent
+          className={`outline-none text-sm leading-relaxed prose max-w-none px-12 py-12 bg-transparent min-h-[29.7cm]
             ${lm ? "prose-neutral text-gray-800" : "prose-invert text-foreground/90"}
             ${lm
               ? "[&_h1]:text-gray-900 [&_h2]:text-gray-800 [&_h3]:text-gray-700 [&_p]:text-gray-600 [&_li]:text-gray-600 [&_blockquote]:text-gray-500 [&_strong]:text-gray-900 [&_em]:text-gray-500"
@@ -557,10 +586,10 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
               : "[&_td]:border [&_td]:border-border/15 [&_td]:px-3 [&_td]:py-1.5 [&_th]:border [&_th]:border-border/15 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-secondary/30 [&_th]:font-semibold [&_th]:text-foreground/80"
             }
             [&_.doc-checkbox]:cursor-pointer [&_.doc-checkbox]:select-none [&_.doc-checkbox]:text-primary [&_.doc-checkbox]:mr-1.5 [&_.doc-checkbox]:text-base [&_.doc-checkbox]:transition-transform [&_.doc-checkbox]:duration-200 [&_.doc-checkbox]:hover:scale-125
-            ${studioMode ? (lm ? "bg-white shadow-xl rounded-xl border border-gray-200" : "bg-card/80 shadow-xl rounded-xl border border-border/20") : ""}
             ${lm ? "selection:bg-primary/20" : "selection:bg-primary/20"}`}
           data-placeholder="Start typing..."
         />
+        </div>
         {/* ── Slash Command Palette ── */}
         <AnimatePresence>
           {slashOpen && slashPos && filteredSlashCmds.length > 0 && (
@@ -610,9 +639,9 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
             </motion.div>
           )}
         </AnimatePresence>
-        <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
-        <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
       </div>
+      <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
+      <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
     </div>
   );
 };

@@ -1,7 +1,10 @@
-import FocusDashboardView from "@/components/focus/FocusDashboardView";
+import { useState } from "react";
+import Dashboard from "@/components/Dashboard";
 import SEO from "@/components/SEO";
 
 const Focus = () => {
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+
   return (
     <>
       <SEO
@@ -10,7 +13,11 @@ const Focus = () => {
         url="/focus"
         keywords="focus mode, deep work, pomodoro timer, ambient sounds, productivity"
       />
-      <FocusDashboardView />
+      <Dashboard
+        sidebarVisible={sidebarVisible}
+        onToggleSidebar={() => setSidebarVisible(v => !v)}
+        focusMode={false}
+      />
     </>
   );
 };
