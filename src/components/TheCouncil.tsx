@@ -335,13 +335,23 @@ const TheCouncil = () => {
 
         {/* Analytics view */}
         {activeTab === "analytics" && user && (
-          <div className="relative z-10 px-4 md:px-8 pb-8 pt-4 max-w-3xl mx-auto">
+          <div className="relative z-10 px-4 md:px-8 pb-8 pt-4 max-w-3xl mx-auto space-y-6">
             <div className="mb-4">
               <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2">
                 <span>📊</span> Boardroom Analytics
               </h2>
               <p className="text-[10px] text-white/30 mt-0.5">Insights across all your saved boardroom sessions</p>
             </div>
+            <WeeklyDigestWidget
+              userId={user.id}
+              onRestoreIdea={(idea) => {
+                setActiveTab("boardroom");
+                setTimeout(() => {
+                  const restore = (window as any).__boardroomRestore;
+                  if (typeof restore === "function") restore(idea);
+                }, 200);
+              }}
+            />
             <BoardroomAnalytics
               userId={user.id}
               onRestoreIdea={(idea) => {
