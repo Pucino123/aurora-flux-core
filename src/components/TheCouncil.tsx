@@ -544,7 +544,7 @@ const TheCouncil = () => {
                         style={{ background: "rgba(0,0,0,0.12)", borderColor: "rgba(0,0,0,0.1)", color: "hsl(var(--foreground)/0.7)" }}
                       >
                         <X size={12} />
-                        Ny idé
+                        New idea
                       </button>
                       <p className="text-sm font-semibold text-foreground/70 truncate min-w-0">{activeIdeaContent}</p>
                       {consensusScore !== null && (
