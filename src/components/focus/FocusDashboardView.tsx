@@ -822,6 +822,7 @@ const FocusContent = () => {
     <StyleEditorProvider value={{ openEditor: handleOpenStyleEditor, activeWidgetId: styleEditorTarget }}>
     <div
       ref={canvasRef}
+      data-canvas-root
       className="relative w-full h-[100dvh] overflow-hidden bg-black"
       onContextMenu={handleContextMenu}
       onMouseDown={handleCanvasMouseDown}
@@ -830,11 +831,26 @@ const FocusContent = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <BackgroundEngine
-        embedded
-        pageBackground={currentPage?.background}
-        onPageBackgroundChange={(id) => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: id } : p))}
-      />
+      {/* Background — animate in/out with parallax on page switch */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`bg-${activePageIndex}`}
+          initial={{ x: pageDir * 40, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: pageDir * -40, opacity: 0 }}
+          transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="absolute inset-0"
+          style={{ zIndex: 0 }}
+        >
+          <BackgroundEngine
+            embedded
+            pageBackground={currentPage?.background}
+            onPageBackgroundChange={(id) => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: id } : p))}
+            pageSpaceSettings={pageSpaceSettings}
+            onPageSpaceSettingsChange={updatePageSpaceSettings}
+          />
+        </motion.div>
+      </AnimatePresence>
       {/* Vignette always visible */}
       <div
         className="absolute inset-0 z-[15] pointer-events-none"
