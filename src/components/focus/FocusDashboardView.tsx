@@ -824,7 +824,6 @@ const FocusContent = () => {
   const { openWindow, closeWindow, windows, updateWindowPosition } = useWindowManager();
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
-  const [openDesktopDoc, setOpenDesktopDoc] = useState<any>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showDocPicker, setShowDocPicker] = useState(false);
