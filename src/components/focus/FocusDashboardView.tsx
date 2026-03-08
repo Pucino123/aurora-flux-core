@@ -1766,13 +1766,21 @@ const FocusContent = () => {
       {/* Dot context menu (right-click / long-press) */}
       {dotMenu && (
         <>
-          <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); }} />
+          <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); setDotBgPickerOpen(false); }} />
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed z-[10001] rounded-xl py-1.5 min-w-[170px] overflow-hidden"
-            style={{ left: dotMenu.x, top: dotMenu.y, background: "rgba(10,8,20,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)", transform: "translateX(-50%)" }}
+            className="fixed z-[10001] rounded-xl py-1.5 overflow-hidden"
+            style={{
+              left: dotMenu.x, top: dotMenu.y,
+              minWidth: dotBgPickerOpen ? 280 : 200,
+              background: "rgba(10,8,20,0.94)", backdropFilter: "blur(24px)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.7)",
+              transform: "translateX(-50%)",
+              transition: "min-width 0.18s ease",
+            }}
           >
             <div className="px-3 py-1.5 text-[10px] font-semibold text-white/35 uppercase tracking-wider">
               {dashboardPages[dotMenu.idx]?.label || `Page ${dotMenu.idx + 1}`}
@@ -1790,35 +1798,228 @@ const FocusContent = () => {
               onClick={() => duplicatePage(dotMenu.idx)}
               className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
             >⧉ Duplicate page</button>
-            {dashboardPages.length > 1 && (
-              deleteConfirmIdx === dotMenu.idx ? (
-                <div className="px-3 py-2">
-                  <p className="text-[11px] text-white/60 mb-2">
-                    {(dashboardPages[dotMenu.idx]?.activeWidgets || dashboardPages[dotMenu.idx]?.stickyNotes)
-                      ? "This page has custom content. Delete anyway?"
-                      : "Delete this page?"}
-                  </p>
-                  <div className="flex gap-2">
+
+            {/* ── Background Picker ── */}
+            <div className="h-px bg-white/10 mx-2 my-1" />
+            <button
+              onClick={() => setDotBgPickerOpen(v => !v)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
+            >
+              <span className="flex items-center gap-2">🎨 Background</span>
+              <span className="text-white/30 text-[10px]">{dotBgPickerOpen ? "▲" : "▼"}</span>
+            </button>
+            <AnimatePresence>
+              {dotBgPickerOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="overflow-hidden px-3 pb-2"
+                >
+                  {/* Solid dark swatches */}
+                  <p className="text-[9px] text-white/25 uppercase tracking-widest mb-1.5 mt-0.5">Solid</p>
+                  <div className="flex gap-1.5 flex-wrap mb-2.5">
+                    {SOLID_COLORS.map(c => {
+                      const isCurrent = dashboardPages[dotMenu.idx]?.background === `solid:${c}`;
+                      return (
+                        <button
+                          key={c}
+                          title={c}
+                          onClick={() => setPages(prev => prev.map((p, i) => i === dotMenu.idx ? { ...p, background: `solid:${c}` } : p))}
+                          className="w-6 h-6 rounded-md border-2 transition-transform hover:scale-110"
+                          style={{
+                            background: `hsl(${c})`,
+                            borderColor: isCurrent ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.1)",
+                          }}
+                        />
+                      );
+                    })}
+                    {/* Clear bg */}
                     <button
-                      onClick={() => deletePage(dotMenu.idx)}
-                      className="flex-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-red-500/70 hover:bg-red-500/90 transition-colors"
-                    >Delete</button>
-                    <button
-                      onClick={() => setDeleteConfirmIdx(null)}
-                      className="flex-1 px-2 py-1 rounded-lg text-[11px] text-white/50 hover:bg-white/8 transition-colors"
-                    >Cancel</button>
+                      onClick={() => setPages(prev => prev.map((p, i) => i === dotMenu.idx ? { ...p, background: undefined } : p))}
+                      className="w-6 h-6 rounded-md border-2 border-white/10 flex items-center justify-center hover:border-white/40 transition-colors"
+                      title="Use global background"
+                      style={{ background: "rgba(255,255,255,0.05)" }}
+                    >
+                      <X size={10} className="text-white/40" />
+                    </button>
                   </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setDeleteConfirmIdx(dotMenu.idx)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red-400 hover:bg-red-500/10 transition-colors"
-                >🗑 Delete page</button>
-              )
+                  {/* Gradient + preset thumbnails */}
+                  <p className="text-[9px] text-white/25 uppercase tracking-widest mb-1.5">Presets</p>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {PAGE_BG_PRESETS.map(preset => {
+                      const isCurrent = dashboardPages[dotMenu.idx]?.background === preset.id;
+                      const gradStyle = preset.colors
+                        ? { background: `linear-gradient(135deg, hsl(${preset.colors[0]}), hsl(${preset.colors[1]}), hsl(${preset.colors[2]}))` }
+                        : { background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" };
+                      return (
+                        <button
+                          key={preset.id}
+                          onClick={() => setPages(prev => prev.map((p, i) => i === dotMenu.idx ? { ...p, background: preset.id } : p))}
+                          className="flex flex-col items-center gap-0.5 group"
+                          title={preset.label}
+                        >
+                          <div
+                            className="w-full rounded-md transition-transform group-hover:scale-105"
+                            style={{
+                              ...gradStyle,
+                              height: 28,
+                              outline: isCurrent ? "2px solid rgba(255,255,255,0.8)" : "none",
+                              outlineOffset: 1,
+                            }}
+                          />
+                          <span className="text-[8px] text-white/35 truncate w-full text-center leading-none">{preset.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {dashboardPages.length > 1 && (
+              <>
+                <div className="h-px bg-white/10 mx-2 my-1" />
+                {deleteConfirmIdx === dotMenu.idx ? (
+                  <div className="px-3 py-2">
+                    <p className="text-[11px] text-white/60 mb-2">
+                      {(dashboardPages[dotMenu.idx]?.activeWidgets || dashboardPages[dotMenu.idx]?.stickyNotes)
+                        ? "This page has custom content. Delete anyway?"
+                        : "Delete this page?"}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => deletePage(dotMenu.idx)}
+                        className="flex-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-red-500/70 hover:bg-red-500/90 transition-colors"
+                      >Delete</button>
+                      <button
+                        onClick={() => setDeleteConfirmIdx(null)}
+                        className="flex-1 px-2 py-1 rounded-lg text-[11px] text-white/50 hover:bg-white/8 transition-colors"
+                      >Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirmIdx(dotMenu.idx)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red-400 hover:bg-red-500/10 transition-colors"
+                  >🗑 Delete page</button>
+                )}
+              </>
             )}
           </motion.div>
         </>
       )}
+
+      {/* ── Thumbnail Grid Overlay (⊞ button in pill) ── */}
+      <AnimatePresence>
+        {showThumbGrid && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 z-[9990]"
+              style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" }}
+              onClick={() => setShowThumbGrid(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 14, scale: 0.96 }}
+              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed z-[9991] bottom-32 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4"
+              style={{ maxWidth: "min(95vw, 800px)", width: "max-content" }}
+            >
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">All Pages</p>
+              <div className="flex flex-wrap justify-center gap-3 px-4">
+                {dashboardPages.map((page, i) => {
+                  const isActive = i === activePageIndex;
+                  const thumb = pageThumbnails[page.id];
+                  const widgets = page.activeWidgets ?? activeWidgets;
+                  const WC: Record<string, string> = { clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa", notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c", quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc", routine: "#4ade80" };
+                  const WL: Record<string, string> = { clock: "🕐", timer: "⏱", music: "🎵", planner: "📋", notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️", quote: "💬", breathing: "🫁", council: "🤝", aura: "✨", routine: "🔄" };
+                  const fCount = (page.visibleFolderIds?.length ?? 0) + (page.pinnedFolderIds?.length ?? 0);
+                  const dCount = (page.visibleDocIds?.length ?? 0) + (page.pinnedDocIds?.length ?? 0);
+                  return (
+                    <motion.button
+                      key={page.id}
+                      onClick={() => { goToPage(i); setShowThumbGrid(false); }}
+                      initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.18, delay: i * 0.03 }}
+                      whileHover={{ scale: 1.06, y: -3 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="flex flex-col items-center gap-1.5 group"
+                    >
+                      <div
+                        className="relative rounded-2xl overflow-hidden"
+                        style={{
+                          width: 140, height: 88,
+                          border: isActive ? "2px solid rgba(255,255,255,0.75)" : "2px solid rgba(255,255,255,0.1)",
+                          boxShadow: isActive
+                            ? "0 0 0 3px rgba(255,255,255,0.12), 0 12px 40px rgba(0,0,0,0.65)"
+                            : "0 6px 24px rgba(0,0,0,0.45)",
+                        }}
+                      >
+                        {thumb ? (
+                          <img src={thumb} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <>
+                            <div className="absolute inset-0" style={{ background: page.background ? "rgba(30,20,60,0.85)" : "rgba(20,15,40,0.8)" }} />
+                            <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "11px 11px" }} />
+                            <div className="absolute inset-0 p-1.5 grid grid-cols-4 gap-0.5 content-start">
+                              {widgets.slice(0, 8).map((w) => (
+                                <div key={w} className="flex items-center justify-center rounded" style={{ height: 18, background: `${WC[w] || "#6b7280"}1e`, border: `1px solid ${WC[w] || "#6b7280"}33` }}>
+                                  <span style={{ fontSize: 8 }}>{WL[w] || "□"}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {isActive && <div className="absolute inset-0 rounded-xl ring-2 ring-white/50" />}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[11px] font-semibold text-white/80 group-hover:text-white transition-colors leading-tight">{page.label || `Page ${i + 1}`}</p>
+                        <p className="text-[9px] text-white/30">
+                          {widgets.length}w
+                          {fCount > 0 ? ` · ${fCount}📁` : ""}
+                          {dCount > 0 ? ` · ${dCount}📄` : ""}
+                        </p>
+                      </div>
+                      {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/60" />}
+                    </motion.button>
+                  );
+                })}
+                {/* Add page tile */}
+                <motion.button
+                  onClick={() => { addPage(); setShowThumbGrid(false); }}
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.18, delay: dashboardPages.length * 0.03 }}
+                  whileHover={{ scale: 1.06, y: -3 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex flex-col items-center gap-1.5 group"
+                >
+                  <div
+                    className="flex items-center justify-center rounded-2xl"
+                    style={{
+                      width: 140, height: 88,
+                      border: "2px dashed rgba(255,255,255,0.15)",
+                      background: "rgba(255,255,255,0.03)",
+                    }}
+                  >
+                    <Plus size={24} className="text-white/25 group-hover:text-white/60 transition-colors" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-[11px] text-white/35 group-hover:text-white/60 transition-colors">New page</p>
+                </motion.button>
+              </div>
+              <button onClick={() => setShowThumbGrid(false)} className="text-[10px] text-white/25 hover:text-white/50 transition-colors mt-1">
+                Click anywhere to close · Esc to dismiss
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Keyboard Shortcuts Cheat Sheet (Cmd+?) ── */}
       <AnimatePresence>
