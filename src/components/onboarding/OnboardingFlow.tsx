@@ -44,20 +44,12 @@ const STEPS = [
   },
 ];
 
-const ACCENTS = [
-  { label: "EMERALD_01", value: "#10b981" },
-  { label: "VIOLET_02",  value: "#8b5cf6" },
-  { label: "CYAN_03",    value: "#06b6d4" },
-  { label: "ROSE_04",    value: "#f43f5e" },
-];
-
-type Phase = "welcome" | "systems" | "accent" | "reward";
+type Phase = "welcome" | "systems" | "reward";
 
 const OnboardingFlow = () => {
   const { addSparks } = useMonetization();
   const [phase, setPhase] = useState<Phase>("welcome");
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
-  const [selectedAccent, setSelectedAccent] = useState(ACCENTS[0]);
   const [sparkCount, setSparkCount] = useState(0);
   const [done, setDone] = useState(() => !!localStorage.getItem("dashiii_onboarding_done_v2"));
   const counterRef = useRef<ReturnType<typeof setInterval> | null>(null);
