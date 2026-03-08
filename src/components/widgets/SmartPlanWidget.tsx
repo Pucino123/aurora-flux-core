@@ -509,6 +509,27 @@ const SmartPlanWidget = () => {
     }
   }, [user, blocks.length]);
 
+  // ── Focus Block quick-add (90 min deep work at next round hour today) ──
+  const addFocusBlock = useCallback(async () => {
+    const now = new Date();
+    // Round up to next full hour
+    const nextHour = new Date(now);
+    nextHour.setMinutes(0, 0, 0);
+    nextHour.setHours(now.getMinutes() > 0 ? now.getHours() + 1 : now.getHours());
+    const startStr = `${String(nextHour.getHours()).padStart(2, "0")}:00`;
+    const endHour  = new Date(nextHour);
+    endHour.setMinutes(90);
+    const endStr   = `${String(Math.floor(endHour.getTime() / 3_600_000) % 24).padStart(2, "0")}:${String(endHour.getMinutes()).padStart(2, "0")}`;
+    await handleAddBlock({
+      title: "⚡ Deep Work — Focus Block",
+      time: startStr,
+      endTime: endStr,
+      type: "work",
+      isAI: false,
+      scheduledDate: TODAY,
+    });
+  }, [handleAddBlock]);
+
   // ── Delete block ────────────────────────────────────────────────────────
   const handleDeleteBlock = useCallback(async (blockId: string) => {
     setBlocks(prev => prev.filter(b => b.id !== blockId));
