@@ -128,17 +128,8 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
         </filter>
       </defs>
 
-      {/* Pulsing aura halo */}
-      {shouldAnimate ? (
-        <motion.circle
-          cx={cx} cy={cy} r={shellR + S * 0.06}
-          fill={color}
-          animate={{ opacity: [0.14, 0.28, 0.14], r: [shellR + S * 0.04, shellR + S * 0.10, shellR + S * 0.04] }}
-          transition={{ duration: auraDurations[pi] || 3, repeat: Infinity, ease: "easeInOut" }}
-        />
-      ) : (
-        <circle cx={cx} cy={cy} r={shellR + S * 0.06} fill={color} opacity={0.18} />
-      )}
+      {/* Static aura halo — no pulse */}
+      <circle cx={cx} cy={cy} r={shellR + S * 0.06} fill={color} opacity={0.15} />
 
       {/* Main circular shell */}
       <circle
