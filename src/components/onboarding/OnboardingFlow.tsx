@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { forwardRef, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles, ChevronRight, X } from "lucide-react";
+import { ArrowRight, Sparkles, ChevronRight } from "lucide-react";
 import { useMonetization } from "@/context/MonetizationContext";
 
 const TOUR_STEPS = [

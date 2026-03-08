@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { forwardRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Sparkles, Check,
