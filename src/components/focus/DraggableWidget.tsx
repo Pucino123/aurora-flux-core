@@ -314,16 +314,22 @@ const DraggableWidget = ({
         />
       )}
 
-      {/* Build mode drag handle */}
+      {/* Build mode drag handle with tooltip */}
       {isBuildMode && (
         <div
-          className="absolute -top-0.5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1 px-3 py-1 rounded-b-lg bg-white/10 backdrop-blur-sm cursor-grab active:cursor-grabbing select-none border border-t-0 border-white/15"
+          className="group/grip absolute -top-0.5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1 px-3 py-1 rounded-b-lg bg-white/10 backdrop-blur-sm cursor-grab active:cursor-grabbing select-none border border-t-0 border-white/15 hover:bg-white/20 transition-colors"
           style={{ pointerEvents: "auto" }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={onPointerDownDrag}
         >
-          <GripHorizontal size={14} className="text-white/50" />
+          <GripHorizontal size={14} className="text-white/50 group-hover/grip:text-white/80 transition-colors" />
           <span className="text-[9px] font-semibold text-white/40 uppercase tracking-wider">{title}</span>
+          {/* Tooltip */}
+          <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1.5 opacity-0 group-hover/grip:opacity-100 transition-opacity duration-150 z-[70]">
+            <div className="px-2 py-1 rounded-md bg-popover border border-border text-[10px] text-muted-foreground whitespace-nowrap shadow-lg">
+              Drag to move
+            </div>
+          </div>
         </div>
       )}
 
