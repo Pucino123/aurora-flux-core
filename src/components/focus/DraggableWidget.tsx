@@ -160,8 +160,15 @@ const DraggableWidget = ({
   posRef.current = pos;
 
   const onPointerDownDrag = useCallback((e: React.PointerEvent) => {
-    // Don't initiate drag if the event target is inside a text-editable element
+    // Don't initiate drag if the event target is a button, anchor, or inside one
     const target = e.target as HTMLElement;
+    const isInteractive =
+      target.tagName === "BUTTON" ||
+      target.tagName === "A" ||
+      !!target.closest("button, a");
+    if (isInteractive) return;
+
+    // Don't initiate drag if the event target is inside a text-editable element
     const isTextEditable =
       target.tagName === "INPUT" ||
       target.tagName === "TEXTAREA" ||
