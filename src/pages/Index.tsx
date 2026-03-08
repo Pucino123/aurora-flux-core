@@ -112,6 +112,11 @@ const Index = () => {
       e.preventDefault();
       setShortcutsOpen((prev) => !prev);
     }
+    // Cmd+Shift+A → toggle Ask Aura
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "a") {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent("toggle-aura"));
+    }
   }, []);
 
   useEffect(() => {
