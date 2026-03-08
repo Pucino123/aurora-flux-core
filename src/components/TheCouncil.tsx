@@ -84,6 +84,7 @@ const TheCouncil = () => {
   const { user } = useAuth();
   const { filterPersona } = useFlux();
   const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState<"council" | "boardroom">("council");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<PersonaResponse[]>([]);
