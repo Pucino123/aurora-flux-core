@@ -460,7 +460,7 @@ const SmartPlanWidget = () => {
               <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                 <motion.div key="blocks" className="space-y-1.5">
                   {blocks.map((block, idx) => (
-                    <SortableBlock key={block.id} block={block} idx={idx} onDelete={handleDeleteBlock} />
+                    <SortableBlock key={block.id} block={block} idx={idx} onDelete={handleDeleteBlock} onRename={handleRenameBlock} />
                   ))}
                 </motion.div>
               </SortableContext>
