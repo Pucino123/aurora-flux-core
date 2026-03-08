@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Flame, Clock, TrendingUp, BarChart3, Play, Pause, Square } from "lucide-react";
-import { motion } from "framer-motion";
+import { Flame, TrendingUp, BarChart3, Play, Pause, Square } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import DraggableWidget from "./DraggableWidget";
 import FocusReportModal from "./FocusReportModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-// ── Fallback localStorage (used when not logged in) ───────────────────────────
+// ── Local fallback helpers ─────────────────────────────────────────────────
 const STATS_KEY = "flux-focus-stats";
 
 interface FocusStats {
@@ -17,45 +17,24 @@ interface FocusStats {
 }
 
 const getToday = () => new Date().toISOString().slice(0, 10);
-const getYesterday = () => {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
-};
-
-const getWeekData = (log: Record<string, number>) => {
-  const labels = ["M", "T", "W", "T", "F", "S", "S"];
-  const now = new Date();
-  const day = now.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + mondayOffset + i);
-    const key = d.toISOString().slice(0, 10);
-    return {
-      label: labels[i],
-      minutes: log[key] || (i < 5 ? [42, 67, 35, 80, 55, 0, 0][i] : 0),
-      isToday: key === getToday(),
-    };
-  });
-};
 
 function loadLocalStats(): FocusStats {
   try {
     const raw = localStorage.getItem(STATS_KEY);
-    if (raw) return { totalSessions: 0, ...JSON.parse(raw) };
+    if (raw) return { totalSessions: 0, streak: 0, lastDate: getToday(), dailyLog: {}, ...JSON.parse(raw) };
   } catch {}
-  return { dailyLog: {}, streak: 4, lastDate: getToday(), totalSessions: 12 };
+  return { dailyLog: {}, streak: 0, lastDate: getToday(), totalSessions: 0 };
 }
 
 function saveLocalStats(stats: FocusStats) {
   localStorage.setItem(STATS_KEY, JSON.stringify(stats));
 }
 
+/** Called by timer when a session finishes – writes to localStorage + dispatches event */
 export function logFocusMinutes(minutes: number) {
   const stats = loadLocalStats();
   const today = getToday();
-  const yesterday = getYesterday();
+  const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })();
   if (!stats.dailyLog[today]) {
     if (stats.lastDate === yesterday) stats.streak += 1;
     else if (stats.lastDate !== today) stats.streak = 1;
@@ -67,58 +46,89 @@ export function logFocusMinutes(minutes: number) {
   window.dispatchEvent(new Event("focus-stats-updated"));
 }
 
-const DAILY_GOAL_MIN = 300; // 5h
+// ── Helpers ────────────────────────────────────────────────────────────────
+const DAILY_GOAL_MIN = 300; // 5 h
 const POMODORO_SECS = 25 * 60;
 
-// ── Component ─────────────────────────────────────────────────────────────────
+/** Returns Mon-Sun dates for the current week */
+function getWeekDates() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + mondayOffset + i);
+    return d.toISOString().slice(0, 10);
+  });
+}
+
+/** Compute consecutive-day streak backwards from today */
+function computeStreak(dailyLog: Record<string, number>): number {
+  const today = getToday();
+  let streak = 0;
+  const d = new Date(today);
+  while (true) {
+    const key = d.toISOString().slice(0, 10);
+    if ((dailyLog[key] ?? 0) > 0) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
 const FocusStatsWidget = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState<FocusStats>(loadLocalStats);
   const [reportOpen, setReportOpen] = useState(false);
   const [timerSecs, setTimerSecs] = useState(POMODORO_SECS);
   const [timerRunning, setTimerRunning] = useState(false);
   const [ringAnim, setRingAnim] = useState(false);
-  // DB-backed today minutes
-  const [dbTodayMin, setDbTodayMin] = useState<number | null>(null);
-  const [dbTotalSessions, setDbTotalSessions] = useState<number | null>(null);
+
+  // DB-driven state
+  const [dailyLog, setDailyLog] = useState<Record<string, number>>({});
+  const [totalSessions, setTotalSessions] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [prevStreak, setPrevStreak] = useState(0);
+  const [streakBump, setStreakBump] = useState(false);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Load today's sessions from DB ─────────────────────────────────────────
+  // ── Load all sessions from DB ────────────────────────────────────────────
   const loadDbSessions = useCallback(async () => {
-    if (!user) return;
-    const today = getToday();
+    if (!user) {
+      // Fall back to local storage
+      const local = loadLocalStats();
+      setDailyLog(local.dailyLog);
+      setTotalSessions(local.totalSessions);
+      setStreak(local.streak);
+      return;
+    }
     const { data, error } = await supabase
       .from("focus_sessions")
       .select("minutes, session_date")
       .eq("user_id", user.id);
+
     if (error || !data) return;
 
-    const todayRows = data.filter(r => r.session_date === today);
-    const todayMin = todayRows.reduce((sum, r) => sum + (r.minutes ?? 0), 0);
-    setDbTodayMin(todayMin);
-    setDbTotalSessions(data.length);
-
-    // Rebuild dailyLog from DB
-    const dailyLog: Record<string, number> = {};
+    const log: Record<string, number> = {};
     data.forEach(r => {
-      dailyLog[r.session_date] = (dailyLog[r.session_date] || 0) + (r.minutes ?? 0);
+      log[r.session_date] = (log[r.session_date] || 0) + (r.minutes ?? 0);
     });
 
-    // Compute streak
-    let streak = 0;
-    let date = new Date(today);
-    while (dailyLog[date.toISOString().slice(0, 10)]) {
-      streak++;
-      date.setDate(date.getDate() - 1);
-    }
-
-    setStats(prev => ({
-      ...prev,
-      dailyLog,
-      streak: Math.max(streak, 1),
-      totalSessions: data.length,
-      lastDate: today,
-    }));
+    const newStreak = computeStreak(log);
+    setDailyLog(log);
+    setTotalSessions(data.length);
+    setStreak(prev => {
+      if (newStreak > prev) {
+        setPrevStreak(prev);
+        setStreakBump(true);
+        setTimeout(() => setStreakBump(false), 1200);
+      }
+      return newStreak;
+    });
   }, [user]);
 
   useEffect(() => {
@@ -126,18 +136,14 @@ const FocusStatsWidget = () => {
     setTimeout(() => setRingAnim(true), 300);
   }, [loadDbSessions]);
 
-  // ── Sync local stats updated event ───────────────────────────────────────
-  const refresh = useCallback(() => {
-    setStats(loadLocalStats());
-    loadDbSessions();
+  // ── Listen for local log events (e.g. when not logged in) ────────────────
+  useEffect(() => {
+    const handler = () => loadDbSessions();
+    window.addEventListener("focus-stats-updated", handler);
+    return () => window.removeEventListener("focus-stats-updated", handler);
   }, [loadDbSessions]);
 
-  useEffect(() => {
-    window.addEventListener("focus-stats-updated", refresh);
-    return () => window.removeEventListener("focus-stats-updated", refresh);
-  }, [refresh]);
-
-  // ── Persist a completed session to DB ────────────────────────────────────
+  // ── Persist a session to DB ──────────────────────────────────────────────
   const persistSession = useCallback(async (minutes: number) => {
     if (!user) return;
     await supabase.from("focus_sessions").insert({
@@ -145,13 +151,10 @@ const FocusStatsWidget = () => {
       session_date: getToday(),
       minutes,
     });
-    // Optimistically update local
-    setDbTodayMin(prev => (prev ?? 0) + minutes);
-    setDbTotalSessions(prev => (prev ?? 0) + 1);
     loadDbSessions();
   }, [user, loadDbSessions]);
 
-  // ── Pomodoro timer ────────────────────────────────────────────────────────
+  // ── Pomodoro logic ───────────────────────────────────────────────────────
   useEffect(() => {
     if (timerRunning) {
       intervalRef.current = setInterval(() => {
@@ -182,12 +185,19 @@ const FocusStatsWidget = () => {
     setTimerSecs(POMODORO_SECS);
   };
 
-  // Use DB data when available, otherwise fall back to local
-  const todayMin = dbTodayMin !== null ? dbTodayMin : (stats.dailyLog[getToday()] || 180);
-  const totalSessions = dbTotalSessions !== null ? dbTotalSessions : (stats.totalSessions || 12);
-  const displayMin = todayMin;
-  const dailyPct = Math.min((displayMin / DAILY_GOAL_MIN) * 100, 100);
-  const weekData = getWeekData(stats.dailyLog);
+  // ── Derived display values ───────────────────────────────────────────────
+  const today = getToday();
+  const todayMin = dailyLog[today] ?? 0;
+  const dailyPct = Math.min((todayMin / DAILY_GOAL_MIN) * 100, 100);
+
+  // Weekly bar chart – real DB data, no mock values
+  const WEEK_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+  const weekDates = getWeekDates();
+  const weekData = weekDates.map((date, i) => ({
+    label: WEEK_LABELS[i],
+    minutes: dailyLog[date] ?? 0,
+    isToday: date === today,
+  }));
   const maxWeek = Math.max(...weekData.map(d => d.minutes), 1);
 
   const mins = Math.floor(timerSecs / 60);
@@ -205,6 +215,7 @@ const FocusStatsWidget = () => {
     <>
       <DraggableWidget id="stats" title="Focus Stats" defaultPosition={{ x: 60, y: 320 }} defaultSize={{ w: 340, h: 440 }}>
         <div className="h-full flex flex-col gap-3 overflow-hidden">
+
           {/* Header */}
           <div className="shrink-0 text-center">
             <p className="text-[10px] text-white/30 uppercase tracking-wider">{todayDate}</p>
@@ -235,7 +246,7 @@ const FocusStatsWidget = () => {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <p className="text-[15px] font-bold text-white/90 leading-none">
-                  {Math.floor(displayMin / 60)}h {displayMin % 60}m
+                  {Math.floor(todayMin / 60)}h {todayMin % 60}m
                 </p>
                 <p className="text-[8px] text-white/30 mt-0.5">/ 5h goal</p>
               </div>
@@ -244,17 +255,43 @@ const FocusStatsWidget = () => {
 
           {/* Stats badges */}
           <div className="flex gap-2 shrink-0">
-            <div className="flex-1 flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/8">
-              <div className="w-6 h-6 rounded-lg bg-orange-400/20 flex items-center justify-center">
+            {/* Streak badge with bump animation */}
+            <div className="flex-1 flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/8 overflow-hidden relative">
+              <div className="w-6 h-6 rounded-lg bg-orange-400/20 flex items-center justify-center shrink-0">
                 <Flame size={12} className="text-orange-400" />
               </div>
-              <div>
-                <p className="text-[14px] font-bold text-white/90 leading-none">{stats.streak}</p>
+              <div className="min-w-0">
+                <div className="relative h-5 overflow-hidden">
+                  <AnimatePresence mode="popLayout">
+                    <motion.p
+                      key={streak}
+                      initial={{ y: streakBump ? 16 : 0, opacity: streakBump ? 0 : 1 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -16, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      className="text-[14px] font-bold text-white/90 leading-5 absolute"
+                    >
+                      {streak}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
                 <p className="text-[8px] text-white/30">Day Streak</p>
               </div>
+              {streakBump && (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.7, y: 4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute right-2 top-2 text-[9px] text-orange-300 font-bold"
+                >
+                  +1 🔥
+                </motion.span>
+              )}
             </div>
+
+            {/* Sessions badge */}
             <div className="flex-1 flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/8">
-              <div className="w-6 h-6 rounded-lg bg-violet-400/20 flex items-center justify-center">
+              <div className="w-6 h-6 rounded-lg bg-violet-400/20 flex items-center justify-center shrink-0">
                 <TrendingUp size={12} className="text-violet-400" />
               </div>
               <div>
@@ -266,18 +303,19 @@ const FocusStatsWidget = () => {
 
           {/* Pomodoro timer */}
           <div className="shrink-0 p-2.5 rounded-xl bg-white/5 border border-white/8">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-[9px] text-white/30 uppercase tracking-wider mb-0.5">Pomodoro</p>
                 <p className="text-[22px] font-bold text-white/90 leading-none tabular-nums font-mono">
                   {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
                 </p>
               </div>
-              {/* Timer progress arc */}
-              <svg className="w-10 h-10 -rotate-90" viewBox="0 0 40 40">
+              <svg className="w-10 h-10 -rotate-90 shrink-0" viewBox="0 0 40 40">
                 <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
                 <motion.circle
-                  cx="20" cy="20" r="16" fill="none" stroke="hsl(250 80% 70%)" strokeWidth="3" strokeLinecap="round"
+                  cx="20" cy="20" r="16" fill="none"
+                  stroke="hsl(250 80% 70%)"
+                  strokeWidth="3" strokeLinecap="round"
                   strokeDasharray={2 * Math.PI * 16}
                   strokeDashoffset={2 * Math.PI * 16 * (1 - timerPct)}
                   transition={{ duration: 0.5 }}
@@ -300,13 +338,15 @@ const FocusStatsWidget = () => {
             </div>
           </div>
 
-          {/* Weekly bars */}
+          {/* Weekly bars — real data */}
           <div className="flex-1 flex flex-col justify-end">
+            <p className="text-[8px] text-white/20 uppercase tracking-wider mb-1">This Week</p>
             <div className="flex items-end justify-between gap-1 h-12">
               {weekData.map((d, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <motion.div
-                    className={`w-full rounded-t-sm ${d.isToday ? "bg-violet-400" : "bg-white/15"}`}
+                    className={`w-full rounded-t-sm ${d.isToday ? "bg-violet-400" : d.minutes > 0 ? "bg-white/30" : "bg-white/8"}`}
+                    title={`${d.minutes} min`}
                     initial={{ height: 0 }}
                     animate={{ height: `${Math.max((d.minutes / maxWeek) * 44, d.minutes > 0 ? 4 : 2)}px` }}
                     transition={{ duration: 0.6, delay: i * 0.05, ease: "easeOut" }}
