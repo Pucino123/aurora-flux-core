@@ -1,11 +1,10 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, FileText, Clock, Timer, Music, CalendarClock, StickyNote, BarChart3, Wind, Users2, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, Orbit, MessageSquareQuote } from "lucide-react";
+import { X, FileText, Clock, Timer, Music, CalendarClock, StickyNote, BarChart3, Wind, Users2, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, Orbit, MessageSquareQuote, LucideIcon } from "lucide-react";
 import { useWindowManager, AppWindow } from "@/context/WindowManagerContext";
 
-// Maps widget contentId → icon component
-const WIDGET_ICONS: Record<string, React.ElementType> = {
+const WIDGET_ICONS: Record<string, LucideIcon> = {
   clock: Clock,
   timer: Timer,
   music: Music,
@@ -29,8 +28,8 @@ const WIDGET_ICONS: Record<string, React.ElementType> = {
 
 function WindowTile({ win }: { win: AppWindow }) {
   const { restoreWindow, bringToFront, closeWindow } = useWindowManager();
-  const Icon = win.type === "widget" ? (WIDGET_ICONS[win.contentId] ?? FileText) : FileText;
-  const isMinimized = win.minimized;
+  const Icon: LucideIcon = win.type === "widget" ? (WIDGET_ICONS[win.contentId] ?? FileText) : FileText;
+  const isMinimized = !!win.minimized;
 
   const handleClick = () => {
     if (isMinimized) restoreWindow(win.id);
@@ -43,24 +42,25 @@ function WindowTile({ win }: { win: AppWindow }) {
       initial={{ opacity: 0, scale: 0.7, y: 12 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.6, y: 8 }}
-      transition={{ type: "spring" as const, stiffness: 420, damping: 28 }}
+      transition={{ type: "spring", stiffness: 420, damping: 28 }}
       className="group relative flex flex-col items-center gap-1"
     >
       <button
         onClick={handleClick}
         title={win.title}
-        className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all
-          ${isMinimized
-            ? "bg-foreground/8 border border-foreground/15 hover:bg-primary/20 hover:border-primary/40"
-            : "bg-primary/20 border border-primary/40 shadow-[0_0_12px_hsl(var(--primary)/0.25)]"
-          }`}
+        className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all border ${
+          isMinimized
+            ? "bg-card/40 border-border/20 hover:bg-primary/20 hover:border-primary/40"
+            : "bg-primary/20 border-primary/40 shadow-[0_0_12px_hsl(var(--primary)/0.2)]"
+        }`}
       >
-        <Icon size={16} className={isMinimized ? "text-foreground/50" : "text-primary"} />
-        {/* Active indicator dot */}
+        <Icon
+          size={16}
+          className={isMinimized ? "text-foreground/50" : "text-primary"}
+        />
         {!isMinimized && (
           <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
         )}
-        {/* Minimized badge */}
         {isMinimized && (
           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-muted-foreground/50 border border-background" />
         )}
@@ -75,7 +75,6 @@ function WindowTile({ win }: { win: AppWindow }) {
         <X size={8} />
       </button>
 
-      {/* Label */}
       <span className="text-[9px] text-foreground/40 max-w-[44px] truncate text-center leading-tight">
         {win.title}
       </span>
