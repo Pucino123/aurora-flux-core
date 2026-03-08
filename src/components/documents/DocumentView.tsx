@@ -35,7 +35,7 @@ const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false,
         document={document} onUpdate={onUpdate} onDelete={onDelete}
         renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
         commitRename={commitRename} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete} lightMode={lightMode}
-        onToggleLightMode={onToggleLightMode}
+        onToggleLightMode={onToggleLightMode} splitViewButton={splitViewButton}
       />
     );
   }
@@ -45,7 +45,7 @@ const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false,
       document={document} onUpdate={onUpdate} onDelete={onDelete}
       renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
       commitRename={commitRename} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete} lightMode={lightMode}
-      onToggleLightMode={onToggleLightMode}
+      onToggleLightMode={onToggleLightMode} splitViewButton={splitViewButton}
     />
   );
 };
