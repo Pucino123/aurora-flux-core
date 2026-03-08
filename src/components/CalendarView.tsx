@@ -1019,12 +1019,31 @@ const CalendarView = () => {
           </div>
           <button
             onClick={() => setShowSyncModal(true)}
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-border/60 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-all group">
-            <RefreshCw size={13} className="group-hover:rotate-180 transition-transform duration-500" />
-            Sync External Calendars
-            {connectedProviders.length > 0 && (
-              <span className="ml-auto text-[10px] font-semibold text-primary">{connectedProviders.length} connected</span>
-            )}
+            className="w-full flex flex-col gap-2 px-3 py-3 rounded-xl border border-dashed border-border/60 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-all group">
+            <div className="flex items-center gap-2 w-full">
+              <RefreshCw size={13} className="group-hover:rotate-180 transition-transform duration-500 text-primary shrink-0" />
+              <span className="font-semibold text-foreground/70 group-hover:text-foreground">Sync External Calendars</span>
+              {connectedProviders.length > 0 && (
+                <span className="ml-auto text-[10px] font-bold text-primary">{connectedProviders.length} connected</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 w-full">
+              {/* Google */}
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all ${connectedProviders.includes("google") ? "bg-[#4285f4]/15 text-[#4285f4] border border-[#4285f4]/30" : "bg-secondary/60 text-muted-foreground/50"}`}>
+                <span className="w-3 h-3 rounded-full bg-[#4285f4] text-white text-[6px] font-bold flex items-center justify-center">G</span>
+                Google
+              </div>
+              {/* Outlook */}
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all ${connectedProviders.includes("outlook") ? "bg-[#0078d4]/15 text-[#0078d4] border border-[#0078d4]/30" : "bg-secondary/60 text-muted-foreground/50"}`}>
+                <span className="w-3 h-3 rounded-sm bg-[#0078d4] text-white text-[6px] font-bold flex items-center justify-center">O</span>
+                Outlook
+              </div>
+              {/* Apple */}
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all ${connectedProviders.includes("apple") ? "bg-gray-500/15 text-gray-400 border border-gray-500/30" : "bg-secondary/60 text-muted-foreground/50"}`}>
+                <span className="w-3 h-3 rounded-full bg-gray-500 text-white text-[6px] font-bold flex items-center justify-center">🍎</span>
+                iCloud
+              </div>
+            </div>
           </button>
         </div>
 
