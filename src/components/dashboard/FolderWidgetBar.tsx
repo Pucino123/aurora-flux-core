@@ -54,7 +54,7 @@ function getRelevantWidgets(folderType?: string, folderTitle?: string): WidgetDe
 
 const renderWidget = (type: string) => {
   switch (type) {
-    case "smart-plan": return <SmartPlanWidget mood={null} energy={null} />;
+    case "smart-plan": return <SmartPlanWidget />;
     case "budget-preview": return <BudgetPreviewWidget />;
     case "savings-ring": return <SavingsRingWidget />;
     case "total-balance": return <TotalBalanceWidget />;

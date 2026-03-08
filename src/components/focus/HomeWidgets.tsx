@@ -19,42 +19,42 @@ export const FocusBudgetWidget = () => (
 
 /* ── Savings Ring ── */
 export const FocusSavingsWidget = () => (
-  <DraggableWidget id="savings-ring" title="Savings" defaultPosition={{ x: 420, y: 400 }} defaultSize={{ w: 300, h: 260 }}>
+  <DraggableWidget id="savings-ring" title="Savings" defaultPosition={{ x: 420, y: 400 }} defaultSize={{ w: 360, h: 480 }}>
     <SavingsRingWidget />
   </DraggableWidget>
 );
 
 /* ── Weekly Workout ── */
 export const FocusWorkoutWidget = () => (
-  <DraggableWidget id="weekly-workout" title="Workout" defaultPosition={{ x: 740, y: 400 }} defaultSize={{ w: 340, h: 280 }} scrollable>
+  <DraggableWidget id="weekly-workout" title="Workout" defaultPosition={{ x: 740, y: 400 }} defaultSize={{ w: 380, h: 480 }} scrollable>
     <WeeklyWorkoutWidget />
   </DraggableWidget>
 );
 
 /* ── Project Status ── */
 export const FocusProjectStatusWidget = () => (
-  <DraggableWidget id="project-status" title="Projects" defaultPosition={{ x: 740, y: 60 }} defaultSize={{ w: 340, h: 280 }} scrollable>
+  <DraggableWidget id="project-status" title="Projects" defaultPosition={{ x: 740, y: 60 }} defaultSize={{ w: 380, h: 480 }} scrollable>
     <ProjectStatusWidget />
   </DraggableWidget>
 );
 
 /* ── Top Tasks ── */
 export const FocusTopTasksWidget = () => (
-  <DraggableWidget id="top-tasks" title="Tasks" defaultPosition={{ x: 60, y: 300 }} defaultSize={{ w: 340, h: 320 }} scrollable>
+  <DraggableWidget id="top-tasks" title="Tasks" defaultPosition={{ x: 60, y: 300 }} defaultSize={{ w: 380, h: 480 }} scrollable>
     <Top5TasksWidget />
   </DraggableWidget>
 );
 
 /* ── Smart Plan ── */
 export const FocusSmartPlanWidget = () => (
-  <DraggableWidget id="smart-plan" title="Smart Plan" defaultPosition={{ x: 420, y: 60 }} defaultSize={{ w: 380, h: 320 }} scrollable>
+  <DraggableWidget id="smart-plan" title="Smart Plan" defaultPosition={{ x: 420, y: 60 }} defaultSize={{ w: 400, h: 480 }} scrollable>
     <SmartPlanWidget />
   </DraggableWidget>
 );
 
 /* ── Gamification ── */
 export const FocusGamificationWidget = () => (
-  <DraggableWidget id="gamification" title="Streaks" defaultPosition={{ x: 740, y: 300 }} defaultSize={{ w: 340, h: 260 }} scrollable>
+  <DraggableWidget id="gamification" title="Streaks" defaultPosition={{ x: 740, y: 300 }} defaultSize={{ w: 360, h: 480 }} scrollable>
     <GamificationCard />
   </DraggableWidget>
 );
