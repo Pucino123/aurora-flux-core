@@ -44,7 +44,7 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, Clock, Music, StickyNote as StickyNoteIcon, BarChart2, Smile } from "lucide-react";
 import { toast } from "sonner";
 
 const BuildModeGrid = () => (
@@ -85,7 +85,7 @@ function loadPaginationSettings(): PaginationSettings {
 }
 
 const FocusContent = () => {
-  const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions } = useFocusStore();
+  const { activeWidgets, systemMode, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
 
@@ -312,12 +312,17 @@ const FocusContent = () => {
     if ((e.target as HTMLElement).closest('button, input')) return; // don't drag on interactive children
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
+    // Always use the pill's actual rendered bounding rect as the source of truth
     const rect = pillRef.current?.getBoundingClientRect();
-    const currentX = pillPos?.x ?? (window.innerWidth / 2 - (rect?.width ?? 200) / 2);
-    const currentY = pillPos?.y ?? (window.innerHeight - 88 - (rect?.height ?? 44));
+    if (!rect) return;
+    // Use actual rendered top-left from DOM — this is always correct regardless of CSS positioning
+    const currentX = rect.left;
+    const currentY = rect.top;
     pillDragOrigin.current = { mx: e.clientX, my: e.clientY, px: currentX, py: currentY };
+    // Immediately lock to absolute position so there's no jump
+    setPillPos({ x: currentX, y: currentY });
     setIsDraggingPill(true);
-  }, [pillPos]);
+  }, []);
 
   const handlePillPointerMove = useCallback((e: React.PointerEvent) => {
     if (!pillDragOrigin.current) return;
@@ -326,8 +331,8 @@ const FocusContent = () => {
     const rect = pillRef.current?.getBoundingClientRect();
     const w = rect?.width ?? 200;
     const h = rect?.height ?? 44;
-    const nx = Math.max(0, Math.min(window.innerWidth - w, pillDragOrigin.current.px + dx));
-    const ny = Math.max(0, Math.min(window.innerHeight - h, pillDragOrigin.current.py + dy));
+    const nx = Math.max(8, Math.min(window.innerWidth - w - 8, pillDragOrigin.current.px + dx));
+    const ny = Math.max(8, Math.min(window.innerHeight - h - 8, pillDragOrigin.current.py + dy));
     setPillPos({ x: nx, y: ny });
   }, []);
 
@@ -444,19 +449,16 @@ const FocusContent = () => {
       { key: "yellow" }, { key: "purple" }, { key: "green" }, { key: "blue" },
       { key: "pink" }, { key: "orange" }, { key: "coral" }, { key: "mint" },
     ];
-    const color = COLORS[focusStickyNotes.length % COLORS.length];
+    const color = COLORS[pageStickyNotes.length % COLORS.length];
     const rotation = Math.round((Math.random() - 0.5) * 8);
     const baseX = pos ? pos.x : 40 + Math.random() * Math.min(window.innerWidth - 200, 500);
     const baseY = pos ? pos.y : 60 + Math.random() * Math.min(window.innerHeight - 250, 400);
-    setFocusStickyNotes([
-      ...focusStickyNotes,
+    setPageStickyNotes([
+      ...pageStickyNotes,
       { id: `fn-${Date.now()}`, text: "", color: color.key, x: baseX, y: baseY, rotation, opacity: 1 },
     ]);
     contextMenuPosRef.current = null;
-    if (!activeWidgets.includes("notes")) {
-      // Toggle it on via the store if possible
-    }
-  }, [focusStickyNotes, setFocusStickyNotes, activeWidgets]);
+  }, [pageStickyNotes, setPageStickyNotes]);
 
   const handleDragStateChange = useCallback((state: { id: string; x: number; y: number } | null) => {
     if (state === null && dragStateRef.current) {
@@ -839,6 +841,12 @@ const FocusContent = () => {
               {pageActiveWidgets.includes("top-tasks") && <FocusTopTasksWidget key="top-tasks" />}
               {pageActiveWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
               {pageActiveWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
+              {/* Per-page sticky notes — rendered inside the page transition container */}
+              <FocusStickyNotes
+                key={`sticky-${activePageIndex}`}
+                notes={pageStickyNotes}
+                onNotesChange={setPageStickyNotes}
+              />
             </AnimatePresence>
               </div>
             </motion.div>
@@ -1258,23 +1266,110 @@ const FocusContent = () => {
               {hoverDotIdx !== null && hoverDotIdx !== activePageIndex && (
                 <motion.div
                   key={`preview-${hoverDotIdx}`}
-                  initial={{ opacity: 0, y: 8, scale: 0.92 }}
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 pointer-events-none z-10"
+                  exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                  transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 pointer-events-none z-10"
                 >
+                  {/* Thumbnail card */}
                   <div
-                    className="px-3 py-2 rounded-xl text-center"
-                    style={{ background: "rgba(10,8,20,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 4px 20px rgba(0,0,0,0.5)", minWidth: 100 }}
+                    className="rounded-2xl overflow-hidden"
+                    style={{
+                      background: "rgba(10,8,20,0.92)",
+                      backdropFilter: "blur(20px)",
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.65)",
+                      width: 160,
+                    }}
                   >
-                    <p className="text-[11px] font-semibold text-white/80 whitespace-nowrap">{dashboardPages[hoverDotIdx]?.label || `Page ${hoverDotIdx + 1}`}</p>
-                    <p className="text-[9px] text-white/35 mt-0.5">
-                      {(dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets).length} widget{(dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets).length !== 1 ? "s" : ""}
-                      {dashboardPages[hoverDotIdx]?.background ? ` · ${dashboardPages[hoverDotIdx].background!.replace("aurora-","").replace("-"," ")} bg` : ""}
-                    </p>
+                    {/* Mini canvas preview */}
+                    <div
+                      className="relative w-full"
+                      style={{
+                        height: 90,
+                        background: dashboardPages[hoverDotIdx]?.background
+                          ? "rgba(30,20,60,0.8)"
+                          : "rgba(20,15,40,0.7)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {/* Tiny dot grid mimicking build grid */}
+                      <div className="absolute inset-0" style={{
+                        backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
+                        backgroundSize: "14px 14px",
+                      }} />
+                      {/* Widget pill representations */}
+                      {(() => {
+                        const widgets = dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets;
+                        const WIDGET_COLORS: Record<string, string> = {
+                          clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa",
+                          notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c",
+                          quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc",
+                          routine: "#4ade80", "budget-preview": "#f59e0b", "savings-ring": "#10b981",
+                          "weekly-workout": "#ef4444", "project-status": "#3b82f6", "top-tasks": "#8b5cf6",
+                          "smart-plan": "#06b6d4", gamification: "#f97316",
+                        };
+                        const WIDGET_LABELS: Record<string, string> = {
+                          clock: "🕐", timer: "⏱", music: "🎵", planner: "📋",
+                          notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️",
+                          quote: "💬", breathing: "🫁", council: "🤝", aura: "✨",
+                          routine: "🔄", "budget-preview": "💰", "savings-ring": "🏦",
+                          "weekly-workout": "💪", "project-status": "📌", "top-tasks": "✅",
+                          "smart-plan": "🧠", gamification: "🏆",
+                        };
+                        // Layout a grid of mini widget blocks
+                        const cols = 4;
+                        const cellW = 34;
+                        const cellH = 22;
+                        const gap = 4;
+                        const padX = 8;
+                        const padY = 8;
+                        return widgets.slice(0, 8).map((w, wi) => {
+                          const col = wi % cols;
+                          const row = Math.floor(wi / cols);
+                          const x = padX + col * (cellW + gap);
+                          const y = padY + row * (cellH + gap);
+                          const color = WIDGET_COLORS[w] || "#6b7280";
+                          const emoji = WIDGET_LABELS[w] || "□";
+                          return (
+                            <div
+                              key={w}
+                              className="absolute flex items-center justify-center rounded"
+                              style={{
+                                left: x, top: y, width: cellW, height: cellH,
+                                background: `${color}22`,
+                                border: `1px solid ${color}44`,
+                              }}
+                            >
+                              <span style={{ fontSize: 10 }}>{emoji}</span>
+                            </div>
+                          );
+                        });
+                      })()}
+                      {/* Background badge */}
+                      {dashboardPages[hoverDotIdx]?.background && (
+                        <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[7px] font-medium"
+                          style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)" }}>
+                          {dashboardPages[hoverDotIdx].background!.split("-").slice(-1)[0]}
+                        </div>
+                      )}
+                    </div>
+                    {/* Label row */}
+                    <div className="px-3 py-2 flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold text-white/85 truncate">
+                        {dashboardPages[hoverDotIdx]?.label || `Page ${hoverDotIdx + 1}`}
+                      </p>
+                      <span className="text-[9px] text-white/35 flex-shrink-0">
+                        {(dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets).length}w
+                        {(dashboardPages[hoverDotIdx]?.stickyNotes?.length ?? 0) > 0
+                          ? ` · ${dashboardPages[hoverDotIdx].stickyNotes!.length}📌` : ""}
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.88)", border: "0 0 1px 1px rgba(255,255,255,0.12)" }} />
+                  {/* Arrow */}
+                  <div className="w-2.5 h-2.5 mx-auto -mt-[1px] rotate-45 rounded-sm"
+                    style={{ background: "rgba(10,8,20,0.92)", borderRight: "1px solid rgba(255,255,255,0.14)", borderBottom: "1px solid rgba(255,255,255,0.14)" }} />
                 </motion.div>
               )}
             </AnimatePresence>

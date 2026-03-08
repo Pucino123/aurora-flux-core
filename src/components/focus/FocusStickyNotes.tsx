@@ -2,7 +2,6 @@ import React, { useRef, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Plus, Users, Loader2 } from "lucide-react";
 
-import { useFocusStore } from "@/context/FocusContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
@@ -462,49 +461,44 @@ const StickyNoteItem = ({ note, onUpdateText, onUpdateNote, onDelete, onMove, on
   );
 };
 
-const FocusStickyNotes = () => {
-  const { focusStickyNotes, setFocusStickyNotes } = useFocusStore();
+interface FocusStickyNotesProps {
+  notes: NoteData[];
+  onNotesChange: (notes: NoteData[]) => void;
+}
 
+const FocusStickyNotes = ({ notes, onNotesChange }: FocusStickyNotesProps) => {
   const addNote = () => {
-    const color = COLORS[focusStickyNotes.length % COLORS.length];
+    const color = COLORS[notes.length % COLORS.length];
     const rotation = Math.round((Math.random() - 0.5) * 8);
     const vw = Math.min(window.innerWidth - 200, 500);
     const vh = Math.min(window.innerHeight - 250, 400);
     const baseX = 40 + Math.random() * Math.max(vw, 60);
     const baseY = 60 + Math.random() * Math.max(vh, 60);
-    setFocusStickyNotes([
-      ...focusStickyNotes,
+    onNotesChange([
+      ...notes,
       { id: `fn-${++idCounter}`, text: "", color: color.key, x: baseX, y: baseY, rotation, opacity: 1 },
     ]);
   };
 
   const updateText = (id: string, text: string) => {
-    setFocusStickyNotes(focusStickyNotes.map((n) => (n.id === id ? { ...n, text } : n)));
+    onNotesChange(notes.map((n) => (n.id === id ? { ...n, text } : n)));
   };
 
   const updateNote = (id: string, patch: Partial<NoteData>) => {
-    setFocusStickyNotes(focusStickyNotes.map((n) => (n.id === id ? { ...n, ...patch } : n)));
+    onNotesChange(notes.map((n) => (n.id === id ? { ...n, ...patch } : n)));
   };
 
   const deleteNote = (id: string) => {
-    setFocusStickyNotes(focusStickyNotes.filter((n) => n.id !== id));
+    onNotesChange(notes.filter((n) => n.id !== id));
   };
 
   const moveNote = useCallback((id: string, x: number, y: number) => {
-    setFocusStickyNotes(focusStickyNotes.map((n) => (n.id === id ? { ...n, x, y } : n)));
-  }, [focusStickyNotes, setFocusStickyNotes]);
-
-  // Auto-create a note when component mounts with no notes
-  React.useEffect(() => {
-    if (focusStickyNotes.length === 0) {
-      addNote();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    onNotesChange(notes.map((n) => (n.id === id ? { ...n, x, y } : n)));
+  }, [notes, onNotesChange]);
 
   return (
     <AnimatePresence>
-      {focusStickyNotes.map((note) => (
+      {notes.map((note) => (
         <StickyNoteItem
           key={note.id}
           note={{
