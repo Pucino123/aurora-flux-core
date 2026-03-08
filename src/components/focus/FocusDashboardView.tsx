@@ -1523,7 +1523,21 @@ export default FocusDashboardView;
               }}
             />
           ))}
-          </div>
+          {/* Divider */}
+          <div className="w-px h-4 bg-white/20" />
+          {/* Plus */}
+          <button
+            onClick={addPage}
+            onPointerDown={e => e.stopPropagation()}
+            className="flex items-center justify-center transition-colors duration-150"
+            style={{ color: "rgba(255,255,255,0.5)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.5)")}
+            title="Add page"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+          </button>
+        </div>
         </div>
       )}
 
