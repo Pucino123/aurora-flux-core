@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Cpu, Users, Calendar, Zap, CheckCircle2, ChevronRight, ArrowRight } from "lucide-react";
+import { Cpu, Users, Calendar, Zap, ChevronRight, ArrowRight } from "lucide-react";
 import { useMonetization } from "@/context/MonetizationContext";
 
 const SPARKS_REWARD = 50;
