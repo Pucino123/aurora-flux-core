@@ -21,8 +21,6 @@ type PersistedWindow = Pick<AppWindow, 'type' | 'contentId' | 'title' | 'layout'
 const STORAGE_KEY = "flux-windows-v2";
 // Documents always render above widgets with a fixed z-offset tier
 const DOC_Z_BOOST = 500;
-// Non-floating layouts (fullscreen/split) must be above the pill (z-9999) and dock (z-10150)
-export const OVERLAY_Z = 10300;
 
 function loadPersistedWindows(): PersistedWindow[] {
   try {
