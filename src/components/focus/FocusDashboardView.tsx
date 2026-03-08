@@ -888,7 +888,15 @@ const FocusContent = () => {
         document.body
       )}
 
-      <ToolDrawer />
+      <ToolDrawer
+        pageActiveWidgets={pageActiveWidgets}
+        onTogglePageWidget={(id) => {
+          const updated = pageActiveWidgets.includes(id)
+            ? pageActiveWidgets.filter(w => w !== id)
+            : [...pageActiveWidgets, id];
+          updatePageWidgets(updated);
+        }}
+      />
 
       {/* ── iOS-style Dashboard Pagination ── positioned just above ToolDrawer (~60px from bottom) */}
       <div className="fixed left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-1.5"
