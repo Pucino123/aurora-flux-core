@@ -152,6 +152,14 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
 
         {/* Nav links */}
         <div className="px-2 space-y-0.5">
+          <button
+            onClick={() => nav("focus")}
+            className={`sidebar-item w-full ${isHomeActive ? "sidebar-item-active" : ""}`}
+          >
+            <Home size={18} className="shrink-0" />
+            <span>{t("sidebar.home")}</span>
+          </button>
+
           {/* Inbox with unified badge */}
           <button
             onClick={() => nav("inbox")}
