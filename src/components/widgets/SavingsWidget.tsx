@@ -343,10 +343,17 @@ const SavingsWidget = () => {
     const goal = goals.find(g => g.id === goalId);
     if (!goal) return;
     const newAmount = Math.max(0, goal.current + (inputMode === "deposit" ? val : -val));
+    const wasComplete = goal.current >= goal.target;
+    const nowComplete = newAmount >= goal.target;
     setGoals(prev => prev.map(g => g.id === goalId ? { ...g, current: newAmount } : g));
     setPulseId(goalId); setTimeout(() => setPulseId(null), 600);
     setActiveCard(null); setInputMode(null); setInputVal("");
     if (user) await supabase.from("goals").update({ current_amount: newAmount }).eq("id", goalId).eq("user_id", user.id);
+    // Trigger 100% celebration only on first completion crossing
+    if (!wasComplete && nowComplete && !celebratedRef.current.has(goalId)) {
+      celebratedRef.current.add(goalId);
+      setCelebratingGoal({ ...goal, current: newAmount });
+    }
   };
 
   // ── Rename ────────────────────────────────────────────────────────────────
