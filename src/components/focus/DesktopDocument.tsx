@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { FileText, Table, Pencil, Trash2, Copy, Type, Upload, Palette, Search, ChevronDown, Share2, CalendarPlus, FolderInput, Clock } from "lucide-react";
+import { FileText, Table, Pencil, Trash2, Copy, Type, Upload, Palette, Search, ChevronDown, Share2, CalendarPlus, FolderInput, Clock, BookCopy } from "lucide-react";
 import { DbDocument } from "@/hooks/useDocuments";
 import { useFocusStore } from "@/context/FocusContext";
 import { useFlux } from "@/context/FluxContext";
@@ -25,6 +25,9 @@ interface DesktopDocumentProps {
   onBulkContextMenu?: (e: React.MouseEvent) => void;
   positionOverride?: { x: number; y: number };
   onPositionChange?: (id: string, pos: { x: number; y: number }) => void;
+  allPages?: { id: string; label: string; index: number }[];
+  currentPageIndex?: number;
+  onMoveToPage?: (docId: string, targetPageIndex: number) => void;
 }
 
 const ICON_COLORS = [
@@ -49,7 +52,7 @@ const BG_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange }: DesktopDocumentProps) => {
+const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage }: DesktopDocumentProps) => {
   const { user } = useAuth();
   const store = useFocusStore();
   const { folders, createBlock } = useFlux();
@@ -78,6 +81,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const [calDate, setCalDate] = useState<Date | undefined>(new Date());
   const [calTime, setCalTime] = useState("09:00");
   const [showMoveFolder, setShowMoveFolder] = useState(false);
+  const [showMoveToPageMenu, setShowMoveToPageMenu] = useState(false);
 
   const rootFolders = useMemo(() => folders.filter(f => !f.parent_id), [folders]);
 
@@ -296,7 +300,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                     </button>
                   </div>
                 )}
-                <button onClick={() => { setShowMoveFolder(!showMoveFolder); setShowCalendar(false); }} className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${showMoveFolder ? "text-primary bg-primary/5" : "text-foreground"}`}>
+                <button onClick={() => { setShowMoveFolder(!showMoveFolder); setShowCalendar(false); setShowMoveToPageMenu(false); }} className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${showMoveFolder ? "text-primary bg-primary/5" : "text-foreground"}`}>
                   <FolderInput size={13} className="text-muted-foreground" /> Move to Folder
                 </button>
                 {showMoveFolder && (
@@ -310,6 +314,33 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                         <FolderInput size={11} className="text-muted-foreground" /> {f.title}
                       </button>
                     ))}
+                  </div>
+                )}
+                {/* Move to page… */}
+                {allPages && allPages.length > 1 && (
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowMoveToPageMenu(!showMoveToPageMenu); setShowMoveFolder(false); setShowCalendar(false); }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${showMoveToPageMenu ? "text-primary bg-primary/5" : "text-foreground"}`}
+                    >
+                      <BookCopy size={13} className="text-muted-foreground" /> Move to page…
+                    </button>
+                    {showMoveToPageMenu && (
+                      <div className="px-2 pb-2 pt-1 max-h-[150px] overflow-y-auto space-y-0.5">
+                        {allPages
+                          .filter(p => p.index !== currentPageIndex)
+                          .map(p => (
+                            <button
+                              key={p.id}
+                              onClick={() => { onMoveToPage?.(doc.id, p.index); setContextMenu(null); }}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] text-foreground hover:bg-secondary/60 rounded-md transition-colors"
+                            >
+                              <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">{p.index + 1}</span>
+                              {p.label}
+                            </button>
+                          ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="h-px bg-border mx-2 my-1" />

@@ -112,12 +112,13 @@ const FocusContent = () => {
           spaceSettings: p.spaceSettings,
           folderPositions: p.folderPositions,
           docPositions: p.docPositions,
+          // Migration: pages that have never had visibility lists stay undefined (migrated lazily below)
           visibleFolderIds: p.visibleFolderIds,
           visibleDocIds: p.visibleDocIds,
         }));
       }
     } catch {}
-    return [{ id: "page-1", label: "Home" }];
+    return [{ id: "page-1", label: "Home", visibleFolderIds: undefined, visibleDocIds: undefined }];
   });
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [pageDir, setPageDir] = useState<1 | -1>(1);
@@ -246,7 +247,13 @@ const FocusContent = () => {
   }, [activePageIndex, dashboardPages]);
 
   const addPage = useCallback(() => {
-    const newPage: DashboardPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
+    // New pages always start completely empty — strict isolation
+    const newPage: DashboardPage = {
+      id: `page-${Date.now()}`,
+      label: `Page ${dashboardPages.length + 1}`,
+      visibleFolderIds: [],
+      visibleDocIds: [],
+    };
     setPages(prev => [...prev, newPage]);
     setPageDir(1);
     setActivePageIndex(dashboardPages.length);
@@ -264,8 +271,9 @@ const FocusContent = () => {
       spaceSettings: source.spaceSettings ? { ...source.spaceSettings } : undefined,
       folderPositions: source.folderPositions ? { ...source.folderPositions } : undefined,
       docPositions: source.docPositions ? { ...source.docPositions } : undefined,
-      visibleFolderIds: source.visibleFolderIds ? [...source.visibleFolderIds] : undefined,
-      visibleDocIds: source.visibleDocIds ? [...source.visibleDocIds] : undefined,
+      // Duplicate carries the same visible items
+      visibleFolderIds: source.visibleFolderIds ? [...source.visibleFolderIds] : [],
+      visibleDocIds: source.visibleDocIds ? [...source.visibleDocIds] : [],
     };
     const insertAt = idx + 1;
     setPages(prev => { const next = [...prev]; next.splice(insertAt, 0, newPage); return next; });
@@ -355,6 +363,23 @@ const FocusContent = () => {
     } : p));
   }, [activePageIndex, setPages, updateDesktopDocPosition, desktopDocPositions]);
 
+  // ── Move item to a different page ──────────────────────────────────────────
+  const handleMoveToPage = useCallback((itemId: string, type: 'folder' | 'doc', targetPageIndex: number) => {
+    setPages(prev => prev.map((p, i) => {
+      if (i === activePageIndex) {
+        if (type === 'folder') return { ...p, visibleFolderIds: (p.visibleFolderIds ?? []).filter(id => id !== itemId) };
+        return { ...p, visibleDocIds: (p.visibleDocIds ?? []).filter(id => id !== itemId) };
+      }
+      if (i === targetPageIndex) {
+        if (type === 'folder') return { ...p, visibleFolderIds: [...(p.visibleFolderIds ?? []), itemId] };
+        return { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), itemId] };
+      }
+      return p;
+    }));
+    const label = dashboardPages[targetPageIndex]?.label || `Page ${targetPageIndex + 1}`;
+    toast.success(`Moved to "${label}"`);
+  }, [activePageIndex, setPages, dashboardPages]);
+
   // Touch swipe
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -384,7 +409,7 @@ const FocusContent = () => {
       // Cmd/Ctrl+T → add new page
       if ((e.metaKey || e.ctrlKey) && e.key === "t") {
         e.preventDefault();
-        const newPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
+        const newPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}`, visibleFolderIds: [] as string[], visibleDocIds: [] as string[] };
         setPages(prev => [...prev, newPage]);
         setPageDir(1);
         setActivePageIndex(dashboardPages.length);
@@ -1050,51 +1075,61 @@ const FocusContent = () => {
                 onNotesChange={setPageStickyNotes}
               />
             </AnimatePresence>
+
+              {/* Desktop Folders — strictly scoped to this page. Legacy pages (undefined list) show all. */}
+              {folderTree
+                .filter(folder => currentPage?.visibleFolderIds === undefined
+                  ? true
+                  : currentPage.visibleFolderIds.includes(folder.id))
+                .map((folder) => (
+                <DesktopFolder
+                  key={folder.id}
+                  folder={folder}
+                  onOpenModal={setOpenFolderId}
+                  dragState={dragState}
+                  docDragState={docDragState}
+                  onDragStateChange={handleDragStateChange}
+                  onDocDropped={refetchDesktopDocs}
+                  isMarqueeSelected={selectedIds.has(folder.id)}
+                  onGroupDragStart={handleGroupDragStart}
+                  onSingleSelect={handleSingleSelect}
+                  onBulkContextMenu={handleBulkContextMenu}
+                  positionOverride={pageFolderPositions[folder.id]}
+                  onPositionChange={updatePageFolderPosition}
+                  allPages={dashboardPages.map((p, i) => ({ id: p.id, label: p.label, index: i }))}
+                  currentPageIndex={activePageIndex}
+                  onMoveToPage={(id, idx) => handleMoveToPage(id, 'folder', idx)}
+                />
+              ))}
+
+              {/* Desktop Documents — strictly scoped to this page. Legacy pages (undefined list) show all. */}
+              {desktopDocs
+                .filter(doc => currentPage?.visibleDocIds === undefined
+                  ? true
+                  : currentPage.visibleDocIds.includes(doc.id))
+                .map((doc) => (
+                <DesktopDocument
+                  key={doc.id}
+                  doc={doc}
+                  onOpen={(d) => setOpenDesktopDoc(d)}
+                  onDelete={(id) => { removeDesktopDoc(id); }}
+                  onRefetch={refetchDesktopDocs}
+                  dragState={docDragState}
+                  onDragStateChange={handleDocDragStateChange}
+                  isMarqueeSelected={selectedIds.has(doc.id)}
+                  onGroupDragStart={handleGroupDragStart}
+                  onSingleSelect={handleSingleSelect}
+                  onBulkContextMenu={handleBulkContextMenu}
+                  positionOverride={pageDocPositions[doc.id]}
+                  onPositionChange={updatePageDocPosition}
+                  allPages={dashboardPages.map((p, i) => ({ id: p.id, label: p.label, index: i }))}
+                  currentPageIndex={activePageIndex}
+                  onMoveToPage={(id, idx) => handleMoveToPage(id, 'doc', idx)}
+                />
+              ))}
               </div>
             </motion.div>
           </AnimatePresence>
-
-          {/* Desktop Folders — only show folders registered to this page (or legacy: all if none registered yet) */}
-          {folderTree
-            .filter(folder => !currentPage?.visibleFolderIds || currentPage.visibleFolderIds.includes(folder.id))
-            .map((folder) => (
-            <DesktopFolder
-              key={folder.id}
-              folder={folder}
-              onOpenModal={setOpenFolderId}
-              dragState={dragState}
-              docDragState={docDragState}
-              onDragStateChange={handleDragStateChange}
-              onDocDropped={refetchDesktopDocs}
-              isMarqueeSelected={selectedIds.has(folder.id)}
-              onGroupDragStart={handleGroupDragStart}
-              onSingleSelect={handleSingleSelect}
-              onBulkContextMenu={handleBulkContextMenu}
-              positionOverride={pageFolderPositions[folder.id]}
-              onPositionChange={updatePageFolderPosition}
-            />
-          ))}
-
-          {/* Desktop Documents (unfiled) — only show docs registered to this page */}
-          {desktopDocs
-            .filter(doc => !currentPage?.visibleDocIds || currentPage.visibleDocIds.includes(doc.id))
-            .map((doc) => (
-            <DesktopDocument
-              key={doc.id}
-              doc={doc}
-              onOpen={(d) => setOpenDesktopDoc(d)}
-              onDelete={(id) => { removeDesktopDoc(id); }}
-              onRefetch={refetchDesktopDocs}
-              dragState={docDragState}
-              onDragStateChange={handleDocDragStateChange}
-              isMarqueeSelected={selectedIds.has(doc.id)}
-              onGroupDragStart={handleGroupDragStart}
-              onSingleSelect={handleSingleSelect}
-              onBulkContextMenu={handleBulkContextMenu}
-              positionOverride={pageDocPositions[doc.id]}
-              onPositionChange={updatePageDocPosition}
-            />
-          ))}
 
           {/* Marquee selection rectangle */}
           {marqueeRect && marqueeRect.width > 2 && marqueeRect.height > 2 && (

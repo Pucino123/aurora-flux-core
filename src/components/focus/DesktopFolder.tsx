@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect, memo, useMemo } from "react";
-import { Folder, FolderOpen, Pencil, Trash2, Copy, FolderInput, CalendarPlus, LayoutDashboard, Share2, FileEdit, Type, Upload, Palette, Search, ChevronDown } from "lucide-react";
+import { Folder, FolderOpen, Pencil, Trash2, Copy, FolderInput, CalendarPlus, LayoutDashboard, Share2, FileEdit, Type, Upload, Palette, Search, ChevronDown, BookCopy } from "lucide-react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { useFlux, FolderNode } from "@/context/FluxContext";
@@ -22,6 +22,9 @@ interface DesktopFolderProps {
   onBulkContextMenu?: (e: React.MouseEvent) => void;
   positionOverride?: { x: number; y: number };
   onPositionChange?: (id: string, pos: { x: number; y: number }) => void;
+  allPages?: { id: string; label: string; index: number }[];
+  currentPageIndex?: number;
+  onMoveToPage?: (folderId: string, targetPageIndex: number) => void;
 }
 
 const FOLDER_COLORS = [
@@ -35,7 +38,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
@@ -69,6 +72,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   const [selected, setSelected] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [showMoveToPageMenu, setShowMoveToPageMenu] = useState(false);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [calendarTime, setCalendarTime] = useState("09:00");
   const [showAllIcons, setShowAllIcons] = useState(false);
@@ -363,6 +367,33 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
                     </div>
                   )}
                 </div>
+                {/* Move to page… */}
+                {allPages && allPages.length > 1 && (
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowMoveToPageMenu(!showMoveToPageMenu); setShowMoveMenu(false); setShowCalendarPicker(false); }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${showMoveToPageMenu ? "text-primary bg-primary/5" : "text-foreground"}`}
+                    >
+                      <BookCopy size={13} className="text-muted-foreground" /> Move to page…
+                    </button>
+                    {showMoveToPageMenu && (
+                      <div className="bg-popover border border-border rounded-lg shadow-xl py-1 ml-2 mt-1 max-h-40 overflow-y-auto">
+                        {allPages
+                          .filter(p => p.index !== currentPageIndex)
+                          .map(p => (
+                            <button
+                              key={p.id}
+                              onClick={() => { onMoveToPage?.(folder.id, p.index); setContextMenu(null); }}
+                              className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+                            >
+                              <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[9px] flex items-center justify-center font-bold">{p.index + 1}</span>
+                              {p.label}
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="relative">
                   <button onClick={() => setShowCalendarPicker(!showCalendarPicker)} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-foreground hover:bg-secondary transition-colors">
                     <CalendarPlus size={13} className="text-muted-foreground" /> Calendar
