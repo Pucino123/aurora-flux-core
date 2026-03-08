@@ -1765,7 +1765,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                 >
                   {digestText}
                 </pre>
-                <div className="flex gap-2">
+                 <div className="flex gap-2">
                   <button
                     onClick={() => { navigator.clipboard.writeText(digestText); toast.success("Digest copied to clipboard!"); }}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-purple-200 transition-colors"
@@ -1774,12 +1774,22 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                     <Copy size={11} /> Copy Digest
                   </button>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(notionText); toast.success("Notion-formatted digest copied!"); }}
-                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors"
-                    style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.55)" }}
-                    title="Formatted for Notion with headers, bullets and callout blocks"
+                    onClick={handleSendToNotion}
+                    disabled={isSendingNotion}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors disabled:opacity-60"
+                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.65)" }}
+                    title="Send to Notion as a formatted page (requires Notion API key in settings)"
                   >
-                    <FileText size={11} /> Notion
+                    {isSendingNotion ? <Loader2 size={11} className="animate-spin" /> : <FileText size={11} />}
+                    {isSendingNotion ? "Sending…" : "Send to Notion"}
+                  </button>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(notionText); toast.success("Notion markdown copied!"); }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs transition-colors"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}
+                    title="Copy Notion-formatted markdown"
+                  >
+                    <Copy size={10} />
                   </button>
                   <button
                     onClick={() => { handleExportPDF(); setShowDigest(false); }}
