@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2, GripHorizontal, Palette, SlidersHorizontal, AppWindow, Trash2, Layers } from "lucide-react";
+import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2, GripHorizontal, Palette, SlidersHorizontal, AppWindow, Trash2 } from "lucide-react";
 import { useFocusStore, SystemMode } from "@/context/FocusContext";
 import { useWindowManager } from "@/context/WindowManagerContext";
 import { useTrash } from "@/context/TrashContext";
+import { useFocusMode } from "@/context/FocusModeContext";
 import { AnimatePresence, motion } from "framer-motion";
 import FocusReportModal from "./FocusReportModal";
 import CollabMessagesModal from "./CollabMessagesModal";
-import MissionControl from "@/components/windows/MissionControl";
 import TrashModal from "@/components/TrashModal";
 import { getSuggestedWidgets } from "@/hooks/useWidgetIntelligence";
 import { useTeamChat } from "@/hooks/useTeamChat";
@@ -278,6 +278,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
   const { activeWidgets, toggleWidget, systemMode, setSystemMode, resetDashboard } = useFocusStore();
   const { openWindow, windows, restoreWindow, closeWindow, bringToFront } = useWindowManager();
   const { trash } = useTrash();
+  const { isFocusModeActive } = useFocusMode();
   const minimizedWindows = windows.filter(w => w.minimized);
 
   const effectiveWidgets = pageActiveWidgets ?? activeWidgets;
@@ -290,7 +291,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
   const [styleOpen, setStyleOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
-  const [missionControlOpen, setMissionControlOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
   const suggestions = useMemo(() => getSuggestedWidgets(effectiveWidgets as string[]), [effectiveWidgets]);
@@ -311,19 +311,8 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
     prevMinimizedIds.current = current;
   }, [minimizedWindows]);
 
-  // ── Mission Control keyboard shortcut (⌘⇧M / F11) ────────────────
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
-      const mod = isMac ? e.metaKey : e.ctrlKey;
-      if ((mod && e.shiftKey && (e.key === "m" || e.key === "M")) || e.key === "F11") {
-        e.preventDefault();
-        setMissionControlOpen(p => !p);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+
+  // (Mission Control removed)
 
   // ── Toolbar style ─────────────────────────────────────────────────
   const [toolbarStyle, setToolbarStyleState] = useState<ToolbarStyle>(loadToolbarStyle);
@@ -424,7 +413,13 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
       <motion.div
         ref={barRef}
         className="fixed z-[10100] flex items-center gap-1 px-2 py-1.5 select-none"
-        animate={isBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
+        animate={
+          isFocusModeActive
+            ? { opacity: 0, y: 24, pointerEvents: "none" as const }
+            : isBouncing
+            ? { scale: [1, 1.06, 0.97, 1.02, 1], opacity: 1, y: 0 }
+            : { scale: 1, opacity: 1, y: 0 }
+        }
         transition={isBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
         style={{
           ...posStyle,
@@ -437,6 +432,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           boxShadow: isDragging
             ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
             : "0 8px 32px rgba(0,0,0,0.55)",
+          pointerEvents: isFocusModeActive ? "none" : undefined,
         }}
         onPointerDown={isBuild ? handlePointerDown : undefined}
       >
@@ -612,23 +608,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
         {/* Right-side separator */}
         <div className="w-px h-5 mx-1" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.12) }} />
 
-        {/* Mission Control — all windows overview */}
-        <button
-          onPointerDown={e => e.stopPropagation()}
-          onClick={() => setMissionControlOpen(true)}
-          title="Mission Control (⌘⇧M)"
-          className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all hover:bg-white/5 ${missionControlOpen ? "bg-white/15" : ""}`}
-          style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
-        >
-          <Layers size={14} />
-          {windows.length > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 flex items-center justify-center rounded-full text-[8px] font-bold px-0.5"
-              style={{ background: "rgba(0,122,255,0.85)", color: "#fff" }}>
-              {windows.length}
-            </span>
-          )}
-        </button>
-
         {/* Trash */}
         <button
           onPointerDown={e => e.stopPropagation()}
@@ -774,7 +753,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
 
       <FocusReportModal open={reportOpen} onOpenChange={setReportOpen} />
       <CollabMessagesModal open={collabOpen} onOpenChange={setCollabOpen} />
-      <MissionControl open={missionControlOpen} onClose={() => setMissionControlOpen(false)} />
       <TrashModal open={trashOpen} onClose={() => setTrashOpen(false)} />
     </>
   );

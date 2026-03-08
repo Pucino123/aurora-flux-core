@@ -13,6 +13,8 @@ export interface DbDocument {
   updated_at: string;
 }
 
+export type MoveToTrashFn = (item: { id: string; type: "document"; title: string; originalData: any }) => void;
+
 const LS_KEY = "flux_local_documents";
 
 function lsGetDocs(): DbDocument[] {
@@ -26,7 +28,7 @@ function lsSetDocs(docs: DbDocument[]) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(docs)); } catch {}
 }
 
-export function useDocuments(folderId?: string | null) {
+export function useDocuments(folderId?: string | null, onMoveToTrash?: MoveToTrashFn) {
   const { user } = useAuth();
   const [documents, setDocumentsRaw] = useState<DbDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,6 +150,11 @@ export function useDocuments(folderId?: string | null) {
 
   const removeDocument = useCallback(
     async (id: string) => {
+      const doc = documents.find(d => d.id === id);
+      // Pass to trash via callback if provided
+      if (doc && onMoveToTrash) {
+        onMoveToTrash({ id: doc.id, type: "document", title: doc.title, originalData: doc });
+      }
       setDocuments((prev) => prev.filter((d) => d.id !== id));
       if (!user) {
         const allDocs = lsGetDocs();
@@ -160,7 +167,7 @@ export function useDocuments(folderId?: string | null) {
         .eq("id", id)
         .eq("user_id", user.id);
     },
-    [user, setDocuments]
+    [user, setDocuments, documents, onMoveToTrash]
   );
 
   return { documents, loading, createDocument, updateDocument, removeDocument, refetch: fetchDocuments };

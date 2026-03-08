@@ -44,13 +44,15 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X, Focus } from "lucide-react";
 import { toast } from "sonner";
 import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
 import WindowFrame from "@/components/windows/WindowFrame";
 import WindowDock from "@/components/windows/WindowDock";
 import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
+import { useFocusMode } from "@/context/FocusModeContext";
+import { useTrash } from "@/context/TrashContext";
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
@@ -330,6 +332,7 @@ const FocusContent = () => {
   const { activeWidgets, systemMode, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
+  const { isFocusModeActive, disableFocusMode } = useFocusMode();
 
   // iOS-style dashboard pages state
   const [dashboardPages, setDashboardPages] = useState<DashboardPage[]>(() => {
@@ -822,7 +825,8 @@ const FocusContent = () => {
     setPillBouncing(true);
     setTimeout(() => setPillBouncing(false), 500);
   }, []);
-  const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
+  const { moveToTrash } = useTrash();
+  const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null, moveToTrash);
   const { openWindow, closeWindow, windows, updateWindowPosition, focusedId } = useWindowManager();
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
@@ -1695,6 +1699,31 @@ const FocusContent = () => {
           updatePageWidgets(updated);
         }}
       />
+
+      {/* ── Focus Mode: floating exit pill ── */}
+      <AnimatePresence>
+        {isFocusModeActive && (
+          <motion.button
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ type: "spring", stiffness: 480, damping: 32 }}
+            onClick={disableFocusMode}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-[10200] flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold select-none"
+            style={{
+              background: "rgba(139,92,246,0.18)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid rgba(139,92,246,0.35)",
+              color: "rgba(196,168,255,0.95)",
+              boxShadow: "0 4px 20px rgba(139,92,246,0.25)",
+            }}
+          >
+            <Focus size={13} />
+            Exit Focus Mode
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
       {/* IMPORTANT: pillRef wraps ONLY the pill row so getBoundingClientRect() always reflects

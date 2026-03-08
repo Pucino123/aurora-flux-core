@@ -9,6 +9,7 @@ import {
 
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { useDocuments, DbDocument } from "@/hooks/useDocuments";
+import { useTrash } from "@/context/TrashContext";
 import { FOLDER_ICONS } from "@/components/CreateFolderModal";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import FolderContents from "./FolderContents";
@@ -37,6 +38,7 @@ interface FolderModalProps {
 
 const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const { findFolderNode, updateFolder, removeFolder, createFolder, moveFolder, createBlock } = useFlux();
+  const { moveToTrash } = useTrash();
 
   const [navStack, setNavStack] = useState<string[]>([folderId]);
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -59,7 +61,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const currentFolderId = navStack[navStack.length - 1];
   const currentFolder = findFolderNode(currentFolderId);
 
-  const { documents, loading: docsLoading, createDocument, updateDocument, removeDocument } = useDocuments(currentFolderId);
+  const { documents, loading: docsLoading, createDocument, updateDocument, removeDocument } = useDocuments(currentFolderId, moveToTrash);
 
   // Filter & sort
   const filteredData = useMemo(() => {
