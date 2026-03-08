@@ -826,7 +826,7 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
                 <button
                   key={cat}
                   onClick={() => handleCategoryChange(cat)}
-                  className="w-full text-left px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-150"
+                  className="w-full text-left px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-150 flex items-center gap-2"
                   style={{
                     background: selectedCategory === cat ? catActiveBg : "transparent",
                     color: selectedCategory === cat ? "#fff" : catInactiveColor,
@@ -834,7 +834,13 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
                   onMouseEnter={e => { if (selectedCategory !== cat) (e.currentTarget as HTMLElement).style.background = catHoverBg; }}
                   onMouseLeave={e => { if (selectedCategory !== cat) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                 >
-                  {cat}
+                  {cat === "Favorites" && (
+                    <Star size={10} fill={selectedCategory === "Favorites" ? "currentColor" : "none"} strokeWidth={2} className="shrink-0" />
+                  )}
+                  <span className="truncate">{cat}</span>
+                  {cat === "Favorites" && favorites.length > 0 && (
+                    <span className="ml-auto text-[9px] opacity-60">{favorites.length}</span>
+                  )}
                 </button>
               ))}
             </div>
