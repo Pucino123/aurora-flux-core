@@ -841,6 +841,12 @@ const FocusContent = () => {
               {pageActiveWidgets.includes("top-tasks") && <FocusTopTasksWidget key="top-tasks" />}
               {pageActiveWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
               {pageActiveWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
+              {/* Per-page sticky notes — rendered inside the page transition container */}
+              <FocusStickyNotes
+                key={`sticky-${activePageIndex}`}
+                notes={pageStickyNotes}
+                onNotesChange={setPageStickyNotes}
+              />
             </AnimatePresence>
               </div>
             </motion.div>
