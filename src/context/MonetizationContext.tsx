@@ -89,7 +89,7 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
 
   const canAccess = useCallback((feature: "split-view" | "mail" | "team-chat" | "full-council"): boolean => {
     if (userPlan === "Pro" || userPlan === "Team") return true;
-    if (feature === "team-chat") return userPlan === "Team";
+    if (feature === "team-chat") return (userPlan as string) === "Team";
     return false; // Starter cannot access split-view, mail, full-council
   }, [userPlan]);
 
