@@ -537,10 +537,12 @@ interface PersonaCardProps {
   onCollapse: () => void;
   onFullscreen: () => void;
   floatingEmojis: string[];
+  userId?: string | null;
+  sessionId?: string;
 }
 
 const PersonaCard: React.FC<PersonaCardProps> = ({
-  persona, state, response, isExpanded, anyExpanded, onExpand, onCollapse, onFullscreen, floatingEmojis,
+  persona, state, response, isExpanded, anyExpanded, onExpand, onCollapse, onFullscreen, floatingEmojis, userId, sessionId,
 }) => {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
