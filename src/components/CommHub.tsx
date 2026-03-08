@@ -4,11 +4,12 @@
  */
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Sparkles, X, Send, Loader2, MessageSquare } from "lucide-react";
+import { Users, X, Send, Loader2, MessageSquare } from "lucide-react";
 import { useTeamChat } from "@/hooks/useTeamChat";
 import { useFlux } from "@/context/FluxContext";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
+import AuraOrb from "@/components/focus/AuraOrb";
 
 type Tab = "aura" | "team";
 
@@ -73,9 +74,7 @@ const AuraTab = () => {
       <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-8">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Sparkles size={20} className="text-primary" />
-            </div>
+            <AuraOrb state="idle" size={52} />
             <p className="text-sm font-semibold text-foreground">Ask Aura anything</p>
             <p className="text-xs text-muted-foreground">Your AI assistant knows your tasks, goals & projects.</p>
           </div>
@@ -291,7 +290,7 @@ const CommHub = () => {
                       />
                     )}
                     <span className="relative z-10 flex items-center gap-1.5">
-                      {t === "aura" ? <Sparkles size={12} /> : <Users size={12} />}
+                      {t === "aura" ? <AuraOrb state="idle" size={16} /> : <Users size={12} />}
                       {t === "aura" ? "Aura AI" : "Team"}
                     </span>
                   </button>

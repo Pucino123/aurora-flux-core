@@ -369,10 +369,12 @@ const EntityNode: React.FC<EntityNodeProps> = ({
       drag
       dragMomentum={false}
       dragElastic={0}
+      dragListener={true}
       dragConstraints={canvasRef}
       onDragStart={() => { didDrag.current = false; }}
       onDrag={() => { didDrag.current = true; }}
-      onDragEnd={(_, info) => {
+      onDragEnd={(e, info) => {
+        e.stopPropagation();
         onDragEnd(entity.id,
           clamp(position.x + info.offset.x, 0, (canvasRef.current?.offsetWidth ?? 9999) - size.w),
           clamp(position.y + info.offset.y, 0, (canvasRef.current?.offsetHeight ?? 9999) - size.h)
@@ -381,9 +383,10 @@ const EntityNode: React.FC<EntityNodeProps> = ({
       onPointerDown={e => { e.stopPropagation(); didDrag.current = false; }}
       onPointerUp={e => { e.stopPropagation(); if (!didDrag.current) onSelect(entity.id); }}
       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, entity.id); }}
-      className="absolute cursor-grab active:cursor-grabbing touch-none"
-      style={{ zIndex, position: "absolute", left: position.x, top: position.y, willChange: "transform" }}
+      className="absolute touch-none"
+      style={{ zIndex, position: "absolute", left: position.x, top: position.y, willChange: "transform", cursor: "grab" }}
       whileHover={{ filter: "brightness(1.06)" }}
+      whileDrag={{ cursor: "grabbing", scale: 1.02, zIndex: 9999 }}
     >
       <div style={shapeStyle}>
         {type === "textBox" && (
