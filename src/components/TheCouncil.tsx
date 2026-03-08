@@ -594,7 +594,7 @@ const TheCouncil = () => {
                             className="flex items-center gap-2 text-[11px] text-foreground/50 hover:text-foreground/80 transition-colors"
                           >
                             <Clock size={12} />
-                            {showPreviousIdeas ? "Skjul" : `Tidligere idéer (${ideas.length})`}
+                            {showPreviousIdeas ? "Hide" : `Previous ideas (${ideas.length})`}
                             <motion.div animate={{ rotate: showPreviousIdeas ? 180 : 0 }}><ChevronDown size={12} /></motion.div>
                           </button>
                           <AnimatePresence>
