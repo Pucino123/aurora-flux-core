@@ -1182,7 +1182,31 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const fullscreenR = fullscreenPersona ? responses[fullscreenPersona] : null;
 
   return (
-    <div className="flex flex-col h-full min-h-0 gap-4">
+    <div ref={boardroomRef} className="flex flex-col h-full min-h-0 gap-4">
+      {/* Realtime collaborators pill */}
+      <AnimatePresence>
+        {collaborators.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full self-start"
+            style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.15)" }}
+          >
+            <Users size={10} className="text-cyan-400/70" />
+            <span className="text-[9px] text-cyan-400/70 font-medium">
+              {collaborators.map(c => (
+                <span key={c.userId} className="inline-flex items-center gap-1 mr-2">
+                  {c.isConsulting && <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />}
+                  {c.displayName}
+                </span>
+              ))}
+              {collaborators.some(c => c.isConsulting) ? "is consulting the board…" : "watching live"}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Pitch area */}
       <div className="space-y-3 shrink-0">
         <div className="flex gap-2">
@@ -1193,6 +1217,15 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
             placeholder="Idea: Should I start an eco-friendly coffee shop?"
             className="flex-1 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/20 transition-colors"
           />
+          {/* New Session button */}
+          <button
+            onClick={handleNewSession}
+            disabled={isConsulting}
+            title="New Session"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/8 transition-colors shrink-0 disabled:opacity-30"
+          >
+            <RotateCcw size={14} />
+          </button>
           <motion.button
             onClick={handleConsult}
             disabled={isConsulting}
@@ -1207,10 +1240,19 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
             {isConsulting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
             {isConsulting ? "Consulting…" : "Consult Board"}
           </motion.button>
+          {/* Export PDF button */}
+          <button
+            onClick={handleExportPDF}
+            disabled={isExportingPDF || !allRevealed}
+            title="Export PDF"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0 disabled:opacity-30"
+          >
+            {isExportingPDF ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+          </button>
           <button
             onClick={() => setShowExport(true)}
             className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0"
-            title="Export Verdict"
+            title="Share Verdict"
           >
             <Share2 size={15} />
           </button>
