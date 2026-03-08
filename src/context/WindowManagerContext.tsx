@@ -14,9 +14,10 @@ export interface AppWindow {
   size?: { w: number; h: number };
   minimized?: boolean;
   groupId?: string; // links two windows into a pair
+  lastActiveAt?: string; // ISO timestamp, updated on bringToFront / openWindow
 }
 
-type PersistedWindow = Pick<AppWindow, 'type' | 'contentId' | 'title' | 'layout' | 'position' | 'size' | 'minimized' | 'groupId'>;
+type PersistedWindow = Pick<AppWindow, 'type' | 'contentId' | 'title' | 'layout' | 'position' | 'size' | 'minimized' | 'groupId' | 'lastActiveAt'>;
 
 const STORAGE_KEY = "flux-windows-v2";
 // Documents always render above widgets with a fixed z-offset tier
@@ -97,6 +98,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
   const openWindow = useCallback((payload: Omit<AppWindow, 'id' | 'zIndex'>): string => {
     const id = `win-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const boost = payload.type === 'document' ? DOC_Z_BOOST : 0;
+    const now = new Date().toISOString();
     setWindows(prev => {
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), counterRef.current);
       counterRef.current = maxZ + 1;
@@ -105,12 +107,12 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
         setFocusedId(existing.id);
         return prev.map(w =>
           w.id === existing.id
-            ? { ...w, zIndex: counterRef.current + boost, minimized: false }
+            ? { ...w, zIndex: counterRef.current + boost, minimized: false, lastActiveAt: now }
             : w
         );
       }
       setFocusedId(id);
-      return [...prev, { ...payload, id, zIndex: counterRef.current + boost, minimized: false }];
+      return [...prev, { ...payload, id, zIndex: counterRef.current + boost, minimized: false, lastActiveAt: now }];
     });
     return id;
   }, []);
@@ -132,7 +134,6 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     setWindows(prev => {
       const win = prev.find(w => w.id === id);
       if (!win) return prev;
-      // If window is in a group, move the partner by the same delta
       if (win.groupId) {
         const dx = x - win.position.x;
         const dy = y - win.position.y;
@@ -156,7 +157,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), 0);
       const win = prev.find(w => w.id === id);
       const boost = win?.type === 'document' ? DOC_Z_BOOST : 0;
-      return prev.map(w => w.id === id ? { ...w, zIndex: maxZ + 1 + boost } : w);
+      return prev.map(w => w.id === id ? { ...w, zIndex: maxZ + 1 + boost, lastActiveAt: new Date().toISOString() } : w);
     });
   }, []);
 
