@@ -267,6 +267,7 @@ const ProjectBoard = ({ folderId }: ProjectBoardProps) => {
                   <Pencil size={12} />
                 </button>
                 <button onClick={() => {
+                  moveToTrash({ id: item.id, type: "task", title: item.title, originalData: item });
                   removeTask(item.id);
                   toast(t("board.deleted"), {
                     action: {
