@@ -14,7 +14,7 @@ import ProjectsOverview from "./ProjectsOverview";
 import DocumentsView from "./DocumentsView";
 import SettingsView from "./SettingsView";
 import CreateFolderModal, { suggestIcon } from "./CreateFolderModal";
-import TeamChatWidget from "./chat/TeamChatWidget";
+import CommHub from "./CommHub";
 import MultitaskingView from "./MultitaskingView";
 import CommunityBoardView from "./CommunityBoardView";
 import CommunityAdminView from "./CommunityAdminView";
@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { t } from "@/lib/i18n";
 import OnboardingFlow from "./onboarding/OnboardingFlow";
-import AskAura from "./AskAura";
+
 
 interface DashboardProps {
   initialPrompt?: string;
@@ -161,7 +161,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       )}
 
       <MobileNav />
-      {effectiveView !== "focus" && effectiveView !== "stream" && <TeamChatWidget />}
+      {effectiveView !== "focus" && effectiveView !== "stream" && <CommHub />}
 
       {/* Global Modals */}
       <UpgradeModal />
@@ -169,8 +169,6 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       <OnboardingFlow />
 
       <CreateFolderModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onCreate={handleCreateFolder} />
-      {/* Global Ask Aura floating AI panel */}
-      {effectiveView !== "focus" && effectiveView !== "stream" && <AskAura />}
     </motion.div>
   );
 };

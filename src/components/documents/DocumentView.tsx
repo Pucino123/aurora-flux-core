@@ -14,9 +14,10 @@ interface DocumentViewProps {
   onDelete: (id: string) => void;
   lightMode?: boolean;
   onToggleLightMode?: () => void;
+  splitViewButton?: React.ReactNode;
 }
 
-const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false, onToggleLightMode }: DocumentViewProps) => {
+const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false, onToggleLightMode, splitViewButton }: DocumentViewProps) => {
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(document.title);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -34,7 +35,7 @@ const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false,
         document={document} onUpdate={onUpdate} onDelete={onDelete}
         renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
         commitRename={commitRename} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete} lightMode={lightMode}
-        onToggleLightMode={onToggleLightMode}
+        onToggleLightMode={onToggleLightMode} splitViewButton={splitViewButton}
       />
     );
   }
@@ -44,7 +45,7 @@ const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false,
       document={document} onUpdate={onUpdate} onDelete={onDelete}
       renaming={renaming} setRenaming={setRenaming} renameValue={renameValue} setRenameValue={setRenameValue}
       commitRename={commitRename} confirmDelete={confirmDelete} setConfirmDelete={setConfirmDelete} lightMode={lightMode}
-      onToggleLightMode={onToggleLightMode}
+      onToggleLightMode={onToggleLightMode} splitViewButton={splitViewButton}
     />
   );
 };
@@ -63,10 +64,11 @@ interface EditorProps {
   setConfirmDelete: (v: boolean) => void;
   lightMode?: boolean;
   onToggleLightMode?: () => void;
+  splitViewButton?: React.ReactNode;
 }
 
 /* ─── Text Editor ─── */
-const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode }: EditorProps) => {
+const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode, splitViewButton }: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const [studioMode, setStudioMode] = useState(false);
@@ -389,6 +391,9 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
           if ((window as any).__auraStreamFinish) (window as any).__auraStreamFinish();
         }}
       />
+      {splitViewButton && (
+        <div className="flex justify-end px-3 py-1 border-b border-border/10">{splitViewButton}</div>
+      )}
       <div className="relative flex-1 flex flex-col min-h-0">
         {ghostText && (
           <div

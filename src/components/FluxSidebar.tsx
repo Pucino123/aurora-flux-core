@@ -1,6 +1,7 @@
 import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import BillingModal from "./billing/BillingModal";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import BrainTree from "./BrainTree";
@@ -11,7 +12,6 @@ import { t } from "@/lib/i18n";
 import { PERSONAS } from "./TheCouncil";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
-import { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface FluxSidebarProps {
