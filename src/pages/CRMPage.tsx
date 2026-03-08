@@ -182,6 +182,10 @@ const CRMPage: React.FC = () => {
                     <td className="px-4 py-3 text-sm font-bold text-foreground">{fmt(deal.value)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setInvoiceContact(deal)} title="Create Invoice"
+                          className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-400 transition-colors">
+                          <Receipt size={13} />
+                        </button>
                         <button onClick={() => setEditDeal(deal)} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
                           <Pencil size={13} />
                         </button>
@@ -226,6 +230,12 @@ const CRMPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <InvoiceModal
+        open={!!invoiceContact}
+        contact={invoiceContact}
+        onClose={() => setInvoiceContact(null)}
+      />
     </div>
   );
 };
