@@ -168,7 +168,7 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
                       <p className="text-lg font-bold text-foreground mb-1">Payment Successful!</p>
                       <motion.p
                         key={displayCount}
-                        className="text-4xl font-black text-amber-400"
+                        className="text-4xl font-black text-primary"
                       >
                         +{displayCount} ✨
                       </motion.p>
