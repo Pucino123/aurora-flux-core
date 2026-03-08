@@ -154,6 +154,15 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                 <span>Tasks</span>
               </button>
 
+              {/* CRM */}
+              <button
+                onClick={() => { setActiveFolder(null); setActiveView("crm" as any); }}
+                className={`sidebar-item w-full ${activeView === ("crm" as any) ? "sidebar-item-active" : ""}`}
+              >
+                <Briefcase size={18} className="shrink-0" />
+                <span>CRM</span>
+              </button>
+
               {/* Council */}
               <button
                 onClick={() => { setActiveFolder(null); setActiveView("council"); setFilterPersona(null); }}
@@ -194,14 +203,16 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                 <span>Community Board</span>
               </button>
 
-              {/* Community Admin */}
-              <button
-                onClick={() => { setActiveFolder(null); setActiveView("community-admin" as any); }}
-                className={`sidebar-item w-full ${activeView === ("community-admin" as any) ? "sidebar-item-active" : ""}`}
-              >
-                <ShieldCheck size={18} className="shrink-0" />
-                <span>Community Admin</span>
-              </button>
+              {/* Community Admin — admin only */}
+              {isAdmin && (
+                <button
+                  onClick={() => { setActiveFolder(null); setActiveView("community-admin" as any); }}
+                  className={`sidebar-item w-full ${activeView === ("community-admin" as any) ? "sidebar-item-active" : ""}`}
+                >
+                  <ShieldCheck size={18} className="shrink-0" />
+                  <span>Community Admin</span>
+                </button>
+              )}
             </div>
 
             <div className="sidebar-separator" />
