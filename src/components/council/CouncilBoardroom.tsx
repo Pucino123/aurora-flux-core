@@ -892,6 +892,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [savedIdeaId, setSavedIdeaId] = useState<string | null>(null);
+  // Personality sliders per advisor
+  const [personalitySliders, setPersonalitySliders] = useState<AllSliders>(DEFAULT_ALL_SLIDERS);
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
