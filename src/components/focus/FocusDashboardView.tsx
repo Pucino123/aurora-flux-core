@@ -119,8 +119,10 @@ const FocusContent = () => {
   const dragDotIdx = useRef<number | null>(null);
   const [draggingDotIdx, setDraggingDotIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  // Dot hover preview
+  // Dot hover preview + screenshot thumbnails
   const [hoverDotIdx, setHoverDotIdx] = useState<number | null>(null);
+  const [pageThumbnails, setPageThumbnails] = useState<Record<string, string>>({});
+  const thumbnailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Build-mode pagination settings
   const [paginationSettings, setPaginationSettings] = useState<PaginationSettings>(loadPaginationSettings);
   const [showPillSettings, setShowPillSettings] = useState(false);
