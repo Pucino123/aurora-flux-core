@@ -74,6 +74,8 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
   // tag editing state per idea
   const [editingTagsFor, setEditingTagsFor] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const tagInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadBoardroomIdeas();
