@@ -1174,15 +1174,27 @@ const FocusContent = () => {
         }}
       />
 
-      {/* ── iOS-style Dashboard Pagination ── draggable pill */}
+      {/* ── iOS-style Dashboard Pagination ── draggable pill (drag only in build mode) */}
       {paginationSettings.showPagination && (
-        <div
+        <motion.div
           ref={pillRef}
           className="fixed z-[9999] flex flex-col items-center gap-1.5"
+          animate={pillBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
+          transition={pillBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
           style={
             pillPos
-              ? { left: pillPos.x, top: pillPos.y, transform: "none", cursor: isDraggingPill ? "grabbing" : "grab" }
-              : { left: "50%", bottom: "88px", transform: "translateX(-50%)", cursor: isDraggingPill ? "grabbing" : "grab" }
+              ? {
+                  left: pillPos.x,
+                  top: pillPos.y,
+                  transform: "none",
+                  cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
+                }
+              : {
+                  left: "50%",
+                  bottom: "88px",
+                  transform: "translateX(-50%)",
+                  cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
+                }
           }
           onPointerDown={handlePillPointerDown}
           onPointerMove={handlePillPointerMove}
