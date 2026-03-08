@@ -83,7 +83,7 @@ const Auth = () => {
       />
       {/* Background */}
       <div className="fixed inset-0 z-0 bg-cover bg-center scale-110 transition-all duration-700"
-        style={{ backgroundImage: `url(${cherryBg})`, filter: isDark ? "blur(22px) brightness(0.45) saturate(0.6)" : "blur(18px)" }} />
+        style={{ backgroundImage: `url(${gradientBg})`, filter: isDark ? "blur(8px) brightness(0.55) saturate(1.1)" : "blur(6px) brightness(0.88) saturate(1.1)" }} />
       {/* Overlay */}
       <div className="fixed inset-0 z-0 transition-colors duration-700" style={{ background: bgOverlay }} />
 
