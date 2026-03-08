@@ -15,7 +15,7 @@ import DocumentsView from "./DocumentsView";
 import SettingsView from "./SettingsView";
 import CreateFolderModal, { suggestIcon } from "./CreateFolderModal";
 import MultitaskingView from "./MultitaskingView";
-import ThinkpadView from "./ThinkpadView";
+import IdeapadView from "./ThinkpadView";
 import CommunityBoardView from "./CommunityBoardView";
 import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
@@ -173,7 +173,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             {effectiveView === "council"                     && <TheCouncil />}
             {effectiveView === "canvas"                      && <Canvas />}
             {(effectiveView as string) === "multitask"       && <MultitaskingView />}
-            {(effectiveView as string) === "thinkpad"         && <ThinkpadView />}
+            {(effectiveView as string) === "thinkpad"         && <IdeapadView />}
             {(effectiveView as string) === "community"       && <CommunityBoardView />}
             {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
             {(effectiveView as string) === "crm"             && <CRMPage />}
