@@ -1593,7 +1593,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             }}
           >
             {isConsulting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {isConsulting ? "Consulting…" : "Consult Board"}
+            {isConsulting ? "Consulting…" : "Consult Board (−5 ✨)"}
           </motion.button>
           {/* Export PDF button */}
           <button
