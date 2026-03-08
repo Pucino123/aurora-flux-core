@@ -2,7 +2,7 @@
  * OnboardingFlow — Professional minimalist redesign
  * Swiss-style typography, line-art icons, slide-fade transitions.
  */
-import { forwardRef, useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Cpu, Users, Calendar, Zap, CheckCircle2, ChevronRight, ArrowRight } from "lucide-react";
 import { useMonetization } from "@/context/MonetizationContext";
