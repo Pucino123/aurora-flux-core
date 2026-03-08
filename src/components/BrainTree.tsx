@@ -350,7 +350,7 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
       try { return isToday(parseISO(due)); } catch { return true; }
     }).length;
   }, [inboxTasks]);
-  const totalInboxBadge = unreadEmails + pendingTodayTasks;
+  const totalInboxBadge = unreadEmails + pendingTodayTasks + unreadMessages;
 
   return (
     <div className="space-y-1" onDragOver={(e) => e.preventDefault()} onDrop={handleRootDrop}>
