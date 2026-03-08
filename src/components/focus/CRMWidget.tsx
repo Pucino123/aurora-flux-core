@@ -88,7 +88,8 @@ const NewDealModal: React.FC<NewDealModalProps> = ({ onSave, onClose }) => {
       setErrors(errs);
       return;
     }
-    onSave(parsed.data);
+    const d = parsed.data;
+    onSave({ name: d.name, company: d.company, value: d.value, stage: d.stage });
   };
 
   return (
