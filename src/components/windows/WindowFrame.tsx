@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import { X, MoreHorizontal, Maximize2, PanelLeft, PanelRight, Square, Minus } from "lucide-react";
 import { useWindowManager, AppWindow, WindowLayout } from "@/context/WindowManagerContext";
 import {
@@ -29,60 +29,77 @@ const MIN_H = 240;
 const DEFAULT_W = 820;
 const DEFAULT_H = 620;
 
+// Spring config for silky floating drag
+const DRAG_SPRING = { stiffness: 260, damping: 28, mass: 0.6 };
+
 const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
   const { closeWindow, setWindowLayout, updateWindowPosition, updateWindowSize, bringToFront, minimizeWindow } = useWindowManager();
 
-  // ── Drag state ──────────────────────────────────────────────────────────────
+  const isFloating = win.layout === "floating";
+
+  // ── Spring-based position for butter-smooth drag ─────────────────────────
+  const rawX = useRef(win.position.x);
+  const rawY = useRef(win.position.y);
+  const motionX = useMotionValue(win.position.x);
+  const motionY = useMotionValue(win.position.y);
+  const springX = useSpring(motionX, DRAG_SPRING);
+  const springY = useSpring(motionY, DRAG_SPRING);
+
+  // Sync spring origin when position changes externally (restore, etc.)
+  useEffect(() => {
+    if (isFloating) {
+      motionX.set(win.position.x);
+      motionY.set(win.position.y);
+      rawX.current = win.position.x;
+      rawY.current = win.position.y;
+    }
+  }, [isFloating, win.position.x, win.position.y, motionX, motionY]);
+
+  // ── Snap zone ──────────────────────────────────────────────────────────────
+  const [snapZone, setSnapZone] = useState<'left' | 'right' | null>(null);
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
-  const [pos, setPos] = useState(win.position);
-  const [snapZone, setSnapZone] = useState<'left' | 'right' | null>(null);
-  const isFloating = win.layout === "floating";
 
   // ── Size state ──────────────────────────────────────────────────────────────
   const [size, setSize] = useState({ w: win.size?.w ?? DEFAULT_W, h: win.size?.h ?? DEFAULT_H });
   const resizing = useRef<string | null>(null);
   const resizeStart = useRef({ mouseX: 0, mouseY: 0, w: 0, h: 0 });
 
-  // Keep pos in sync when layout snaps back to floating
-  useEffect(() => {
-    if (isFloating) setPos(win.position);
-  }, [isFloating, win.position.x, win.position.y]);
-
-  // ── DRAG handlers ────────────────────────────────────────────────────────────
+  // ── DRAG handlers ─────────────────────────────────────────────────────────
   const handlePillPointerDown = useCallback((e: React.PointerEvent) => {
     if (!isFloating) return;
     e.preventDefault();
     e.stopPropagation();
     dragging.current = true;
-    offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    offset.current = { x: e.clientX - rawX.current, y: e.clientY - rawY.current };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [isFloating, pos.x, pos.y]);
+  }, [isFloating]);
 
   const handlePillPointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragging.current) return;
     const nx = e.clientX - offset.current.x;
     const ny = Math.max(0, e.clientY - offset.current.y);
-    setPos({ x: nx, y: ny });
+    rawX.current = nx;
+    rawY.current = ny;
+    motionX.set(nx);
+    motionY.set(ny);
     if (e.clientX < SNAP_THRESHOLD) setSnapZone('left');
     else if (e.clientX > window.innerWidth - SNAP_THRESHOLD) setSnapZone('right');
     else setSnapZone(null);
-  }, []);
+  }, [motionX, motionY]);
 
   const handlePillPointerUp = useCallback((e: React.PointerEvent) => {
     if (!dragging.current) return;
     dragging.current = false;
-    const nx = e.clientX - offset.current.x;
-    const ny = Math.max(0, e.clientY - offset.current.y);
     if (snapZone) {
       setWindowLayout(win.id, snapZone === 'left' ? 'split-left' : 'split-right');
     } else {
-      updateWindowPosition(win.id, nx, ny);
+      updateWindowPosition(win.id, rawX.current, rawY.current);
     }
     setSnapZone(null);
   }, [win.id, updateWindowPosition, setWindowLayout, snapZone]);
 
-  // ── RESIZE handlers ───────────────────────────────────────────────────────
+  // ── RESIZE handlers ────────────────────────────────────────────────────────
   const handleResizePointerDown = useCallback((e: React.PointerEvent, dir: string) => {
     if (!isFloating) return;
     e.stopPropagation();
@@ -123,7 +140,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     };
   }, [win.id, updateWindowSize]);
 
-  // ── Layout classes ────────────────────────────────────────────────────────────
+  // ── Layout classes ────────────────────────────────────────────────────────
   const layoutClasses = useMemo(() => {
     const base = "absolute rounded-2xl shadow-2xl bg-card/90 backdrop-blur-2xl border border-border/20 overflow-hidden flex flex-col";
     switch (win.layout) {
@@ -135,17 +152,29 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     }
   }, [win.layout]);
 
-  const posStyle = useMemo(() => {
+  // For non-floating layouts spring values don't matter — use inset CSS
+  const posStyle = useMemo<React.CSSProperties>(() => {
     if (win.layout !== "floating") return {};
-    return { left: pos.x, top: pos.y, width: size.w, height: size.h };
-  }, [win.layout, pos.x, pos.y, size.w, size.h]);
+    return { width: size.w, height: size.h };
+  }, [win.layout, size.w, size.h]);
 
-  // Don't render the frame body when minimized — just keep it mounted to preserve state
-  if (win.minimized) return null;
+  // Minimized: shrink + fly toward dock, then hide
+  if (win.minimized) {
+    return (
+      <motion.div
+        layoutId={`window-${win.id}`}
+        className="absolute rounded-2xl bg-card/90 backdrop-blur-2xl border border-border/20 overflow-hidden"
+        initial={false}
+        animate={{ opacity: 0, scale: 0.15, y: "80vh" }}
+        transition={{ type: "spring", stiffness: 340, damping: 30 }}
+        style={{ zIndex: win.zIndex, left: rawX.current, top: rawY.current, width: size.w, height: 48, pointerEvents: "none" }}
+      />
+    );
+  }
 
   return (
     <>
-      {/* ── Snap zone overlay ───────────────────────────────────────────────── */}
+      {/* ── Snap zone overlay ─────────────────────────────────────────────── */}
       {snapZone && dragging.current && createPortal(
         <div className="fixed inset-0 pointer-events-none z-[9990] flex">
           <AnimatePresence>
@@ -186,47 +215,52 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
         document.body
       )}
 
-      {/* ── Window frame ──────────────────────────────────────────────────────── */}
+      {/* ── Window frame ──────────────────────────────────────────────────── */}
       <motion.div
-        layout
+        layoutId={`window-${win.id}`}
+        layout={win.layout !== "floating"}
         transition={{ type: "spring", stiffness: 340, damping: 34 }}
         className={`${layoutClasses} select-none`}
-        style={{ zIndex: win.zIndex, ...posStyle }}
+        style={{
+          zIndex: win.zIndex,
+          ...(isFloating
+            ? { x: springX, y: springY, ...posStyle }
+            : {}),
+          ...(win.layout !== "floating" ? {} : {}),
+        }}
         onPointerDownCapture={() => bringToFront(win.id)}
-        initial={{ opacity: 0, scale: 0.96 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.94 }}
       >
-        {/* ── Header ──────────────────────────────────────────────────────────── */}
-        <div className="relative flex items-center justify-between px-3 py-2 border-b border-border/20 shrink-0">
-          {/* Traffic-light buttons (left side) */}
-          <div className="flex items-center gap-1.5">
-            {/* Close — red */}
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <div className="relative flex items-center px-3 py-2 border-b border-border/20 shrink-0 h-9">
+          {/* Traffic-light buttons */}
+          <div className="flex items-center gap-1.5 z-[62]">
             <button
               onClick={() => closeWindow(win.id)}
-              className="group w-3.5 h-3.5 rounded-full bg-[hsl(0_72%_50%)/0.6] hover:bg-[hsl(0_72%_50%)] transition-colors flex items-center justify-center"
+              className="group w-3.5 h-3.5 rounded-full bg-red-500/60 hover:bg-red-500 transition-colors flex items-center justify-center"
               title="Close"
             >
-              <X size={7} className="opacity-0 group-hover:opacity-100 text-[hsl(0_72%_20%)]" />
+              <X size={7} className="opacity-0 group-hover:opacity-100 text-red-900" />
             </button>
-            {/* Minimize — amber */}
             <button
               onClick={() => minimizeWindow(win.id)}
-              className="group w-3.5 h-3.5 rounded-full bg-[hsl(38_92%_50%)/0.6] hover:bg-[hsl(38_92%_50%)] transition-colors flex items-center justify-center"
+              className="group w-3.5 h-3.5 rounded-full bg-amber-400/60 hover:bg-amber-400 transition-colors flex items-center justify-center"
               title="Minimize"
             >
-              <Minus size={7} className="opacity-0 group-hover:opacity-100 text-[hsl(38_92%_20%)]" />
+              <Minus size={7} className="opacity-0 group-hover:opacity-100 text-amber-900" />
             </button>
           </div>
 
-          {/* Title (center) */}
-          <span className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[40%] pointer-events-none">
+          {/* Title */}
+          <span className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[40%] pointer-events-none select-none">
             {win.title}
           </span>
 
-          {/* ── Center Pill — drag + layout menu ── */}
+          {/* ── Drag pill + layout menu ─────────────────────────────────── */}
           <div
-            className={`absolute left-1/2 -translate-x-1/2 top-0.5 flex items-center justify-center w-10 h-4 bg-foreground/8 hover:bg-foreground/15 rounded-full transition-colors z-[60] mt-1 ${isFloating ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
+            className={`absolute left-1/2 -translate-x-1/2 top-1 flex items-center justify-center w-10 h-[18px] bg-foreground/8 hover:bg-foreground/15 rounded-full transition-colors z-[60] ${isFloating ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
             onPointerDown={handlePillPointerDown}
             onPointerMove={handlePillPointerMove}
             onPointerUp={handlePillPointerUp}
@@ -254,16 +288,10 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => minimizeWindow(win.id)}
-                  className="flex items-center gap-2.5 text-xs"
-                >
+                <DropdownMenuItem onClick={() => minimizeWindow(win.id)} className="flex items-center gap-2.5 text-xs">
                   <Minus size={13} /> Minimize
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => closeWindow(win.id)}
-                  className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive"
-                >
+                <DropdownMenuItem onClick={() => closeWindow(win.id)} className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive">
                   <X size={13} /> Close Window
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -271,12 +299,12 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
           </div>
         </div>
 
-        {/* ── Content ───────────────────────────────────────────────────────── */}
+        {/* ── Content ──────────────────────────────────────────────────────── */}
         <div className="flex-1 min-h-0 overflow-hidden select-text pointer-events-auto">
           {children}
         </div>
 
-        {/* ── Resize handles (floating only) ───────────────────────────────── */}
+        {/* ── Resize handles ────────────────────────────────────────────── */}
         {isFloating && (
           <>
             <div
