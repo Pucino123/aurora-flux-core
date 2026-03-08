@@ -337,6 +337,13 @@ const FocusContent = () => {
   const { isFocusModeActive, disableFocusMode, enableFocusMode } = useFocusMode();
   const [intentionModalOpen, setIntentionModalOpen] = useState(false);
 
+  // Listen for the Control Center triggering focus intention modal
+  useEffect(() => {
+    const handler = () => setIntentionModalOpen(true);
+    window.addEventListener("open-focus-intention", handler);
+    return () => window.removeEventListener("open-focus-intention", handler);
+  }, []);
+
   // iOS-style dashboard pages state
   const [dashboardPages, setDashboardPages] = useState<DashboardPage[]>(() => {
     try {
