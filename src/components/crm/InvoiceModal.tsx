@@ -3,13 +3,15 @@
  */
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2, Send, Loader2, Building2, CreditCard, ToggleLeft, ToggleRight } from "lucide-react";
+import { X, Plus, Trash2, Send, Loader2, Building2, CreditCard, ToggleLeft, ToggleRight, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCRM, CRMContact } from "@/context/CRMContext";
 import { pushNotification } from "@/components/NotificationBell";
 
-// ── Global payment profile (mock — editable in Settings later) ───────────────
-const PAYMENT_PROFILE = {
+// ── Payment profile helpers ───────────────────────────────────────────────────
+const PROFILE_KEY = "crm_payment_profile";
+
+const DEFAULT_PROFILE = {
   companyName: "Dashiii Workspace ApS",
   bankName: "Nordea Bank",
   regNumber: "2200",
@@ -18,6 +20,67 @@ const PAYMENT_PROFILE = {
   swift: "NDEADKKK",
   paymentTerms: "30",
   email: "billing@dashiii.io",
+};
+
+type PaymentProfile = typeof DEFAULT_PROFILE;
+
+const loadProfile = (): PaymentProfile => {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if (raw) return { ...DEFAULT_PROFILE, ...JSON.parse(raw) };
+  } catch {}
+  return DEFAULT_PROFILE;
+};
+
+const saveProfile = (p: PaymentProfile) => {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+};
+
+// ── Bank Info Settings Panel ──────────────────────────────────────────────────
+const BankInfoPanel = ({ profile, onSave, onClose }: { profile: PaymentProfile; onSave: (p: PaymentProfile) => void; onClose: () => void }) => {
+  const [draft, setDraft] = useState(profile);
+  const set = (k: keyof PaymentProfile, v: string) => setDraft(p => ({ ...p, [k]: v }));
+  const fields: { key: keyof PaymentProfile; label: string; ph: string }[] = [
+    { key: "companyName", label: "Company Name", ph: "Acme ApS" },
+    { key: "email", label: "Billing Email", ph: "billing@acme.com" },
+    { key: "bankName", label: "Bank Name", ph: "Nordea Bank" },
+    { key: "regNumber", label: "Reg. Number", ph: "2200" },
+    { key: "accountNumber", label: "Account Number", ph: "1234567890" },
+    { key: "iban", label: "IBAN", ph: "DK12 2200 1234 5678 90" },
+    { key: "swift", label: "SWIFT / BIC", ph: "NDEADKKK" },
+    { key: "paymentTerms", label: "Payment Terms (days)", ph: "30" },
+  ];
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9200] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(10px)" }}>
+      <motion.div initial={{ scale: 0.93, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.93, y: 20 }}
+        className="relative w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+        style={{ background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))" }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/20">
+          <div className="flex items-center gap-2">
+            <CreditCard size={15} className="text-primary" />
+            <h3 className="text-sm font-bold text-foreground">Bank & Payment Info</h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-secondary text-muted-foreground"><X size={14} /></button>
+        </div>
+        <div className="px-6 py-5 space-y-3 max-h-[60vh] overflow-y-auto">
+          {fields.map(f => (
+            <div key={f.key}>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">{f.label}</label>
+              <input value={draft[f.key]} onChange={e => set(f.key, e.target.value)} placeholder={f.ph}
+                className="w-full bg-secondary/40 border border-border/30 rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-all" />
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-4 border-t border-border/20 flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-2xl border border-border/30 text-sm font-medium text-muted-foreground hover:bg-secondary/50 transition-colors">Cancel</button>
+          <button onClick={() => { saveProfile(draft); onSave(draft); onClose(); toast.success("Payment info saved!"); }}
+            className="flex-1 py-2.5 rounded-2xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors">Save</button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 };
 
 interface LineItem {
