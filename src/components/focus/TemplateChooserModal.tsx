@@ -1423,7 +1423,7 @@ const CATEGORIES = [
 ];
 
 interface TemplateChooserModalProps {
-  onCreateDocument: (title: string, type: DocType, content?: any) => void;
+  onCreateDocument: (title: string, type: DocType, content?: any, lightMode?: boolean) => void;
   onClose: () => void;
 }
 
