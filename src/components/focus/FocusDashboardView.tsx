@@ -47,34 +47,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X } from "lucide-react";
 import { toast } from "sonner";
 
-// Quick gradient/solid presets for per-page background picker in dot context menu
-const PAGE_BG_PRESETS = [
-  { id: "aurora-northern", label: "Aurora", colors: ["210 90% 50%", "160 70% 45%", "270 60% 55%"] as [string,string,string] },
-  { id: "aurora-sunset",   label: "Sunset",  colors: ["25 90% 55%", "340 80% 60%", "300 70% 50%"] as [string,string,string] },
-  { id: "aurora-ocean",    label: "Ocean",   colors: ["185 80% 40%", "220 70% 30%", "195 90% 55%"] as [string,string,string] },
-  { id: "aurora-cosmic",   label: "Cosmic",  colors: ["270 70% 50%", "240 60% 40%", "330 70% 55%"] as [string,string,string] },
-  { id: "aurora-ember",    label: "Ember",   colors: ["10 85% 50%", "35 90% 55%", "350 75% 45%"] as [string,string,string] },
-  { id: "aurora-twilight", label: "Twilight",colors: ["240 50% 35%", "280 60% 45%", "200 70% 50%"] as [string,string,string] },
-  { id: "aurora-rose",     label: "Rose",    colors: ["345 60% 65%", "20 50% 70%", "330 40% 55%"] as [string,string,string] },
-  { id: "aurora-neon",     label: "Neon",    colors: ["300 90% 55%", "180 90% 50%", "60 90% 55%"] as [string,string,string] },
-  { id: "cozy-fireplace",  label: "Video 1", colors: null },
-  { id: "cozy-library",    label: "Video 2", colors: null },
-  { id: "nature-rain",     label: "Rain",    colors: null },
-  { id: "nature-ocean",    label: "Lofi",    colors: null },
-  { id: "urban-tokyo",     label: "Tokyo",   colors: null },
-  { id: "nature-forest",   label: "Forest",  colors: null },
-  { id: "urban-cafe",      label: "Café",    colors: null },
-  { id: "scenic-beach",    label: "Beach",   colors: null },
-  { id: "scenic-sakura",   label: "Sakura",  colors: null },
-  { id: "cine-clouds",     label: "Clouds",  colors: null },
-] as const;
-
-// Solid color presets (HSL)
-const SOLID_COLORS = [
-  "0 0% 4%", "220 30% 8%", "250 30% 10%", "210 40% 10%",
-  "260 50% 12%", "0 60% 12%", "30 60% 12%", "160 50% 10%",
-];
-
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
     backgroundImage: `
@@ -160,9 +132,6 @@ const FocusContent = () => {
   // Dot context menu (delete / background)
   const [dotMenu, setDotMenu] = useState<{ idx: number; x: number; y: number } | null>(null);
   const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null);
-  const [dotBgPickerOpen, setDotBgPickerOpen] = useState(false);
-  // Thumbnail grid overlay (from pill ⊞ button)
-  const [showThumbGrid, setShowThumbGrid] = useState(false);
   // Drag-to-reorder dots
   const dragDotIdx = useRef<number | null>(null);
   const [draggingDotIdx, setDraggingDotIdx] = useState<number | null>(null);
@@ -513,9 +482,6 @@ const FocusContent = () => {
       if (e.key === "Escape" && showMissionControl) {
         setShowMissionControl(false);
       }
-      if (e.key === "Escape" && showThumbGrid) {
-        setShowThumbGrid(false);
-      }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
@@ -539,7 +505,7 @@ const FocusContent = () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage, showMissionControl, showThumbGrid]);
+  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage, showMissionControl]);
 
   // Dot drag-to-reorder handlers
   const handleDotDragStart = useCallback((i: number) => {
@@ -1757,16 +1723,16 @@ const FocusContent = () => {
       {/* Dot context menu (right-click / long-press) */}
       {dotMenu && (
         <>
-          <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); setDotBgPickerOpen(false); }} />
+          <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); }} />
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             className="fixed z-[10001] rounded-xl py-1.5 overflow-hidden"
             style={{
-              left: Math.max(8, Math.min(dotMenu.x, window.innerWidth - (dotBgPickerOpen ? 288 : 208))),
+              left: Math.max(8, Math.min(dotMenu.x, window.innerWidth - 208)),
               bottom: window.innerHeight - dotMenu.y + 8,
-              minWidth: dotBgPickerOpen ? 280 : 200,
+              minWidth: 200,
               maxHeight: "70vh",
               overflowY: "auto",
               background: "rgba(10,8,20,0.94)", backdropFilter: "blur(24px)",
@@ -1791,85 +1757,6 @@ const FocusContent = () => {
               onClick={() => duplicatePage(dotMenu.idx)}
               className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
             >⧉ Duplicate page</button>
-
-            {/* ── Background Picker ── */}
-            <div className="h-px bg-white/10 mx-2 my-1" />
-            <button
-              onClick={() => setDotBgPickerOpen(v => !v)}
-              className="w-full flex items-center justify-between gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
-            >
-              <span className="flex items-center gap-2">🎨 Background</span>
-              <span className="text-white/30 text-[10px]">{dotBgPickerOpen ? "▲" : "▼"}</span>
-            </button>
-            <AnimatePresence>
-              {dotBgPickerOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.18 }}
-                  className="overflow-hidden px-3 pb-2"
-                >
-                  {/* Solid dark swatches */}
-                  <p className="text-[9px] text-white/25 uppercase tracking-widest mb-1.5 mt-0.5">Solid</p>
-                  <div className="flex gap-1.5 flex-wrap mb-2.5">
-                    {SOLID_COLORS.map(c => {
-                      const isCurrent = dashboardPages[dotMenu.idx]?.background === `solid:${c}`;
-                      return (
-                        <button
-                          key={c}
-                          title={c}
-                          onClick={() => setPages(prev => prev.map((p, i) => i === dotMenu.idx ? { ...p, background: `solid:${c}` } : p))}
-                          className="w-6 h-6 rounded-md border-2 transition-transform hover:scale-110"
-                          style={{
-                            background: `hsl(${c})`,
-                            borderColor: isCurrent ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.1)",
-                          }}
-                        />
-                      );
-                    })}
-                    {/* Clear bg */}
-                    <button
-                      onClick={() => setPages(prev => prev.map((p, i) => i === dotMenu.idx ? { ...p, background: undefined } : p))}
-                      className="w-6 h-6 rounded-md border-2 border-white/10 flex items-center justify-center hover:border-white/40 transition-colors"
-                      title="Use global background"
-                      style={{ background: "rgba(255,255,255,0.05)" }}
-                    >
-                      <X size={10} className="text-white/40" />
-                    </button>
-                  </div>
-                  {/* Gradient + preset thumbnails */}
-                  <p className="text-[9px] text-white/25 uppercase tracking-widest mb-1.5">Presets</p>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {PAGE_BG_PRESETS.map(preset => {
-                      const isCurrent = dashboardPages[dotMenu.idx]?.background === preset.id;
-                      const gradStyle = preset.colors
-                        ? { background: `linear-gradient(135deg, hsl(${preset.colors[0]}), hsl(${preset.colors[1]}), hsl(${preset.colors[2]}))` }
-                        : { background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" };
-                      return (
-                        <button
-                          key={preset.id}
-                          onClick={() => setPages(prev => prev.map((p, i) => i === dotMenu.idx ? { ...p, background: preset.id } : p))}
-                          className="flex flex-col items-center gap-0.5 group"
-                          title={preset.label}
-                        >
-                          <div
-                            className="w-full rounded-md transition-transform group-hover:scale-105"
-                            style={{
-                              ...gradStyle,
-                              height: 28,
-                              outline: isCurrent ? "2px solid rgba(255,255,255,0.8)" : "none",
-                              outlineOffset: 1,
-                            }}
-                          />
-                          <span className="text-[8px] text-white/35 truncate w-full text-center leading-none">{preset.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {dashboardPages.length > 1 && (
               <>
