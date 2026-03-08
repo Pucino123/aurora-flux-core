@@ -3,14 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import FluxSidebar from "./FluxSidebar";
 import GridDashboard from "./GridDashboard";
 import Scheduler from "./Scheduler";
-import InputBar from "./InputBar";
 import MobileNav from "./MobileNav";
 import Canvas from "./Canvas";
 import TheCouncil from "./TheCouncil";
 import FocusDashboardView from "./focus/FocusDashboardView";
 import FullCalendarView from "../pages/FullCalendarView";
 import AITaskManager from "../pages/AITaskManager";
-import CalendarView from "./CalendarView";
 import AnalyticsView from "./AnalyticsView";
 import ProjectsOverview from "./ProjectsOverview";
 import DocumentsView from "./DocumentsView";
@@ -22,6 +20,7 @@ import CommunityBoardView from "./CommunityBoardView";
 import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
 import { UpgradeModal, OutOfSparksModal } from "./billing/BillingView";
+import CRMPage from "../pages/CRMPage";
 import { useFlux } from "@/context/FluxContext";
 import { useMonetization } from "@/context/MonetizationContext";
 import { toast } from "sonner";
@@ -49,7 +48,8 @@ function deriveFolderName(text: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-const VIEWS_WITHOUT_INPUT = ["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing"];
+// InputBar is completely removed — all views suppress it
+const VIEWS_WITHOUT_INPUT = ["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing", "canvas"];
 const VIEWS_WITHOUT_SCHEDULER = [...VIEWS_WITHOUT_INPUT];
 
 const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible, onToggleSidebar, focusMode }: DashboardProps) => {
@@ -143,15 +143,10 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
           <CommunityAdminView />
         ) : (effectiveView as string) === "billing" ? (
           <BillingView />
+        ) : (effectiveView as string) === "crm" ? (
+          <CRMPage />
         ) : (
           <Canvas />
-        )}
-
-        {/* Docked input */}
-        {!VIEWS_WITHOUT_INPUT.includes(effectiveView) && (
-          <div className="sticky bottom-0 px-3 pb-16 pt-2 md:px-4 md:pb-6 bg-gradient-to-t from-background/80 to-transparent">
-            <InputBar onSubmit={(text) => setLastSubmitted(text)} docked />
-          </div>
         )}
       </div>
 

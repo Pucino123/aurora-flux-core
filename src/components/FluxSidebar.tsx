@@ -1,4 +1,4 @@
-import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck } from "lucide-react";
+import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -74,8 +74,12 @@ const UserSection = () => {
   );
 };
 
+const ADMIN_EMAIL = "kevin.therkildsen@icloud.com";
+
 const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarProps) => {
   const { activeView, activeFolder, setActiveView, setActiveFolder, filterPersona, setFilterPersona } = useFlux();
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const { sparksBalance, openBilling } = useMonetization();
   const { theme, setTheme } = useTheme();
 
@@ -150,6 +154,15 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                 <span>Tasks</span>
               </button>
 
+              {/* CRM */}
+              <button
+                onClick={() => { setActiveFolder(null); setActiveView("crm" as any); }}
+                className={`sidebar-item w-full ${activeView === ("crm" as any) ? "sidebar-item-active" : ""}`}
+              >
+                <Briefcase size={18} className="shrink-0" />
+                <span>CRM</span>
+              </button>
+
               {/* Council */}
               <button
                 onClick={() => { setActiveFolder(null); setActiveView("council"); setFilterPersona(null); }}
@@ -190,14 +203,16 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                 <span>Community Board</span>
               </button>
 
-              {/* Community Admin */}
-              <button
-                onClick={() => { setActiveFolder(null); setActiveView("community-admin" as any); }}
-                className={`sidebar-item w-full ${activeView === ("community-admin" as any) ? "sidebar-item-active" : ""}`}
-              >
-                <ShieldCheck size={18} className="shrink-0" />
-                <span>Community Admin</span>
-              </button>
+              {/* Community Admin — admin only */}
+              {isAdmin && (
+                <button
+                  onClick={() => { setActiveFolder(null); setActiveView("community-admin" as any); }}
+                  className={`sidebar-item w-full ${activeView === ("community-admin" as any) ? "sidebar-item-active" : ""}`}
+                >
+                  <ShieldCheck size={18} className="shrink-0" />
+                  <span>Community Admin</span>
+                </button>
+              )}
             </div>
 
             <div className="sidebar-separator" />
