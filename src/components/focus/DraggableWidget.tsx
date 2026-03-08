@@ -303,6 +303,7 @@ const DraggableWidget = ({
 
   const widgetContent = (
     <motion.div
+      ref={nodeRef}
       data-widget-id={id}
       initial={{ opacity: 0, scale: 0.92, y: 8 }}
       animate={{
@@ -311,7 +312,6 @@ const DraggableWidget = ({
         filter: isEditingOther ? "blur(4px)" : "none",
       }}
       exit={{ opacity: 0, scale: 0.92, y: 8 }}
-      // During drag: cut all spring transitions so content never lags behind the position
       transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 20 }}
       className={`${isBeingEdited ? "fixed" : "absolute"} ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
       style={{
@@ -321,7 +321,6 @@ const DraggableWidget = ({
         ...(autoHeight ? {} : { height: pos.h }),
         pointerEvents: isEditingOther ? "none" : "auto",
         zIndex: containerStyle?.zIndex ?? (isBeingEdited ? 65 : isDragging ? 60 : 50),
-        willChange: isDragging ? "transform" : "auto",
         ...containerStyle,
       }}
       onMouseEnter={() => setIsHovered(true)}
