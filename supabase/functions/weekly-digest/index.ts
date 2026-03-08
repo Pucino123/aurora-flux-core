@@ -48,9 +48,9 @@ Be concise, warm, and specific. No bullet points — write in flowing prose.`;
     }),
   });
 
-  if (!resp.ok) return `Hi ${displayName}, here's your weekly Flux digest!`;
+  if (!resp.ok) return `Hi ${displayName}, here's your weekly Dashiii digest!`;
   const json = await resp.json();
-  return json.choices?.[0]?.message?.content || `Hi ${displayName}, here's your weekly Flux digest!`;
+  return json.choices?.[0]?.message?.content || `Hi ${displayName}, here's your weekly Dashiii digest!`;
 }
 
 function buildEmailHtml(opts: {
