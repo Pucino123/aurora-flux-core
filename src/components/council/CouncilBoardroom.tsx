@@ -1012,9 +1012,33 @@ const CouncilBoardroom: React.FC = () => {
             transition={{ delay: 0.3, duration: 0.5 }}
             className="shrink-0 rounded-2xl border border-white/10 bg-white/4 backdrop-blur-xl p-4"
           >
-            <h3 className="text-[11px] font-bold text-white/50 uppercase tracking-widest mb-3">
-              ✦ Council's Recommended Action Plan
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[11px] font-bold text-white/50 uppercase tracking-widest">
+                ✦ Council's Recommended Action Plan
+              </h3>
+              {user && (
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={handleSaveToCouncil}
+                  disabled={saveState !== "idle"}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold transition-all disabled:opacity-70"
+                  style={
+                    saveState === "saved"
+                      ? { background: "rgba(52,211,153,0.2)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }
+                      : { background: "rgba(139,92,246,0.2)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)" }
+                  }
+                >
+                  {saveState === "saving" ? (
+                    <><Loader2 size={9} className="animate-spin" /> Saving…</>
+                  ) : saveState === "saved" ? (
+                    <><Check size={9} /> Saved to Council</>
+                  ) : (
+                    <><BookmarkPlus size={9} /> Save to Council</>
+                  )}
+                </motion.button>
+              )}
+            </div>
             <ol className="space-y-2">
               {actionPlan.map((step, i) => (
                 <motion.li
