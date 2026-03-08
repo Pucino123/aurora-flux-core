@@ -52,6 +52,7 @@ interface IdeaNodeData {
   label: string;
   iconKey: string;
   iconColor: string;
+  isLight?: boolean;
   [key: string]: unknown;
 }
 
@@ -59,6 +60,7 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
   const { setNodes, deleteElements } = useReactFlow();
   const iconEntry = ICONS.find((i) => i.key === data.iconKey) || ICONS[0];
   const IconComp = iconEntry.icon;
+  const isLight = !!data.isLight;
 
   const updateLabel = (val: string) => {
     setNodes((nds) =>
@@ -75,18 +77,18 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
     <div
       className="group relative transition-all duration-200"
       style={{
-        background: "rgba(15, 18, 30, 0.85)",
+        background: isLight ? "rgba(255,255,255,0.96)" : "rgba(15, 18, 30, 0.85)",
         backdropFilter: "blur(20px)",
         border: selected
           ? `1.5px solid ${data.iconColor}80`
-          : "1px solid rgba(255,255,255,0.08)",
+          : isLight ? "1px solid rgba(0,0,0,0.10)" : "1px solid rgba(255,255,255,0.08)",
         borderRadius: "16px",
         padding: "16px",
         minWidth: "180px",
         maxWidth: "260px",
         boxShadow: selected
-          ? `0 0 20px ${data.iconColor}30, 0 8px 32px rgba(0,0,0,0.4)`
-          : "0 8px 32px rgba(0,0,0,0.3)",
+          ? `0 0 20px ${data.iconColor}30, 0 8px 32px ${isLight ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.4)"}`
+          : isLight ? "0 4px 16px rgba(0,0,0,0.08)" : "0 8px 32px rgba(0,0,0,0.3)",
       }}
     >
       {/* Delete button — appears on hover */}
@@ -116,8 +118,10 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
         value={String(data.label)}
         onChange={(e) => updateLabel(e.target.value)}
         placeholder="Idea title…"
-        className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-white/20"
-        style={{ color: "rgba(255,255,255,0.9)" }}
+        className="w-full bg-transparent text-sm font-medium outline-none"
+        style={{
+          color: isLight ? "rgba(20,24,40,0.9)" : "rgba(255,255,255,0.9)",
+        }}
         onPointerDown={(e) => e.stopPropagation()}
       />
     </div>
