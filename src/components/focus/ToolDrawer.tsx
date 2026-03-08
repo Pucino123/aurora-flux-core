@@ -152,7 +152,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
             exit={{ opacity: 0, y: 18, scaleX: 0.94, scaleY: 0.90 }}
             transition={{ type: "spring", stiffness: 500, damping: 36, mass: 0.8 }}
             style={{ transformOrigin: "50% 100%" }}
-            className="fixed bottom-16 left-1/2 -translate-x-1/2 z-40 w-[92vw] max-w-[520px] p-4 rounded-2xl bg-black/60 backdrop-blur-[24px] border border-white/15 shadow-2xl"
+            className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[10100] w-[92vw] max-w-[520px] p-4 rounded-2xl bg-black/60 backdrop-blur-[24px] border border-white/15 shadow-2xl"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-white/50 uppercase tracking-widest">Tool Ecosystem</span>
