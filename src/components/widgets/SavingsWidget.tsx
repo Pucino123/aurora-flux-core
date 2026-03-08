@@ -290,6 +290,10 @@ const SavingsWidget = () => {
   const [pulseId, setPulseId]           = useState<string | null>(null);
   const [saving, setSaving]             = useState(false);
   const [sortedByDeadline, setSortedByDeadline] = useState(false);
+  // id of goal to show 100% celebration for
+  const [celebratingGoal, setCelebratingGoal] = useState<SavingsGoal | null>(null);
+  // track which goals we've already celebrated (persisted per session)
+  const celebratedRef = useRef<Set<string>>(new Set());
 
   // ── Load ──────────────────────────────────────────────────────────────────
   const loadGoals = useCallback(async () => {
