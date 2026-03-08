@@ -754,7 +754,7 @@ const TheCouncil = () => {
                                             <div className="flex items-center gap-1.5 mb-0.5 flex-nowrap">
                                               <span className="text-[10px] font-bold whitespace-nowrap" style={{ color: r.color }}>{r.name}</span>
                                               <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap" style={{ backgroundColor: `${r.color}15`, color: r.color }}>
-                                                {r.vote === "GO" ? "Støtter" : r.vote === "EXPERIMENT" ? "Åben" : r.vote === "PIVOT" ? "Bekymret" : r.vote === "KILL" ? "Fraråder" : r.vote}
+                                                {r.vote === "GO" ? "Supports" : r.vote === "EXPERIMENT" ? "Open" : r.vote === "PIVOT" ? "Concerned" : r.vote === "KILL" ? "Against" : r.vote}
                                               </span>
                                             </div>
                                             <p className="text-[11px] text-foreground/65 leading-snug break-words">
