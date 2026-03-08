@@ -247,7 +247,7 @@ const EntityNode: React.FC<EntityNodeProps> = ({
       }}
       onClick={e => { e.stopPropagation(); onSelect(entity.id); }}
       className="absolute cursor-move touch-none"
-      style={{ zIndex, left: 0, top: 0, x: 0, y: 0, position: "absolute", left: position.x, top: position.y }}
+      style={{ zIndex, position: "absolute", left: position.x, top: position.y }}
     >
       <div style={shapeStyle}>
         {type === "textBox" && (
