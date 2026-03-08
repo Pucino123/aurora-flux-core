@@ -112,13 +112,13 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}
       className="relative z-10 flex min-h-screen w-full">
-      {/* Sidebar */}
+      {/* Sidebar — desktop only */}
       <div className="hidden md:block">
         <FluxSidebar visible={sidebarVisible} onToggle={onToggleSidebar} onRequestCreateFolder={() => setShowCreateModal(true)} />
       </div>
 
       {/* Center stage */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-[64px] md:pb-0">
         {effectiveView === "focus" || effectiveView === "stream" ? (
           <FocusDashboardView />
         ) : effectiveView === "council" ? (

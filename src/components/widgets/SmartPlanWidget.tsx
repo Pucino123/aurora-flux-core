@@ -611,13 +611,13 @@ const SmartPlanWidget = () => {
 
       {/* Suggestion chips + Focus Block shortcut */}
       <div className="flex gap-1.5 shrink-0 flex-wrap">
-        {["✨ Optimize Schedule", "✨ Find Focus Time", "+ Add Break"].map(chip => (
+        {[{ label: "✨ Optimize Schedule", cost: "−1 ✨" }, { label: "✨ Find Focus Time", cost: "−1 ✨" }, { label: "+ Add Break", cost: null }].map(chip => (
           <button
-            key={chip}
-            onClick={() => chip.startsWith("✨ Opt") && optimize()}
-            className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-white/40 hover:bg-violet-500/15 hover:text-violet-300 hover:border-violet-400/25 transition-all"
+            key={chip.label}
+            onClick={() => chip.label.startsWith("✨ Opt") && optimize()}
+            className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-white/40 hover:bg-violet-500/15 hover:text-violet-300 hover:border-violet-400/25 transition-all"
           >
-            {chip}
+            {chip.label}{chip.cost && <span className="opacity-60 ml-0.5">{chip.cost}</span>}
           </button>
         ))}
         {/* ⚡ Focus Block one-click shortcut */}
@@ -636,7 +636,7 @@ const SmartPlanWidget = () => {
               title="AI summary of today's blocks"
               className="flex items-center gap-1 px-2 py-1 rounded-full bg-violet-500/15 border border-violet-400/20 text-[10px] text-violet-300 hover:bg-violet-500/30 hover:border-violet-400/40 transition-all"
             >
-              <FileText size={9} /> Daily Summary
+              <FileText size={9} /> Daily Summary <span className="opacity-60">−2 ✨</span>
             </button>
           </PopoverTrigger>
           <PopoverContent
