@@ -68,7 +68,7 @@ interface EditorProps {
 }
 
 /* ─── Text Editor ─── */
-const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode }: EditorProps) => {
+const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode, splitViewButton }: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const [studioMode, setStudioMode] = useState(false);
