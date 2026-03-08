@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Users, LayoutGrid, Zap, X, ArrowRight, ChevronRight, Check } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
+import SparksCheckoutModal from "./SparksCheckoutModal";
 
 /* ─── Upgrade Modal ─── */
 export function UpgradeModal() {
