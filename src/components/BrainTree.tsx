@@ -377,7 +377,20 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
             onDrop={handleDrop}
             dragOverId={dragOverId}
             allDocs={allDocs}
-            onDocClick={(docId) => {
+            onDocClick={async (docId) => {
+              // Fetch the full doc and open it directly in workspace
+              if (user) {
+                const { data } = await (supabase as any).from("documents").select("*").eq("id", docId).maybeSingle();
+                if (data) { openInWorkspace(data); setActiveView("multitask" as any); return; }
+              } else {
+                try {
+                  const raw = localStorage.getItem("flux_local_documents");
+                  const docs = raw ? JSON.parse(raw) : [];
+                  const found = docs.find((d: any) => d.id === docId);
+                  if (found) { openInWorkspace(found); setActiveView("multitask" as any); return; }
+                } catch {}
+              }
+              // Fallback
               setPendingDocumentId(docId);
               setActiveView("documents");
             }}
