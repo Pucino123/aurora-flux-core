@@ -110,6 +110,12 @@ const DraggableWidget = ({
   id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle, headerActions, overflowVisible = false,
 }: DraggableWidgetProps) => {
   const { widgetPositions, updateWidgetPosition, toggleWidget, getWidgetOpacity, setWidgetOpacity, widgetMinimalMode, systemMode } = useFocusStore();
+  const contextClose = useWidgetClose();
+  // Use context close (per-page) if available, otherwise fall back to global toggleWidget
+  const closeWidget = () => {
+    if (contextClose) contextClose(id);
+    else toggleWidget(id);
+  };
   const openStyleEditor = useStyleEditorCallback();
   const styleEditorTarget = useStyleEditorTarget();
   const isBeingEdited = !!styleEditorTarget && styleEditorTarget === id;
