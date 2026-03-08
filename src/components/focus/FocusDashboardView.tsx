@@ -2164,7 +2164,9 @@ const FocusContent = () => {
 
 const FocusDashboardView = () => (
   <FocusProvider>
-    <FocusContent />
+    <WindowManagerProvider>
+      <FocusContent />
+    </WindowManagerProvider>
   </FocusProvider>
 );
 
