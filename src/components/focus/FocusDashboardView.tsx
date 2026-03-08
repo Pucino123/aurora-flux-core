@@ -368,7 +368,7 @@ const FocusContent = () => {
     if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
   }, [activePageIndex, dashboardPages.length, goToPage]);
 
-  // Arrow key navigation + Cmd/Ctrl+T for new page + Cmd/Ctrl+W to close + Cmd/Ctrl+? for cheat sheet
+  // Arrow key navigation + Mission Control (hold 300ms) + Cmd shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase();
@@ -381,7 +381,7 @@ const FocusContent = () => {
         return;
       }
 
-      // Cmd/Ctrl+T → add new page (intercept before browser tab open)
+      // Cmd/Ctrl+T → add new page
       if ((e.metaKey || e.ctrlKey) && e.key === "t") {
         e.preventDefault();
         const newPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
@@ -400,17 +400,47 @@ const FocusContent = () => {
       }
 
       if (isEditing) return;
-      if (e.key === "ArrowRight" && activePageIndex < dashboardPages.length - 1) {
+
+      // Arrow keys: hold 300ms → Mission Control; tap → navigate
+      if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && !e.repeat) {
         e.preventDefault();
-        goToPage(activePageIndex + 1);
-      } else if (e.key === "ArrowLeft" && activePageIndex > 0) {
-        e.preventDefault();
-        goToPage(activePageIndex - 1);
+        // Start hold timer for Mission Control
+        if (arrowHoldKey.current !== e.key) {
+          arrowHoldKey.current = e.key;
+          if (arrowHoldTimer.current) clearTimeout(arrowHoldTimer.current);
+          arrowHoldTimer.current = setTimeout(() => {
+            setShowMissionControl(true);
+            arrowHoldTimer.current = null;
+          }, 300);
+        }
+      }
+      if (e.key === "Escape" && showMissionControl) {
+        setShowMissionControl(false);
       }
     };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        if (arrowHoldTimer.current) {
+          // Timer still pending → it was a tap, not a hold → navigate
+          clearTimeout(arrowHoldTimer.current);
+          arrowHoldTimer.current = null;
+          if (!showMissionControl) {
+            if (e.key === "ArrowRight" && activePageIndex < dashboardPages.length - 1) goToPage(activePageIndex + 1);
+            if (e.key === "ArrowLeft" && activePageIndex > 0) goToPage(activePageIndex - 1);
+          }
+        }
+        arrowHoldKey.current = null;
+      }
+    };
+
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage]);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage, showMissionControl]);
 
   // Dot drag-to-reorder handlers
   const handleDotDragStart = useCallback((i: number) => {
