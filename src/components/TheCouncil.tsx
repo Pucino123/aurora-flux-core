@@ -906,12 +906,12 @@ const TheCouncil = () => {
                                 <div className="flex flex-wrap gap-1.5 mb-3">
                                   {agreesWithKeys.length > 0 && (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-[hsl(150_60%_45%/0.12)] text-[hsl(150_60%_40%)]">
-                                      ✓ Enig med {agreesWithKeys.join(", ")}
+                                      ✓ Agrees with {agreesWithKeys.join(", ")}
                                     </span>
                                   )}
                                   {disagreesWithKeys.length > 0 && (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-[hsl(0_70%_55%/0.12)] text-[hsl(0_70%_50%)]">
-                                      ✗ Uenig med {disagreesWithKeys.join(", ")}
+                                      ✗ Disagrees with {disagreesWithKeys.join(", ")}
                                     </span>
                                   )}
                                 </div>
