@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { jsPDF } from "jspdf";
 import BoardroomPersonalitySliders, { DEFAULT_ALL_SLIDERS, AllSliders } from "./BoardroomPersonalitySliders";
+import BoardroomOnboardingTour from "./BoardroomOnboardingTour";
 import { toast } from "sonner";
 
 // ── Types ──
