@@ -1740,8 +1740,6 @@ const FocusContent = () => {
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
 
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
-            exit={{ opacity: 0, y: -16 }}
-
 
 
 
