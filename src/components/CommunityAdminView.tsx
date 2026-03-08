@@ -118,6 +118,28 @@ const CommunityAdminView = () => {
     else { toast.success("Slot cleared."); fetchSlots(); }
   };
 
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const slotId = uploadTargetId.current;
+    if (!file || !slotId) return;
+    setUploadingId(slotId);
+    const ext = file.name.split(".").pop();
+    const path = `community/${slotId}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("document-images").upload(path, file, { upsert: true });
+    if (uploadError) { toast.error("Upload failed"); setUploadingId(null); return; }
+    const { data: { publicUrl } } = supabase.storage.from("document-images").getPublicUrl(path);
+    const { error: updateError } = await supabase.from("community_slots").update({ thumbnail_url: publicUrl }).eq("id", slotId);
+    if (updateError) toast.error("Failed to save thumbnail");
+    else { toast.success("Thumbnail updated!"); fetchSlots(); }
+    setUploadingId(null);
+    if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+  };
+
+  const triggerThumbnailUpload = (slotId: string) => {
+    uploadTargetId.current = slotId;
+    thumbnailInputRef.current?.click();
+  };
+
   const pendingSlots = slots.filter((s) => s.status === "pending");
   const approvedSlots = slots.filter((s) => s.status === "approved");
   const visibleSlots = tab === "pending" ? pendingSlots : tab === "approved" ? approvedSlots : slots;
