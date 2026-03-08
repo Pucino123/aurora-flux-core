@@ -14,6 +14,7 @@ interface DocumentViewProps {
   onDelete: (id: string) => void;
   lightMode?: boolean;
   onToggleLightMode?: () => void;
+  splitViewButton?: React.ReactNode;
 }
 
 const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false, onToggleLightMode }: DocumentViewProps) => {
