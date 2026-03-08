@@ -45,7 +45,8 @@ function TilePreview({
   const previewW = 200;
   const previewH = 120;
   const left = rect.left + rect.width / 2 - previewW / 2;
-  const bottom = window.innerHeight - rect.top + 10;
+  // Position above dock with enough clearance
+  const bottom = window.innerHeight - rect.top + 14;
   const Icon: LucideIcon =
     win.type === "widget" ? (WIDGET_ICONS[win.contentId] ?? FileText) : FileText;
 
@@ -168,7 +169,7 @@ function WindowTile({ win }: { win: AppWindow }) {
   );
 }
 
-// ── Dock container ─────────────────────────────────────────────────────────────
+// ── Dock container — z-index above pill (z-9999) ───────────────────────────────
 const WindowDock = () => {
   const { windows } = useWindowManager();
   if (windows.length === 0) return null;
@@ -176,8 +177,9 @@ const WindowDock = () => {
   return createPortal(
     <LayoutGroup id="window-manager">
       <div
-        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[10090] pointer-events-none"
-        style={{ maxWidth: "90vw" }}
+        className="fixed left-1/2 -translate-x-1/2 pointer-events-none"
+        // bottom-28 ≈ 112px — clears the pill navigation bar (~56px) + breathing room
+        style={{ bottom: "112px", maxWidth: "90vw", zIndex: 10150 }}
       >
         <motion.div
           layout
