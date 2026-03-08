@@ -365,6 +365,7 @@ const MailTab = () => {
 /* ─── TASKS TAB ─── */
 const TasksTab = () => {
   const { inboxTasks, updateTask, removeTask, createTask } = useFlux();
+  const { moveToTrash } = useTrash();
   const [filter, setFilter] = useState<TaskFilter>("today");
   const [search, setSearch] = useState("");
 

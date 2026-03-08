@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useFlux } from "@/context/FluxContext";
+import { useTrash } from "@/context/TrashContext";
 import { Check, Trash2, FileText, Pencil, X, CheckCircle2, Circle, ListTodo, AlertTriangle, Calendar, Pin, Columns3, List, Table, Plus } from "lucide-react";
 import KanbanBoard from "./KanbanBoard";
 import { motion, AnimatePresence } from "framer-motion";
