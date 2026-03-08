@@ -409,7 +409,7 @@ const FocusContent = () => {
       // Cmd/Ctrl+T → add new page
       if ((e.metaKey || e.ctrlKey) && e.key === "t") {
         e.preventDefault();
-        const newPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
+        const newPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}`, visibleFolderIds: [] as string[], visibleDocIds: [] as string[] };
         setPages(prev => [...prev, newPage]);
         setPageDir(1);
         setActivePageIndex(dashboardPages.length);
