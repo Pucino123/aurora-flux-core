@@ -408,62 +408,7 @@ const CommunityBoardView = () => {
         </div>
       </div>
 
-      {/* Admin Pending Queue */}
-      <AnimatePresence>
-        {adminMode && pendingSlots.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-4 mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 overflow-hidden"
-          >
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Clock size={14} className="text-amber-500" /> Pending Submissions Queue
-            </h3>
-            <div className="space-y-3">
-              {pendingSlots.map((slot) => (
-                <div
-                  key={slot.slotIndex}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
-                >
-                  {slot.thumbnailUrl && (
-                    <img
-                      src={slot.thumbnailUrl}
-                      className="w-10 h-10 rounded-lg object-cover shrink-0"
-                      alt={slot.projectName}
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{slot.projectName}</p>
-                    <a
-                      href={slot.websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground hover:text-primary truncate flex items-center gap-0.5"
-                    >
-                      {slot.websiteUrl} <ExternalLink size={9} />
-                    </a>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleApprove(slot)}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-green-500/10 text-green-500 text-xs font-medium hover:bg-green-500/20 transition-colors"
-                    >
-                      <CheckCircle size={12} /> Approve
-                    </button>
-                    <button
-                      onClick={() => handleReject(slot)}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
-                    >
-                      <X size={12} /> Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Admin Pending Queue - removed (use Community Admin view in sidebar) */}
 
       {/* Slot Grid */}
       {loading ? (
