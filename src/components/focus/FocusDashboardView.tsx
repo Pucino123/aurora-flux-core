@@ -343,28 +343,6 @@ const FocusContent = () => {
     return () => window.removeEventListener("open-focus-intention", handler);
   }, []);
 
-  // Listen for document restore from trash — add back to page 1 visibleDocIds
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const docId = (e as CustomEvent<{ docId: string }>).detail?.docId;
-      if (!docId) return;
-      setPages(prev => {
-        const updated = prev.map((p, i) => {
-          if (i !== 0) return p; // restore to first page (Home)
-          const visible = p.visibleDocIds ?? [];
-          if (visible.includes(docId)) return p;
-          return { ...p, visibleDocIds: [...visible, docId] };
-        });
-        localStorage.setItem("flux-dashboard-pages", JSON.stringify(updated));
-        return updated;
-      });
-      // Re-fetch docs so the restored item is loaded from DB
-      setTimeout(() => refetchDesktopDocs?.(), 500);
-    };
-    window.addEventListener("dashboard:restore-doc", handler);
-    return () => window.removeEventListener("dashboard:restore-doc", handler);
-  }, []);
-
   // iOS-style dashboard pages state
   const [dashboardPages, setDashboardPages] = useState<DashboardPage[]>(() => {
     try {
