@@ -27,15 +27,16 @@ const LAYOUT_OPTIONS: { label: string; value: WindowLayout; icon: React.ReactNod
 ];
 
 const SNAP_THRESHOLD = 100;
+const GUIDE_THRESHOLD = 18; // px — when to show snap guides
 const MIN_W = 320;
 const MIN_H = 240;
 const DEFAULT_W = 820;
 const DEFAULT_H = 620;
+const DEAD_ZONE_LEFT = 110; // px — left side reserved for traffic-light buttons
 
-// Snappy spring — near-instant on float drag, tiny settle
+// Snappy spring for drag position only
 const DRAG_SPRING = { stiffness: 900, damping: 50, mass: 0.3 };
 
-// Layout pill colors via inline style (no hardcoded Tailwind classes)
 const LAYOUT_PILL_BG: Record<WindowLayout, string> = {
   floating:     "hsl(142 71% 45%)",
   fullscreen:   "hsl(217 91% 60%)",
@@ -49,8 +50,46 @@ const LAYOUT_LABEL: Record<WindowLayout, string> = {
   "split-right":"right ▶",
 };
 
-// Dead zone width (px) on left side of header for traffic-light buttons — no drag here
-const DEAD_ZONE_LEFT = 110;
+// ── Snap guide lines rendered in a portal ─────────────────────────────────────
+type Guide = { type: "v"; x: number } | { type: "h"; y: number };
+
+function SnapGuides({ guides }: { guides: Guide[] }) {
+  if (!guides.length) return null;
+  return createPortal(
+    <div className="fixed inset-0 pointer-events-none z-[9989]">
+      {guides.map((g, i) =>
+        g.type === "v" ? (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.1 }}
+            className="absolute top-0 bottom-0"
+            style={{
+              left: g.x,
+              width: 1,
+              background: "hsl(var(--primary) / 0.55)",
+              boxShadow: "0 0 6px 1px hsl(var(--primary) / 0.35)",
+            }}
+          />
+        ) : (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.1 }}
+            className="absolute left-0 right-0"
+            style={{
+              top: g.y,
+              height: 1,
+              background: "hsl(var(--primary) / 0.55)",
+              boxShadow: "0 0 6px 1px hsl(var(--primary) / 0.35)",
+            }}
+          />
+        )
+      )}
+    </div>,
+    document.body
+  );
+}
 
 const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProps) => {
   const {
@@ -59,13 +98,10 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   } = useWindowManager();
 
   const isFloating = win.layout === "floating";
-
-  // Track previous layout so toggling fullscreen restores it
   const prevLayoutRef = useRef<WindowLayout>(win.layout);
-  // Remember exact position/size before going fullscreen
   const preFullscreenState = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
-  // ── Spring-based position — near-instant response ─────────────────────────
+  // ── Spring position — drag position only, no spring on size ──────────────
   const rawX = useRef(win.position.x);
   const rawY = useRef(win.position.y);
   const motionX = useMotionValue(win.position.x);
@@ -73,7 +109,6 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const springX = useSpring(motionX, DRAG_SPRING);
   const springY = useSpring(motionY, DRAG_SPRING);
 
-  // Sync when position changes externally
   useEffect(() => {
     if (isFloating) {
       motionX.set(win.position.x);
@@ -83,15 +118,20 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     }
   }, [isFloating, win.position.x, win.position.y, motionX, motionY]);
 
-  // ── Snap zone ──────────────────────────────────────────────────────────────
+  // ── Snap zone + guide lines ───────────────────────────────────────────────
   const [snapZone, setSnapZone] = useState<"left" | "right" | null>(null);
+  const [guides, setGuides] = useState<Guide[]>([]);
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
 
-  // ── Size state ─────────────────────────────────────────────────────────────
+  // ── Size — React state only for initial render / after resize ends ─────────
   const [size, setSize] = useState({ w: win.size?.w ?? DEFAULT_W, h: win.size?.h ?? DEFAULT_H });
+  const liveSizeRef = useRef(size); // tracks live size during resize without triggering re-renders
   const resizing = useRef<string | null>(null);
-  const resizeStart = useRef({ mouseX: 0, mouseY: 0, w: 0, h: 0, x: 0, y: 0 });
+  const resizeStart = useRef({ mouseX: 0, mouseY: 0, w: 0, h: 0 });
+
+  // Direct DOM ref for instant resize without React re-renders
+  const frameRef = useRef<HTMLDivElement>(null);
 
   // ── Fullscreen helpers ─────────────────────────────────────────────────────
   const enterFullscreen = useCallback(() => {
@@ -111,6 +151,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
         rawX.current = prev.x;
         rawY.current = prev.y;
         updateWindowPosition(win.id, prev.x, prev.y);
+        liveSizeRef.current = { w: prev.w, h: prev.h };
         setSize({ w: prev.w, h: prev.h });
         updateWindowSize(win.id, prev.w, prev.h);
       });
@@ -122,19 +163,16 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     else enterFullscreen();
   }, [win.layout, enterFullscreen, exitFullscreen]);
 
-  // ── Double-click header → toggle fullscreen ────────────────────────────────
   const handleHeaderDoubleClick = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return;
+    if ((e.target as HTMLElement).closest("button,[role='button']")) return;
     toggleFullscreen();
   }, [toggleFullscreen]);
 
-  // ── DRAG — entire header, dead zone on left for traffic lights ────────────
+  // ── DRAG — full header, dead zone for traffic-light cluster ──────────────
   const handleHeaderPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!isFloating) return;
-    // Dead zone: left DEAD_ZONE_LEFT px is reserved for traffic-light buttons
     if (e.nativeEvent.offsetX < DEAD_ZONE_LEFT) return;
-    // Ignore clicks on any button or the dropdown pill
-    if ((e.target as HTMLElement).closest("button,[role='button']")) return;
+    if ((e.target as HTMLElement).closest("button,[role='button'],[data-radix-collection-item]")) return;
     e.preventDefault();
     dragging.current = true;
     offset.current = { x: e.clientX - rawX.current, y: e.clientY - rawY.current };
@@ -149,14 +187,30 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     rawY.current = ny;
     motionX.set(nx);
     motionY.set(ny);
+
+    // Snap zone detection
     if (e.clientX < SNAP_THRESHOLD) setSnapZone("left");
     else if (e.clientX > window.innerWidth - SNAP_THRESHOLD) setSnapZone("right");
     else setSnapZone(null);
+
+    // Smart guides
+    const sw = liveSizeRef.current.w;
+    const newGuides: Guide[] = [];
+    const cx = nx + sw / 2;
+    const scrW = window.innerWidth;
+    const scrH = window.innerHeight;
+    if (nx < GUIDE_THRESHOLD) newGuides.push({ type: "v", x: 0 });
+    if (nx + sw > scrW - GUIDE_THRESHOLD) newGuides.push({ type: "v", x: scrW });
+    if (Math.abs(cx - scrW / 2) < GUIDE_THRESHOLD) newGuides.push({ type: "v", x: scrW / 2 });
+    if (ny < GUIDE_THRESHOLD) newGuides.push({ type: "h", y: 0 });
+    if (Math.abs(ny - scrH / 2) < GUIDE_THRESHOLD) newGuides.push({ type: "h", y: scrH / 2 });
+    setGuides(newGuides);
   }, [motionX, motionY]);
 
   const handleHeaderPointerUp = useCallback((_e: React.PointerEvent) => {
     if (!dragging.current) return;
     dragging.current = false;
+    setGuides([]);
     if (snapZone) {
       setWindowLayout(win.id, snapZone === "left" ? "split-left" : "split-right");
     } else {
@@ -165,7 +219,16 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     setSnapZone(null);
   }, [win.id, updateWindowPosition, setWindowLayout, snapZone]);
 
-  // ── RESIZE — instant setSize, no spring ───────────────────────────────────
+  // ── RESIZE — direct DOM manipulation, ZERO React re-renders during drag ───
+  const handleResizePointerDown = useCallback((e: React.PointerEvent, dir: string) => {
+    if (!isFloating) return;
+    e.stopPropagation();
+    e.preventDefault();
+    resizing.current = dir;
+    resizeStart.current = { mouseX: e.clientX, mouseY: e.clientY, w: liveSizeRef.current.w, h: liveSizeRef.current.h };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [isFloating]);
+
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       if (!resizing.current) return;
@@ -176,8 +239,12 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
       let nw = w, nh = h;
       if (resizing.current.includes("e")) nw = Math.max(MIN_W, w + dx);
       if (resizing.current.includes("s")) nh = Math.max(MIN_H, h + dy);
-      // Directly set — no spring lag
-      setSize({ w: nw, h: nh });
+      // Direct DOM — no React re-render
+      liveSizeRef.current = { w: nw, h: nh };
+      if (frameRef.current) {
+        frameRef.current.style.width = `${nw}px`;
+        frameRef.current.style.height = `${nh}px`;
+      }
     };
     const onUp = (e: PointerEvent) => {
       if (!resizing.current) return;
@@ -188,6 +255,8 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
       if (resizing.current.includes("e")) nw = Math.max(MIN_W, w + dx);
       if (resizing.current.includes("s")) nh = Math.max(MIN_H, h + dy);
       resizing.current = null;
+      liveSizeRef.current = { w: nw, h: nh };
+      setSize({ w: nw, h: nh }); // commit to React state — ONE re-render
       updateWindowSize(win.id, nw, nh);
     };
     window.addEventListener("pointermove", onMove, { passive: false });
@@ -198,24 +267,11 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     };
   }, [win.id, updateWindowSize]);
 
-  const handleResizePointerDown = useCallback((e: React.PointerEvent, dir: string) => {
-    if (!isFloating) return;
-    e.stopPropagation();
-    e.preventDefault();
-    resizing.current = dir;
-    resizeStart.current = {
-      mouseX: e.clientX, mouseY: e.clientY,
-      w: size.w, h: size.h,
-      x: rawX.current, y: rawY.current,
-    };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [isFloating, size]);
-
   // ── Layout classes ─────────────────────────────────────────────────────────
   const layoutClasses = useMemo(() => {
-    const base = "absolute rounded-2xl shadow-2xl bg-card/90 backdrop-blur-2xl border overflow-hidden flex flex-col transition-[box-shadow]";
+    const base = "absolute rounded-2xl bg-card/90 backdrop-blur-2xl border overflow-hidden flex flex-col";
     const focusRing = focused
-      ? "border-primary/60 shadow-[0_0_0_2px_hsl(var(--primary)/0.35),0_8px_32px_rgba(0,0,0,0.5)]"
+      ? "border-primary/60 shadow-[0_0_0_2px_hsl(var(--primary)/0.35),0_8px_40px_rgba(0,0,0,0.55)]"
       : "border-border/20 shadow-2xl";
     switch (win.layout) {
       case "floating":    return `${base} ${focusRing}`;
@@ -231,7 +287,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     return { width: size.w, height: size.h };
   }, [win.layout, size.w, size.h]);
 
-  // ── Minimized ghost — positioned higher so it clears the dock ─────────────
+  // ── Minimized ghost ────────────────────────────────────────────────────────
   if (win.minimized) {
     return (
       <motion.div
@@ -244,7 +300,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
           zIndex: win.zIndex,
           left: rawX.current,
           top: rawY.current,
-          width: size.w,
+          width: liveSizeRef.current.w,
           height: 48,
         }}
       />
@@ -253,40 +309,25 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
 
   const layoutPillBg = LAYOUT_PILL_BG[win.layout];
   const layoutLabel  = LAYOUT_LABEL[win.layout];
-  const isDraggableHeader = isFloating;
 
   return (
     <>
-      {/* ── Snap zone overlay ───────────────────────────────────────────────── */}
+      {/* ── Snap zone overlay ─────────────────────────────────────────────── */}
       {snapZone && dragging.current && createPortal(
         <div className="fixed inset-0 pointer-events-none z-[9990] flex">
           <AnimatePresence>
             {snapZone === "left" && (
-              <motion.div
-                key="snap-left"
+              <motion.div key="snap-left"
                 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.15 }}
-                className="h-full rounded-2xl m-3"
-                style={{
-                  width: "calc(50% - 20px)",
-                  background: "hsl(var(--primary) / 0.14)",
-                  border: "2px solid hsl(var(--primary) / 0.55)",
-                  boxShadow: "inset 0 0 40px hsl(var(--primary) / 0.08)",
-                }}
+                transition={{ duration: 0.15 }} className="h-full rounded-2xl m-3"
+                style={{ width: "calc(50% - 20px)", background: "hsl(var(--primary) / 0.14)", border: "2px solid hsl(var(--primary) / 0.55)" }}
               />
             )}
             {snapZone === "right" && (
-              <motion.div
-                key="snap-right"
+              <motion.div key="snap-right"
                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.15 }}
-                className="h-full rounded-2xl m-3 ml-auto"
-                style={{
-                  width: "calc(50% - 20px)",
-                  background: "hsl(var(--primary) / 0.14)",
-                  border: "2px solid hsl(var(--primary) / 0.55)",
-                  boxShadow: "inset 0 0 40px hsl(var(--primary) / 0.08)",
-                }}
+                transition={{ duration: 0.15 }} className="h-full rounded-2xl m-3 ml-auto"
+                style={{ width: "calc(50% - 20px)", background: "hsl(var(--primary) / 0.14)", border: "2px solid hsl(var(--primary) / 0.55)" }}
               />
             )}
           </AnimatePresence>
@@ -294,8 +335,14 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
         document.body
       )}
 
-      {/* ── Window frame ────────────────────────────────────────────────────── */}
+      {/* ── Smart snap guides ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {guides.length > 0 && <SnapGuides guides={guides} />}
+      </AnimatePresence>
+
+      {/* ── Window frame ──────────────────────────────────────────────────── */}
       <motion.div
+        ref={frameRef as React.Ref<HTMLDivElement>}
         layoutId={`window-${win.id}`}
         layout={win.layout !== "floating"}
         transition={{ type: "spring", stiffness: 340, damping: 34 }}
@@ -309,47 +356,36 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.94 }}
       >
-        {/* ── Header — full-width drag (dead zone on left) ──────────────────── */}
+        {/* ── Header ──────────────────────────────────────────────────────── */}
         <div
-          className={`relative flex items-center px-3 py-2 border-b border-border/20 shrink-0 h-9 ${isDraggableHeader ? "cursor-grab active:cursor-grabbing" : ""}`}
+          className={`relative flex items-center px-3 py-2 border-b border-border/20 shrink-0 h-9 ${isFloating ? "cursor-grab active:cursor-grabbing" : ""}`}
           onPointerDown={handleHeaderPointerDown}
           onPointerMove={handleHeaderPointerMove}
           onPointerUp={handleHeaderPointerUp}
           onDoubleClick={handleHeaderDoubleClick}
         >
-          {/* Traffic-light cluster + layout switcher — click only, NOT draggable */}
+          {/* Traffic-light + layout switcher (dead zone — no drag capture) */}
           <div
             className="flex items-center gap-1.5 z-[62] shrink-0"
             onPointerDown={(e) => e.stopPropagation()}
           >
-            {/* Red — close */}
-            <button
-              onClick={() => closeWindow(win.id)}
+            <button onClick={() => closeWindow(win.id)}
               className="group w-3.5 h-3.5 rounded-full bg-red-500/60 hover:bg-red-500 transition-colors flex items-center justify-center"
-              title="Close (⌘W)"
-            >
+              title="Close (⌘W)">
               <X size={7} className="opacity-0 group-hover:opacity-100 text-red-900" />
             </button>
-
-            {/* Amber — minimize */}
-            <button
-              onClick={() => minimizeWindow(win.id)}
+            <button onClick={() => minimizeWindow(win.id)}
               className="group w-3.5 h-3.5 rounded-full bg-amber-400/60 hover:bg-amber-400 transition-colors flex items-center justify-center"
-              title="Minimize (⌘M)"
-            >
+              title="Minimize (⌘M)">
               <Minus size={7} className="opacity-0 group-hover:opacity-100 text-amber-900" />
             </button>
-
-            {/* Green — fullscreen toggle */}
-            <button
-              onClick={toggleFullscreen}
+            <button onClick={toggleFullscreen}
               className="group w-3.5 h-3.5 rounded-full bg-emerald-500/60 hover:bg-emerald-500 transition-colors flex items-center justify-center"
-              title={win.layout === "fullscreen" ? "Restore" : "Full Screen"}
-            >
+              title={win.layout === "fullscreen" ? "Restore" : "Full Screen"}>
               <Maximize2 size={7} className="opacity-0 group-hover:opacity-100 text-emerald-900" />
             </button>
 
-            {/* Layout switcher — replaces the old floating pill, now a dropdown */}
+            {/* Layout switcher pill — opens dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -362,8 +398,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={8} className="z-[9999] min-w-[160px]">
                 {LAYOUT_OPTIONS.map((opt) => (
-                  <DropdownMenuItem
-                    key={opt.value}
+                  <DropdownMenuItem key={opt.value}
                     onClick={() => {
                       if (opt.value === "fullscreen" && win.layout !== "fullscreen") enterFullscreen();
                       else if (opt.value !== "fullscreen" && win.layout === "fullscreen") {
@@ -375,8 +410,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
                     }}
                     className={`flex items-center gap-2.5 text-xs ${win.layout === opt.value ? "text-primary font-semibold" : ""}`}
                   >
-                    {opt.icon}
-                    {opt.label}
+                    {opt.icon} {opt.label}
                     {win.layout === opt.value && <span className="ml-auto text-primary">✓</span>}
                   </DropdownMenuItem>
                 ))}
@@ -384,10 +418,8 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
                 <DropdownMenuItem onClick={() => minimizeWindow(win.id)} className="flex items-center gap-2.5 text-xs">
                   <Minus size={13} /> Minimize <span className="ml-auto text-foreground/30">⌘M</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => closeWindow(win.id)}
-                  className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive"
-                >
+                <DropdownMenuItem onClick={() => closeWindow(win.id)}
+                  className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive">
                   <X size={13} /> Close <span className="ml-auto text-foreground/30">⌘W</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -395,14 +427,11 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
           </div>
 
           {/* Title */}
-          <span
-            className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[36%] pointer-events-none select-none"
-            title="Double-click to toggle fullscreen"
-          >
+          <span className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[36%] pointer-events-none select-none">
             {win.title}
           </span>
 
-          {/* ── Centre pill — just a visual drag hint, no longer the only drag area */}
+          {/* Visual drag hint pill */}
           <div className="absolute left-1/2 -translate-x-1/2 top-[11px] w-8 h-1 rounded-full bg-foreground/15 pointer-events-none" />
         </div>
 
@@ -414,18 +443,12 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
         {/* ── Resize handles ──────────────────────────────────────────────── */}
         {isFloating && (
           <>
-            <div
-              className="absolute top-0 right-0 w-1.5 h-full cursor-e-resize z-[70] hover:bg-primary/15 transition-colors"
-              onPointerDown={(e) => handleResizePointerDown(e, "e")}
-            />
-            <div
-              className="absolute bottom-0 left-0 h-1.5 w-full cursor-s-resize z-[70] hover:bg-primary/15 transition-colors"
-              onPointerDown={(e) => handleResizePointerDown(e, "s")}
-            />
-            <div
-              className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-[71] flex items-end justify-end pr-0.5 pb-0.5"
-              onPointerDown={(e) => handleResizePointerDown(e, "se")}
-            >
+            <div className="absolute top-0 right-0 w-1.5 h-full cursor-e-resize z-[70] hover:bg-primary/15 transition-colors"
+              onPointerDown={(e) => handleResizePointerDown(e, "e")} />
+            <div className="absolute bottom-0 left-0 h-1.5 w-full cursor-s-resize z-[70] hover:bg-primary/15 transition-colors"
+              onPointerDown={(e) => handleResizePointerDown(e, "s")} />
+            <div className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-[71] flex items-end justify-end pr-0.5 pb-0.5"
+              onPointerDown={(e) => handleResizePointerDown(e, "se")}>
               <svg width="10" height="10" viewBox="0 0 10 10" className="text-foreground/25">
                 <path d="M10 0 L10 10 L0 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 <path d="M10 4 L10 10 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
