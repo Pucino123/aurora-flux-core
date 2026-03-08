@@ -7,6 +7,7 @@ import Dashboard from "../components/Dashboard";
 import CommandPalette from "../components/CommandPalette";
 import KeyboardShortcutsSheet from "../components/KeyboardShortcutsSheet";
 import GlobalSearch from "../components/GlobalSearch";
+import SettingsModal from "../components/settings/SettingsModal";
 import { useFlux } from "@/context/FluxContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +25,7 @@ const Index = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Handle invite token from URL
   useEffect(() => {
@@ -31,7 +33,6 @@ const Index = () => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("invite");
     if (!token) return;
-    // Remove token from URL
     window.history.replaceState({}, "", window.location.pathname);
     (async () => {
       const { data: invite } = await (supabase as any)
@@ -47,8 +48,10 @@ const Index = () => {
         display_name: (profile as any)?.display_name || user.email?.split("@")[0] || "Member",
       });
       if (error) toast.error("Failed to join team");
-      else { const { data: teamData } = await (supabase as any).from("teams").select("name").eq("id", invite.team_id).single();
-        toast.success(`Joined team "${(teamData as any)?.name || "team"}"! Open Colab to chat.`); }
+      else {
+        const { data: teamData } = await (supabase as any).from("teams").select("name").eq("id", invite.team_id).single();
+        toast.success(`Joined team "${(teamData as any)?.name || "team"}"! Open Colab to chat.`);
+      }
     })();
   }, [user]);
 
@@ -103,20 +106,41 @@ const Index = () => {
   };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Cmd+K or Cmd+/ → global search palette
-    if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "/")) {
+    // Cmd+K → Command Palette (omni-search)
+    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      e.preventDefault();
+      setCmdOpen((prev) => !prev);
+      return;
+    }
+    // Cmd+/ → Global Search (alternate)
+    if ((e.metaKey || e.ctrlKey) && e.key === "/") {
       e.preventDefault();
       setSearchOpen((prev) => !prev);
+      return;
+    }
+    // Cmd+, → Settings Modal
+    if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+      e.preventDefault();
+      setSettingsOpen((prev) => !prev);
+      return;
     }
     if ((e.metaKey || e.ctrlKey) && e.key === "?") {
       e.preventDefault();
       setShortcutsOpen((prev) => !prev);
+      return;
     }
     // Cmd+Shift+A → toggle Ask Aura
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "a") {
       e.preventDefault();
       window.dispatchEvent(new CustomEvent("toggle-aura"));
     }
+  }, []);
+
+  // Listen for settings open event from sidebar gear button
+  useEffect(() => {
+    const handler = () => setSettingsOpen(true);
+    window.addEventListener("open-settings", handler);
+    return () => window.removeEventListener("open-settings", handler);
   }, []);
 
   useEffect(() => {
@@ -151,11 +175,14 @@ const Index = () => {
           />
         )}
       </AnimatePresence>
+      {/* Global overlays */}
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
       <KeyboardShortcutsSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 };
 
 export default Index;
+

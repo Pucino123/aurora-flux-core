@@ -38,7 +38,7 @@ const AskAura = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { tasks, goals, workouts, folders, pendingDocumentId, createTask, updateTask, removeTask, createBlock } = useFlux();
+  const { tasks, goals, workouts, folders, scheduleBlocks, pendingDocumentId, createTask, updateTask, removeTask, createBlock } = useFlux();
   const { deals } = useCRM();
   const { consumeSparks, sparksBalance } = useMonetization();
 
@@ -69,20 +69,34 @@ const AskAura = () => {
 
   // ── Workspace context string ───────────────────────────────────────────────
   const workspaceContext = useCallback(() => {
+    const today = format(new Date(), "yyyy-MM-dd");
     const pendingTasks = tasks.filter(t => !t.done).slice(0, 10);
+    const todayTasks = tasks.filter(t => !t.done && (t.scheduled_date === today || t.due_date === today));
     const recentWorkouts = workouts.slice(0, 5);
     const pinnedGoals = goals.filter(g => g.pinned);
     const topFolders = folders.slice(0, 8).map(f => f.title);
     const crmSummary = deals.slice(0, 5).map(d => `${d.name}(${d.stage})`).join(", ");
+    // Today's schedule blocks
+    const todayBlocks = scheduleBlocks
+      .filter(b => b.scheduled_date === today)
+      .sort((a, b) => a.time.localeCompare(b.time))
+      .slice(0, 8);
+    const scheduleSummary = todayBlocks.length
+      ? todayBlocks.map(b => `${b.time} ${b.title}`).join(", ")
+      : "No scheduled blocks today.";
     return [
+      `[SYSTEM DATA] Today is ${format(new Date(), "EEEE, MMMM d, yyyy")}.`,
       `User has ${tasks.length} tasks total, ${pendingTasks.length} pending.`,
-      pendingTasks.length ? `Pending: ${pendingTasks.map(t => `"${t.title}" (${t.priority})`).join(", ")}.` : "",
+      todayTasks.length ? `Today's tasks: ${todayTasks.map(t => `"${t.title}"`).join(", ")}.` : "No tasks due today.",
+      pendingTasks.length ? `All pending: ${pendingTasks.map(t => `"${t.title}" (${t.priority})`).join(", ")}.` : "",
+      `Today's schedule: ${scheduleSummary}`,
+      `Sparks balance: ${sparksBalance} Sparks remaining.`,
       pinnedGoals.length ? `Goals: ${pinnedGoals.map(g => `"${g.title}" ${g.current_amount}/${g.target_amount}`).join(", ")}.` : "",
       recentWorkouts.length ? `Recent workouts: ${recentWorkouts.map(w => w.activity).join(", ")}.` : "",
       topFolders.length ? `Projects: ${topFolders.join(", ")}.` : "",
-      crmSummary ? `CRM: ${crmSummary}.` : "",
+      crmSummary ? `CRM pipeline: ${crmSummary}.` : "",
     ].filter(Boolean).join(" ");
-  }, [tasks, goals, workouts, folders, deals]);
+  }, [tasks, goals, workouts, folders, deals, scheduleBlocks, sparksBalance]);
 
   // ── Agentic action handler ─────────────────────────────────────────────────
   const handleAgentAction = useCallback(async (text: string): Promise<Message | null> => {
