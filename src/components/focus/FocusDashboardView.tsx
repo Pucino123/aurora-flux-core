@@ -334,7 +334,8 @@ const FocusContent = () => {
   const { activeWidgets, systemMode, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
-  const { isFocusModeActive, disableFocusMode } = useFocusMode();
+  const { isFocusModeActive, disableFocusMode, enableFocusMode } = useFocusMode();
+  const [intentionModalOpen, setIntentionModalOpen] = useState(false);
 
   // iOS-style dashboard pages state
   const [dashboardPages, setDashboardPages] = useState<DashboardPage[]>(() => {
