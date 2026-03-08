@@ -567,12 +567,8 @@ const ExpandedFolderOverlay = ({
           />
         )}
       </AnimatePresence>
-    </>,
-    document.body
-  );
 
-  return (
-    <>
+      {/* Template chooser */}
       {showTemplateChooser && (
         <TemplateChooserModal
           onClose={() => setShowTemplateChooser(false)}
@@ -583,7 +579,8 @@ const ExpandedFolderOverlay = ({
           }}
         />
       )}
-    </>
+    </>,
+    document.body
   );
 };
 
