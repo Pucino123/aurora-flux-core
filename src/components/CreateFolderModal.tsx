@@ -303,6 +303,6 @@ const CreateFolderModal = forwardRef<HTMLDivElement, CreateFolderModalProps>(fun
       )}
     </AnimatePresence>
   );
-};
+});
 
 export default CreateFolderModal;
