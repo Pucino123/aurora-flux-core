@@ -46,6 +46,9 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X } from "lucide-react";
 import { toast } from "sonner";
+import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
+import WindowFrame from "@/components/windows/WindowFrame";
+import DocumentView from "@/components/documents/DocumentView";
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
