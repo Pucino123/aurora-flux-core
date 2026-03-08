@@ -27,6 +27,7 @@ import VoteTooltip from "./council/VoteTooltip";
 import ProactiveIntelligence from "./council/ProactiveIntelligence";
 import CouncilBoardroom from "./council/CouncilBoardroom";
 import BoardroomIdeasHistory from "./council/BoardroomIdeasHistory";
+import BoardroomAnalytics from "./council/BoardroomAnalytics";
 
 // ── Types ──
 
@@ -85,7 +86,7 @@ const TheCouncil = () => {
   const { user } = useAuth();
   const { filterPersona } = useFlux();
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<"council" | "boardroom">("council");
+  const [activeTab, setActiveTab] = useState<"council" | "boardroom" | "analytics">("council");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<PersonaResponse[]>([]);
@@ -273,10 +274,11 @@ const TheCouncil = () => {
 
         {/* Tab switcher */}
         <div className="relative z-20 flex items-center justify-center pt-4 pb-2">
-          <div className="flex items-center gap-1 p-1 rounded-full bg-black/10 backdrop-blur-sm border border-black/8">
+        <div className="flex items-center gap-1 p-1 rounded-full bg-black/10 backdrop-blur-sm border border-black/8">
             {[
               { key: "council" as const, label: "Council", icon: "🔮" },
               { key: "boardroom" as const, label: "Boardroom", icon: "🪄" },
+              { key: "analytics" as const, label: "Analytics", icon: "📊" },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -303,17 +305,28 @@ const TheCouncil = () => {
                 <BoardroomIdeasHistory
                   userId={user.id}
                   onRestoreIdea={(idea) => {
-                    // Use the global restore bridge exposed by CouncilBoardroom
                     const restore = (window as any).__boardroomRestore;
                     if (typeof restore === "function") {
                       restore(idea);
-                      // Scroll to top so restored cards are visible
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }
                   }}
                 />
               </div>
             )}
+          </div>
+        )}
+
+        {/* Analytics view */}
+        {activeTab === "analytics" && user && (
+          <div className="relative z-10 px-4 md:px-8 pb-8 pt-4 max-w-3xl mx-auto">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2">
+                <span>📊</span> Boardroom Analytics
+              </h2>
+              <p className="text-[10px] text-white/30 mt-0.5">Insights across all your saved boardroom sessions</p>
+            </div>
+            <BoardroomAnalytics userId={user.id} />
           </div>
         )}
 
