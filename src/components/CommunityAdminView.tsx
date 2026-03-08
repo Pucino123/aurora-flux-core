@@ -377,17 +377,23 @@ const CommunityAdminView = () => {
             <div className="px-4 py-3 flex items-center gap-2" style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <Ban size={13} className="text-indigo-400" />
               <span className="text-sm font-semibold text-white">System Logs</span>
-              <span className="ml-auto text-xs text-white/30">Today</span>
+              <span className="ml-auto text-xs text-white/30">Approval history</span>
             </div>
-            <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-              {MOCK_LOGS.map((log, i) => (
-                <div key={i} className="flex items-start gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                  <span className="text-[10px] text-white/20 font-mono shrink-0 mt-0.5">{log.time}</span>
-                  <span className="text-xs font-medium text-indigo-400 shrink-0">{log.event}</span>
-                  <span className="text-xs text-white/40 truncate">{log.detail}</span>
-                </div>
-              ))}
-            </div>
+            {slots.length === 0 ? (
+              <div className="text-center py-16 text-white/30 text-sm">No activity yet</div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+                {slots.map((slot) => (
+                  <div key={slot.id} className="flex items-start gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                    <span className="text-[10px] text-white/20 font-mono shrink-0 mt-0.5">{new Date(slot.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                    <span className={`text-xs font-medium shrink-0 ${slot.status === "approved" ? "text-emerald-400" : "text-amber-400"}`}>
+                      {slot.status === "approved" ? "Slot approved" : "Submission pending"}
+                    </span>
+                    <span className="text-xs text-white/40 truncate">Slot #{slot.slotIndex} — {slot.projectName || "Unnamed"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
