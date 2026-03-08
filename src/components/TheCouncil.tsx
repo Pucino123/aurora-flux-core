@@ -797,7 +797,7 @@ const TheCouncil = () => {
                       {/* Loading state */}
                       {loading && (
                         <div className="council-glass-card p-4 space-y-3">
-                          <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider">Rådet tænker…</h3>
+                          <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider">Council is thinking…</h3>
                           {PERSONAS.map((p, i) => (
                             <motion.div
                               key={p.key}
