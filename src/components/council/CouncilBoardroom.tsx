@@ -1346,6 +1346,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
   const handleConsult = async () => {
     if (isConsulting) return;
+    if (!consumeSparks(5, "Boardroom AI consult")) return;
     setIsConsulting(true);
     setRevealedCount(0);
     revealedCountRef.current = 0;
