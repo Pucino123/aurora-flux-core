@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Navigate, useNavigate } from "react-router-dom";
 import { t } from "@/lib/i18n";
 import { Eye, EyeOff, ArrowLeft, Sparkles, Sun, Moon } from "lucide-react";
-import cherryBg from "@/assets/bg-cherry-blossom.jpg";
+import gradientBg from "@/assets/bg-gradient.png";
 import SEO from "@/components/SEO";
 
 const Auth = () => {
@@ -23,7 +23,7 @@ const Auth = () => {
   const isDark = theme === "dark";
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundImage: `url(${cherryBg})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundImage: `url(${gradientBg})`, backgroundSize: "cover", backgroundPosition: "center" }}>
       <div className="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full" />
     </div>
   );
@@ -83,7 +83,7 @@ const Auth = () => {
       />
       {/* Background */}
       <div className="fixed inset-0 z-0 bg-cover bg-center scale-110 transition-all duration-700"
-        style={{ backgroundImage: `url(${cherryBg})`, filter: isDark ? "blur(22px) brightness(0.45) saturate(0.6)" : "blur(18px)" }} />
+        style={{ backgroundImage: `url(${gradientBg})`, filter: isDark ? "blur(8px) brightness(0.55) saturate(1.1)" : "blur(6px) brightness(0.88) saturate(1.1)" }} />
       {/* Overlay */}
       <div className="fixed inset-0 z-0 transition-colors duration-700" style={{ background: bgOverlay }} />
 
