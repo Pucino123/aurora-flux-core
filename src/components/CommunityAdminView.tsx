@@ -52,36 +52,8 @@ const ActivityItem = ({ avatar, name, action, time }: { avatar: string; name: st
   </div>
 );
 
-/* ─── Mock data ─── */
-const MOCK_ACTIVITY = [
-  { avatar: "S", name: "Sarah K.", action: "created a new Idea Frame", time: "2m ago" },
-  { avatar: "M", name: "Mike R.", action: "published 'Alpha Dashboard' to Community", time: "14m ago" },
-  { avatar: "A", name: "Anna L.", action: "upgraded to Pro plan", time: "1h ago" },
-  { avatar: "J", name: "James T.", action: "submitted 'DevTrack' for approval", time: "2h ago" },
-  { avatar: "P", name: "Priya M.", action: "joined via invite link", time: "3h ago" },
-  { avatar: "T", name: "Tom H.", action: "connected Google Calendar", time: "5h ago" },
-];
 
-const MOCK_REPORTS = [
-  { id: 1, project: "SpamFarm Pro", reason: "Inappropriate content", user: "anon@test.com" },
-  { id: 2, project: "CryptoScam.io", reason: "Phishing attempt", user: "bad@actor.net" },
-];
 
-const MOCK_USERS = [
-  { id: 1, avatar: "S", name: "Sarah K.", email: "sarah@example.com", plan: "Pro", joined: "Jan 12, 2025" },
-  { id: 2, avatar: "M", name: "Mike R.", email: "mike@devco.io", plan: "Pro", joined: "Feb 3, 2025" },
-  { id: 3, avatar: "A", name: "Anna L.", email: "anna@startup.com", plan: "Starter", joined: "Feb 18, 2025" },
-  { id: 4, avatar: "J", name: "James T.", email: "james@freelancer.io", plan: "Starter", joined: "Mar 1, 2025" },
-  { id: 5, avatar: "P", name: "Priya M.", email: "priya@design.co", plan: "Pro", joined: "Mar 5, 2025" },
-];
-
-const MOCK_LOGS = [
-  { time: "08:14:32", event: "User login", detail: "kevin.therkildsen@icloud.com — IP 192.168.1.1" },
-  { time: "08:02:11", event: "Slot approved", detail: "Slot #4 'Alpha Dashboard' approved by admin" },
-  { time: "07:50:05", event: "New signup", detail: "Priya M. created account" },
-  { time: "07:31:20", event: "Invoice generated", detail: "Invoice #INV-042 sent to Mike R." },
-  { time: "06:45:00", event: "System health check", detail: "All services operational — 99.9% uptime" },
-];
 
 /* ─── Main Admin View ─── */
 const CommunityAdminView = () => {
