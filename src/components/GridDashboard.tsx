@@ -360,148 +360,155 @@ const GridDashboard = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold font-display">{t("dashboard.title")}</h2>
-        <div className="flex items-center gap-2">
-          {editMode && (
-            <button onClick={addStickyNote} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
-              <StickyNote size={12} /> Note
-            </button>
-          )}
-          <button
-            onClick={() => { setEditMode(!editMode); setShowWidgetPicker(false); setRenamingWidget(null); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              editMode ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            }`}
-          >
-            <Settings2 size={14} />
-            {editMode ? t("dashboard.done") : t("dashboard.customize")}
-          </button>
-        </div>
-      </div>
-
-      {/* Widget picker */}
-      <AnimatePresence>
-        {editMode && showWidgetPicker && availableToAdd.length > 0 && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="mb-4 p-3 rounded-xl bg-secondary/50 border border-border">
-            <p className="text-xs font-semibold mb-2">{t("dashboard.add_widget")}</p>
-            <div className="flex flex-wrap gap-2">
-              {availableToAdd.map((w) => (
-                <button key={w.id} onClick={() => addWidget(w.id)}
-                  className="px-3 py-1.5 rounded-lg text-xs bg-card border border-border hover:border-primary/40 transition-colors">
-                  {w.label.includes(".") ? t(w.label) : w.label}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {editMode && (
-        <button onClick={() => setShowWidgetPicker(!showWidgetPicker)}
-          className="mb-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
-          <Plus size={14} /> {t("dashboard.add_widget")}
-        </button>
-      )}
-
-      <DashboardStickyNotes notes={stickyNotes} onUpdate={(notes) => updateConfig({ stickyNotes: notes })} />
-
-      {/* ─── iOS-style page slide (touch-swipeable) ─── */}
-      <div
-        className="relative overflow-hidden flex-1"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        <AnimatePresence initial={false} custom={direction} mode="wait">
-          <motion.div
-            key={currentPage}
-            custom={direction}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ type: "spring", stiffness: 280, damping: 32 }}
-          >
-            <PageGrid
-              page={pages[currentPage] || DEFAULT_PAGES[0]}
-              editMode={editMode}
-              onRemoveWidget={removeWidgetFromPage}
-              renamingWidget={renamingWidget}
-              renameValue={renameValue}
-              setRenamingWidget={handleSetRenamingWidget}
-              setRenameValue={handleSetRenameValue}
-              commitRename={commitRename}
-              config={config}
-              onWidgetDragStart={(wId, pId) => { setDraggingWidgetId(wId || null); setDraggingFromPageId(pId || null); }}
-              draggingWidgetId={draggingWidgetId}
-            />
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {/* Pinned items (always shown, independent of page) */}
-      {(pinnedGoals.length > 0 || pinnedTasks.length > 0) && (
-        <div className="mt-6 space-y-3">
-          <h3 className="text-sm font-semibold font-display text-muted-foreground flex items-center gap-1.5">
-            <Pin size={12} className="fill-current" /> {t("dashboard.pinned_items")}
-          </h3>
-          {pinnedGoals.map((goal) => (
-            <div key={goal.id} className="relative group">
-              <FinanceDashboard goal={goal} />
-              <button onClick={() => { updateGoal(goal.id, { pinned: false }); toast.success(t("home.unpinned")); }}
-                className="absolute top-3 right-3 p-1.5 rounded-lg bg-background/80 backdrop-blur border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
-                <PinOff size={14} />
+      {/* ─── Scrollable content area ─── */}
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold font-display">{t("dashboard.title")}</h2>
+          <div className="flex items-center gap-2">
+            {editMode && (
+              <button onClick={addStickyNote} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
+                <StickyNote size={12} /> Note
               </button>
-            </div>
-          ))}
-          {pinnedTasks.map((item) => {
-            if (item.type === "budget") {
-              let rows: BudgetRow[] = [];
-              try { rows = JSON.parse(item.content || "[]"); } catch { rows = []; }
-              return (
-                <div key={item.id} className="relative group">
-                  <BudgetTable taskId={item.id} title={item.title} initialRows={rows} pinned={item.pinned} />
-                  <button onClick={() => { updateTask(item.id, { pinned: false }); toast.success(t("home.unpinned")); }}
-                    className="absolute top-3 right-3 p-1.5 rounded-lg bg-background/80 backdrop-blur border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
-                    <PinOff size={14} />
+            )}
+            <button
+              onClick={() => { setEditMode(!editMode); setShowWidgetPicker(false); setRenamingWidget(null); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                editMode ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              }`}
+            >
+              <Settings2 size={14} />
+              {editMode ? t("dashboard.done") : t("dashboard.customize")}
+            </button>
+          </div>
+        </div>
+
+        {/* Widget picker */}
+        <AnimatePresence>
+          {editMode && showWidgetPicker && availableToAdd.length > 0 && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+              className="mb-4 p-3 rounded-xl bg-secondary/50 border border-border">
+              <p className="text-xs font-semibold mb-2">{t("dashboard.add_widget")}</p>
+              <div className="flex flex-wrap gap-2">
+                {availableToAdd.map((w) => (
+                  <button key={w.id} onClick={() => addWidget(w.id)}
+                    className="px-3 py-1.5 rounded-lg text-xs bg-card border border-border hover:border-primary/40 transition-colors">
+                    {w.label.includes(".") ? t(w.label) : w.label}
                   </button>
-                </div>
-              );
-            }
-            const folderName = item.folder_id ? findFolderNode(item.folder_id)?.title : null;
-            return (
-              <div key={item.id} className="flux-card relative group">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {item.type === "note" ? <FileText size={16} className="text-muted-foreground" /> : (
-                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${item.done ? "bg-primary border-primary" : "border-border"}`}>
-                        {item.done && <Check size={10} className="text-primary-foreground" />}
-                      </div>
-                    )}
-                    <h3 className={`font-semibold text-sm font-display ${item.done ? "line-through text-muted-foreground/50" : ""}`}>{item.title}</h3>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {folderName && <span className="text-[10px] text-muted-foreground mr-1">{folderName}</span>}
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {editMode && (
+          <button onClick={() => setShowWidgetPicker(!showWidgetPicker)}
+            className="mb-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
+            <Plus size={14} /> {t("dashboard.add_widget")}
+          </button>
+        )}
+
+        <DashboardStickyNotes notes={stickyNotes} onUpdate={(notes) => updateConfig({ stickyNotes: notes })} />
+
+        {/* ─── iOS-style page slide (touch-swipeable) ─── */}
+        <div
+          className="relative overflow-hidden flex-1"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <AnimatePresence initial={false} custom={direction} mode="wait">
+            <motion.div
+              key={currentPage}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ type: "spring", stiffness: 280, damping: 32 }}
+            >
+              <PageGrid
+                page={pages[currentPage] || DEFAULT_PAGES[0]}
+                editMode={editMode}
+                onRemoveWidget={removeWidgetFromPage}
+                renamingWidget={renamingWidget}
+                renameValue={renameValue}
+                setRenamingWidget={handleSetRenamingWidget}
+                setRenameValue={handleSetRenameValue}
+                commitRename={commitRename}
+                config={config}
+                onWidgetDragStart={(wId, pId) => { setDraggingWidgetId(wId || null); setDraggingFromPageId(pId || null); }}
+                draggingWidgetId={draggingWidgetId}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Pinned items (always shown, independent of page) */}
+        {(pinnedGoals.length > 0 || pinnedTasks.length > 0) && (
+          <div className="mt-6 space-y-3">
+            <h3 className="text-sm font-semibold font-display text-muted-foreground flex items-center gap-1.5">
+              <Pin size={12} className="fill-current" /> {t("dashboard.pinned_items")}
+            </h3>
+            {pinnedGoals.map((goal) => (
+              <div key={goal.id} className="relative group">
+                <FinanceDashboard goal={goal} />
+                <button onClick={() => { updateGoal(goal.id, { pinned: false }); toast.success(t("home.unpinned")); }}
+                  className="absolute top-3 right-3 p-1.5 rounded-lg bg-background/80 backdrop-blur border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
+                  <PinOff size={14} />
+                </button>
+              </div>
+            ))}
+            {pinnedTasks.map((item) => {
+              if (item.type === "budget") {
+                let rows: BudgetRow[] = [];
+                try { rows = JSON.parse(item.content || "[]"); } catch { rows = []; }
+                return (
+                  <div key={item.id} className="relative group">
+                    <BudgetTable taskId={item.id} title={item.title} initialRows={rows} pinned={item.pinned} />
                     <button onClick={() => { updateTask(item.id, { pinned: false }); toast.success(t("home.unpinned")); }}
-                      className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-                      <PinOff size={12} />
+                      className="absolute top-3 right-3 p-1.5 rounded-lg bg-background/80 backdrop-blur border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
+                      <PinOff size={14} />
                     </button>
                   </div>
+                );
+              }
+              const folderName = item.folder_id ? findFolderNode(item.folder_id)?.title : null;
+              return (
+                <div key={item.id} className="flux-card relative group">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {item.type === "note" ? <FileText size={16} className="text-muted-foreground" /> : (
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${item.done ? "bg-primary border-primary" : "border-border"}`}>
+                          {item.done && <Check size={10} className="text-primary-foreground" />}
+                        </div>
+                      )}
+                      <h3 className={`font-semibold text-sm font-display ${item.done ? "line-through text-muted-foreground/50" : ""}`}>{item.title}</h3>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {folderName && <span className="text-[10px] text-muted-foreground mr-1">{folderName}</span>}
+                      <button onClick={() => { updateTask(item.id, { pinned: false }); toast.success(t("home.unpinned")); }}
+                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                        <PinOff size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  {item.content && <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4 pl-6">{item.content}</p>}
                 </div>
-                {item.content && <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4 pl-6">{item.content}</p>}
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      {/* ─── Pagination Dots + Add Page ─── */}
-      <div className="flex items-center justify-center gap-2 mt-5 pb-2" data-tour="pagination-dots">
+        {/* ─── Recent Activity ─── */}
+        <RecentActivityFeed />
+      </div>
+
+      {/* ─── Pagination Dots (sticky bottom bar) ─── */}
+      <div className="shrink-0 flex items-center justify-center gap-2 py-3 border-t border-border/20" data-tour="pagination-dots"
+        style={{ background: "hsl(var(--background)/0.7)", backdropFilter: "blur(12px)" }}>
         <div
-          className="flex items-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-sm"
-          style={{ background: "hsl(var(--card)/0.6)", border: "1px solid hsl(var(--border)/0.4)" }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-full"
+          style={{ background: "hsl(var(--card)/0.7)", border: "1px solid hsl(var(--border)/0.4)" }}
         >
           {pages.map((p, idx) => (
             <button
@@ -525,7 +532,6 @@ const GridDashboard = () => {
                 const wId = e.dataTransfer.getData("application/flux-widget");
                 const fromPId = e.dataTransfer.getData("application/flux-from-page");
                 if (!wId || !fromPId || fromPId === p.id) return;
-                // Move widget: remove from source page, add to target page
                 const next = pages.map((pg) => {
                   if (pg.id === fromPId) return { ...pg, widgets: pg.widgets.filter(w => w !== wId) };
                   if (pg.id === p.id) return { ...pg, widgets: [...pg.widgets.filter(w => w !== wId), wId] };
@@ -537,7 +543,8 @@ const GridDashboard = () => {
                 setDraggingWidgetId(null);
                 setDraggingFromPageId(null);
               }}
-              aria-label={`Go to page ${idx + 1}`}
+              aria-label={`Go to page ${idx + 1}: ${p.name}`}
+              title={p.name}
               className={`transition-all duration-300 rounded-full ${
                 idx === currentPage
                   ? "w-5 h-2 bg-primary"
@@ -570,9 +577,6 @@ const GridDashboard = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ─── Recent Activity ─── */}
-      <RecentActivityFeed />
     </div>
   );
 };
