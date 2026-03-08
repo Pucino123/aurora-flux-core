@@ -19,7 +19,8 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash2, Save, Lightbulb, Zap, Target, Rocket,
-  Code, Database, Star, Heart, Brain, LayoutTemplate, X, Pencil, Check, Sun, Moon
+  Code, Database, Star, Heart, Brain, LayoutTemplate, X, Pencil, Check, Sun, Moon,
+  ZoomIn, ZoomOut, Bookmark, Lock, Unlock
 } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";

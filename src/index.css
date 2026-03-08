@@ -37,10 +37,10 @@
     --radius: 0.75rem;
 
     /* Flux Aurora tokens */
-    --aurora-blue: 217 90% 70%;
+    --aurora-blue: 211 100% 65%;
     --aurora-pink: 330 80% 75%;
-    --aurora-violet: 270 70% 65%;
-    --aurora-indigo: 240 70% 55%;
+    --aurora-violet: 217 90% 70%;
+    --aurora-indigo: 211 100% 55%;
 
     /* Priority tokens */
     --priority-critical: 0 84% 60%;
