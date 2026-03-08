@@ -60,17 +60,21 @@ const TOOLBAR_POS_KEY = "flux-toolbar-pos";
 const TOOLBAR_STYLE_KEY = "flux-toolbar-style";
 
 interface ToolbarStyle {
-  bgOpacity: number;       // 0–100
-  blurAmount: number;      // 0–40
-  borderOpacity: number;   // 0–100
-  borderRadius: number;    // 0–50 (px)
-  borderWidth: number;     // 0–4
-  borderColor: string;     // hex
-  textOpacity: number;     // 0–100
+  bgOpacity: number;
+  bgColor: string;
+  textColor: string;
+  blurAmount: number;
+  borderOpacity: number;
+  borderRadius: number;
+  borderWidth: number;
+  borderColor: string;
+  textOpacity: number;
 }
 
 const DEFAULT_TOOLBAR_STYLE: ToolbarStyle = {
   bgOpacity: 10,
+  bgColor: "#000000",
+  textColor: "#ffffff",
   blurAmount: 16,
   borderOpacity: 20,
   borderRadius: 50,
