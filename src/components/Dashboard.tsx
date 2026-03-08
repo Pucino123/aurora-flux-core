@@ -49,7 +49,8 @@ function deriveFolderName(text: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-const VIEWS_WITHOUT_INPUT = ["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing"];
+// InputBar is completely removed — all views suppress it
+const VIEWS_WITHOUT_INPUT = ["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing", "canvas"];
 const VIEWS_WITHOUT_SCHEDULER = [...VIEWS_WITHOUT_INPUT];
 
 const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible, onToggleSidebar, focusMode }: DashboardProps) => {
