@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { t } from "@/lib/i18n";
 import OnboardingFlow from "./onboarding/OnboardingFlow";
-import CommHub from "./CommHub";
+import FocusControlBar from "./focus/FocusControlBar";
 
 interface DashboardProps {
   initialPrompt?: string;
@@ -174,7 +174,6 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             {(effectiveView as string) === "community"       && <CommunityBoardView />}
             {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
             {(effectiveView as string) === "crm"             && <CRMPage />}
-            {(effectiveView as string) === "inbox"           && <CommHub />}
             {effectiveView === "billing"                     && <BillingView />}
             {!VIEWS_WITHOUT_SCHEDULER.includes(effectiveView as string) && <Scheduler />}
           </motion.div>
@@ -189,6 +188,9 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       <OutOfSparksModal />
       <OnboardingFlow />
       <CreateFolderModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onCreate={handleCreateFolder} />
+
+      {/* Focus Mode Control Bar — global, visible on all views */}
+      <FocusControlBar />
 
       {/* Control Center */}
       <ControlCenter open={controlCenterOpen} onClose={() => setControlCenterOpen(false)} />

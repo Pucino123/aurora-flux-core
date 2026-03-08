@@ -53,7 +53,6 @@ import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
 import { useFocusMode } from "@/context/FocusModeContext";
 import { useTrash } from "@/context/TrashContext";
-import FocusControlBar from "./FocusControlBar";
 import FocusIntentionModal from "./FocusIntentionModal";
 
 const BuildModeGrid = () => (
@@ -1730,9 +1729,6 @@ const FocusContent = () => {
         }}
       />
 
-
-      {/* ── Focus Mode: Control Bar (timer + task + exit) ── */}
-      <FocusControlBar />
 
       {/* ── Intention Modal — shown before enabling focus mode ── */}
       <FocusIntentionModal

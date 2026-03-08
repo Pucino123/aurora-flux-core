@@ -12,6 +12,7 @@ import { PERSONAS } from "./TheCouncil";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useFocusMode } from "@/context/FocusModeContext";
 
 interface FluxSidebarProps {
   visible: boolean;
@@ -88,6 +89,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
   const isAdmin = user?.email === ADMIN_EMAIL;
   const { sparksBalance, openBilling, closeBilling } = useMonetization();
   const { theme, setTheme } = useTheme();
+  const { isFocusModeActive } = useFocusMode();
 
   // Every nav click must close any open billing/overlay, then switch view
   const nav = (view: typeof activeView | string) => {
@@ -100,8 +102,8 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
 
   return (
     <>
-      {/* Floating re-open trigger when sidebar is hidden */}
-      {!visible && (
+      {/* Floating re-open trigger when sidebar is hidden (suppressed during Focus Mode) */}
+      {!visible && !isFocusModeActive && (
         <motion.button
           onClick={onToggle}
           initial={{ opacity: 0, x: -8 }}
