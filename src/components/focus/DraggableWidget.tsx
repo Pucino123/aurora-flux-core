@@ -424,7 +424,7 @@ const DraggableWidget = ({
                       <button
                         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
                         onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                        onClick={(e) => { e.stopPropagation(); toggleWidget(id); }}
+                        onClick={(e) => { e.stopPropagation(); closeWidget(); }}
                         className="p-1 rounded-lg transition-colors bg-white/10 hover:bg-red-500/30"
                         style={{ color: iconColor }}
                         title="Remove widget"
