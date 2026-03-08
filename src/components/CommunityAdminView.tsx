@@ -143,14 +143,6 @@ const CommunityAdminView = () => {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchSlots();
-    const channel = supabase.channel("admin_community_slots")
-      .on("postgres_changes", { event: "*", schema: "public", table: "community_slots" }, () => fetchSlots())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchSlots]);
-
   const handleApprove = async (slot: Slot) => {
     const { error } = await supabase.from("community_slots").update({ status: "approved" }).eq("id", slot.id);
     if (error) toast.error("Failed to approve");
