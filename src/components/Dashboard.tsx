@@ -15,6 +15,7 @@ import DocumentsView from "./DocumentsView";
 import SettingsView from "./SettingsView";
 import CreateFolderModal, { suggestIcon } from "./CreateFolderModal";
 import MultitaskingView from "./MultitaskingView";
+import ThinkpadView from "./ThinkpadView";
 import CommunityBoardView from "./CommunityBoardView";
 import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
@@ -50,7 +51,7 @@ function deriveFolderName(text: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-const VIEWS_WITHOUT_INPUT = ["council", "focus", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing", "canvas", "inbox"];
+const VIEWS_WITHOUT_INPUT = ["council", "focus", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "thinkpad", "community", "community-admin", "billing", "canvas", "inbox"];
 const VIEWS_WITHOUT_SCHEDULER = [...VIEWS_WITHOUT_INPUT];
 
 const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible, onToggleSidebar, focusMode }: DashboardProps) => {
@@ -172,6 +173,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             {effectiveView === "council"                     && <TheCouncil />}
             {effectiveView === "canvas"                      && <Canvas />}
             {(effectiveView as string) === "multitask"       && <MultitaskingView />}
+            {(effectiveView as string) === "thinkpad"         && <ThinkpadView />}
             {(effectiveView as string) === "community"       && <CommunityBoardView />}
             {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
             {(effectiveView as string) === "crm"             && <CRMPage />}
