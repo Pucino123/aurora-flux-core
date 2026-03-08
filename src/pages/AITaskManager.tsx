@@ -377,6 +377,15 @@ const DroppableColumn = ({
 const AITaskManager = () => {
   const { tasks, updateTask, createTask, removeTask } = useFlux();
   const { moveToTrash } = useTrash();
+
+  // Soft-delete: move to trash first, then permanently remove from DB
+  const softRemoveTask = useCallback(async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      moveToTrash({ id: task.id, type: "task", title: task.title, originalData: task });
+    }
+    await removeTask(id);
+  }, [tasks, removeTask, moveToTrash]);
   const { members } = useTeamChat();
   const [newTitle, setNewTitle] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
