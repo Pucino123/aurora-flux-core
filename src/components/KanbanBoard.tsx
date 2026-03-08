@@ -148,6 +148,15 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
           </div>
           <span className="text-[10px] text-muted-foreground/40 font-medium w-7">{progressPct}%</span>
 
+          {/* Dark/Light toggle */}
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-1.5 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+          >
+            {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+          </button>
+
           {/* AI Prioritize button */}
           <motion.button
             onClick={handleAIPrioritize}

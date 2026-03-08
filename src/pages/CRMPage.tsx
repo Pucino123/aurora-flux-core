@@ -230,10 +230,19 @@ const CRMPage: React.FC = () => {
           <h2 className="text-xl font-bold font-display">CRM</h2>
           <p className="text-sm text-muted-foreground">{filtered.length} deals · {fmt(totalValue)} total pipeline</p>
         </div>
-        <button onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
-          <Plus size={15} /> New Lead
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground border border-border/30"
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+          >
+            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
+            <Plus size={15} /> New Lead
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
