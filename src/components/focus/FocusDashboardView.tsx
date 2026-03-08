@@ -1523,21 +1523,85 @@ export default FocusDashboardView;
               }}
             />
           ))}
-          {/* Divider */}
-          <div className="w-px h-4 bg-white/20" />
-          {/* Plus */}
-          <button
-            onClick={addPage}
-            className="flex items-center justify-center transition-colors duration-150"
-            style={{ color: "rgba(255,255,255,0.5)" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.5)")}
-            title="Add page"
-          >
-            <Plus size={14} strokeWidth={2.5} />
-          </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Build mode: show pagination button when hidden */}
+      {!paginationSettings.showPagination && systemMode === "build" && (
+        <button
+          onClick={() => setPaginationSettings(s => ({ ...s, showPagination: true }))}
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] px-3 py-1.5 rounded-full text-[10px] font-medium"
+          style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.12)" }}
+        >
+          Show pagination
+        </button>
+      }}
+
+      {/* Dot context menu (right-click / long-press) */}
+      {dotMenu && (
+        <>
+          <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); }} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed z-[10001] rounded-xl py-1.5 min-w-[160px] overflow-hidden"
+            style={{ left: dotMenu.x, top: dotMenu.y, background: "rgba(10,8,20,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)", transform: "translateX(-50%)" }}
+          >
+            <div className="px-3 py-1.5 text-[10px] font-semibold text-white/35 uppercase tracking-wider">
+              {dashboardPages[dotMenu.idx]?.label || `Page ${dotMenu.idx + 1}`}
+            </div>
+            <div className="h-px bg-white/10 mx-2 mb-1" />
+            <button
+              onClick={() => { startLabelEdit(dotMenu.idx); setDotMenu(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
+            >✏️ Rename</button>
+            <button
+              onClick={() => { goToPage(dotMenu.idx); setDotMenu(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
+            >→ Switch to page</button>
+            {dashboardPages.length > 1 && (
+              deleteConfirmIdx === dotMenu.idx ? (
+                <div className="px-3 py-2">
+                  <p className="text-[11px] text-white/60 mb-2">
+                    {(dashboardPages[dotMenu.idx]?.activeWidgets || dashboardPages[dotMenu.idx]?.stickyNotes)
+                      ? "This page has custom content. Delete anyway?"
+                      : "Delete this page?"}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => deletePage(dotMenu.idx)}
+                      className="flex-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-red-500/70 hover:bg-red-500/90 transition-colors"
+                    >Delete</button>
+                    <button
+                      onClick={() => setDeleteConfirmIdx(null)}
+                      className="flex-1 px-2 py-1 rounded-lg text-[11px] text-white/50 hover:bg-white/8 transition-colors"
+                    >Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setDeleteConfirmIdx(dotMenu.idx)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red-400 hover:bg-red-500/10 transition-colors"
+                >🗑 Delete page</button>
+              )
+            )}
+          </motion.div>
+        </>
+      )}
+    </div>
+    </StyleEditorProvider>
+  );
+};
+
+const FocusDashboardView = () => (
+  <FocusProvider>
+    <FocusContent />
+  </FocusProvider>
+);
+
+export default FocusDashboardView;
 
       {/* Dot context menu (right-click / long-press) */}
       {dotMenu && (
