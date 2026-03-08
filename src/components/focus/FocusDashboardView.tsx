@@ -1693,7 +1693,7 @@ const FocusContent = () => {
                 key={page.id}
                 onClick={() => { if (draggingDotIdx === null) goToPage(i); }}
                 onDoubleClick={() => startLabelEdit(i)}
-                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: i, x: e.clientX, y: e.clientY - 80 }); }}
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: i, x: e.clientX, y: e.clientY }); }}
                 onTouchStart={(e) => handleDotTouchStart(i, e)}
                 onTouchEnd={handleDotTouchEnd}
                 onMouseEnter={() => setHoverDotIdx(i)}
@@ -1776,12 +1776,14 @@ const FocusContent = () => {
             exit={{ opacity: 0, scale: 0.9 }}
             className="fixed z-[10001] rounded-xl py-1.5 overflow-hidden"
             style={{
-              left: dotMenu.x, top: dotMenu.y,
+              left: Math.max(8, Math.min(dotMenu.x, window.innerWidth - (dotBgPickerOpen ? 288 : 208))),
+              bottom: window.innerHeight - dotMenu.y + 8,
               minWidth: dotBgPickerOpen ? 280 : 200,
+              maxHeight: "70vh",
+              overflowY: "auto",
               background: "rgba(10,8,20,0.94)", backdropFilter: "blur(24px)",
               border: "1px solid rgba(255,255,255,0.15)",
               boxShadow: "0 12px 40px rgba(0,0,0,0.7)",
-              transform: "translateX(-50%)",
               transition: "min-width 0.18s ease",
             }}
           >

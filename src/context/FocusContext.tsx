@@ -64,6 +64,7 @@ interface FocusState {
   desktopFolderIconStrokeOpacities: Record<string, number>;
   desktopFolderCustomIcons: Record<string, string>;
   desktopFolderBgColors: Record<string, string>;
+  desktopFolderTitleGaps: Record<string, number>; // px gap between icon and label
   // Document customization (mirrors folder pattern)
   desktopDocPositions: Record<string, { x: number; y: number }>;
   desktopDocOpacities: Record<string, number>;
@@ -71,6 +72,7 @@ interface FocusState {
   desktopDocBgColors: Record<string, string>;
   desktopDocCustomIcons: Record<string, string>;
   desktopDocIconColors: Record<string, string>;
+  desktopDocTitleGaps: Record<string, number>; // px gap between icon and label
 }
 
 const DEFAULT_STATE: FocusState = {
@@ -110,12 +112,14 @@ const DEFAULT_STATE: FocusState = {
   desktopFolderIconStrokeOpacities: {},
   desktopFolderCustomIcons: {},
   desktopFolderBgColors: {},
+  desktopFolderTitleGaps: {},
   desktopDocPositions: {},
   desktopDocOpacities: {},
   desktopDocTitleSizes: {},
   desktopDocBgColors: {},
   desktopDocCustomIcons: {},
   desktopDocIconColors: {},
+  desktopDocTitleGaps: {},
 };
 
 const STORAGE_KEY = "flux-focus-prefs";
@@ -206,6 +210,8 @@ interface FocusContextValue extends FocusState {
   updateDesktopFolderCustomIcon: (folderId: string, url: string) => void;
   desktopFolderBgColors: Record<string, string>;
   updateDesktopFolderBgColor: (folderId: string, color: string) => void;
+  desktopFolderTitleGaps: Record<string, number>;
+  updateDesktopFolderTitleGap: (folderId: string, gap: number) => void;
   // Document customization
   desktopDocPositions: Record<string, { x: number; y: number }>;
   updateDesktopDocPosition: (docId: string, pos: { x: number; y: number }) => void;
@@ -219,6 +225,8 @@ interface FocusContextValue extends FocusState {
   updateDesktopDocCustomIcon: (docId: string, url: string) => void;
   desktopDocIconColors: Record<string, string>;
   updateDesktopDocIconColor: (docId: string, color: string) => void;
+  desktopDocTitleGaps: Record<string, number>;
+  updateDesktopDocTitleGap: (docId: string, gap: number) => void;
   resetDashboard: () => void;
 }
 
@@ -416,6 +424,12 @@ export function FocusProvider({ children }: { children: ReactNode }) {
         ...prev,
         desktopFolderBgColors: { ...(prev.desktopFolderBgColors ?? {}), [folderId]: color },
       })),
+    desktopFolderTitleGaps: state.desktopFolderTitleGaps ?? {},
+    updateDesktopFolderTitleGap: (folderId, gap) =>
+      setState((prev) => ({
+        ...prev,
+        desktopFolderTitleGaps: { ...(prev.desktopFolderTitleGaps ?? {}), [folderId]: gap },
+      })),
     // Document customization
     desktopDocPositions: state.desktopDocPositions ?? {},
     updateDesktopDocPosition: (docId, pos) =>
@@ -435,6 +449,9 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     desktopDocIconColors: state.desktopDocIconColors ?? {},
     updateDesktopDocIconColor: (docId, color) =>
       setState((prev) => ({ ...prev, desktopDocIconColors: { ...(prev.desktopDocIconColors ?? {}), [docId]: color } })),
+    desktopDocTitleGaps: state.desktopDocTitleGaps ?? {},
+    updateDesktopDocTitleGap: (docId, gap) =>
+      setState((prev) => ({ ...prev, desktopDocTitleGaps: { ...(prev.desktopDocTitleGaps ?? {}), [docId]: gap } })),
     resetDashboard: () => setState({
       ...DEFAULT_STATE,
       currentBackground: state.currentBackground,

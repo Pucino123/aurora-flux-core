@@ -68,6 +68,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const bgColor = store.desktopDocBgColors[doc.id] ?? "";
   const customIconUrl = store.desktopDocCustomIcons[doc.id] ?? "";
   const iconColor = store.desktopDocIconColors[doc.id] ?? "";
+  const titleGap = store.desktopDocTitleGaps?.[doc.id] ?? 2;
 
   const isSpreadsheet = doc.type === "spreadsheet";
   const dragging = useRef(false);
@@ -241,7 +242,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
           }} />
         )}
 
-        <div className="relative z-10 transition-transform group-hover:scale-110">
+        <div className="relative z-10 transition-transform group-hover:scale-110" style={{ marginBottom: titleGap }}>
           {storedIconName && storedIconName.startsWith("http") ? (
             <img src={storedIconName} alt="" className="rounded-lg object-cover" style={{ width: iconSize, height: iconSize, filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" }} />
           ) : lucideIcon ? (
@@ -253,15 +254,18 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
           )}
         </div>
 
-        <div className="relative z-10">
+        {/* Title — click to inline-rename (macOS style) */}
+        <div className="relative z-10 w-full">
           {renaming ? (
             <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={commitRename}
               onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenaming(false); }}
-              className="w-full text-center bg-transparent border-b border-primary/40 outline-none text-foreground"
+              className="w-full text-center bg-transparent outline-none text-foreground ring-1 ring-primary/50 rounded px-1 transition-all"
               style={{ fontSize: `${titleSize}px` }} autoFocus onClick={(e) => e.stopPropagation()} />
           ) : (
             <span className="font-medium text-foreground/80 text-center leading-tight truncate max-w-[80px] block group-hover:text-foreground transition-colors"
-              style={{ fontSize: `${titleSize}px` }}>
+              style={{ fontSize: `${titleSize}px` }}
+              onClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setRenameValue(doc.title); setRenaming(true); } }}
+            >
               {doc.title}
             </span>
           )}
@@ -283,6 +287,20 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                 onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
                 className="flex-1 h-1 rounded-full appearance-none bg-secondary cursor-pointer accent-primary" />
               <span className="text-[10px] text-muted-foreground tabular-nums w-7 text-right">{titleSize}px</span>
+            </div>
+            {/* Icon Spacing row */}
+            <div className="px-4 py-2 border-b border-border/30 flex items-center gap-3">
+              <p className="text-[10px] text-muted-foreground uppercase shrink-0">Spacing</p>
+              <div className="flex gap-1">
+                {([{ label: "Tight", val: 0 }, { label: "Normal", val: 4 }, { label: "Wide", val: 10 }] as const).map(opt => (
+                  <button key={opt.label}
+                    onClick={(e) => { e.stopPropagation(); store.updateDesktopDocTitleGap(doc.id, opt.val); }}
+                    onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
+                    className={`px-2 py-0.5 rounded text-[10px] transition-colors border ${titleGap === opt.val ? "bg-primary/15 text-primary border-primary/30" : "text-muted-foreground border-border/30 hover:bg-secondary"}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex gap-0">

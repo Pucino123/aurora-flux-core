@@ -58,6 +58,8 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   const updateCustomIcon = focusStore.updateDesktopFolderCustomIcon;
   const bgColors = focusStore.desktopFolderBgColors ?? {};
   const updateBgColor = focusStore.updateDesktopFolderBgColor;
+  const titleGaps = focusStore.desktopFolderTitleGaps ?? {};
+  const updateTitleGap = focusStore.updateDesktopFolderTitleGap;
   const systemMode = focusStore.systemMode ?? "focus";
 
   const pos = positionOverride ?? desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };
@@ -67,6 +69,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   }, [onPositionChange, updateDesktopFolderPosition]);
   const folderOpacity = desktopFolderOpacities[folder.id] ?? 1;
   const titleSize = desktopFolderTitleSizes[folder.id] ?? 11;
+  const titleGap = titleGaps[folder.id] ?? 2; // px gap between icon and title
   const iconFillOp = iconFillOpacities[folder.id] ?? 0.75;
   const iconStrokeOp = iconStrokeOpacities[folder.id] ?? 1;
   const customIconUrl = customIcons[folder.id] ?? null;
@@ -260,7 +263,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
           ? { duration: 0.38, ease: [0.4, 0, 1, 1] }
           : justAbsorbed ? { duration: 0.4, ease: "easeOut" } : { duration: 0.2 }
         }
-        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl transition-shadow duration-200 ${
+        className={`desktop-folder absolute flex flex-col items-center justify-center p-2 pb-1 cursor-pointer select-none rounded-2xl transition-shadow duration-200 ${
           isDropTarget ? "ring-2 ring-blue-400/60" : (!isMarqueeSelected && selected && !isDragging ? "ring-2 ring-primary/50" : "")
         }`}
         style={{
@@ -312,7 +315,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
         ) : null}
 
         {/* Icon */}
-        <div className="relative z-10" style={{ opacity: isDragging ? 0.5 : 1 }}>
+        <div className="relative z-10" style={{ opacity: isDragging ? 0.5 : 1, marginBottom: titleGap }}>
           {customIconUrl ? (
             <img src={customIconUrl} alt="" className="rounded-lg object-cover" style={{ width: iconSize, height: iconSize, filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" }} />
           ) : (
@@ -320,20 +323,25 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
           )}
         </div>
 
-        {/* Title */}
-        <div className="relative z-10">
+        {/* Title — click to inline-rename (macOS style) */}
+        <div className="relative z-10 w-full">
           {renaming ? (
             <input
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onBlur={commitRename}
-              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenaming(false); }}
-              className="w-full text-center text-[11px] bg-transparent border-b border-primary/40 outline-none text-foreground"
+              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { setRenaming(false); } }}
+              className="w-full text-center bg-transparent outline-none text-foreground ring-1 ring-primary/50 rounded px-1 transition-all"
+              style={{ fontSize: `${titleSize}px` }}
               autoFocus
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <span className="font-medium text-foreground/90 text-center leading-tight truncate w-full block" style={{ fontSize: `${titleSize}px` }}>
+            <span
+              className="font-medium text-foreground/90 text-center leading-tight truncate w-full block hover:text-foreground transition-colors"
+              style={{ fontSize: `${titleSize}px` }}
+              onClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setRenameValue(folder.title); setRenaming(true); } }}
+            >
               {folder.title}
             </span>
           )}
@@ -358,6 +366,20 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
                 className="flex-1 h-1 rounded-full appearance-none bg-secondary cursor-pointer accent-primary"
               />
               <span className="text-[10px] text-muted-foreground tabular-nums w-7 text-right">{titleSize}px</span>
+            </div>
+            {/* Icon Spacing row */}
+            <div className="px-4 py-2 border-b border-border/30 flex items-center gap-3">
+              <p className="text-[10px] text-muted-foreground uppercase shrink-0">Spacing</p>
+              <div className="flex gap-1">
+                {([{ label: "Tight", val: 0 }, { label: "Normal", val: 4 }, { label: "Wide", val: 10 }] as const).map(opt => (
+                  <button key={opt.label}
+                    onClick={(e) => { e.stopPropagation(); updateTitleGap(folder.id, opt.val); }}
+                    onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
+                    className={`px-2 py-0.5 rounded text-[10px] transition-colors border ${titleGap === opt.val ? "bg-primary/15 text-primary border-primary/30" : "text-muted-foreground border-border/30 hover:bg-secondary"}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex gap-0">
