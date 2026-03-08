@@ -57,7 +57,7 @@ interface IdeaNodeData {
 }
 
 const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; selected: boolean }) => {
-  const { setNodes } = useReactFlow();
+  const { setNodes, deleteElements } = useReactFlow();
   const iconEntry = ICONS.find((i) => i.key === data.iconKey) || ICONS[0];
   const IconComp = iconEntry.icon;
 
@@ -67,9 +67,14 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
     );
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteElements({ nodes: [{ id }] });
+  };
+
   return (
     <div
-      className="relative transition-all duration-200"
+      className="group relative transition-all duration-200"
       style={{
         background: "rgba(15, 18, 30, 0.85)",
         backdropFilter: "blur(20px)",
@@ -85,6 +90,17 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
           : "0 8px 32px rgba(0,0,0,0.3)",
       }}
     >
+      {/* Delete button — appears on hover */}
+      <button
+        onClick={handleDelete}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        style={{ background: "rgba(239,68,68,0.18)", border: "1px solid rgba(239,68,68,0.35)", color: "rgba(239,68,68,0.85)" }}
+        title="Delete node"
+      >
+        <X size={10} />
+      </button>
+
       <Handle type="target" position={Position.Top} style={{ background: data.iconColor, border: "none", width: 8, height: 8 }} />
       <Handle type="source" position={Position.Bottom} style={{ background: data.iconColor, border: "none", width: 8, height: 8 }} />
       <Handle type="target" position={Position.Left} style={{ background: data.iconColor, border: "none", width: 8, height: 8 }} />
@@ -244,10 +260,21 @@ const IdeaCanvas = ({
         nodesDraggable={!isLocked}
         nodesConnectable={!isLocked}
         elementsSelectable={!isLocked}
+        panOnDrag={!isLocked}
+        zoomOnScroll={!isLocked}
         deleteKeyCode={isLocked ? null : "Delete"}
         style={{ background: "transparent" }}
         proOptions={{ hideAttribution: true }}
       >
+        {/* Lock overlay — captures all pointer events so nodes cannot be dragged */}
+        {isLocked && (
+          <div
+            className="absolute inset-0 z-[9998]"
+            style={{ cursor: "not-allowed" }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        )}
         <Background color="rgba(255,255,255,0.06)" gap={28} size={1} />
         {/* Hide default Controls — we use our own toolbar */}
         <MiniMap
