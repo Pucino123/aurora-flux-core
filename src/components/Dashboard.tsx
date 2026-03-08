@@ -134,7 +134,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
         transition={{ duration: 0.3, ease: "easeInOut" }}
         style={{ pointerEvents: isFocusModeActive ? "none" : undefined }}
       >
-        <FluxSidebar visible={sidebarVisible} onToggle={onToggleSidebar} onRequestCreateFolder={() => setShowCreateModal(true)} />
+        <FluxSidebar visible={sidebarVisible && !isFocusModeActive} onToggle={onToggleSidebar} onRequestCreateFolder={() => setShowCreateModal(true)} />
       </motion.div>
 
       {/* Center stage */}
