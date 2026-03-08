@@ -146,12 +146,24 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
 
         {/* Nav links */}
         <div className="px-2 space-y-0.5">
+          {/* Inbox with unified badge */}
           <button
-            onClick={() => nav("focus")}
-            className={`sidebar-item w-full ${isHomeActive ? "sidebar-item-active" : ""}`}
+            onClick={() => nav("inbox")}
+            className={`sidebar-item w-full ${activeView === ("inbox" as any) ? "sidebar-item-active" : ""}`}
           >
-            <Home size={18} className="shrink-0" />
-            <span>{t("sidebar.home")}</span>
+            <Inbox size={18} className="shrink-0" />
+            <span className="flex-1 text-left">Indbakke</span>
+            {unreadInboxCount > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", boxShadow: "0 0 8px hsl(var(--primary)/0.6)" }}
+              >
+                {unreadInboxCount > 99 ? "99+" : unreadInboxCount}
+              </motion.span>
+            )}
           </button>
 
           <button
