@@ -717,11 +717,11 @@ const FocusContent = () => {
       if (r - l < 5 && b - t < 5) return new Set<string>();
       const ns = new Set<string>();
       folderTree.forEach(folder => {
-        const fPos = desktopFolderPositions[folder.id] || { x: 40, y: 40 };
+        const fPos = pageFolderPositions[folder.id] || { x: 40, y: 40 };
         if (fPos.x < r && fPos.x + 90 > l && fPos.y < b && fPos.y + 90 > t) ns.add(folder.id);
       });
       desktopDocs.forEach(doc => {
-        const dPos = desktopDocPositions[doc.id] || { x: 0, y: 0 };
+        const dPos = pageDocPositions[doc.id] || { x: 0, y: 0 };
         if (dPos.x < r && dPos.x + 90 > l && dPos.y < b && dPos.y + 90 > t) ns.add(doc.id);
       });
       return ns;
