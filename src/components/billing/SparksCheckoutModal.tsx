@@ -8,15 +8,23 @@ import { useMonetization } from "@/context/MonetizationContext";
 
 interface Package {
   sparks: number;
+  bonus?: number;
   price: string;
   label: string;
-  popular?: boolean;
+  bestValue?: boolean;
 }
 
 const PACKAGES: Package[] = [
-  { sparks: 60,  price: "$5",  label: "Starter Pack" },
-  { sparks: 150, price: "$10", label: "Power Pack", popular: true },
-  { sparks: 400, price: "$25", label: "Pro Bundle" },
+  { sparks: 50,  price: "$5",  label: "Starter Pack" },
+  { sparks: 100, bonus: 20, price: "$10", label: "Power Pack", bestValue: true },
+  { sparks: 200, bonus: 100, price: "$20", label: "Pro Bundle" },
+];
+
+const VALUE_ITEMS = [
+  { icon: "🧠", label: "Ask Aura AI",       cost: "1–3 Sparks" },
+  { icon: "⚖️", label: "Council Session",   cost: "5 Sparks" },
+  { icon: "📄", label: "AI Document Draft", cost: "4 Sparks" },
+  { icon: "📊", label: "Smart Plan",        cost: "2 Sparks" },
 ];
 
 type PayState = "idle" | "processing" | "success";
