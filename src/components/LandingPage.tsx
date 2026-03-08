@@ -227,6 +227,55 @@ const SLIDES = [
       </div>
     ),
   },
+  {
+    tag: "💪 Fitness & Habits",
+    tagColor: "rgba(52,211,153,0.7)",
+    tagBorder: "rgba(52,211,153,0.4)",
+    headline: "Build habits.\nTrack everything.",
+    body: "Log workouts, track your mood, and watch streaks build. Your health dashboard lives right inside Dashiii.",
+    accentColor: "rgba(52,211,153,0.22)",
+    visual: (
+      <div className="space-y-3">
+        {/* Streak heatmap */}
+        <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="text-xs text-white/40 mb-2 font-semibold uppercase tracking-wider">7-day streak 🔥</div>
+          <div className="flex gap-1.5">
+            {[4, 6, 3, 7, 5, 6, 7].map((v, i) => (
+              <div key={i} className="flex-1 rounded-md" style={{ height: 28, background: `rgba(52,211,153,${(v / 7) * 0.8 + 0.1})` }} />
+            ))}
+          </div>
+          <div className="flex justify-between mt-1">
+            {["M","T","W","T","F","S","S"].map((d, i) => (
+              <span key={i} className="text-[9px] text-white/25 flex-1 text-center">{d}</span>
+            ))}
+          </div>
+        </div>
+        {/* Mood + workout */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="text-lg mb-1">😊</div>
+            <div className="text-xs font-bold text-white">Mood</div>
+            <div className="text-xs text-white/40 mt-0.5">Feeling great</div>
+          </div>
+          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="text-lg mb-1">🏃</div>
+            <div className="text-xs font-bold text-white">Run</div>
+            <div className="text-xs text-white/40 mt-0.5">5.2 km today</div>
+          </div>
+        </div>
+        {/* Energy bar */}
+        <div className="rounded-xl px-3 py-2.5" style={{ background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.2)" }}>
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-xs text-white/60">Energy level</span>
+            <span className="text-xs font-bold text-emerald-300">82%</span>
+          </div>
+          <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+            <div className="h-1.5 rounded-full" style={{ background: "rgba(52,211,153,0.8)", width: "82%" }} />
+          </div>
+        </div>
+      </div>
+    ),
+  },
 ];
 
 const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
@@ -343,13 +392,13 @@ const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
         </button>
       </div>
 
-      {/* Slide tag labels */}
-      <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
+      {/* Slide tag labels — horizontal scroll on mobile */}
+      <div className="flex items-center gap-2 mt-6 overflow-x-auto no-scrollbar px-2 pb-1 justify-start md:justify-center">
         {SLIDES.map((s, i) => (
           <button
             key={i}
             onClick={() => go(i, i > idx ? 1 : -1)}
-            className={`text-xs px-3 py-1 rounded-full transition-all duration-200 ${i === idx ? "text-white font-semibold" : "text-white/35 hover:text-white/60"}`}
+            className={`flex-shrink-0 text-xs px-3 py-1 rounded-full transition-all duration-200 ${i === idx ? "text-white font-semibold" : "text-white/35 hover:text-white/60"}`}
             style={i === idx ? { background: slide.accentColor, border: `1px solid ${slide.tagBorder}` } : {}}
           >
             {s.tag}
@@ -453,13 +502,19 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       {/* Final CTA */}
       <section className="relative z-10 px-4 md:px-6 pb-24">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="max-w-2xl mx-auto rounded-3xl p-10 text-center shadow-2xl"
-          style={{ background: "linear-gradient(135deg, rgba(100,60,200,0.35), rgba(60,140,240,0.35))", backdropFilter: "blur(32px)", border: "1.5px solid rgba(255,255,255,0.15)" }}>
-          <div className="text-3xl mb-3">✨</div>
+          className="max-w-2xl mx-auto rounded-3xl p-10 text-center"
+          style={{
+            background: isDark ? "rgba(12,10,18,0.72)" : "rgba(255,255,255,0.10)",
+            backdropFilter: "blur(40px)",
+            WebkitBackdropFilter: "blur(40px)",
+            border: isDark ? "1.5px solid rgba(255,255,255,0.10)" : "1.5px solid rgba(255,255,255,0.28)",
+            boxShadow: "0 32px 80px rgba(0,0,0,0.35)",
+          }}>
+          <div className="text-3xl mb-4">✨</div>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
             Ready to upgrade your workflow?
           </h2>
-          <p className="text-base text-white/70 mb-8">Claim your first 50 Sparks ✨ and start consulting The Council.</p>
+          <p className="text-sm md:text-base text-white/55 mb-8 max-w-sm mx-auto leading-relaxed">Claim your first 50 Sparks ✨ and start consulting The Council.</p>
           <button onClick={handleCTA} className="inline-flex items-center gap-2 bg-white text-slate-800 font-bold px-10 py-4 rounded-full shadow-2xl hover:scale-[1.03] active:scale-[0.98] transition-all text-base">
             Get Started for Free <ArrowRight size={16} />
           </button>
