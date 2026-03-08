@@ -204,7 +204,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
             <div className="px-2 pb-1">
               <button
                 onClick={openBilling}
-                className={`sidebar-item w-full ${activeView === "billing" ? "sidebar-item-active" : ""}`}
+                className={`sidebar-item w-full ${(activeView as string) === "billing" ? "sidebar-item-active" : ""}`}
               >
                 <CreditCard size={16} className="shrink-0" />
                 <span>Billing & Plans</span>

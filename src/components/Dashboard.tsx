@@ -133,11 +133,11 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
           <DocumentsView />
         ) : effectiveView === "settings" ? (
           <SettingsView />
-        ) : effectiveView === "multitask" ? (
+        ) : (effectiveView as string) === "multitask" ? (
           <MultitaskingView />
-        ) : effectiveView === "community" ? (
+        ) : (effectiveView as string) === "community" ? (
           <CommunityBoardView />
-        ) : effectiveView === "billing" ? (
+        ) : (effectiveView as string) === "billing" ? (
           <BillingView />
         ) : (
           <Canvas />
