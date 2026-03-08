@@ -407,8 +407,12 @@ const GridDashboard = () => {
 
       <DashboardStickyNotes notes={stickyNotes} onUpdate={(notes) => updateConfig({ stickyNotes: notes })} />
 
-      {/* ─── iOS-style page slide ─── */}
-      <div className="relative overflow-hidden flex-1">
+      {/* ─── iOS-style page slide (touch-swipeable) ─── */}
+      <div
+        className="relative overflow-hidden flex-1"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentPage}
