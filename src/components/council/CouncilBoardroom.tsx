@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, BarChart2, Send, Loader2, Share2, X, MessageSquare, TrendingUp, AlertTriangle,
-  Lightbulb, Star, Reply, Maximize2
+  Lightbulb, Star, Reply, Maximize2, BookmarkPlus, Check,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 // ── Types ──
@@ -767,6 +768,7 @@ interface PersonaResponse {
 }
 
 const CouncilBoardroom: React.FC = () => {
+  const { user } = useAuth();
   const [idea, setIdea] = useState("");
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({
     elena: "idle", helen: "idle", anton: "idle", margot: "idle",
@@ -783,6 +785,7 @@ const CouncilBoardroom: React.FC = () => {
   const [floatingEmojis, setFloatingEmojis] = useState<Record<string, string[]>>({
     elena: [], helen: [], anton: [], margot: [],
   });
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
 
@@ -863,6 +866,37 @@ const CouncilBoardroom: React.FC = () => {
     await revealPersonaSequence(aiPersonas);
     setIsConsulting(false);
   };
+
+  const handleSaveToCouncil = useCallback(async () => {
+    if (!user || !allRevealed || saveState !== "idle") return;
+    setSaveState("saving");
+    try {
+      // Insert idea
+      const { data: ideaData, error: ideaError } = await supabase
+        .from("council_ideas")
+        .insert({ content: idea || "Untitled Idea", user_id: user.id, consensus_score: avgRing })
+        .select("id")
+        .single();
+      if (ideaError || !ideaData) throw ideaError;
+
+      // Insert responses for each revealed persona
+      const inserts = PERSONAS
+        .filter(p => responses[p.key])
+        .map(p => ({
+          idea_id: ideaData.id,
+          user_id: user.id,
+          persona_key: p.key,
+          analysis: responses[p.key]!.analysis,
+          vote: responses[p.key]!.confidence >= 60 ? "yes" : responses[p.key]!.confidence >= 40 ? "maybe" : "no",
+          vote_score: responses[p.key]!.confidence,
+        }));
+      await supabase.from("council_responses").insert(inserts);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 3000);
+    } catch {
+      setSaveState("idle");
+    }
+  }, [user, allRevealed, saveState, idea, avgRing, responses]);
 
   const consensus = getConsensusLabel();
   const fullscreenP = fullscreenPersona ? PERSONAS.find(p => p.key === fullscreenPersona) : null;
@@ -978,9 +1012,33 @@ const CouncilBoardroom: React.FC = () => {
             transition={{ delay: 0.3, duration: 0.5 }}
             className="shrink-0 rounded-2xl border border-white/10 bg-white/4 backdrop-blur-xl p-4"
           >
-            <h3 className="text-[11px] font-bold text-white/50 uppercase tracking-widest mb-3">
-              ✦ Council's Recommended Action Plan
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[11px] font-bold text-white/50 uppercase tracking-widest">
+                ✦ Council's Recommended Action Plan
+              </h3>
+              {user && (
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={handleSaveToCouncil}
+                  disabled={saveState !== "idle"}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold transition-all disabled:opacity-70"
+                  style={
+                    saveState === "saved"
+                      ? { background: "rgba(52,211,153,0.2)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }
+                      : { background: "rgba(139,92,246,0.2)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)" }
+                  }
+                >
+                  {saveState === "saving" ? (
+                    <><Loader2 size={9} className="animate-spin" /> Saving…</>
+                  ) : saveState === "saved" ? (
+                    <><Check size={9} /> Saved to Council</>
+                  ) : (
+                    <><BookmarkPlus size={9} /> Save to Council</>
+                  )}
+                </motion.button>
+              )}
+            </div>
             <ol className="space-y-2">
               {actionPlan.map((step, i) => (
                 <motion.li
