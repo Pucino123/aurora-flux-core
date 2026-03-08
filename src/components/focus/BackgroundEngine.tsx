@@ -749,16 +749,18 @@ const BackgroundEngine = ({
                 )}
               </AnimatePresence>
             </div>
-            {/* Style button */}
-            <button
-              onPointerDown={e => e.stopPropagation()}
-              onClick={() => { setSpacesStyleOpen(!spacesStyleOpen); setMenuOpen(false); }}
-              className="ml-1 p-2 rounded-full transition-all hover:bg-white/10"
-              style={{ color: spacesStyleOpen ? spacesTextColor : "rgba(255,255,255,0.3)" }}
-              title="Customize button style"
-            >
-              <Palette size={13} />
-            </button>
+            {/* Style button — build mode only */}
+            {isBuild && (
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => { setSpacesStyleOpen(!spacesStyleOpen); setMenuOpen(false); }}
+                className="ml-1 p-2 rounded-full transition-all hover:bg-white/10"
+                style={{ color: spacesStyleOpen ? spacesTextColor : "rgba(255,255,255,0.3)" }}
+                title="Customize button style"
+              >
+                <Palette size={13} />
+              </button>
+            )}
           </motion.div>
         </>,
         document.body
