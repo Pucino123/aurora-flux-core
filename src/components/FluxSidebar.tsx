@@ -150,7 +150,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
             {/* Nav links */}
             <div className="px-2 space-y-0.5">
               <button
-                onClick={() => { setActiveFolder(null); setActiveView("focus"); }}
+                onClick={() => nav("focus")}
                 className={`sidebar-item w-full ${isHomeActive ? "sidebar-item-active" : ""}`}
               >
                 <Home size={18} className="shrink-0" />
@@ -158,7 +158,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
               </button>
 
               <button
-                onClick={() => { setActiveFolder(null); setActiveView("calendar"); }}
+                onClick={() => nav("calendar")}
                 className={`sidebar-item w-full ${activeView === "calendar" ? "sidebar-item-active" : ""}`}
               >
                 <CalendarDays size={18} className="shrink-0" />
@@ -166,7 +166,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
               </button>
 
               <button
-                onClick={() => { setActiveFolder(null); setActiveView("tasks"); }}
+                onClick={() => nav("tasks")}
                 className={`sidebar-item w-full ${activeView === "tasks" ? "sidebar-item-active" : ""}`}
               >
                 <ListTodo size={18} className="shrink-0" />
@@ -175,7 +175,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
 
               {/* CRM */}
               <button
-                onClick={() => { setActiveFolder(null); setActiveView("crm" as any); }}
+                onClick={() => nav("crm")}
                 className={`sidebar-item w-full ${activeView === ("crm" as any) ? "sidebar-item-active" : ""}`}
               >
                 <Briefcase size={18} className="shrink-0" />
@@ -184,7 +184,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
 
               {/* Council */}
               <button
-                onClick={() => { setActiveFolder(null); setActiveView("council"); setFilterPersona(null); }}
+                onClick={() => { nav("council"); setFilterPersona(null); }}
                 className={`sidebar-item w-full ${activeView === "council" ? "sidebar-item-active" : ""}`}
                 data-tour="council-nav"
               >
@@ -197,7 +197,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                     return (
                       <div key={p.key} className="relative group/avatar">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setActiveFolder(null); setActiveView("council"); setFilterPersona(isActive ? null : p.key); }}
+                          onClick={(e) => { e.stopPropagation(); nav("council"); setFilterPersona(isActive ? null : p.key); }}
                           className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-200 ${isActive ? "scale-115" : "opacity-50 hover:opacity-90 hover:scale-105"}`}
                           style={{
                             backgroundColor: p.color,
@@ -225,7 +225,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
 
               {/* Workspace (Split-View) */}
               <button
-                onClick={() => { setActiveFolder(null); setActiveView("multitask" as any); }}
+                onClick={() => nav("multitask")}
                 className={`sidebar-item w-full ${activeView === ("multitask" as any) ? "sidebar-item-active" : ""}`}
                 data-tour="workspace-nav"
               >
@@ -235,7 +235,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
 
               {/* Community Board */}
               <button
-                onClick={() => { setActiveFolder(null); setActiveView("community" as any); }}
+                onClick={() => nav("community")}
                 className={`sidebar-item w-full ${activeView === ("community" as any) ? "sidebar-item-active" : ""}`}
               >
                 <Grid size={18} className="shrink-0" />
@@ -245,7 +245,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
               {/* Community Admin — admin only */}
               {isAdmin && (
                 <button
-                  onClick={() => { setActiveFolder(null); setActiveView("community-admin" as any); }}
+                  onClick={() => nav("community-admin")}
                   className={`sidebar-item w-full ${activeView === ("community-admin" as any) ? "sidebar-item-active" : ""}`}
                 >
                   <ShieldCheck size={18} className="shrink-0" />
