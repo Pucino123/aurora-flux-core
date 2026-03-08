@@ -843,37 +843,59 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
             <div className="flex-1 overflow-y-auto px-8 py-6">
               {filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: emptyColor }}>
-                  <AlignLeft size={32} />
-                  <p className="text-sm">No templates in this category yet</p>
+                  {selectedCategory === "Favorites"
+                    ? <><Star size={28} /><p className="text-sm">Star templates to pin them here</p></>
+                    : <><AlignLeft size={32} /><p className="text-sm">No templates in this category yet</p></>
+                  }
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-8">
                   {filtered.map(template => {
                     const isSelected = template.id === selectedTemplateId;
+                    const isFav = favorites.includes(template.id);
                     return (
                       <div
                         key={template.id}
-                        className="flex flex-col items-center gap-3 cursor-pointer"
+                        className="flex flex-col items-center gap-3 cursor-pointer group/card"
                         onClick={() => setSelectedTemplateId(template.id)}
                         onDoubleClick={handleCreate}
                       >
-                        {/* Thumbnail */}
-                        <div
-                          className="transition-all duration-200"
-                          style={{
-                            borderRadius: 8,
-                            overflow: "hidden",
-                            width: 120,
-                            aspectRatio: "1 / 1.4",
-                            boxShadow: isSelected
-                              ? "0 0 0 3px rgba(59,130,246,1), 0 8px 32px rgba(59,130,246,0.3)"
-                              : isDark
-                                ? "0 4px 16px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5)"
-                                : "0 4px 16px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.1)",
-                            transform: isSelected ? "scale(1.05)" : "scale(1)",
-                          }}
-                        >
-                          {template.thumbnail(isDark)}
+                        {/* Thumbnail + star overlay */}
+                        <div className="relative">
+                          <div
+                            className="transition-all duration-200"
+                            style={{
+                              borderRadius: 8,
+                              overflow: "hidden",
+                              width: 120,
+                              aspectRatio: "1 / 1.4",
+                              boxShadow: isSelected
+                                ? "0 0 0 3px rgba(59,130,246,1), 0 8px 32px rgba(59,130,246,0.3)"
+                                : isDark
+                                  ? "0 4px 16px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5)"
+                                  : "0 4px 16px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.1)",
+                              transform: isSelected ? "scale(1.05)" : "scale(1)",
+                            }}
+                          >
+                            {template.thumbnail(isDark)}
+                          </div>
+                          {/* Star button */}
+                          <motion.button
+                            whileTap={{ scale: 0.75 }}
+                            onClick={(e) => toggleFavorite(template.id, e)}
+                            className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                              isFav
+                                ? "opacity-100"
+                                : "opacity-0 group-hover/card:opacity-100"
+                            }`}
+                            style={{
+                              background: isFav ? "rgba(251,191,36,0.9)" : "rgba(0,0,0,0.4)",
+                              backdropFilter: "blur(4px)",
+                              boxShadow: isFav ? "0 0 6px rgba(251,191,36,0.6)" : "none",
+                            }}
+                          >
+                            <Star size={9} fill={isFav ? "white" : "none"} stroke={isFav ? "none" : "white"} strokeWidth={2} />
+                          </motion.button>
                         </div>
                         {/* Label */}
                         <div className="text-center">
