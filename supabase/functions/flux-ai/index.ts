@@ -194,7 +194,7 @@ NEVER generate a "note" for structured requests like savings goals, budgets, or 
 
 async function handlePlan(context: any, apiKey: string) {
   const today = context?.today || new Date().toISOString().split("T")[0];
-  const systemPrompt = `You are a world-class daily planning assistant for Flux, inspired by Motion and Notion AI.
+  const systemPrompt = `You are a world-class daily planning assistant for Dashiii, inspired by Motion and Notion AI.
 
 You are a Proactive Productivity Strategist. You must think before generating.
 
