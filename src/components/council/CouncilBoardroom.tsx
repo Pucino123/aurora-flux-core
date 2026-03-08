@@ -1738,6 +1738,14 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                     <Copy size={11} /> Copy Digest
                   </button>
                   <button
+                    onClick={() => { navigator.clipboard.writeText(notionText); toast.success("Notion-formatted digest copied!"); }}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors"
+                    style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.55)" }}
+                    title="Formatted for Notion with headers, bullets and callout blocks"
+                  >
+                    <FileText size={11} /> Notion
+                  </button>
+                  <button
                     onClick={() => { handleExportPDF(); setShowDigest(false); }}
                     disabled={isExportingPDF}
                     className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white/40 hover:text-white/70 transition-colors"
