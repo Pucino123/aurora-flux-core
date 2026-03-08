@@ -29,6 +29,7 @@ const TaskManagerWidget = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [auraLoading, setAuraLoading] = useState(false);
+  const [rowAuraLoading, setRowAuraLoading] = useState<string | null>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -73,44 +74,38 @@ const TaskManagerWidget = () => {
     setEditingId(null);
   };
 
-  // ── Aura AI: break a task into subtasks ────────────────────────────────
+  // ── Aura AI: shared breakdown helper ─────────────────────────────────────
+  const invokeAuraBreakdown = useCallback(async (title: string): Promise<string[]> => {
+    const response = await supabase.functions.invoke("flux-ai", {
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: `Break this task into 3-5 concrete, actionable subtasks. Reply ONLY with a JSON array of strings, each being one subtask. No explanation, no markdown, just the JSON array. Task: "${title}"`,
+          },
+        ],
+        action: "chat",
+        context: { currentPage: "stream" },
+      },
+    });
+    const raw = response.data?.content || response.data?.message || "";
+    const match = raw.match(/\[[\s\S]*?\]/);
+    if (match) return JSON.parse(match[0]) as string[];
+    return [];
+  }, []);
+
+  // ── New task input breakdown ──────────────────────────────────────────────
   const handleAuraBreakdown = useCallback(async () => {
     const title = newTitle.trim();
     if (!title || auraLoading) return;
     setAuraLoading(true);
-
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await supabase.functions.invoke("flux-ai", {
-        body: {
-          messages: [
-            {
-              role: "user",
-              content: `Break this task into 3-5 concrete, actionable subtasks. Reply ONLY with a JSON array of strings, each being one subtask. No explanation, no markdown, just the JSON array. Task: "${title}"`,
-            },
-          ],
-          action: "chat",
-          context: { currentPage: "stream" },
-        },
-      });
-
-      let subtasks: string[] = [];
-
-      // Try to parse response
-      const raw = response.data?.content || response.data?.message || "";
-      const match = raw.match(/\[[\s\S]*?\]/);
-      if (match) {
-        subtasks = JSON.parse(match[0]);
-      }
-
+      const subtasks = await invokeAuraBreakdown(title);
       if (subtasks.length > 0) {
-        // Create parent task first
         createTask({ title, type: "task", scheduled_date: today });
-        // Create subtasks
         for (const sub of subtasks) {
-          if (typeof sub === "string" && sub.trim()) {
+          if (typeof sub === "string" && sub.trim())
             createTask({ title: `↳ ${sub.trim()}`, type: "task", scheduled_date: today });
-          }
         }
         setNewTitle("");
       }
@@ -120,7 +115,27 @@ const TaskManagerWidget = () => {
       setAuraLoading(false);
       inputRef.current?.focus();
     }
-  }, [newTitle, auraLoading, createTask, today]);
+  }, [newTitle, auraLoading, createTask, today, invokeAuraBreakdown]);
+
+  // ── Existing task row breakdown ───────────────────────────────────────────
+  const handleRowAuraBreakdown = useCallback(async (taskId: string, taskTitle: string) => {
+    if (rowAuraLoading) return;
+    setRowAuraLoading(taskId);
+    try {
+      const subtasks = await invokeAuraBreakdown(taskTitle);
+      if (subtasks.length > 0) {
+        for (const sub of subtasks) {
+          if (typeof sub === "string" && sub.trim())
+            createTask({ title: `↳ ${sub.trim()}`, type: "task", scheduled_date: today });
+        }
+        setEditingId(null);
+      }
+    } catch (err) {
+      console.error("Row Aura breakdown failed:", err);
+    } finally {
+      setRowAuraLoading(null);
+    }
+  }, [rowAuraLoading, invokeAuraBreakdown, createTask, today]);
 
   const cfg = SMART_LISTS.find(l => l.key === activeList)!;
 
@@ -207,14 +222,41 @@ const TaskManagerWidget = () => {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   {editingId === task.id ? (
-                    <input
-                      ref={editRef}
-                      value={editValue}
-                      onChange={e => setEditValue(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter") saveEdit(task.id); if (e.key === "Escape") setEditingId(null); }}
-                      onBlur={() => saveEdit(task.id)}
-                      className="w-full bg-white/5 border border-emerald-500/50 rounded px-2 py-0.5 outline-none text-white/90 text-[12px]"
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        ref={editRef}
+                        value={editValue}
+                        onChange={e => setEditValue(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") saveEdit(task.id); if (e.key === "Escape") setEditingId(null); }}
+                        onBlur={e => {
+                          // Don't blur-save if the ✨ button was clicked
+                          if ((e.relatedTarget as HTMLElement)?.dataset?.auraBtn) return;
+                          saveEdit(task.id);
+                        }}
+                        className="flex-1 bg-white/5 border border-emerald-500/50 rounded px-2 py-0.5 outline-none text-white/90 text-[12px]"
+                      />
+                      {/* Per-row Aura ✨ breakdown button */}
+                      <motion.button
+                        data-aura-btn="1"
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.85 }}
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => handleRowAuraBreakdown(task.id, editValue || task.title)}
+                        disabled={rowAuraLoading === task.id}
+                        title="Ask Aura to break this task into subtasks"
+                        className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(139,92,246,0.5), rgba(16,185,129,0.5))",
+                          boxShadow: "0 0 8px rgba(139,92,246,0.6)",
+                          border: "0.5px solid rgba(139,92,246,0.4)",
+                        }}
+                      >
+                        {rowAuraLoading === task.id
+                          ? <Loader2 size={9} className="text-violet-300 animate-spin" />
+                          : <Sparkles size={9} className="text-violet-300" />
+                        }
+                      </motion.button>
+                    </div>
                   ) : (
                     <p className={`text-[12px] leading-tight transition-all ${task.done ? "line-through decoration-slate-400/60 text-white/30" : "text-white/80"}`}>
                       {task.title}
