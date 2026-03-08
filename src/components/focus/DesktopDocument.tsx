@@ -255,17 +255,31 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
           )}
         </div>
 
-        {/* Title — click to inline-rename (macOS style) */}
+        {/* Title — double-click to inline-rename (macOS style) */}
         <div className="relative z-10 w-full">
           {renaming ? (
-            <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={commitRename}
-              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenaming(false); }}
+            <input
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === "Enter") { e.preventDefault(); commitRename(); }
+                if (e.key === "Escape") setRenaming(false);
+              }}
+              onFocus={(e) => e.target.select()}
               className="w-full text-center bg-transparent outline-none text-foreground ring-1 ring-primary/50 rounded px-1 transition-all"
-              style={{ fontSize: `${titleSize}px` }} autoFocus onClick={(e) => e.stopPropagation()} />
-          ) : (
-            <span className="font-medium text-foreground/80 text-center leading-tight truncate max-w-[80px] block group-hover:text-foreground transition-colors"
               style={{ fontSize: `${titleSize}px` }}
-              onClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setRenameValue(doc.title); setRenaming(true); } }}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span
+              className="font-medium text-foreground/80 text-center leading-tight truncate max-w-[80px] block group-hover:text-foreground transition-colors"
+              style={{ fontSize: `${titleSize}px` }}
+              onDoubleClick={(e) => { e.stopPropagation(); setRenameValue(doc.title); setRenaming(true); }}
             >
               {doc.title}
             </span>
