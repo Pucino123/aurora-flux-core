@@ -223,6 +223,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const handleHeaderPointerUp = useCallback((_e: React.PointerEvent) => {
     if (!dragging.current) return;
     dragging.current = false;
+    setIsDragging(false);
     setGuides([]);
     if (snapZone) setWindowLayout(win.id, snapZone === "left" ? "split-left" : "split-right");
     else updateWindowPosition(win.id, rawX.current, rawY.current);
