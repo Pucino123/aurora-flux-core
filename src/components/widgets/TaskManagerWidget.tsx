@@ -21,7 +21,7 @@ const SMART_LISTS = [
 ];
 
 const TaskManagerWidget = () => {
-  const { tasks: fluxTasks, updateTask, addTask } = useFlux();
+  const { tasks: fluxTasks, updateTask, createTask } = useFlux();
   const today = format(new Date(), "yyyy-MM-dd");
 
   const [newTitle, setNewTitle] = useState("");
@@ -57,7 +57,7 @@ const TaskManagerWidget = () => {
 
   const handleAdd = () => {
     if (!newTitle.trim()) return;
-    addTask({
+    createTask({
       title: newTitle.trim(),
       type: "task",
       scheduled_date: today,
