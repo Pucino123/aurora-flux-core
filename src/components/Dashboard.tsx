@@ -14,7 +14,7 @@ import ProjectsOverview from "./ProjectsOverview";
 import DocumentsView from "./DocumentsView";
 import SettingsView from "./SettingsView";
 import CreateFolderModal, { suggestIcon } from "./CreateFolderModal";
-import CommHub from "./CommHub";
+
 import MultitaskingView from "./MultitaskingView";
 import CommunityBoardView from "./CommunityBoardView";
 import CommunityAdminView from "./CommunityAdminView";
@@ -172,7 +172,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       )}
 
       <MobileNav />
-      {effectiveView !== "focus" && effectiveView !== "stream" && <CommHub />}
+      
 
       {/* Global Modals */}
       <UpgradeModal />
