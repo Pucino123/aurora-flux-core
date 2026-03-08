@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Plus, Minus, Check, Sparkles, Trash2, Loader2, CalendarDays, ArrowUpDown, Pencil, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Plus, Minus, Check, Sparkles, Trash2, Loader2, CalendarDays, ArrowUpDown, TrendingUp, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +52,19 @@ function deadlineBadge(deadline: string | null | undefined): { label: string; ur
   if (days === 0) return { label: "Due today",  urgent: true  };
   if (days === 1) return { label: "1 day left", urgent: true  };
   return { label: `${days} days left`, urgent: days <= 7 };
+}
+
+/** Monthly deposit needed to reach target by deadline */
+function savingsForecast(current: number, target: number, deadline: string | null | undefined): string | null {
+  if (!deadline) return null;
+  const remaining = target - current;
+  if (remaining <= 0) return null;
+  const daysLeft = differenceInDays(parseISO(deadline), new Date());
+  if (daysLeft <= 0) return null;
+  const monthsLeft = daysLeft / 30.44;
+  if (monthsLeft < 0.1) return null;
+  const perMonth = remaining / monthsLeft;
+  return fmt(Math.ceil(perMonth));
 }
 
 /** Sort goals by deadline: soonest first, no-deadline last */
@@ -182,6 +196,84 @@ function MilestoneBadges({ pct, goalId }: { pct: number; goalId: string }) {
   );
 }
 
+// ── Full-screen goal celebration overlay ──────────────────────────────────
+function GoalCelebrationOverlay({ goal, onDone }: { goal: SavingsGoal; onDone: () => void }) {
+  const COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#f59e0b", "#f472b6", "#fb923c"];
+  const pieces = Array.from({ length: 60 }, (_, i) => ({
+    id: i,
+    color: COLORS[i % COLORS.length],
+    x: (Math.random() - 0.5) * (window.innerWidth * 0.9),
+    y: -(Math.random() * window.innerHeight * 0.8 + 100),
+    rotate: Math.random() * 1080 - 540,
+    size: 5 + Math.random() * 7,
+    delay: Math.random() * 0.3,
+  }));
+
+  useEffect(() => {
+    const t = setTimeout(onDone, 3200);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return createPortal(
+    <motion.div
+      className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      {/* Dark backdrop */}
+      <motion.div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      />
+      {/* Confetti */}
+      <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
+        {pieces.map(p => (
+          <motion.div
+            key={p.id}
+            className="absolute rounded-sm"
+            style={{ width: p.size, height: p.size, background: p.color, top: "50%", left: "50%" }}
+            initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
+            animate={{ x: p.x, y: p.y, opacity: 0, rotate: p.rotate }}
+            transition={{ duration: 1.4 + Math.random() * 0.6, delay: p.delay, ease: "easeOut" }}
+          />
+        ))}
+      </div>
+      {/* Card */}
+      <motion.div
+        className="relative z-10 flex flex-col items-center gap-4 text-center px-8"
+        initial={{ scale: 0.6, opacity: 0, y: 30 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.8, opacity: 0, y: -20 }}
+        transition={{ type: "spring", stiffness: 280, damping: 22, delay: 0.1 }}
+      >
+        <motion.span
+          className="text-7xl leading-none"
+          animate={{ rotate: [0, -15, 15, -10, 10, 0], scale: [1, 1.2, 1] }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+        >
+          {goal.emoji}
+        </motion.span>
+        <div>
+          <p className="text-3xl font-bold text-white mb-1">Goal Achieved!</p>
+          <p className="text-white/60 text-base">{goal.name}</p>
+        </div>
+        <motion.div
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-400/20 border border-emerald-400/30 text-emerald-300 font-semibold text-sm"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", delay: 0.5 }}
+        >
+          🏆 100% Complete
+        </motion.div>
+      </motion.div>
+    </motion.div>,
+    document.body
+  );
+}
+
 // ── Main widget ─────────────────────────────────────────────────────────────
 const SavingsWidget = () => {
   const { user } = useAuth();
@@ -198,6 +290,10 @@ const SavingsWidget = () => {
   const [pulseId, setPulseId]           = useState<string | null>(null);
   const [saving, setSaving]             = useState(false);
   const [sortedByDeadline, setSortedByDeadline] = useState(false);
+  // id of goal to show 100% celebration for
+  const [celebratingGoal, setCelebratingGoal] = useState<SavingsGoal | null>(null);
+  // track which goals we've already celebrated (persisted per session)
+  const celebratedRef = useRef<Set<string>>(new Set());
 
   // ── Load ──────────────────────────────────────────────────────────────────
   const loadGoals = useCallback(async () => {
@@ -247,10 +343,17 @@ const SavingsWidget = () => {
     const goal = goals.find(g => g.id === goalId);
     if (!goal) return;
     const newAmount = Math.max(0, goal.current + (inputMode === "deposit" ? val : -val));
+    const wasComplete = goal.current >= goal.target;
+    const nowComplete = newAmount >= goal.target;
     setGoals(prev => prev.map(g => g.id === goalId ? { ...g, current: newAmount } : g));
     setPulseId(goalId); setTimeout(() => setPulseId(null), 600);
     setActiveCard(null); setInputMode(null); setInputVal("");
     if (user) await supabase.from("goals").update({ current_amount: newAmount }).eq("id", goalId).eq("user_id", user.id);
+    // Trigger 100% celebration only on first completion crossing
+    if (!wasComplete && nowComplete && !celebratedRef.current.has(goalId)) {
+      celebratedRef.current.add(goalId);
+      setCelebratingGoal({ ...goal, current: newAmount });
+    }
   };
 
   // ── Rename ────────────────────────────────────────────────────────────────
@@ -522,7 +625,7 @@ const SavingsWidget = () => {
                   )}
 
                   {/* Progress bar */}
-                  <div className="h-1.5 rounded-full bg-white/8 overflow-hidden mb-2">
+                  <div className="h-1.5 rounded-full bg-white/8 overflow-hidden mb-1">
                     <motion.div
                       className={`h-full rounded-full bg-gradient-to-r ${gradClass}`}
                       initial={{ width: 0 }}
@@ -530,6 +633,19 @@ const SavingsWidget = () => {
                       transition={{ duration: 0.6, ease: "easeOut" }}
                     />
                   </div>
+
+                  {/* Savings forecast */}
+                  {(() => {
+                    const forecast = savingsForecast(goal.current, goal.target, goal.deadline);
+                    if (!forecast || done) return null;
+                    return (
+                      <p className="flex items-center gap-1 text-[9px] text-white/30 mb-2">
+                        <TrendingUp size={8} className="text-violet-300/50 shrink-0" />
+                        <span className="text-violet-300/70 font-medium">{forecast}/mo</span>
+                        <span>needed to reach goal</span>
+                      </p>
+                    );
+                  })()}
 
                   {/* Action buttons */}
                   <div className="flex items-center gap-1.5">
@@ -599,6 +715,16 @@ const SavingsWidget = () => {
           </span>
         </div>
       )}
+
+      {/* 100% Goal celebration overlay */}
+      <AnimatePresence>
+        {celebratingGoal && (
+          <GoalCelebrationOverlay
+            goal={celebratingGoal}
+            onDone={() => setCelebratingGoal(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

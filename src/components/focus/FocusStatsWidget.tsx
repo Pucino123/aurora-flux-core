@@ -119,17 +119,14 @@ function ConfettiBurst() {
 
 // ── 4-week sparkline ───────────────────────────────────────────────────────
 function WeeklyHistorySparkline({ dailyLog }: { dailyLog: Record<string, number> }) {
-  // Build 4 weeks of data (current + 3 prior)
   const weeks = [-3, -2, -1, 0].map(offset => {
     const dates = getWeekDates(offset);
     const total = dates.reduce((sum, d) => sum + (dailyLog[d] ?? 0), 0);
     const hrs   = +(total / 60).toFixed(1);
     return { label: weekLabel(offset), hrs, offset };
   });
-
   const maxHrs = Math.max(...weeks.map(w => w.hrs), 0.1);
-  const SPARKLINE_H = 32; // px height for bars
-
+  const SPARKLINE_H = 28;
   return (
     <div className="shrink-0">
       <p className="text-[7px] text-white/15 uppercase tracking-wider mb-1.5 flex items-center gap-1">
@@ -151,15 +148,105 @@ function WeeklyHistorySparkline({ dailyLog }: { dailyLog: Record<string, number>
                 animate={{ height: `${barH}px` }}
                 transition={{ duration: 0.5, delay: i * 0.07, ease: "easeOut" }}
               />
-              <span
-                className={`text-[6px] leading-none text-center ${isCurrent ? "text-violet-300" : "text-white/20"}`}
-                style={{ fontSize: "6px" }}
-              >
+              <span className={`leading-none text-center ${isCurrent ? "text-violet-300" : "text-white/20"}`} style={{ fontSize: "6px" }}>
                 {i === 3 ? "Now" : i === 2 ? "-1w" : i === 1 ? "-2w" : "-3w"}
               </span>
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ── 3-month streak heatmap ─────────────────────────────────────────────────
+function StreakHeatmap({ dailyLog }: { dailyLog: Record<string, number> }) {
+  // Build last 91 days (13 weeks)
+  const days = Array.from({ length: 91 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (90 - i));
+    return d.toISOString().slice(0, 10);
+  });
+
+  // Group into weeks of 7 (oldest first, pad start to align Mon)
+  const firstDay = new Date(days[0]);
+  const startPad = (firstDay.getDay() + 6) % 7; // Mon=0
+  const padded: (string | null)[] = [...Array(startPad).fill(null), ...days];
+  // chunk into weeks
+  const weeks: (string | null)[][] = [];
+  for (let i = 0; i < padded.length; i += 7) weeks.push(padded.slice(i, i + 7));
+
+  const today = getToday();
+
+  const cellColor = (dateStr: string | null) => {
+    if (!dateStr) return "bg-transparent";
+    const mins = dailyLog[dateStr] ?? 0;
+    if (dateStr === today) {
+      if (mins === 0) return "bg-violet-500/20 ring-1 ring-violet-400/40";
+      return "bg-violet-400 ring-1 ring-violet-300/50";
+    }
+    if (mins === 0)   return "bg-white/[0.04]";
+    if (mins < 30)    return "bg-violet-400/25";
+    if (mins < 120)   return "bg-violet-400/55";
+    return "bg-violet-400/90";
+  };
+
+  // Month labels – find first occurrence of each new month in the day list
+  const monthLabels: { col: number; label: string }[] = [];
+  weeks.forEach((week, wi) => {
+    week.forEach((d, di) => {
+      if (!d) return;
+      const date = new Date(d);
+      if (date.getDate() <= 7) {
+        const label = date.toLocaleDateString("en-US", { month: "short" });
+        if (!monthLabels.find(m => m.label === label)) {
+          monthLabels.push({ col: wi, label });
+        }
+      }
+    });
+  });
+
+  return (
+    <div className="shrink-0">
+      <p className="text-[7px] text-white/15 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+        <History size={7} className="text-white/20" /> 3-Month Activity
+      </p>
+      {/* Month row */}
+      <div className="relative flex gap-[2px] mb-0.5 h-3">
+        {weeks.map((_, wi) => {
+          const ml = monthLabels.find(m => m.col === wi);
+          return (
+            <div key={wi} className="flex-none" style={{ width: 8 }}>
+              {ml && <span className="text-white/20 absolute" style={{ fontSize: "6px" }}>{ml.label}</span>}
+            </div>
+          );
+        })}
+      </div>
+      {/* Grid: columns = weeks, rows = days Mon–Sun */}
+      <div className="flex gap-[2px]">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="flex flex-col gap-[2px]">
+            {week.map((d, di) => (
+              <motion.div
+                key={di}
+                className={`rounded-[1px] ${cellColor(d)}`}
+                style={{ width: 8, height: 8 }}
+                title={d ? `${d}: ${dailyLog[d] ?? 0} min` : undefined}
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: (wi * 7 + di) * 0.002, duration: 0.15 }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      {/* Legend */}
+      <div className="flex items-center gap-1 mt-1">
+        <span className="text-white/15" style={{ fontSize: "6px" }}>Less</span>
+        {["bg-white/[0.04]", "bg-violet-400/25", "bg-violet-400/55", "bg-violet-400/90"].map((c, i) => (
+          <div key={i} className={`rounded-[1px] ${c}`} style={{ width: 8, height: 8 }} />
+        ))}
+        <span className="text-white/15" style={{ fontSize: "6px" }}>More</span>
       </div>
     </div>
   );
@@ -576,6 +663,9 @@ const FocusStatsWidget = () => {
 
             {/* 4-week history sparkline */}
             <WeeklyHistorySparkline dailyLog={dailyLog} />
+
+            {/* 3-month heatmap */}
+            <StreakHeatmap dailyLog={dailyLog} />
           </div>
 
           <button
