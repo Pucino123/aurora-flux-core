@@ -334,11 +334,18 @@ const FocusContent = () => {
     if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
   }, [activePageIndex, dashboardPages.length, goToPage]);
 
-  // Arrow key navigation + Cmd/Ctrl+T for new page
+  // Arrow key navigation + Cmd/Ctrl+T for new page + Cmd/Ctrl+W to close + Cmd/Ctrl+? for cheat sheet
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase();
       const isEditing = tag === "input" || tag === "textarea" || (document.activeElement as HTMLElement)?.isContentEditable;
+
+      // Cmd/Ctrl+? → toggle shortcuts cheat sheet
+      if ((e.metaKey || e.ctrlKey) && e.key === "?") {
+        e.preventDefault();
+        setShowShortcuts(v => !v);
+        return;
+      }
 
       // Cmd/Ctrl+T → add new page (intercept before browser tab open)
       if ((e.metaKey || e.ctrlKey) && e.key === "t") {
@@ -348,6 +355,13 @@ const FocusContent = () => {
         setPageDir(1);
         setActivePageIndex(dashboardPages.length);
         toast.success(`Page ${dashboardPages.length + 1} added`, { description: "⌘T to add more pages" });
+        return;
+      }
+
+      // Cmd/Ctrl+W → delete current page with undo
+      if ((e.metaKey || e.ctrlKey) && e.key === "w") {
+        e.preventDefault();
+        deletePage(activePageIndex);
         return;
       }
 
@@ -362,7 +376,7 @@ const FocusContent = () => {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activePageIndex, dashboardPages.length, goToPage, setPages]);
+  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage]);
 
   // Dot drag-to-reorder handlers
   const handleDotDragStart = useCallback((i: number) => {
