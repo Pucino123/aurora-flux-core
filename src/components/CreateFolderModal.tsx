@@ -135,7 +135,7 @@ interface CreateFolderModalProps {
   onCreate: (data: { title: string; color: string | null; icon: string; subfolders: string[] }) => void;
 }
 
-const CreateFolderModal = ({ open, onClose, onCreate }: CreateFolderModalProps) => {
+const CreateFolderModal = forwardRef<HTMLDivElement, CreateFolderModalProps>(function CreateFolderModal({ open, onClose, onCreate }, _ref) {
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedIcon, setSelectedIcon] = useState<string>("Folder");
