@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import SparksCheckoutModal from "@/components/billing/SparksCheckoutModal";
+import { useAvatar } from "@/context/AvatarContext";
 
 type Tab = "account" | "integrations" | "sparks" | "appearance";
 
