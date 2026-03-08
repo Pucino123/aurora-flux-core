@@ -565,7 +565,7 @@ const TheCouncil = () => {
                           className="w-full mt-2 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-all council-submit-btn"
                         >
                           {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                          Indsend
+                          Indsend <span className="opacity-60 font-normal">−5 ✨</span>
                         </motion.button>
                       </div>
 
