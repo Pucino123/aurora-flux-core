@@ -11,6 +11,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { FOLDER_ICONS } from "./CreateFolderModal";
 import { MOCK_EMAILS } from "./inbox/MockEmailData";
 import { isToday, parseISO } from "date-fns";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 const FOLDER_COLORS = [
   { name: "Blue", value: "hsl(var(--aurora-blue))" },
