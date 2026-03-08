@@ -133,6 +133,7 @@ const FocusContent = () => {
     try { const s = loadPaginationSettings(); return s.pillPosition ?? null; } catch { return null; }
   });
   const [isDraggingPill, setIsDraggingPill] = useState(false);
+  const [pillBouncing, setPillBouncing] = useState(false);
   // Cloud sync debounce
   const cloudSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -359,21 +360,21 @@ const FocusContent = () => {
   }, []);
 
   // Pill drag-to-reposition (pointer events so it works on touch too)
+  // Only active in Build mode
   const handlePillPointerDown = useCallback((e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button, input')) return; // don't drag on interactive children
+    if (systemMode !== "build") return; // drag only in build mode
+    if ((e.target as HTMLElement).closest('button, input')) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    // Always use the pill's actual rendered bounding rect as the source of truth
     const rect = pillRef.current?.getBoundingClientRect();
     if (!rect) return;
-    // Use actual rendered top-left from DOM — this is always correct regardless of CSS positioning
     const currentX = rect.left;
     const currentY = rect.top;
     pillDragOrigin.current = { mx: e.clientX, my: e.clientY, px: currentX, py: currentY };
-    // Immediately lock to absolute position so there's no jump
     setPillPos({ x: currentX, y: currentY });
     setIsDraggingPill(true);
-  }, []);
+    setPillBouncing(false);
+  }, [systemMode]);
 
   const handlePillPointerMove = useCallback((e: React.PointerEvent) => {
     if (!pillDragOrigin.current) return;
@@ -388,8 +389,12 @@ const FocusContent = () => {
   }, []);
 
   const handlePillPointerUp = useCallback(() => {
+    if (!pillDragOrigin.current) return;
     pillDragOrigin.current = null;
     setIsDraggingPill(false);
+    // Trigger spring bounce animation on drop
+    setPillBouncing(true);
+    setTimeout(() => setPillBouncing(false), 500);
   }, []);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
@@ -1169,15 +1174,27 @@ const FocusContent = () => {
         }}
       />
 
-      {/* ── iOS-style Dashboard Pagination ── draggable pill */}
+      {/* ── iOS-style Dashboard Pagination ── draggable pill (drag only in build mode) */}
       {paginationSettings.showPagination && (
-        <div
+        <motion.div
           ref={pillRef}
           className="fixed z-[9999] flex flex-col items-center gap-1.5"
+          animate={pillBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
+          transition={pillBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
           style={
             pillPos
-              ? { left: pillPos.x, top: pillPos.y, transform: "none", cursor: isDraggingPill ? "grabbing" : "grab" }
-              : { left: "50%", bottom: "88px", transform: "translateX(-50%)", cursor: isDraggingPill ? "grabbing" : "grab" }
+              ? {
+                  left: pillPos.x,
+                  top: pillPos.y,
+                  transform: "none",
+                  cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
+                }
+              : {
+                  left: "50%",
+                  bottom: "88px",
+                  transform: "translateX(-50%)",
+                  cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
+                }
           }
           onPointerDown={handlePillPointerDown}
           onPointerMove={handlePillPointerMove}
@@ -1304,18 +1321,19 @@ const FocusContent = () => {
               background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
+              border: systemMode === "build" ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
+              boxShadow: isDraggingPill
+                ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
+                : "0 8px 32px rgba(0,0,0,0.55)",
             }}
           >
-            {/* ← → keyboard hint — visible on hover when no dot is hovered */}
+            {/* ← → keyboard hint — only in focus mode, visible on group hover when no dot hovered */}
             <AnimatePresence>
-              {hoverDotIdx === null && dashboardPages.length > 1 && (
+              {systemMode !== "build" && hoverDotIdx === null && dashboardPages.length > 1 && (
                 <motion.div
                   key="key-hint"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 0, y: 0 }}
-                  whileHover={{ opacity: 1 }}
                   exit={{ opacity: 0, y: 4 }}
                   transition={{ duration: 0.15 }}
                   className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -1326,6 +1344,25 @@ const FocusContent = () => {
                     <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">→</span>
                   </div>
                   <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.85)", borderRight: "1px solid rgba(255,255,255,0.1)", borderBottom: "1px solid rgba(255,255,255,0.1)" }} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {/* Build mode drag hint — shows on pill hover */}
+            <AnimatePresence>
+              {systemMode === "build" && !isDraggingPill && hoverDotIdx === null && (
+                <motion.div
+                  key="build-drag-hint"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 0, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+                >
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: "rgba(10,8,20,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
+                    <span className="text-[10px] text-white/40">✥ drag pill</span>
+                    <span className="text-[9px] text-white/20">·</span>
+                    <span className="text-[10px] text-white/40">grab dot to reorder</span>
+                  </div>
+                  <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.88)", borderRight: "1px solid rgba(255,255,255,0.15)", borderBottom: "1px solid rgba(255,255,255,0.15)" }} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1426,18 +1463,19 @@ const FocusContent = () => {
                 onTouchEnd={handleDotTouchEnd}
                 onMouseEnter={() => setHoverDotIdx(i)}
                 onMouseLeave={() => setHoverDotIdx(null)}
-                draggable
-                onDragStart={() => handleDotDragStart(i)}
-                onDragOver={(e) => handleDotDragOver(i, e)}
-                onDrop={() => handleDotDrop(i)}
+                draggable={systemMode === "build"}
+                onDragStart={() => systemMode === "build" && handleDotDragStart(i)}
+                onDragOver={(e) => systemMode === "build" && handleDotDragOver(i, e)}
+                onDrop={() => systemMode === "build" && handleDotDrop(i)}
                 onDragEnd={() => { setDraggingDotIdx(null); setDragOverIdx(null); }}
                 onPointerDown={e => e.stopPropagation()}
-                className="transition-all duration-300 flex-shrink-0 cursor-grab active:cursor-grabbing"
-                title={page.label || `Page ${i + 1}`}
+                className="transition-all duration-300 flex-shrink-0"
+                title={systemMode === "build" ? `${page.label || `Page ${i + 1}`} — drag to reorder` : page.label || `Page ${i + 1}`}
                 style={{
                   width: i === activePageIndex ? 24 : 8,
                   height: 8,
                   borderRadius: 9999,
+                  cursor: systemMode === "build" ? (draggingDotIdx === i ? "grabbing" : "grab") : "pointer",
                   background: draggingDotIdx === i
                     ? "rgba(255,255,255,0.15)"
                     : dragOverIdx === i
@@ -1466,7 +1504,7 @@ const FocusContent = () => {
               <Plus size={14} strokeWidth={2.5} />
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Build mode: show pagination button when hidden */}
