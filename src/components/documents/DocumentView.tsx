@@ -104,8 +104,8 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const [zoom, setZoom] = useState(100);
 
   // Layout canvas mode: if doc.content has an entities array, OR canvasMode is toggled on
-  const [canvasMode, setCanvasMode] = useState(false);
-  const isCanvas = canvasMode || Array.isArray((doc.content as any)?.entities);
+  const [canvasMode, setCanvasMode] = useState(() => Array.isArray((doc.content as any)?.entities));
+  const isCanvas = canvasMode;
   const canvasEntities: CanvasEntity[] = (doc.content as any)?.entities || [];
   const handleCanvasChange = useCallback((entities: CanvasEntity[]) => {
     onUpdate(doc.id, { content: { ...(doc.content as any), entities } });
