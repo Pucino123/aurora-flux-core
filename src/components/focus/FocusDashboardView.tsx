@@ -1625,6 +1625,51 @@ const FocusContent = () => {
           </motion.div>
         </>
       )}
+
+      {/* ── Keyboard Shortcuts Cheat Sheet (Cmd+?) ── */}
+      <AnimatePresence>
+        {showShortcuts && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[10002]"
+              style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+              onClick={() => setShowShortcuts(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 16 }}
+              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed z-[10003] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl px-6 py-5 min-w-[300px]"
+              style={{ background: "rgba(10,8,20,0.96)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.14)", boxShadow: "0 24px 64px rgba(0,0,0,0.7)" }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Keyboard Shortcuts</p>
+                <button onClick={() => setShowShortcuts(false)} className="text-white/30 hover:text-white/70 text-lg leading-none">×</button>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {[
+                  { keys: ["←", "→"], label: "Navigate pages" },
+                  { keys: ["⌘T"], label: "New page" },
+                  { keys: ["⌘W"], label: "Close current page (Undo available)" },
+                  { keys: ["⌘?"], label: "Toggle this cheat sheet" },
+                ].map(({ keys, label }) => (
+                  <div key={label} className="flex items-center justify-between gap-6">
+                    <span className="text-[12px] text-white/60">{label}</span>
+                    <div className="flex items-center gap-1">
+                      {keys.map(k => (
+                        <kbd key={k} className="px-2 py-0.5 rounded-md text-[11px] font-mono text-white/70" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.18)" }}>{k}</kbd>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[9px] text-white/20 text-center mt-4">Windows: Ctrl instead of ⌘</p>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
     </StyleEditorProvider>
   );
