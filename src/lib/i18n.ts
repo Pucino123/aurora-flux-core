@@ -329,15 +329,15 @@ const da: Record<string, string> = {
 };
 
 const en: Record<string, string> = {
-  "app.name": "Flux",
+  "app.name": "Dashiii",
   "app.tagline": "Plan, track, and accomplish your goals — effortlessly",
   "app.headline": "What do you want to achieve?",
   "app.hint": "Press Enter to start planning · Cmd+K for quick actions",
-  "app.pill": "New: Introducing Flux Intelligence →",
+  "app.pill": "New: Introducing Dashiii Intelligence →",
   "app.signin": "Sign in",
   "app.plan": "Free Plan",
-  "auth.join": "Join Flux.",
-  "auth.welcome": "Welcome back to Flux.",
+  "auth.join": "Join Dashiii.",
+  "auth.welcome": "Welcome back to Dashiii.",
   "auth.create_desc": "Create your account to get started",
   "auth.signin_desc": "Sign in to continue where you left off",
   "auth.display_name": "Display Name",
