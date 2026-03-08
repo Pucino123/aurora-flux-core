@@ -45,8 +45,8 @@ const Auth = () => {
 
   // Apple-style dark: very dark desaturated overlay over blurred bg
   const bgOverlay = isDark
-    ? "rgba(10,10,14,0.72)"
-    : "rgba(255,255,255,0.10)";
+    ? "rgba(4,2,10,0.38)"
+    : "rgba(10,8,30,0.18)";
 
   // Card glass
   const cardBg = isDark
