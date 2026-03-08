@@ -69,6 +69,22 @@ interface EditorProps {
 }
 
 /* ─── Text Editor ─── */
+// ── Slash Command palette config ──
+const SLASH_COMMANDS = [
+  { icon: "H1", label: "Heading 1", desc: "Large section header", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "h1") },
+  { icon: "H2", label: "Heading 2", desc: "Medium section header", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "h2") },
+  { icon: "H3", label: "Heading 3", desc: "Small section header", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "h3") },
+  { icon: "•", label: "Bullet List", desc: "Unordered list", action: (exec: (c: string, v?: string) => void) => exec("insertUnorderedList") },
+  { icon: "1.", label: "Numbered List", desc: "Ordered numbered list", action: (exec: (c: string, v?: string) => void) => exec("insertOrderedList") },
+  { icon: '❝', label: "Quote", desc: "Block quote for citations", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "blockquote") },
+  { icon: "</>", label: "Code Block", desc: "Monospace code formatting", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "pre") },
+  { icon: "—", label: "Divider", desc: "Horizontal rule separator", action: (exec: (c: string, v?: string) => void) => exec("insertHorizontalRule") },
+  { icon: "✨", label: "Ask Aura", desc: "AI writes into your document", action: (_exec: (c: string, v?: string) => void, editorRef: React.RefObject<HTMLDivElement>) => {
+    window.dispatchEvent(new CustomEvent("aura:open-panel"));
+    editorRef.current?.blur();
+  }},
+];
+
 const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode, splitViewButton }: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
@@ -79,6 +95,12 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const streamCancelRef = useRef<(() => void) | null>(null);
   const streamFinishRef = useRef<(() => void) | null>(null);
   const lm = lightMode;
+  // Slash commands
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashPos, setSlashPos] = useState<{ top: number; left: number } | null>(null);
+  const slashRangeRef = useRef<Range | null>(null);
 
   useEffect(() => {
     if (editorRef.current && !initialized.current) {
