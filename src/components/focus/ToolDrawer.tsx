@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2, GripHorizontal } from "lucide-react";
+import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2, GripHorizontal, Palette, SlidersHorizontal } from "lucide-react";
 import { useFocusStore, SystemMode } from "@/context/FocusContext";
 import { AnimatePresence, motion } from "framer-motion";
 import FocusReportModal from "./FocusReportModal";
 import CollabMessagesModal from "./CollabMessagesModal";
 import { getSuggestedWidgets } from "@/hooks/useWidgetIntelligence";
 import { useTeamChat } from "@/hooks/useTeamChat";
+import { Slider } from "@/components/ui/slider";
 
 const TOOL_CATEGORIES = [
   {
@@ -56,6 +57,27 @@ const MODES: { key: SystemMode; label: string; icon: any; desc: string }[] = [
 ];
 
 const TOOLBAR_POS_KEY = "flux-toolbar-pos";
+const TOOLBAR_STYLE_KEY = "flux-toolbar-style";
+
+interface ToolbarStyle {
+  bgOpacity: number;       // 0–100
+  blurAmount: number;      // 0–40
+  borderOpacity: number;   // 0–100
+  borderRadius: number;    // 0–50 (px)
+  borderWidth: number;     // 0–4
+  borderColor: string;     // hex
+  textOpacity: number;     // 0–100
+}
+
+const DEFAULT_TOOLBAR_STYLE: ToolbarStyle = {
+  bgOpacity: 10,
+  blurAmount: 16,
+  borderOpacity: 20,
+  borderRadius: 50,
+  borderWidth: 1,
+  borderColor: "#ffffff",
+  textOpacity: 80,
+};
 
 function loadToolbarPos(): { x: number; y: number } | null {
   try {
@@ -66,6 +88,138 @@ function loadToolbarPos(): { x: number; y: number } | null {
 function saveToolbarPos(pos: { x: number; y: number }) {
   localStorage.setItem(TOOLBAR_POS_KEY, JSON.stringify(pos));
 }
+
+function loadToolbarStyle(): ToolbarStyle {
+  try {
+    const raw = localStorage.getItem(TOOLBAR_STYLE_KEY);
+    return raw ? { ...DEFAULT_TOOLBAR_STYLE, ...JSON.parse(raw) } : DEFAULT_TOOLBAR_STYLE;
+  } catch { return DEFAULT_TOOLBAR_STYLE; }
+}
+function saveToolbarStyle(s: ToolbarStyle) {
+  localStorage.setItem(TOOLBAR_STYLE_KEY, JSON.stringify(s));
+}
+
+const BORDER_RADIUS_PRESETS = [
+  { label: "Soft", value: 12 },
+  { label: "Round", value: 24 },
+  { label: "Pill", value: 50 },
+];
+
+const BORDER_STYLES_LIST = [
+  { label: "None", value: 0 },
+  { label: "Thin", value: 1 },
+  { label: "Med", value: 2 },
+  { label: "Bold", value: 3 },
+];
+
+const SWATCH_COLORS = ["#ffffff", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc", "#fca5a5"];
+
+// ── Style panel ──────────────────────────────────────────────────────
+const ToolbarStylePanel = ({ style, onUpdate, onReset, onClose }: {
+  style: ToolbarStyle;
+  onUpdate: (patch: Partial<ToolbarStyle>) => void;
+  onReset: () => void;
+  onClose: () => void;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.92, y: 8 }}
+    animate={{ opacity: 1, scale: 1, y: 0 }}
+    exit={{ opacity: 0, scale: 0.92, y: 8 }}
+    transition={{ type: "spring", stiffness: 420, damping: 30 }}
+    className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-72 rounded-2xl p-4 shadow-2xl z-[10200]"
+    style={{ background: "rgba(18,18,20,0.92)", backdropFilter: "blur(48px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    onPointerDown={e => e.stopPropagation()}
+  >
+    {/* Header */}
+    <div className="flex items-center justify-between mb-4">
+      <span className="text-[11px] font-semibold text-white/50 uppercase tracking-widest">Toolbar Style</span>
+      <div className="flex items-center gap-2">
+        <button onClick={onReset} className="text-[9px] text-white/30 hover:text-white/60 transition-colors px-1.5 py-0.5 rounded hover:bg-white/5">Reset</button>
+        <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors"><X size={13} /></button>
+      </div>
+    </div>
+
+    <div className="space-y-4">
+      {/* Background opacity */}
+      <div className="space-y-1.5">
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Background</span>
+          <span className="text-[10px] text-white/30 tabular-nums">{style.bgOpacity}%</span>
+        </div>
+        <Slider value={[style.bgOpacity]} onValueChange={([v]) => onUpdate({ bgOpacity: v })} min={0} max={80} step={1}
+          className="[&_[data-radix-slider-track]]:h-[5px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-white/50 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-4 [&_[data-radix-slider-thumb]]:h-4 [&_[data-radix-slider-thumb]]:shadow-md" />
+      </div>
+
+      {/* Blur */}
+      <div className="space-y-1.5">
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Blur</span>
+          <span className="text-[10px] text-white/30 tabular-nums">{style.blurAmount}px</span>
+        </div>
+        <Slider value={[style.blurAmount]} onValueChange={([v]) => onUpdate({ blurAmount: v })} min={0} max={40} step={1}
+          className="[&_[data-radix-slider-track]]:h-[5px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-white/50 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-4 [&_[data-radix-slider-thumb]]:h-4 [&_[data-radix-slider-thumb]]:shadow-md" />
+      </div>
+
+      {/* Text opacity */}
+      <div className="space-y-1.5">
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Text Opacity</span>
+          <span className="text-[10px] text-white/30 tabular-nums">{style.textOpacity}%</span>
+        </div>
+        <Slider value={[style.textOpacity]} onValueChange={([v]) => onUpdate({ textOpacity: v })} min={10} max={100} step={1}
+          className="[&_[data-radix-slider-track]]:h-[5px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-white/50 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-4 [&_[data-radix-slider-thumb]]:h-4 [&_[data-radix-slider-thumb]]:shadow-md" />
+      </div>
+
+      {/* Border radius presets */}
+      <div className="space-y-1.5">
+        <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider block">Shape</span>
+        <div className="flex gap-1.5">
+          {BORDER_RADIUS_PRESETS.map(p => (
+            <button key={p.label} onClick={() => onUpdate({ borderRadius: p.value })}
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${style.borderRadius === p.value ? "bg-white/15 text-white" : "text-white/35 hover:bg-white/8 hover:text-white/60 border border-white/8"}`}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Border width */}
+      <div className="space-y-1.5">
+        <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider block">Border</span>
+        <div className="flex gap-1.5">
+          {BORDER_STYLES_LIST.map(b => (
+            <button key={b.label} onClick={() => onUpdate({ borderWidth: b.value })}
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${style.borderWidth === b.value ? "bg-white/15 text-white" : "text-white/35 hover:bg-white/8 hover:text-white/60 border border-white/8"}`}>
+              {b.label}
+            </button>
+          ))}
+        </div>
+        {style.borderWidth > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Border Opacity</span>
+              <span className="text-[10px] text-white/30 tabular-nums">{style.borderOpacity}%</span>
+            </div>
+            <Slider value={[style.borderOpacity]} onValueChange={([v]) => onUpdate({ borderOpacity: v })} min={0} max={100} step={5}
+              className="[&_[data-radix-slider-track]]:h-[5px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-white/50 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-4 [&_[data-radix-slider-thumb]]:h-4 [&_[data-radix-slider-thumb]]:shadow-md" />
+            {/* Border color swatches */}
+            <div className="flex gap-1.5 flex-wrap mt-1">
+              {SWATCH_COLORS.map(c => (
+                <button key={c} onClick={() => onUpdate({ borderColor: c })}
+                  className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{ backgroundColor: c, borderColor: style.borderColor === c ? "rgba(255,255,255,0.9)" : "transparent" }} />
+              ))}
+              <label className="w-6 h-6 rounded-full cursor-pointer overflow-hidden border border-white/20 hover:scale-110 transition-transform"
+                style={{ background: "conic-gradient(hsl(0 80% 60%), hsl(60 80% 60%), hsl(120 80% 60%), hsl(180 80% 60%), hsl(240 80% 60%), hsl(300 80% 60%))" }}>
+                <input type="color" value={style.borderColor} onChange={e => onUpdate({ borderColor: e.target.value })} className="opacity-0 w-full h-full cursor-pointer" />
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </motion.div>
+);
 
 interface ToolDrawerProps {
   pageActiveWidgets?: string[];
@@ -82,11 +236,26 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
   };
 
   const [open, setOpen] = useState(false);
+  const [styleOpen, setStyleOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
   const suggestions = useMemo(() => getSuggestedWidgets(effectiveWidgets as string[]), [effectiveWidgets]);
   const { unreadCount, markAsRead } = useTeamChat();
+
+  // ── Toolbar style ─────────────────────────────────────────────────
+  const [toolbarStyle, setToolbarStyleState] = useState<ToolbarStyle>(loadToolbarStyle);
+  const updateToolbarStyle = useCallback((patch: Partial<ToolbarStyle>) => {
+    setToolbarStyleState(prev => {
+      const next = { ...prev, ...patch };
+      saveToolbarStyle(next);
+      return next;
+    });
+  }, []);
+  const resetToolbarStyle = useCallback(() => {
+    setToolbarStyleState(DEFAULT_TOOLBAR_STYLE);
+    saveToolbarStyle(DEFAULT_TOOLBAR_STYLE);
+  }, []);
 
   // ── Drag position (build mode only) ──────────────────────────────────
   const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(loadToolbarPos);
@@ -110,7 +279,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
     } else if (toolbarPos) {
       offset.current = { x: e.clientX - toolbarPos.x, y: e.clientY - toolbarPos.y };
     } else {
-      // default center-bottom position
       const w = barRef.current?.offsetWidth ?? 320;
       offset.current = { x: e.clientX - (window.innerWidth / 2 - w / 2), y: e.clientY - (window.innerHeight - 48) };
     }
@@ -122,7 +290,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
       didDrag.current = true;
       const nx = e.clientX - offset.current.x;
       const ny = e.clientY - offset.current.y;
-      // Clamp inside viewport
       const w = barRef.current?.offsetWidth ?? 320;
       const h = barRef.current?.offsetHeight ?? 48;
       const cx = Math.max(0, Math.min(nx, window.innerWidth - w));
@@ -147,27 +314,43 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
     };
   }, [toolbarPos]);
 
-  // Reset to center-bottom when switching away from build mode (optional UX clarity)
-  // Keep position sticky across modes so it stays where user placed it
-
   const posStyle: React.CSSProperties = toolbarPos
     ? { left: toolbarPos.x, top: toolbarPos.y, bottom: "auto", transform: "none" }
     : { left: "50%", bottom: "24px", top: "auto", transform: "translateX(-50%)" };
 
   const isBuild = systemMode === "build";
 
+  // ── Dynamic bar style from ToolbarStyle ──────────────────────────
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  };
+  const barBg = hexToRgba("#000000", toolbarStyle.bgOpacity / 100);
+  const barBorder = toolbarStyle.borderWidth > 0
+    ? `${toolbarStyle.borderWidth}px solid ${hexToRgba(toolbarStyle.borderColor, toolbarStyle.borderOpacity / 100)}`
+    : "1px solid rgba(255,255,255,0.12)";
+  const barRadius = toolbarStyle.borderRadius;
+  const barBlur = toolbarStyle.blurAmount;
+  const textAlpha = toolbarStyle.textOpacity / 100;
+
   return (
     <>
       {/* Bottom bar */}
       <motion.div
         ref={barRef}
-        className="fixed z-[10100] flex items-center gap-1 px-2 py-1.5 rounded-full bg-white/10 backdrop-blur-[16px] border shadow-lg select-none"
+        className="fixed z-[10100] flex items-center gap-1 px-2 py-1.5 select-none"
         animate={isBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
         transition={isBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
         style={{
           ...posStyle,
           cursor: isBuild ? (isDragging ? "grabbing" : "grab") : "default",
-          borderColor: isBuild ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.20)",
+          borderRadius: barRadius,
+          background: barBg,
+          backdropFilter: `blur(${barBlur}px)`,
+          WebkitBackdropFilter: `blur(${barBlur}px)`,
+          border: barBorder,
           boxShadow: isDragging
             ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
             : "0 8px 32px rgba(0,0,0,0.55)",
@@ -184,7 +367,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
               transition={{ duration: 0.18 }}
               className="overflow-hidden"
             >
-              <GripHorizontal size={12} className="text-white/30 mr-1" />
+              <GripHorizontal size={12} style={{ color: `rgba(255,255,255,${textAlpha * 0.4})` }} className="mr-1" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -198,9 +381,10 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
             title={label}
             className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all ${
               systemMode === key
-                ? "bg-white/15 text-white shadow-[0_0_10px_rgba(255,255,255,0.05)]"
-                : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                ? "bg-white/15 shadow-[0_0_10px_rgba(255,255,255,0.05)]"
+                : "hover:bg-white/5"
             }`}
+            style={{ color: systemMode === key ? `rgba(255,255,255,${textAlpha})` : `rgba(255,255,255,${textAlpha * 0.4})` }}
           >
             <Icon size={14} />
             <span className="hidden sm:inline">{label}</span>
@@ -212,7 +396,8 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           onPointerDown={e => e.stopPropagation()}
           onClick={() => { setCollabOpen(true); markAsRead(); }}
           title="Collab"
-          className="relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all text-white/30 hover:text-white/60 hover:bg-white/5"
+          className="relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all hover:bg-white/5"
+          style={{ color: `rgba(255,255,255,${textAlpha * 0.4})` }}
         >
           <MessageCircle size={14} />
           <span className="hidden sm:inline">Collab</span>
@@ -223,21 +408,43 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           )}
         </button>
 
-        <div className="w-px h-5 bg-white/15 mx-1" />
+        <div className="w-px h-5 mx-1" style={{ background: `rgba(255,255,255,${textAlpha * 0.15})` }} />
 
         {/* Tools trigger */}
         <motion.button
           onPointerDown={e => e.stopPropagation()}
-          onClick={() => setOpen(!open)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-medium transition-all ${
-            open ? "bg-white/15 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"
-          }`}
+          onClick={() => { setOpen(!open); setStyleOpen(false); }}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-medium transition-all ${open ? "bg-white/15" : "hover:bg-white/5"}`}
+          style={{ color: open ? `rgba(255,255,255,${textAlpha})` : `rgba(255,255,255,${textAlpha * 0.5})` }}
           whileTap={{ scale: 0.96 }}
         >
           <ChevronUp size={14} className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
           <span className="hidden sm:inline">Tools</span>
-          <span className="text-[10px] text-white/25 tabular-nums">{effectiveWidgets.length}</span>
+          <span className="text-[10px] tabular-nums" style={{ color: `rgba(255,255,255,${textAlpha * 0.3})` }}>{effectiveWidgets.length}</span>
         </motion.button>
+
+        {/* Style button — always visible */}
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={() => { setStyleOpen(!styleOpen); setOpen(false); }}
+          title="Customize toolbar style"
+          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all ${styleOpen ? "bg-white/15" : "hover:bg-white/5"}`}
+          style={{ color: styleOpen ? `rgba(255,255,255,${textAlpha})` : `rgba(255,255,255,${textAlpha * 0.4})` }}
+        >
+          <Palette size={13} />
+        </button>
+
+        {/* Style panel */}
+        <AnimatePresence>
+          {styleOpen && (
+            <ToolbarStylePanel
+              style={toolbarStyle}
+              onUpdate={updateToolbarStyle}
+              onReset={resetToolbarStyle}
+              onClose={() => setStyleOpen(false)}
+            />
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Backdrop */}

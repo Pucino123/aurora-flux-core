@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useFocusStore } from "@/context/FocusContext";
-import { ChevronDown, Image, Upload, Plus, X, Palette, Save, Link, Sun } from "lucide-react";
+import { ChevronDown, Image, Upload, Plus, X, Palette, Save, Link, Sun, GripHorizontal, SlidersHorizontal } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 
 // ── Background images (ES6 imports) ──────────────────────────────────
@@ -265,6 +266,92 @@ const CustomUploadSection = ({ customBgs, onUpload, onAddYoutube, onDelete, onSe
   );
 };
 
+// ── Spaces button style ─────────────────────────────────────────────
+const SPACES_POS_KEY = "flux-spaces-pos";
+const SPACES_STYLE_KEY = "flux-spaces-style";
+
+interface SpacesStyle {
+  bgOpacity: number;
+  blurAmount: number;
+  borderOpacity: number;
+  borderRadius: number;
+  borderWidth: number;
+  borderColor: string;
+  textOpacity: number;
+}
+const DEFAULT_SPACES_STYLE: SpacesStyle = {
+  bgOpacity: 10, blurAmount: 16, borderOpacity: 20,
+  borderRadius: 50, borderWidth: 1, borderColor: "#ffffff", textOpacity: 80,
+};
+
+function loadSpacesPos(): { x: number; y: number } | null {
+  try { const r = localStorage.getItem(SPACES_POS_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function saveSpacesPos(p: { x: number; y: number }) { localStorage.setItem(SPACES_POS_KEY, JSON.stringify(p)); }
+function loadSpacesStyle(): SpacesStyle {
+  try { const r = localStorage.getItem(SPACES_STYLE_KEY); return r ? { ...DEFAULT_SPACES_STYLE, ...JSON.parse(r) } : DEFAULT_SPACES_STYLE; } catch { return DEFAULT_SPACES_STYLE; }
+}
+function saveSpacesStyle(s: SpacesStyle) { localStorage.setItem(SPACES_STYLE_KEY, JSON.stringify(s)); }
+
+const SWATCH_COLORS_SPACES = ["#ffffff", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc"];
+
+const SpacesStylePanel = ({ style, onUpdate, onReset, onClose }: {
+  style: SpacesStyle; onUpdate: (p: Partial<SpacesStyle>) => void; onReset: () => void; onClose: () => void;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.92, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 8 }}
+    transition={{ type: "spring", stiffness: 420, damping: 30 }}
+    className="absolute bottom-[calc(100%+10px)] left-0 w-64 rounded-2xl p-4 shadow-2xl z-[10200]"
+    style={{ background: "rgba(18,18,20,0.94)", backdropFilter: "blur(48px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    onPointerDown={e => e.stopPropagation()}
+  >
+    <div className="flex items-center justify-between mb-3">
+      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-widest">Button Style</span>
+      <div className="flex gap-1.5">
+        <button onClick={onReset} className="text-[9px] text-white/30 hover:text-white/60 px-1.5 py-0.5 rounded hover:bg-white/5">Reset</button>
+        <button onClick={onClose} className="text-white/30 hover:text-white/60"><X size={12} /></button>
+      </div>
+    </div>
+    <div className="space-y-3">
+      {[
+        { label: "Background", key: "bgOpacity" as const, min: 0, max: 80, unit: "%" },
+        { label: "Blur", key: "blurAmount" as const, min: 0, max: 40, unit: "px" },
+        { label: "Text Opacity", key: "textOpacity" as const, min: 10, max: 100, unit: "%" },
+        { label: "Border Opacity", key: "borderOpacity" as const, min: 0, max: 100, unit: "%" },
+      ].map(({ label, key, min, max, unit }) => (
+        <div key={key} className="space-y-1">
+          <div className="flex justify-between"><span className="text-[9px] text-white/40 uppercase tracking-wider">{label}</span><span className="text-[9px] text-white/30 tabular-nums">{style[key]}{unit}</span></div>
+          <Slider value={[style[key]]} onValueChange={([v]) => onUpdate({ [key]: v })} min={min} max={max} step={1}
+            className="[&_[data-radix-slider-track]]:h-[4px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-white/50 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-3.5 [&_[data-radix-slider-thumb]]:h-3.5" />
+        </div>
+      ))}
+      <div className="space-y-1">
+        <span className="text-[9px] text-white/40 uppercase tracking-wider block">Shape</span>
+        <div className="flex gap-1">
+          {[{ l: "Soft", v: 8 }, { l: "Round", v: 24 }, { l: "Pill", v: 50 }].map(p => (
+            <button key={p.l} onClick={() => onUpdate({ borderRadius: p.v })}
+              className={`flex-1 py-1 rounded-lg text-[9px] font-medium transition-all ${style.borderRadius === p.v ? "bg-white/15 text-white" : "text-white/35 border border-white/8 hover:bg-white/8"}`}>{p.l}</button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1">
+        <span className="text-[9px] text-white/40 uppercase tracking-wider block">Border Color</span>
+        <div className="flex gap-1.5 flex-wrap">
+          {SWATCH_COLORS_SPACES.map(c => (
+            <button key={c} onClick={() => onUpdate({ borderColor: c, borderWidth: Math.max(1, style.borderWidth) })}
+              className="w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform"
+              style={{ backgroundColor: c, borderColor: style.borderColor === c ? "rgba(255,255,255,0.9)" : "transparent" }} />
+          ))}
+          <label className="w-5 h-5 rounded-full cursor-pointer border border-white/20 overflow-hidden hover:scale-110 transition-transform"
+            style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+            <input type="color" value={style.borderColor} onChange={e => onUpdate({ borderColor: e.target.value })} className="opacity-0 w-full h-full" />
+          </label>
+        </div>
+      </div>
+    </div>
+  </motion.div>
+);
+
 // ── Main Component ───────────────────────────────────────────────────
 const BackgroundEngine = ({
   embedded = false,
@@ -281,8 +368,7 @@ const BackgroundEngine = ({
   pageSpaceSettings?: SpaceSettings;
   onPageSpaceSettingsChange?: (s: SpaceSettings) => void;
 }) => {
-  const { currentBackground: globalBackground, setCurrentBackground: setGlobalBackground, isZenMode } = useFocusStore();
-  // Use per-page background if provided, otherwise fall back to global
+  const { currentBackground: globalBackground, setCurrentBackground: setGlobalBackground, isZenMode, systemMode } = useFocusStore();
   const currentBackground = pageBackground ?? globalBackground;
   const setCurrentBackground = (id: string) => {
     if (onPageBackgroundChange) onPageBackgroundChange(id);
@@ -290,12 +376,78 @@ const BackgroundEngine = ({
   };
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [spacesStyleOpen, setSpacesStyleOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [customBgs, setCustomBgs] = useState<CustomBg[]>(loadCustomBgs);
   const [customGrads, setCustomGrads] = useState<CustomGrad[]>(loadCustomGrads);
   const [showGradCreator, setShowGradCreator] = useState(false);
   const [user, setUser] = useState<any>(null);
+
+  // ── Spaces drag ─────────────────────────────────────────────────
+  const [spacesPos, setSpacesPos] = useState<{ x: number; y: number } | null>(loadSpacesPos);
+  const [spacesDragging, setSpacesDragging] = useState(false);
+  const [spacesBouncing, setSpacesBouncing] = useState(false);
+  const spacesRef = useRef<HTMLDivElement>(null);
+  const spacesIsDragging = useRef(false);
+  const spacesDidDrag = useRef(false);
+  const spacesOffset = useRef({ x: 0, y: 0 });
+
+  const isBuild = systemMode === "build";
+
+  const handleSpacesPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!isBuild) return;
+    e.preventDefault(); e.stopPropagation();
+    spacesIsDragging.current = true; spacesDidDrag.current = false; setSpacesDragging(true);
+    const rect = spacesRef.current?.getBoundingClientRect();
+    if (rect) spacesOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    else if (spacesPos) spacesOffset.current = { x: e.clientX - spacesPos.x, y: e.clientY - spacesPos.y };
+    else spacesOffset.current = { x: e.clientX - 268, y: e.clientY - (window.innerHeight - 56) };
+  }, [isBuild, spacesPos]);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!spacesIsDragging.current) return;
+      spacesDidDrag.current = true;
+      const nx = e.clientX - spacesOffset.current.x;
+      const ny = e.clientY - spacesOffset.current.y;
+      const w = spacesRef.current?.offsetWidth ?? 120;
+      const h = spacesRef.current?.offsetHeight ?? 40;
+      setSpacesPos({ x: Math.max(0, Math.min(nx, window.innerWidth - w)), y: Math.max(0, Math.min(ny, window.innerHeight - h)) });
+    };
+    const onUp = () => {
+      if (!spacesIsDragging.current) return;
+      spacesIsDragging.current = false; setSpacesDragging(false);
+      if (spacesDidDrag.current && spacesPos) {
+        saveSpacesPos(spacesPos); setSpacesBouncing(true); setTimeout(() => setSpacesBouncing(false), 500);
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
+  }, [spacesPos]);
+
+  // ── Spaces style ────────────────────────────────────────────────
+  const [spacesStyle, setSpacesStyleState] = useState<SpacesStyle>(loadSpacesStyle);
+  const updateSpacesStyle = useCallback((patch: Partial<SpacesStyle>) => {
+    setSpacesStyleState(prev => { const next = { ...prev, ...patch }; saveSpacesStyle(next); return next; });
+  }, []);
+  const resetSpacesStyle = useCallback(() => { setSpacesStyleState(DEFAULT_SPACES_STYLE); saveSpacesStyle(DEFAULT_SPACES_STYLE); }, []);
+
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  };
+  const spacesBg = hexToRgba("#000000", spacesStyle.bgOpacity / 100);
+  const spacesBorder = spacesStyle.borderWidth > 0
+    ? `${spacesStyle.borderWidth}px solid ${hexToRgba(spacesStyle.borderColor, spacesStyle.borderOpacity / 100)}`
+    : "1px solid rgba(255,255,255,0.15)";
+  const spacesTextColor = `rgba(255,255,255,${spacesStyle.textOpacity / 100})`;
+  const spacesPosStyle: React.CSSProperties = spacesPos
+    ? { left: spacesPos.x, top: spacesPos.y, bottom: "auto" }
+    : { left: 268, bottom: 24, top: "auto" };
 
   // Per-page space settings — if pageSpaceSettings is provided use it, else fall back to localStorage globals
   const [localDimming, setLocalDimming] = useState(() => { try { return parseFloat(localStorage.getItem("flux-bg-dimming") || "0.15"); } catch { return 0.15; } });
@@ -433,99 +585,151 @@ const BackgroundEngine = ({
       {/* Spaces menu — portalled to body when embedded to escape transform stacking context */}
       {embedded ? createPortal(
         <>
-          {menuOpen && <div className="fixed inset-0 z-[10109]" onClick={() => setMenuOpen(false)} />}
-          <div className="fixed bottom-6 left-[268px] z-[10110]">
-            <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 text-white/80 text-sm font-medium hover:bg-white/15 transition-all shadow-lg">
-              <Image size={16} /><span>Spaces</span><ChevronDown size={14} className={`transition-transform ${menuOpen ? "rotate-180" : ""}`} />
-            </button>
-            <AnimatePresence>
-              {menuOpen && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                  className="absolute bottom-14 left-0 w-80 max-h-[480px] rounded-2xl bg-black/60 backdrop-blur-[20px] border border-white/15 p-4 overflow-auto shadow-2xl">
-                  <div className="mb-3">
-                    <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-2">This page only</p>
-                  </div>
-                  <div className="mb-4 space-y-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5"><Sun size={12} className="text-white/50" /><span className="text-[11px] text-white/50 font-medium">Brightness</span></div>
-                        <span className="text-[10px] text-white/30 tabular-nums">{Math.round((1 - dimming) * 100)}%</span>
-                      </div>
-                      <input type="range" min={0} max={0.7} step={0.01} value={dimming}
-                        onChange={(e) => updateSpaceSetting({ dimming: parseFloat(e.target.value) })}
-                        className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
+          {(menuOpen || spacesStyleOpen) && <div className="fixed inset-0 z-[10109]" onClick={() => { setMenuOpen(false); setSpacesStyleOpen(false); }} />}
+          <motion.div
+            ref={spacesRef}
+            className="fixed z-[10110] flex items-center"
+            animate={spacesBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
+            transition={spacesBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
+            style={{
+              ...spacesPosStyle,
+              cursor: isBuild ? (spacesDragging ? "grabbing" : "grab") : "default",
+            }}
+            onPointerDown={isBuild ? handleSpacesPointerDown : undefined}
+          >
+            {isBuild && (
+              <GripHorizontal size={10} className="mr-1 shrink-0" style={{ color: "rgba(255,255,255,0.25)" }} />
+            )}
+            <div className="relative">
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => { setMenuOpen(!menuOpen); setSpacesStyleOpen(false); }}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-all shadow-lg"
+                style={{
+                  borderRadius: spacesStyle.borderRadius,
+                  background: spacesBg,
+                  backdropFilter: `blur(${spacesStyle.blurAmount}px)`,
+                  WebkitBackdropFilter: `blur(${spacesStyle.blurAmount}px)`,
+                  border: spacesBorder,
+                  color: spacesTextColor,
+                }}
+              >
+                <Image size={16} /><span>Spaces</span><ChevronDown size={14} className={`transition-transform ${menuOpen ? "rotate-180" : ""}`} />
+              </button>
+              {/* Style panel */}
+              <AnimatePresence>
+                {spacesStyleOpen && (
+                  <SpacesStylePanel
+                    style={spacesStyle}
+                    onUpdate={updateSpacesStyle}
+                    onReset={resetSpacesStyle}
+                    onClose={() => setSpacesStyleOpen(false)}
+                  />
+                )}
+              </AnimatePresence>
+              {/* Spaces dropdown */}
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                    className="absolute bottom-14 left-0 w-80 max-h-[480px] rounded-2xl bg-black/60 backdrop-blur-[20px] border border-white/15 p-4 overflow-auto shadow-2xl z-[10200]"
+                    onPointerDown={e => e.stopPropagation()}
+                  >
+                    <div className="mb-3">
+                      <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-2">This page only</p>
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-white/50 font-medium">🔍 Blur</span>
-                        <span className="text-[10px] text-white/30 tabular-nums">{Math.round(bgBlur)}px</span>
-                      </div>
-                      <input type="range" min={0} max={20} step={0.5} value={bgBlur}
-                        onChange={(e) => updateSpaceSetting({ blur: parseFloat(e.target.value) })}
-                        className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-white/50 font-medium">🌑 Vignette</span>
-                        <span className="text-[10px] text-white/30 tabular-nums">{Math.round(vignette * 100)}%</span>
-                      </div>
-                      <input type="range" min={0} max={1} step={0.01} value={vignette}
-                        onChange={(e) => updateSpaceSetting({ vignette: parseFloat(e.target.value) })}
-                        className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-white/50 font-medium">🔊 Video Audio</span>
-                        <span className="text-[10px] text-white/30 tabular-nums">{Math.round(youtubeVolume * 100)}%</span>
-                      </div>
-                      <input type="range" min={0} max={1} step={0.01} value={youtubeVolume}
-                        onChange={(e) => updateSpaceSetting({ volume: parseFloat(e.target.value) })}
-                        className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <button onClick={() => setSelectedCategory(null)} className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${!selectedCategory ? "bg-white/20 text-white" : "bg-white/5 text-white/50 hover:text-white/80"}`}>All</button>
-                    {CATEGORIES.map((cat) => (
-                      <button key={cat} onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${selectedCategory === cat ? "bg-white/20 text-white" : "bg-white/5 text-white/50 hover:text-white/80"}`}>{cat}</button>
-                    ))}
-                  </div>
-                  {selectedCategory !== "Custom" && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {filteredBgs.map((item) => (
-                        <button key={item.id} onClick={() => { setCurrentBackground(item.id); setMenuOpen(false); }}
-                          className={`relative rounded-xl overflow-hidden h-20 border-2 transition-all ${currentBackground === item.id ? "border-white/60 ring-2 ring-white/30" : "border-transparent hover:border-white/30"}`}>
-                          {item.type === "gradient" && item.colors ? <GradientThumbnail colors={item.colors} /> : <img src={item.src} alt={item.label} className="w-full h-full object-cover" loading="lazy" />}
-                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1 flex items-center justify-between">
-                            <span className="text-[10px] text-white/80 font-medium">{item.label}</span>
-                            {item.type === "video" && <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/40 backdrop-blur-sm"><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /><span className="text-[8px] font-semibold text-white/90 uppercase tracking-wider">Live</span></span>}
-                          </div>
-                        </button>
-                      ))}
-                      {(selectedCategory === "Aurora" || !selectedCategory) && customGrads.map((grad) => (
-                        <div key={grad.id} className="relative group">
-                          <button onClick={() => { setCurrentBackground(grad.id); setMenuOpen(false); }}
-                            className={`relative rounded-xl overflow-hidden h-20 w-full border-2 transition-all ${currentBackground === grad.id ? "border-white/60 ring-2 ring-white/30" : "border-transparent hover:border-white/30"}`}>
-                            <GradientThumbnail colors={grad.colors} />
-                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1"><span className="text-[10px] text-white/80 font-medium">{grad.label}</span></div>
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDeleteGrad(grad.id); }} className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white/60 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><X size={10} /></button>
+                    <div className="mb-4 space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5"><Sun size={12} className="text-white/50" /><span className="text-[11px] text-white/50 font-medium">Brightness</span></div>
+                          <span className="text-[10px] text-white/30 tabular-nums">{Math.round((1 - dimming) * 100)}%</span>
                         </div>
-                      ))}
-                      {selectedCategory === "Aurora" && !showGradCreator && (
-                        <button onClick={() => setShowGradCreator(true)} className="flex flex-col items-center justify-center gap-1.5 rounded-xl h-20 border-2 border-dashed border-white/15 text-white/40 hover:text-white/60 hover:border-white/25 transition-all">
-                          <Palette size={16} /><span className="text-[10px] font-medium">Create Custom</span>
-                        </button>
-                      )}
+                        <input type="range" min={0} max={0.7} step={0.01} value={dimming}
+                          onChange={(e) => updateSpaceSetting({ dimming: parseFloat(e.target.value) })}
+                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-white/50 font-medium">🔍 Blur</span>
+                          <span className="text-[10px] text-white/30 tabular-nums">{Math.round(bgBlur)}px</span>
+                        </div>
+                        <input type="range" min={0} max={20} step={0.5} value={bgBlur}
+                          onChange={(e) => updateSpaceSetting({ blur: parseFloat(e.target.value) })}
+                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-white/50 font-medium">🌑 Vignette</span>
+                          <span className="text-[10px] text-white/30 tabular-nums">{Math.round(vignette * 100)}%</span>
+                        </div>
+                        <input type="range" min={0} max={1} step={0.01} value={vignette}
+                          onChange={(e) => updateSpaceSetting({ vignette: parseFloat(e.target.value) })}
+                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-white/50 font-medium">🔊 Video Audio</span>
+                          <span className="text-[10px] text-white/30 tabular-nums">{Math.round(youtubeVolume * 100)}%</span>
+                        </div>
+                        <input type="range" min={0} max={1} step={0.01} value={youtubeVolume}
+                          onChange={(e) => updateSpaceSetting({ volume: parseFloat(e.target.value) })}
+                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
+                      </div>
                     </div>
-                  )}
-                  {selectedCategory === "Aurora" && showGradCreator && <CustomGradientCreator onSave={handleSaveGrad} onCancel={() => setShowGradCreator(false)} />}
-                  <CustomUploadSection customBgs={customBgs} onUpload={handleUpload} onAddYoutube={handleAddYoutube} onDelete={handleDeleteCustom}
-                    onSelect={(id) => { setCurrentBackground(id); setMenuOpen(false); }} currentBg={currentBackground} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <button onClick={() => setSelectedCategory(null)} className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${!selectedCategory ? "bg-white/20 text-white" : "bg-white/5 text-white/50 hover:text-white/80"}`}>All</button>
+                      {CATEGORIES.map((cat) => (
+                        <button key={cat} onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${selectedCategory === cat ? "bg-white/20 text-white" : "bg-white/5 text-white/50 hover:text-white/80"}`}>{cat}</button>
+                      ))}
+                    </div>
+                    {selectedCategory !== "Custom" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        {filteredBgs.map((item) => (
+                          <button key={item.id} onClick={() => { setCurrentBackground(item.id); setMenuOpen(false); }}
+                            className={`relative rounded-xl overflow-hidden h-20 border-2 transition-all ${currentBackground === item.id ? "border-white/60 ring-2 ring-white/30" : "border-transparent hover:border-white/30"}`}>
+                            {item.type === "gradient" && item.colors ? <GradientThumbnail colors={item.colors} /> : <img src={item.src} alt={item.label} className="w-full h-full object-cover" loading="lazy" />}
+                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1 flex items-center justify-between">
+                              <span className="text-[10px] text-white/80 font-medium">{item.label}</span>
+                              {item.type === "video" && <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/40 backdrop-blur-sm"><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /><span className="text-[8px] font-semibold text-white/90 uppercase tracking-wider">Live</span></span>}
+                            </div>
+                          </button>
+                        ))}
+                        {(selectedCategory === "Aurora" || !selectedCategory) && customGrads.map((grad) => (
+                          <div key={grad.id} className="relative group">
+                            <button onClick={() => { setCurrentBackground(grad.id); setMenuOpen(false); }}
+                              className={`relative rounded-xl overflow-hidden h-20 w-full border-2 transition-all ${currentBackground === grad.id ? "border-white/60 ring-2 ring-white/30" : "border-transparent hover:border-white/30"}`}>
+                              <GradientThumbnail colors={grad.colors} />
+                              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1"><span className="text-[10px] text-white/80 font-medium">{grad.label}</span></div>
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteGrad(grad.id); }} className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white/60 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><X size={10} /></button>
+                          </div>
+                        ))}
+                        {selectedCategory === "Aurora" && !showGradCreator && (
+                          <button onClick={() => setShowGradCreator(true)} className="flex flex-col items-center justify-center gap-1.5 rounded-xl h-20 border-2 border-dashed border-white/15 text-white/40 hover:text-white/60 hover:border-white/25 transition-all">
+                            <Palette size={16} /><span className="text-[10px] font-medium">Create Custom</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {selectedCategory === "Aurora" && showGradCreator && <CustomGradientCreator onSave={handleSaveGrad} onCancel={() => setShowGradCreator(false)} />}
+                    <CustomUploadSection customBgs={customBgs} onUpload={handleUpload} onAddYoutube={handleAddYoutube} onDelete={handleDeleteCustom}
+                      onSelect={(id) => { setCurrentBackground(id); setMenuOpen(false); }} currentBg={currentBackground} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            {/* Style button */}
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={() => { setSpacesStyleOpen(!spacesStyleOpen); setMenuOpen(false); }}
+              className="ml-1 p-2 rounded-full transition-all hover:bg-white/10"
+              style={{ color: spacesStyleOpen ? spacesTextColor : "rgba(255,255,255,0.3)" }}
+              title="Customize button style"
+            >
+              <Palette size={13} />
+            </button>
+          </motion.div>
         </>,
         document.body
       ) : (
