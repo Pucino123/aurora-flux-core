@@ -464,9 +464,12 @@ const AddToolbar: React.FC<AddToolbarProps> = ({ onAdd }) => (
   >
     <span className="text-[9px] text-white/30 uppercase tracking-wider mr-1">Add</span>
     {([
-      { type: "rect"    as const, icon: Square, label: "Rectangle" },
-      { type: "circle"  as const, icon: Circle, label: "Circle"    },
-      { type: "textBox" as const, icon: Type,   label: "Text"      },
+      { type: "rect"     as const, icon: Square,  label: "Rectangle" },
+      { type: "circle"   as const, icon: Circle,  label: "Circle"    },
+      { type: "textBox"  as const, icon: Type,    label: "Text"      },
+      { type: "triangle" as const, icon: Triangle as any, label: "Triangle" },
+      { type: "line"     as const, icon: Minus2 as any,   label: "Line"     },
+      { type: "star"     as const, icon: Star as any,     label: "Star"     },
     ]).map(({ type, icon: Icon, label }) => (
       <button
         key={type}
