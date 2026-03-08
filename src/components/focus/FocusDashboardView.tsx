@@ -1728,6 +1728,41 @@ const FocusContent = () => {
         />
       )}
 
+      {/* Template Chooser Modal */}
+      {showTemplateChooser && (
+        <TemplateChooserModal
+          onCreateDocument={async (title, type, content) => {
+            const pos = contextMenuPosRef.current;
+            const doc = await createDocument(title, type, null);
+            if (doc) {
+              if (pos) updatePageDocPosition(doc.id, pos);
+              if (content) {
+                // Trigger a document update via supabase/localStorage after creation
+                const updates = { content };
+                if (user) {
+                  (supabase as any).from("documents").update(updates).eq("id", doc.id).then(() => refetchDesktopDocs());
+                }
+              }
+              setPages(prev => prev.map((p, i) => i === activePageIndex
+                ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
+                : p
+              ));
+              openWindow({
+                type: "document",
+                contentId: doc.id,
+                title: doc.title,
+                layout: "floating",
+                position: { x: Math.max(60, (window.innerWidth / 2) - 410 + Math.random() * 80), y: Math.max(40, (window.innerHeight / 2) - 310 + Math.random() * 60) },
+              });
+            }
+            contextMenuPosRef.current = null;
+            toast.success(`${title} created`);
+          }}
+          onClose={() => setShowTemplateChooser(false)}
+        />
+      )}
+
+
       {/* Clock editor */}
       {clockEditorOpen && (
         <>
