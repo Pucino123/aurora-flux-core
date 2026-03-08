@@ -1035,6 +1035,252 @@ const TEMPLATES: Template[] = [
       );
     },
   },
+  // ── NOTES & MEETINGS – Missing entries ────────────────────────────────
+  {
+    id: "meeting-minutes-pro",
+    title: "Meeting Minutes Pro",
+    subtitle: "Formal boardroom record",
+    type: "text",
+    category: "Notes & Meetings",
+    content: {
+      html: `<div style="max-width:760px;margin:0 auto;font-family:system-ui,sans-serif;padding:40px 48px;background:#fff;min-height:900px">
+  <div style="border-bottom:4px solid #0f172a;padding-bottom:20px;margin-bottom:28px">
+    <h1 style="font-size:32px;font-weight:900;text-transform:uppercase;letter-spacing:-0.5px;margin:0 0 12px;color:#0f172a">Meeting Minutes</h1>
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#64748b">
+      <span>Date: ${new Date().toLocaleDateString()}</span>
+      <span>Time: 10:00 AM</span>
+      <span>Location: Boardroom A</span>
+    </div>
+  </div>
+  <div style="background:#f8fafc;border-radius:8px;padding:16px 20px;margin-bottom:24px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div><p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin:0 0 4px">Facilitator</p><p style="font-size:14px;font-weight:600;color:#1e293b;margin:0">[Name]</p></div>
+    <div><p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin:0 0 4px">Note Taker</p><p style="font-size:14px;font-weight:600;color:#1e293b;margin:0">[Name]</p></div>
+  </div>
+  <h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;background:#f1f5f9;padding:8px 12px;border-radius:4px;color:#334155;margin:0 0 12px">1. Attendees</h2>
+  <ul style="font-size:14px;color:#475569;line-height:2;margin:0 0 24px;padding-left:20px"><li>Attendee 1</li><li>Attendee 2</li><li>Attendee 3</li></ul>
+  <h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;background:#f1f5f9;padding:8px 12px;border-radius:4px;color:#334155;margin:0 0 12px">2. Discussion</h2>
+  <p style="font-size:14px;color:#475569;line-height:1.8;margin:0 0 24px">Key discussion points go here...</p>
+  <h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;background:#f1f5f9;padding:8px 12px;border-radius:4px;color:#334155;margin:0 0 12px">3. Action Items</h2>
+  <div style="border-left:3px solid #ef4444;padding:12px 16px;background:#fff5f5;border-radius:0 6px 6px 0;margin-bottom:8px"><p style="font-weight:700;color:#1e293b;margin:0 0 4px">Task: Finalize Q3 Budget</p><p style="font-size:12px;color:#64748b;margin:0">Owner: Finance | Due: Friday</p></div>
+  <div style="border-left:3px solid #3b82f6;padding:12px 16px;background:#eff6ff;border-radius:0 6px 6px 0;margin-bottom:24px"><p style="font-weight:700;color:#1e293b;margin:0 0 4px">Task: Send client proposal</p><p style="font-size:12px;color:#64748b;margin:0">Owner: Sales | Due: Next Monday</p></div>
+  <h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;background:#f1f5f9;padding:8px 12px;border-radius:4px;color:#334155;margin:0 0 12px">4. Next Meeting</h2>
+  <p style="font-size:14px;color:#475569;margin:0">Date &amp; Time: ___________</p>
+</div>`,
+    },
+    thumbnail: (isDark) => {
+      const bg = isDark ? "#1e293b" : "#fff";
+      const hdr = isDark ? "#e2e8f0" : "#0f172a";
+      const line = isDark ? "#334155" : "#e2e8f0";
+      const subtle = isDark ? "#475569" : "#f1f5f9";
+      const red = isDark ? "rgba(239,68,68,0.3)" : "#fee2e2";
+      const blue = isDark ? "rgba(59,130,246,0.2)" : "#dbeafe";
+      return (
+        <div className="w-full h-full flex flex-col px-3 pt-2.5 pb-2 gap-1" style={{ background: bg }}>
+          <div className="w-3/4 h-2.5 rounded-sm" style={{ background: hdr }} />
+          <div className="w-full h-px mb-1" style={{ background: hdr, opacity: 0.8 }} />
+          <div className="flex gap-2 mb-1">
+            {[0,1].map(i=><div key={i} className="flex-1 h-4 rounded" style={{background:subtle}}/>)}
+          </div>
+          <div className="w-2/5 h-1.5 rounded" style={{background:subtle}}/>
+          {[1,2,3].map(i=><div key={i} className="flex items-center gap-1"><div className="w-1 h-1 rounded-full" style={{background:isDark?"#64748b":"#94a3b8"}}/><div className="h-1 rounded-full" style={{background:line,width:`${40+i*12}%`}}/></div>)}
+          <div className="w-full h-px my-1" style={{background:line}}/>
+          <div className="h-4 rounded-r px-2 flex items-center" style={{background:red,borderLeft:`2px solid #ef4444`}}>
+            <div className="h-1 w-2/3 rounded-full" style={{background:isDark?"#ef4444":"#fca5a5"}}/>
+          </div>
+          <div className="h-4 rounded-r px-2 flex items-center" style={{background:blue,borderLeft:`2px solid #3b82f6`}}>
+            <div className="h-1 w-1/2 rounded-full" style={{background:isDark?"#3b82f6":"#93c5fd"}}/>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "project-proposal-pro",
+    title: "Project Proposal",
+    subtitle: "Dark hero, editorial layout",
+    type: "text",
+    category: "Project Management",
+    content: {
+      html: `<div style="max-width:800px;min-height:900px;margin:0 auto;font-family:system-ui,sans-serif;background:#f8fafc">
+  <div style="height:240px;background:#0f172a;padding:48px;display:flex;flex-direction:column;justify-content:flex-end">
+    <p style="color:#4ade80;font-family:monospace;font-size:12px;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">PROPOSAL DOCUMENT</p>
+    <h1 style="font-size:52px;font-weight:900;letter-spacing:-2px;color:white;line-height:0.95;margin:0">PROJECT<br/>ALPHA</h1>
+  </div>
+  <div style="padding:48px">
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:0;margin-bottom:40px;border-top:1px solid #e2e8f0;padding-top:20px">
+      <p style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;margin:0">Prepared For</p>
+      <p style="font-size:15px;font-weight:500;color:#0f172a;font-family:Georgia,serif;margin:0">Board of Directors, Acme Corp</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:0;margin-bottom:40px;border-top:1px solid #e2e8f0;padding-top:20px">
+      <p style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;margin:0">Date</p>
+      <p style="font-size:15px;font-weight:500;color:#0f172a;font-family:Georgia,serif;margin:0">${new Date().toLocaleDateString()}</p>
+    </div>
+    <h2 style="font-size:26px;font-weight:800;color:#0f172a;margin:0 0 12px;letter-spacing:-0.5px">1. Objective</h2>
+    <p style="font-size:14px;color:#475569;line-height:1.9;margin:0 0 32px">Replace this with your project goals. Be specific about the outcomes, timeline, and success criteria.</p>
+    <h2 style="font-size:26px;font-weight:800;color:#0f172a;margin:0 0 12px;letter-spacing:-0.5px">2. Solution</h2>
+    <p style="font-size:14px;color:#475569;line-height:1.9;margin:0 0 32px">Explain your proposed approach and methodology here...</p>
+    <h2 style="font-size:26px;font-weight:800;color:#0f172a;margin:0 0 12px;letter-spacing:-0.5px">3. Budget &amp; Timeline</h2>
+    <p style="font-size:14px;color:#475569;line-height:1.9;margin:0">Add milestones, key dates, and estimated investment...</p>
+  </div>
+</div>`,
+    },
+    thumbnail: (isDark) => {
+      const bg = isDark ? "#f8fafc" : "#f8fafc";
+      return (
+        <div className="w-full h-full flex flex-col overflow-hidden" style={{background:bg}}>
+          <div className="flex flex-col justify-end pb-2 px-3" style={{height:"42%",background:"#0f172a"}}>
+            <div className="w-12 h-0.5 rounded-full mb-1" style={{background:"#4ade80",opacity:0.8}}/>
+            <div className="w-16 h-2.5 rounded-sm" style={{background:"rgba(255,255,255,0.85)"}}/>
+            <div className="w-12 h-2 rounded-sm mt-0.5" style={{background:"rgba(255,255,255,0.65)"}}/>
+          </div>
+          <div className="flex-1 px-3 pt-2 flex flex-col gap-1.5">
+            {[["Prepared For","Board of Directors"],["Date",new Date().toLocaleDateString()]].map(([k,v],i)=>(
+              <div key={i} className="flex gap-2 pb-1" style={{borderBottom:"0.5px solid #e2e8f0"}}>
+                <div className="w-12 h-1 rounded-full" style={{background:"#94a3b8"}}/>
+                <div className="flex-1 h-1 rounded-full" style={{background:"#334155"}}/>
+              </div>
+            ))}
+            <div className="w-2/3 h-1.5 rounded-full mt-1" style={{background:"#0f172a"}}/>
+            {[100,100,80,100,90].map((w,i)=><div key={i} className="h-1 rounded-full" style={{background:"#e2e8f0",width:`${w}%`}}/>)}
+          </div>
+        </div>
+      );
+    },
+  },
+
+  // ── SPRINT PLANNING spreadsheet ────────────────────────────────────────
+  {
+    id: "sprint-planning",
+    title: "Sprint Planning",
+    subtitle: "Agile task board with status",
+    type: "spreadsheet",
+    category: "Project Management",
+    content: {
+      rows: [
+        ["Task ID", "Task", "Priority", "Assignee", "Status", "Est. Hours"],
+        ["SP-001", "Design system audit", "High", "Alice M.", "In Progress", "8"],
+        ["SP-002", "API endpoint refactor", "High", "Bob T.", "To Do", "12"],
+        ["SP-003", "Unit test coverage", "Medium", "Carol S.", "In Progress", "6"],
+        ["SP-004", "Onboarding flow redesign", "Medium", "Alice M.", "To Do", "10"],
+        ["SP-005", "Database migration", "Low", "David L.", "Done", "4"],
+        ["SP-006", "Performance audit", "Low", "Eva K.", "To Do", "5"],
+      ],
+      cellFormats: {
+        "0-0": { bold: true, background: "#1e293b", color: "#f8fafc" },
+        "0-1": { bold: true, background: "#1e293b", color: "#f8fafc" },
+        "0-2": { bold: true, background: "#1e293b", color: "#f8fafc" },
+        "0-3": { bold: true, background: "#1e293b", color: "#f8fafc" },
+        "0-4": { bold: true, background: "#1e293b", color: "#f8fafc" },
+        "0-5": { bold: true, background: "#1e293b", color: "#f8fafc" },
+        "1-2": { background: "#fef2f2", color: "#dc2626", bold: true },
+        "2-2": { background: "#fef2f2", color: "#dc2626", bold: true },
+        "3-2": { background: "#fffbeb", color: "#d97706", bold: true },
+        "4-2": { background: "#fffbeb", color: "#d97706", bold: true },
+        "5-2": { background: "#f0fdf4", color: "#16a34a", bold: true },
+        "6-2": { background: "#f0fdf4", color: "#16a34a", bold: true },
+        "1-4": { background: "#eff6ff", color: "#2563eb" },
+        "3-4": { background: "#eff6ff", color: "#2563eb" },
+        "5-4": { background: "#f0fdf4", color: "#16a34a", bold: true },
+      },
+    },
+    thumbnail: (isDark) => {
+      const bg = isDark ? "#1e293b" : "#fff";
+      const rows = [
+        { task: "Design audit", pri: "High", priC: "#dc2626", priB: isDark?"rgba(220,38,38,0.15)":"#fef2f2", status: "In Progress", stC: "#2563eb", stB: isDark?"rgba(37,99,235,0.15)":"#eff6ff" },
+        { task: "API refactor", pri: "High", priC: "#dc2626", priB: isDark?"rgba(220,38,38,0.15)":"#fef2f2", status: "To Do", stC: "#64748b", stB: isDark?"#1e293b":"#f8fafc" },
+        { task: "Unit tests", pri: "Med", priC: "#d97706", priB: isDark?"rgba(217,119,6,0.15)":"#fffbeb", status: "In Progress", stC: "#2563eb", stB: isDark?"rgba(37,99,235,0.15)":"#eff6ff" },
+        { task: "DB migration", pri: "Low", priC: "#16a34a", priB: isDark?"rgba(22,163,74,0.15)":"#f0fdf4", status: "Done", stC: "#16a34a", stB: isDark?"rgba(22,163,74,0.15)":"#f0fdf4" },
+      ];
+      return (
+        <div className="w-full h-full flex flex-col" style={{background:bg}}>
+          <div className="flex px-1.5 py-1 gap-0.5" style={{background:"#1e293b",borderBottom:"1px solid #334155"}}>
+            {["ID","Task","Pri","Status","Hrs"].map((h,i)=>(
+              <div key={i} className={`text-[3.5px] font-bold ${i===1?"flex-[2]":"flex-1"}`} style={{color:"#94a3b8"}}>{h}</div>
+            ))}
+          </div>
+          {rows.map((r,i)=>(
+            <div key={i} className="flex px-1.5 py-0.5 gap-0.5 items-center" style={{borderBottom:`0.5px solid ${isDark?"#334155":"#e2e8f0"}`}}>
+              <div className="flex-1 text-[3px]" style={{color:isDark?"#64748b":"#94a3b8"}}>{`SP-00${i+1}`}</div>
+              <div className="flex-[2] text-[3px] truncate" style={{color:isDark?"#cbd5e1":"#374151"}}>{r.task}</div>
+              <div className="flex-1 flex">
+                <div className="px-0.5 rounded text-[3px] font-bold" style={{background:r.priB,color:r.priC}}>{r.pri}</div>
+              </div>
+              <div className="flex-1 flex">
+                <div className="px-0.5 rounded text-[3px]" style={{background:r.stB,color:r.stC}}>{r.status.split(" ")[0]}</div>
+              </div>
+              <div className="flex-1 text-[3px]" style={{color:isDark?"#475569":"#94a3b8"}}>—</div>
+            </div>
+          ))}
+        </div>
+      );
+    },
+  },
+
+  // ── QUARTERLY BUDGET spreadsheet ─────────────────────────────────────────
+  {
+    id: "quarterly-budget",
+    title: "Quarterly Budget",
+    subtitle: "Q1–Q4 planning with totals",
+    type: "spreadsheet",
+    category: "Business & Finance",
+    content: {
+      rows: [
+        ["Category", "Q1 ($)", "Q2 ($)", "Q3 ($)", "Q4 ($)", "Total ($)"],
+        ["Marketing", "12,000", "15,000", "18,000", "22,000", "67,000"],
+        ["Salaries", "45,000", "45,000", "47,500", "47,500", "185,000"],
+        ["Operations", "8,500", "8,500", "9,000", "9,500", "35,500"],
+        ["Infrastructure", "3,200", "3,200", "3,500", "3,500", "13,400"],
+        ["Travel", "2,000", "1,500", "3,500", "2,000", "9,000"],
+        ["Training", "1,800", "1,200", "1,800", "1,200", "6,000"],
+        ["", "", "", "", "", ""],
+        ["TOTAL", "72,500", "74,400", "83,300", "85,700", "315,900"],
+      ],
+      cellFormats: {
+        "0-0": { bold: true, background: "#1e3a5f", color: "#e0f2fe" },
+        "0-1": { bold: true, background: "#1e3a5f", color: "#e0f2fe" },
+        "0-2": { bold: true, background: "#1e3a5f", color: "#e0f2fe" },
+        "0-3": { bold: true, background: "#1e3a5f", color: "#e0f2fe" },
+        "0-4": { bold: true, background: "#1e3a5f", color: "#e0f2fe" },
+        "0-5": { bold: true, background: "#1e3a5f", color: "#e0f2fe" },
+        "8-0": { bold: true, background: "#0f4c2a", color: "#dcfce7" },
+        "8-1": { bold: true, background: "#0f4c2a", color: "#dcfce7" },
+        "8-2": { bold: true, background: "#0f4c2a", color: "#dcfce7" },
+        "8-3": { bold: true, background: "#0f4c2a", color: "#dcfce7" },
+        "8-4": { bold: true, background: "#0f4c2a", color: "#dcfce7" },
+        "8-5": { bold: true, background: "#0f4c2a", color: "#dcfce7" },
+      },
+    },
+    thumbnail: (isDark) => {
+      const bg = isDark ? "#1e293b" : "#fff";
+      const navy = "#1e3a5f";
+      const green = "#0f4c2a";
+      const rowBg = isDark ? "#0f172a" : "#f8fafc";
+      const altBg = isDark ? "#1e293b" : "#fff";
+      return (
+        <div className="w-full h-full flex flex-col" style={{background:bg}}>
+          <div className="flex px-1.5 py-1 gap-0.5" style={{background:navy}}>
+            {["Category","Q1","Q2","Q3","Q4","Total"].map((h,i)=>(
+              <div key={i} className={`text-[3px] font-bold ${i===0?"flex-[2]":"flex-1"}`} style={{color:"#bae6fd"}}>{h}</div>
+            ))}
+          </div>
+          {["Marketing","Salaries","Operations","Infrastr.","Travel","Training"].map((cat,i)=>(
+            <div key={i} className="flex px-1.5 py-0.5 gap-0.5" style={{background:i%2===0?altBg:rowBg,borderBottom:`0.5px solid ${isDark?"#334155":"#e2e8f0"}`}}>
+              <div className="flex-[2] text-[3px]" style={{color:isDark?"#cbd5e1":"#374151"}}>{cat}</div>
+              {[0,1,2,3,4].map(j=>(
+                <div key={j} className="flex-1 text-[3px] text-right" style={{color:isDark?"#64748b":"#94a3b8"}}>–</div>
+              ))}
+            </div>
+          ))}
+          <div className="flex px-1.5 py-1 gap-0.5 mt-auto" style={{background:green}}>
+            {["TOTAL","72.5k","74.4k","83.3k","85.7k","315.9k"].map((v,i)=>(
+              <div key={i} className={`text-[3px] font-bold ${i===0?"flex-[2]":"flex-1 text-right"}`} style={{color:"#bbf7d0"}}>{v}</div>
+            ))}
+          </div>
+        </div>
+      );
+    },
+  },
+
   {
     id: "crm-pipeline",
     title: "CRM Pipeline",
