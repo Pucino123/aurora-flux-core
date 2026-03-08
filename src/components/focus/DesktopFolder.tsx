@@ -69,6 +69,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   }, [onPositionChange, updateDesktopFolderPosition]);
   const folderOpacity = desktopFolderOpacities[folder.id] ?? 1;
   const titleSize = desktopFolderTitleSizes[folder.id] ?? 11;
+  const titleGap = titleGaps[folder.id] ?? 2; // px gap between icon and title
   const iconFillOp = iconFillOpacities[folder.id] ?? 0.75;
   const iconStrokeOp = iconStrokeOpacities[folder.id] ?? 1;
   const customIconUrl = customIcons[folder.id] ?? null;
