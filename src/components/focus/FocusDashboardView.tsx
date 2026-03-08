@@ -1734,9 +1734,10 @@ const FocusContent = () => {
           setIntentionModalOpen(false);
           enableFocusMode(taskTitle, durationSeconds);
         }}
+        onCancel={() => setIntentionModalOpen(false)}
+      />
 
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
-
           <motion.button
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
