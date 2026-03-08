@@ -49,7 +49,7 @@ const BoardroomAnalytics: React.FC<Props> = ({ userId, onRestoreIdea }) => {
       .from("council_responses")
       .select("idea_id, persona_key, vote_score")
       .in("idea_id", ids)
-      .in("persona_key", ["elena","helen","anton","margot"]);
+      .in("persona_key", ["strategist","operator","skeptic","advocate","growth"]);
 
     const byIdea: Record<string, { persona_key: string; vote_score: number | null }[]> = {};
     (respData || []).forEach(r => {
