@@ -1127,6 +1127,8 @@ const CouncilBoardroom: React.FC = () => {
           <FullscreenModal
             persona={fullscreenP}
             response={fullscreenR}
+            savedIdeaId={savedIdeaId}
+            userId={user?.id ?? null}
             onClose={() => setFullscreenPersona(null)}
           />
         )}
