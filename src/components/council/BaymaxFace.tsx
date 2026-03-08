@@ -214,8 +214,6 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
   return (
     <motion.div
       style={{ display: "inline-flex" }}
-      animate={{ y: [-1.5, 1.5, -1.5] }}
-      transition={{ duration: breathDurations[pi] || 4, repeat: Infinity, ease: "easeInOut" }}
       whileHover={{ scale: 1.15, filter: "brightness(1.3)" }}
     >
       {svgContent}
