@@ -406,8 +406,8 @@ const TheCouncil = () => {
                       const isCenter = i === 2;
                       const baseSize = isMobile ? 38 : 52;
                       const size = isCenter ? baseSize + (isMobile ? 12 : 16) : baseSize;
-                      const expressions: Record<string, "smile" | "straight" | "frown" | "calm" | "wide"> = {
-                        strategist: "smile", operator: "straight", skeptic: "frown", advocate: "straight", growth: "wide",
+                      const expressions: Record<string, import("./council/BaymaxFace").BaymaxExpression> = {
+                        strategist: "smile", operator: "straight", skeptic: "frown", advocate: "analytical", growth: "wide-smile",
                       };
                       return (
                         <motion.button
