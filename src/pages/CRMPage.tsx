@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, Trash2, Pencil, X, Check, Building2, DollarSign, User, Receipt } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, X, Check, Building2, DollarSign, User, Receipt, Sparkles, Loader2, CheckSquare } from "lucide-react";
 import { useCRM, CRMDeal, Stage } from "@/context/CRMContext";
+import { useFlux } from "@/context/FluxContext";
 import { toast } from "sonner";
 import InvoiceModal from "@/components/crm/InvoiceModal";
+import EmptyState from "@/components/ui/EmptyState";
 
 const STAGE_CONFIG: Record<Stage, { label: string; dot: string; text: string; bg: string }> = {
   leads:     { label: "New Lead",      dot: "#3b82f6", text: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30" },
@@ -38,11 +40,9 @@ const DealForm: React.FC<DealFormProps> = ({ initial, onSave, onClose }) => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-      onClick={onClose}>
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 380, damping: 32 }}
-        onClick={e => e.stopPropagation()}
+        transition={{ type: "spring", stiffness: 380, damping: 32 }} onClick={e => e.stopPropagation()}
         className="w-full max-w-sm rounded-2xl border border-border/30 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
           <p className="text-sm font-bold">{initial?.id ? "Edit Deal" : "New Deal"}</p>
@@ -77,11 +77,126 @@ const DealForm: React.FC<DealFormProps> = ({ initial, onSave, onClose }) => {
         </div>
         <div className="px-5 pb-5 flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">Cancel</button>
-          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-            {initial?.id ? "Save Changes" : "Add Deal"}
-          </button>
+          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">{initial?.id ? "Save Changes" : "Add Deal"}</button>
         </div>
       </motion.div>
+    </motion.div>
+  );
+};
+
+// ── Aura CRM Intelligence Panel ───────────────────────────────────────────────
+interface AuraAnalysisPanelProps {
+  deal: CRMDeal;
+  onClose: () => void;
+}
+const AuraAnalysisPanel: React.FC<AuraAnalysisPanelProps> = ({ deal, onClose }) => {
+  const { createTask } = useFlux();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [proposedPoints, setProposedPoints] = useState<string[]>([]);
+  const [addedPoints, setAddedPoints] = useState<Set<string>>(new Set());
+
+  const runAnalysis = async () => {
+    setIsAnalyzing(true);
+    await new Promise(r => setTimeout(r, 1500));
+
+    const points: string[] = [];
+    const pendingInvoices = (deal.invoices || []).filter(inv => inv.status === "Pending" || inv.status === "Sent");
+    if (pendingInvoices.length > 0) {
+      points.push(`Follow up on pending invoice ($${pendingInvoices.reduce((s, i) => s + i.amount, 0).toLocaleString()}) for ${deal.name}`);
+    }
+    if (deal.stage === "proposal") {
+      points.push(`Prepare presentation materials for ${deal.name} at ${deal.company}`);
+    }
+    if (deal.stage === "contacted") {
+      points.push(`Schedule discovery call with ${deal.name}`);
+    }
+    if (deal.stage === "leads") {
+      points.push(`Send initial outreach email to ${deal.name} at ${deal.company}`);
+    }
+    if (points.length === 0) {
+      points.push(`Review deal status and next steps for ${deal.name}`);
+    }
+
+    setProposedPoints(points);
+    setIsAnalyzing(false);
+    setHasAnalyzed(true);
+  };
+
+  const handleAddToTasks = async (point: string) => {
+    await createTask({ title: point, priority: "medium", type: "task" });
+    setAddedPoints(prev => new Set([...prev, point]));
+    toast.success("Added to tasks! 🎯");
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+      transition={{ duration: 0.2 }}
+      className="mt-3 rounded-2xl border border-white/10 overflow-hidden"
+      style={{ background: "hsl(var(--card) / 0.7)", backdropFilter: "blur(16px)" }}
+    >
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, hsl(265 60% 60% / 0.3), hsl(160 84% 39% / 0.2))" }}>
+            <Sparkles size={12} style={{ color: "hsl(265 60% 75%)" }} />
+          </div>
+          <p className="text-xs font-semibold text-foreground">Aura Intelligence</p>
+        </div>
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-secondary transition-colors text-muted-foreground"><X size={12} /></button>
+      </div>
+
+      <div className="p-4">
+        {!hasAnalyzed && !isAnalyzing && (
+          <div className="text-center py-3">
+            <p className="text-xs text-muted-foreground mb-3">Aura will analyze this contact's data and suggest action items.</p>
+            <button onClick={runAnalysis}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold mx-auto transition-all"
+              style={{ border: "1px solid hsl(265 60% 60% / 0.4)", color: "hsl(265 60% 75%)", background: "hsl(265 60% 60% / 0.08)" }}>
+              <Sparkles size={12} /> Start Analysis
+            </button>
+          </div>
+        )}
+
+        {isAnalyzing && (
+          <div className="flex items-center gap-3 py-3">
+            <Loader2 size={14} className="animate-spin shrink-0" style={{ color: "hsl(265 60% 70%)" }} />
+            <div>
+              <p className="text-xs font-medium text-foreground">Analyzing {deal.name}…</p>
+              <p className="text-[10px] text-muted-foreground">Scanning invoices, pipeline stage, and history</p>
+            </div>
+          </div>
+        )}
+
+        {hasAnalyzed && proposedPoints.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[10px] text-muted-foreground mb-3">Aura found {proposedPoints.length} action point{proposedPoints.length > 1 ? "s" : ""}:</p>
+            {proposedPoints.map((point, i) => {
+              const isAdded = addedPoints.has(point);
+              return (
+                <div key={i} className="flex items-start gap-2 p-2.5 rounded-xl border border-white/8 bg-white/[0.02]">
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: "hsl(265 60% 65%)" }} />
+                  <p className="text-xs text-foreground/80 flex-1 leading-relaxed">{point}</p>
+                  <button
+                    onClick={() => !isAdded && handleAddToTasks(point)}
+                    disabled={isAdded}
+                    className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${
+                      isAdded
+                        ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                        : "border border-white/15 text-muted-foreground hover:text-foreground hover:bg-white/8 hover:border-white/25"
+                    }`}
+                  >
+                    {isAdded ? <><Check size={9} /> Added</> : <><CheckSquare size={9} /> Add</>}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 };
@@ -94,6 +209,7 @@ const CRMPage: React.FC = () => {
   const [editDeal, setEditDeal] = useState<CRMDeal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [invoiceContact, setInvoiceContact] = useState<CRMDeal | null>(null);
+  const [auraAnalyzeDeal, setAuraAnalyzeDeal] = useState<string | null>(null);
 
   const filtered = deals.filter(d => {
     const matchSearch = d.name.toLowerCase().includes(search.toLowerCase()) || d.company.toLowerCase().includes(search.toLowerCase());
@@ -153,62 +269,92 @@ const CRMPage: React.FC = () => {
         })}
       </div>
 
-      {/* Table */}
+      {/* Table / Empty state */}
       <div className="flux-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/30">
-                {["Contact", "Company", "Stage", "Value", "Actions"].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {filtered.map((deal, i) => (
-                  <motion.tr key={deal.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    className="border-b border-border/10 hover:bg-secondary/20 transition-colors group">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 bg-primary/10 text-primary">
-                          {initials(deal.name)}
-                        </div>
-                        <span className="text-sm font-medium">{deal.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{deal.company}</td>
-                    <td className="px-4 py-3">
-                      <select value={deal.stage} onChange={e => updateDeal(deal.id, { stage: e.target.value as Stage })}
-                        className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border cursor-pointer outline-none transition-colors ${STAGE_CONFIG[deal.stage].bg} ${STAGE_CONFIG[deal.stage].text}`}>
-                        {STAGES.map(s => <option key={s} value={s}>{STAGE_CONFIG[s].label}</option>)}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-bold text-foreground">{fmt(deal.value)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setInvoiceContact(deal)} title="Create Invoice"
-                          className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-400 transition-colors">
-                          <Receipt size={13} />
-                        </button>
-                        <button onClick={() => setEditDeal(deal)} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
-                          <Pencil size={13} />
-                        </button>
-                        <button onClick={() => setConfirmDelete(deal.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground text-sm">No deals match your filters.</div>
-          )}
-        </div>
+        {filtered.length === 0 && deals.length === 0 ? (
+          <div className="py-10">
+            <EmptyState
+              icon={User}
+              title="No contacts yet"
+              description="Start building your network. Add your first client to unlock Aura's AI insights."
+              actionText="Add Contact"
+              onAction={() => setShowForm(true)}
+            />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border/30">
+                  {["Contact", "Company", "Stage", "Value", "Actions"].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <AnimatePresence>
+                  {filtered.map((deal, i) => (
+                    <React.Fragment key={deal.id}>
+                      <motion.tr initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="border-b border-border/10 hover:bg-secondary/20 transition-colors group">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 bg-primary/10 text-primary">
+                              {initials(deal.name)}
+                            </div>
+                            <span className="text-sm font-medium">{deal.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{deal.company}</td>
+                        <td className="px-4 py-3">
+                          <select value={deal.stage} onChange={e => updateDeal(deal.id, { stage: e.target.value as Stage })}
+                            className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border cursor-pointer outline-none transition-colors ${STAGE_CONFIG[deal.stage].bg} ${STAGE_CONFIG[deal.stage].text}`}>
+                            {STAGES.map(s => <option key={s} value={s}>{STAGE_CONFIG[s].label}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-foreground">{fmt(deal.value)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {/* Aura Analyze button */}
+                            <button
+                              onClick={() => setAuraAnalyzeDeal(auraAnalyzeDeal === deal.id ? null : deal.id)}
+                              title="Ask Aura to Analyze"
+                              className={`p-1.5 rounded-lg transition-colors ${auraAnalyzeDeal === deal.id ? "text-violet-400 bg-violet-500/15" : "text-muted-foreground hover:text-violet-400 hover:bg-violet-500/10"}`}
+                            >
+                              <Sparkles size={13} />
+                            </button>
+                            <button onClick={() => setInvoiceContact(deal)} title="Create Invoice"
+                              className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-400 transition-colors">
+                              <Receipt size={13} />
+                            </button>
+                            <button onClick={() => setEditDeal(deal)} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+                              <Pencil size={13} />
+                            </button>
+                            <button onClick={() => setConfirmDelete(deal.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                      {/* Aura Analysis Panel (inline row expansion) */}
+                      {auraAnalyzeDeal === deal.id && (
+                        <tr key={`aura-${deal.id}`}>
+                          <td colSpan={5} className="px-4 pb-4">
+                            <AuraAnalysisPanel deal={deal} onClose={() => setAuraAnalyzeDeal(null)} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </AnimatePresence>
+              </tbody>
+            </table>
+            {filtered.length === 0 && deals.length > 0 && (
+              <div className="text-center py-10 text-muted-foreground text-sm">No deals match your filters.</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modals */}
@@ -237,11 +383,7 @@ const CRMPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <InvoiceModal
-        open={!!invoiceContact}
-        contact={invoiceContact}
-        onClose={() => setInvoiceContact(null)}
-      />
+      <InvoiceModal open={!!invoiceContact} contact={invoiceContact} onClose={() => setInvoiceContact(null)} />
     </div>
   );
 };

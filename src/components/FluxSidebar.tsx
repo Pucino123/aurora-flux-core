@@ -1,4 +1,4 @@
-import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase } from "lucide-react";
+import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase, Settings } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
@@ -264,13 +264,20 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
             <div className="sidebar-separator" />
 
             {/* Billing */}
-            <div className="px-2 pb-1">
+            <div className="px-2 pb-1 space-y-0.5">
               <button
                 onClick={openBilling}
                 className={`sidebar-item w-full ${(activeView as string) === "billing" ? "sidebar-item-active" : ""}`}
               >
                 <CreditCard size={16} className="shrink-0" />
                 <span>Billing & Plans</span>
+              </button>
+              <button
+                onClick={() => window.dispatchEvent(new Event("open-settings"))}
+                className="sidebar-item w-full"
+              >
+                <Settings size={16} className="shrink-0" />
+                <span>Settings</span>
               </button>
             </div>
 
