@@ -137,8 +137,8 @@ interface FluxContextValue {
   // Navigation
   activeFolder: string | null;
   setActiveFolder: (id: string | null) => void;
-  activeView: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks";
-  setActiveView: (v: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks") => void;
+  activeView: "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks";
+  setActiveView: (v: "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks") => void;
   pendingDocumentId: string | null;
   setPendingDocumentId: (id: string | null) => void;
   filterPersona: string | null;
