@@ -537,10 +537,12 @@ interface PersonaCardProps {
   onCollapse: () => void;
   onFullscreen: () => void;
   floatingEmojis: string[];
+  userId?: string | null;
+  sessionId?: string;
 }
 
 const PersonaCard: React.FC<PersonaCardProps> = ({
-  persona, state, response, isExpanded, anyExpanded, onExpand, onCollapse, onFullscreen, floatingEmojis,
+  persona, state, response, isExpanded, anyExpanded, onExpand, onCollapse, onFullscreen, floatingEmojis, userId, sessionId,
 }) => {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
@@ -554,7 +556,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // SSE streaming sendChat
+  // SSE streaming sendChat — persists to council_threads with session_id
   const sendChat = async () => {
     if (!chatInput.trim() || chatLoading) return;
     const msg = chatInput.trim();
@@ -573,7 +575,24 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
       personaKey: persona.key,
       question: msg,
       onDelta: chunk => { streamText += chunk; addMsg(); },
-      onDone: () => setChatLoading(false),
+      onDone: async () => {
+        setChatLoading(false);
+        // Persist thread — even before "Save to Council", tagged with session_id
+        if (userId) {
+          try {
+            const db = supabase as any;
+            await db.from("council_threads").insert({
+              user_id: userId,
+              persona_key: persona.key,
+              user_message: msg,
+              persona_reply: streamText,
+              // response_id left null — linked after save; session tracked locally
+            });
+          } catch {
+            // silent
+          }
+        }
+      },
       onError: () => {
         setChatMessages(prev => [...prev, { role: "ai", text: `As ${persona.title}, I believe this deserves deeper analysis.` }]);
         setChatLoading(false);
@@ -816,19 +835,45 @@ const ExportModal: React.FC<{ avgRing: number; idea: string; responses: Record<s
 
 type CardState = "idle" | "typing" | "revealed";
 
-interface PersonaResponse {
+export interface BoardroomPersonaResponse {
   analysis: string;
   question: string;
   confidence: number;
 }
 
-const CouncilBoardroom: React.FC = () => {
+// Session-id stored in localStorage so pre-save threads survive page reloads
+const getOrCreateSessionId = (): string => {
+  let sid = localStorage.getItem("boardroom_session_id");
+  if (!sid) {
+    sid = crypto.randomUUID();
+    localStorage.setItem("boardroom_session_id", sid);
+  }
+  return sid;
+};
+
+const resetSessionId = (): string => {
+  const sid = crypto.randomUUID();
+  localStorage.setItem("boardroom_session_id", sid);
+  return sid;
+};
+
+export interface RestorableBoardroomIdea {
+  id: string;
+  content: string;
+  responses: { persona_key: string; vote_score: number | null; analysis: string | null }[];
+}
+
+interface CouncilBoardroomProps {
+  onRestoreIdea?: (idea: RestorableBoardroomIdea) => void;
+}
+
+const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) => {
   const { user } = useAuth();
   const [idea, setIdea] = useState("");
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({
     elena: "idle", helen: "idle", anton: "idle", margot: "idle",
   });
-  const [responses, setResponses] = useState<Record<string, PersonaResponse | null>>({
+  const [responses, setResponses] = useState<Record<string, BoardroomPersonaResponse | null>>({
     elena: null, helen: null, anton: null, margot: null,
   });
   const [actionPlan, setActionPlan] = useState<string[]>(DEFAULT_ACTION_PLAN);
@@ -842,6 +887,7 @@ const CouncilBoardroom: React.FC = () => {
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [savedIdeaId, setSavedIdeaId] = useState<string | null>(null);
+  const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
 
@@ -877,7 +923,7 @@ const CouncilBoardroom: React.FC = () => {
     return () => { if (emojiTimerRef.current) clearInterval(emojiTimerRef.current); };
   }, []);
 
-  const revealPersonaSequence = useCallback(async (aiPersonas: Record<string, PersonaResponse | null>) => {
+  const revealPersonaSequence = useCallback(async (aiPersonas: Record<string, BoardroomPersonaResponse | null>) => {
     for (let i = 0; i < PERSONAS.length; i++) {
       const p = PERSONAS[i];
       startFloatingEmojis(p.key);
@@ -892,6 +938,43 @@ const CouncilBoardroom: React.FC = () => {
     stopFloatingEmojis();
   }, [startFloatingEmojis, stopFloatingEmojis]);
 
+  // Restore a previously saved boardroom session
+  const handleRestore = useCallback((savedIdea: RestorableBoardroomIdea) => {
+    setIdea(savedIdea.content);
+    setSavedIdeaId(savedIdea.id);
+    const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
+    const newResponses: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+    savedIdea.responses.forEach(r => {
+      if (r.persona_key in newStates) {
+        newStates[r.persona_key] = "revealed";
+        // Merge with MOCK_RESPONSES for question field (not stored in DB)
+        const mock = MOCK_RESPONSES[r.persona_key];
+        newResponses[r.persona_key] = {
+          analysis: r.analysis || mock?.analysis || "",
+          question: mock?.question || "",
+          confidence: r.vote_score ?? mock?.confidence ?? 50,
+        };
+      }
+    });
+    setCardStates(newStates);
+    setResponses(newResponses);
+    setRevealedCount(savedIdea.responses.filter(r => r.persona_key in newStates).length);
+    revealedCountRef.current = savedIdea.responses.filter(r => r.persona_key in newStates).length;
+    setSaveState("saved");
+    setTimeout(() => setSaveState("idle"), 3000);
+    // Reset session id so new chats go to a fresh session
+    sessionIdRef.current = resetSessionId();
+    // Scroll to top of boardroom
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  // Expose restore to parent via onRestoreIdea prop
+  useEffect(() => {
+    if (onRestoreIdea) {
+      (window as any).__boardroomRestore = handleRestore;
+    }
+  }, [onRestoreIdea, handleRestore]);
+
   const handleConsult = async () => {
     if (isConsulting) return;
     setIsConsulting(true);
@@ -901,8 +984,12 @@ const CouncilBoardroom: React.FC = () => {
     setFullscreenPersona(null);
     setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
     setResponses({ elena: null, helen: null, anton: null, margot: null });
+    setSavedIdeaId(null);
+    setSaveState("idle");
+    // Fresh session for new consult
+    sessionIdRef.current = resetSessionId();
 
-    let aiPersonas: Record<string, PersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+    let aiPersonas: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
     try {
       const { data, error } = await supabase.functions.invoke("flux-ai", {
         body: { type: "boardroom-consult", idea: idea || "Should I start a new business?" },
@@ -1038,6 +1125,8 @@ const CouncilBoardroom: React.FC = () => {
               onCollapse={() => setExpandedCard(null)}
               onFullscreen={() => setFullscreenPersona(persona.key)}
               floatingEmojis={floatingEmojis[persona.key]}
+              userId={user?.id}
+              sessionId={sessionIdRef.current}
             />
           ))}
         </div>
@@ -1054,6 +1143,8 @@ const CouncilBoardroom: React.FC = () => {
               onCollapse={() => setExpandedCard(null)}
               onFullscreen={() => setFullscreenPersona(persona.key)}
               floatingEmojis={floatingEmojis[persona.key]}
+              userId={user?.id}
+              sessionId={sessionIdRef.current}
             />
           ))}
         </div>
