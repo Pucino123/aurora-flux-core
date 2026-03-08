@@ -8,6 +8,7 @@ import { useDocuments } from "@/hooks/useDocuments";
 import { useAuth } from "@/hooks/useAuth";
 import { useWidgetStyle } from "@/hooks/useWidgetStyle";
 import { StyleEditorProvider } from "./StyleEditorContext";
+import { WidgetCloseProvider } from "@/context/WidgetCloseContext";
 import BackgroundEngine, { SpaceSettings, DEFAULT_SPACE_SETTINGS } from "./BackgroundEngine";
 import FocusTimer from "./FocusTimer";
 import DesktopFolder from "./DesktopFolder";
