@@ -86,6 +86,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const [showMoveFolder, setShowMoveFolder] = useState(false);
   const [showMoveToPageMenu, setShowMoveToPageMenu] = useState(false);
   const [flyingOff, setFlyingOff] = useState<{ dir: 1 | -1 } | null>(null);
+  const [dropBounce, setDropBounce] = useState(false);
 
   const rootFolders = useMemo(() => folders.filter(f => !f.parent_id), [folders]);
 

@@ -88,6 +88,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   const [justAbsorbed, setJustAbsorbed] = useState(false);
   const [isDropTarget, setIsDropTarget] = useState(false);
   const [flyingOff, setFlyingOff] = useState<{ dir: 1 | -1 } | null>(null);
+  const [dropBounce, setDropBounce] = useState(false);
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const didDrag = useRef(false);
