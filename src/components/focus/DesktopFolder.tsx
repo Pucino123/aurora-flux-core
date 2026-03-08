@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect, memo, useMemo } from "react";
-import { Folder, FolderOpen, Pencil, Trash2, Copy, FolderInput, CalendarPlus, LayoutDashboard, Share2, FileEdit, Type, Upload, Palette, Search, ChevronDown, BookCopy } from "lucide-react";
+import { Folder, FolderOpen, Pencil, Trash2, Copy, FolderInput, CalendarPlus, LayoutDashboard, Share2, FileEdit, Type, Upload, Palette, Search, ChevronDown, BookCopy, Pin, PinOff } from "lucide-react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { useFlux, FolderNode } from "@/context/FluxContext";

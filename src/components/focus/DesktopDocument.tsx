@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { FileText, Table, Pencil, Trash2, Copy, Type, Upload, Palette, Search, ChevronDown, Share2, CalendarPlus, FolderInput, Clock, BookCopy } from "lucide-react";
+import { FileText, Table, Pencil, Trash2, Copy, Type, Upload, Palette, Search, ChevronDown, Share2, CalendarPlus, FolderInput, Clock, BookCopy, Pin, PinOff } from "lucide-react";
 import { DbDocument } from "@/hooks/useDocuments";
 import { useFocusStore } from "@/context/FocusContext";
 import { useFlux } from "@/context/FluxContext";
