@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid, Legend,
+  LineChart, Line, CartesianGrid,
 } from "recharts";
-import { TrendingUp, BarChart2, Clock, Sparkles } from "lucide-react";
+import { TrendingUp, BarChart2, Clock, Sparkles, TrendingDown, RotateCcw, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const PERSONA_CONFIG: Record<string, { name: string; color: string }> = {
