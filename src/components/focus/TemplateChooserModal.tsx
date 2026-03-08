@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, FileText, Table, Briefcase, FolderKanban, MessageSquare, AlignLeft } from "lucide-react";
+import { X, AlignLeft } from "lucide-react";
 
 type DocType = "text" | "spreadsheet";
 
@@ -101,12 +101,10 @@ const TEMPLATES: Template[] = [
     },
     thumbnail: (
       <div className="w-full h-full bg-white flex flex-col">
-        {/* Dark header */}
         <div className="bg-slate-800 px-3 py-2 flex items-center justify-between">
           <div className="w-8 h-1.5 bg-white/30 rounded-full" />
           <div className="w-6 h-1.5 bg-white/20 rounded-full" />
         </div>
-        {/* Client info row */}
         <div className="px-3 pt-2 pb-1 flex justify-between gap-2">
           <div className="flex flex-col gap-1">
             <div className="w-10 h-1.5 bg-slate-300 rounded-full" />
@@ -117,7 +115,6 @@ const TEMPLATES: Template[] = [
             <div className="w-8 h-1 bg-slate-200 rounded-full" />
           </div>
         </div>
-        {/* Table rows */}
         <div className="flex-1 px-3 flex flex-col gap-1 pt-1">
           <div className="flex gap-1 border-b border-slate-200 pb-0.5">
             <div className="flex-1 h-1 bg-slate-300 rounded-full" />
@@ -132,7 +129,6 @@ const TEMPLATES: Template[] = [
             </div>
           ))}
         </div>
-        {/* Total block */}
         <div className="mx-3 mb-2 mt-1 self-end">
           <div className="bg-slate-800 rounded px-2 py-1 flex gap-3 items-center">
             <div className="w-6 h-1 bg-white/30 rounded-full" />
@@ -165,7 +161,6 @@ const TEMPLATES: Template[] = [
     },
     thumbnail: (
       <div className="w-full h-full bg-white flex flex-col overflow-hidden">
-        {/* Large hero block */}
         <div
           className="w-full flex items-end pb-2 px-3"
           style={{ height: "44%", background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)" }}
@@ -175,7 +170,6 @@ const TEMPLATES: Template[] = [
             <div className="w-10 h-1.5 bg-white/40 rounded-full" />
           </div>
         </div>
-        {/* Content area */}
         <div className="flex-1 px-3 pt-2 flex gap-2">
           <div className="flex flex-col gap-1.5 flex-1">
             <div className="w-full h-1.5 bg-slate-200 rounded-full" />
@@ -215,31 +209,72 @@ const TEMPLATES: Template[] = [
     },
     thumbnail: (
       <div className="w-full h-full bg-white flex flex-col px-3 py-2.5 gap-2">
-        {/* Title */}
         <div className="w-3/4 h-2 bg-slate-700 rounded-full" />
         <div className="w-1/2 h-1 bg-slate-300 rounded-full" />
-        {/* Divider */}
         <div className="w-full h-px bg-slate-200 my-0.5" />
-        {/* Bullet rows */}
         {[1, 2, 3].map(i => (
           <div key={i} className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-slate-300 shrink-0" />
-            <div
-              className="h-1.5 bg-slate-200 rounded-full"
-              style={{ width: `${40 + i * 15}%` }}
-            />
+            <div className="h-1.5 bg-slate-200 rounded-full" style={{ width: `${40 + i * 15}%` }} />
           </div>
         ))}
-        {/* Divider */}
         <div className="w-full h-px bg-slate-200 my-0.5" />
-        {/* Action items */}
         {[1, 2].map(i => (
           <div key={i} className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded border border-slate-300 shrink-0" />
-            <div
-              className="h-1 bg-slate-100 rounded-full"
-              style={{ width: `${50 + i * 10}%` }}
-            />
+            <div className="h-1 bg-slate-100 rounded-full" style={{ width: `${50 + i * 10}%` }} />
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    id: "crm-pipeline",
+    title: "CRM Pipeline",
+    subtitle: "Track contacts & deals",
+    type: "spreadsheet",
+    category: "CRM & Sales",
+    content: {
+      rows: [
+        ["Contact Name", "Company", "Stage", "Deal Value", "Last Contacted"],
+        ["Sarah Johnson", "Acme Corp", "Qualified", "$12,500", new Date(Date.now() - 86400000).toLocaleDateString()],
+        ["Michael Chen", "TechStart Inc", "Proposal Sent", "$8,200", new Date(Date.now() - 172800000).toLocaleDateString()],
+        ["Emily Rodriguez", "GlobalReach", "Negotiation", "$31,000", new Date(Date.now() - 259200000).toLocaleDateString()],
+        ["David Kim", "Bright Solutions", "Demo Scheduled", "$5,750", new Date(Date.now() - 345600000).toLocaleDateString()],
+        ["Anna Müller", "NovaTech GmbH", "Closed Won", "$19,800", new Date(Date.now() - 432000000).toLocaleDateString()],
+      ],
+    },
+    thumbnail: (
+      <div className="w-full h-full bg-white flex flex-col">
+        {/* Header row */}
+        <div className="flex border-b-2 border-emerald-500 bg-emerald-50 px-2 py-1 gap-1">
+          {["Contact", "Stage", "Value"].map((h, i) => (
+            <div key={i} className="flex-1 text-[4px] font-bold text-emerald-700 truncate">{h}</div>
+          ))}
+        </div>
+        {/* Data rows */}
+        {[
+          ["S. Johnson", "Qualified", "$12.5k"],
+          ["M. Chen", "Proposal", "$8.2k"],
+          ["E. Rodriguez", "Negotiation", "$31k"],
+          ["D. Kim", "Demo", "$5.7k"],
+          ["A. Müller", "Closed ✓", "$19.8k"],
+        ].map((row, i) => (
+          <div key={i} className="flex px-2 py-0.5 gap-1 border-b border-slate-100">
+            {row.map((cell, j) => (
+              <div
+                key={j}
+                className="flex-1 text-[4px] truncate"
+                style={{
+                  color: j === 1
+                    ? cell.includes("Closed") ? "#16a34a" : cell.includes("Negotiation") ? "#d97706" : "#3b82f6"
+                    : "#475569",
+                  fontWeight: j === 0 ? "600" : "400",
+                }}
+              >
+                {cell}
+              </div>
+            ))}
           </div>
         ))}
       </div>
@@ -264,18 +299,70 @@ interface TemplateChooserModalProps {
 const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModalProps) => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("blank-text");
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  const filtered =
-    selectedCategory === "All"
-      ? TEMPLATES
-      : TEMPLATES.filter(t => t.category === selectedCategory);
-
+  const filtered = selectedCategory === "All" ? TEMPLATES : TEMPLATES.filter(t => t.category === selectedCategory);
   const selectedTemplate = TEMPLATES.find(t => t.id === selectedTemplateId) ?? TEMPLATES[0];
 
-  const handleCreate = () => {
+  // Keep selection valid when category changes
+  const handleCategoryChange = useCallback((cat: string) => {
+    setSelectedCategory(cat);
+    const newFiltered = cat === "All" ? TEMPLATES : TEMPLATES.filter(t => t.category === cat);
+    if (newFiltered.length > 0 && !newFiltered.find(t => t.id === selectedTemplateId)) {
+      setSelectedTemplateId(newFiltered[0].id);
+    }
+  }, [selectedTemplateId]);
+
+  const handleCreate = useCallback(() => {
     onCreateDocument(selectedTemplate.title, selectedTemplate.type, selectedTemplate.content);
     onClose();
-  };
+  }, [selectedTemplate, onCreateDocument, onClose]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onClose(); return; }
+      if (e.key === "Enter") { handleCreate(); return; }
+
+      const catIndex = CATEGORIES.indexOf(selectedCategory);
+
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const next = e.shiftKey
+          ? (catIndex - 1 + CATEGORIES.length) % CATEGORIES.length
+          : (catIndex + 1) % CATEGORIES.length;
+        handleCategoryChange(CATEGORIES[next]);
+        return;
+      }
+
+      const currentIndex = filtered.findIndex(t => t.id === selectedTemplateId);
+      const cols = 3;
+
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        const next = Math.min(currentIndex + 1, filtered.length - 1);
+        setSelectedTemplateId(filtered[next].id);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        const prev = Math.max(currentIndex - 1, 0);
+        setSelectedTemplateId(filtered[prev].id);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = Math.min(currentIndex + cols, filtered.length - 1);
+        setSelectedTemplateId(filtered[next].id);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev = Math.max(currentIndex - cols, 0);
+        setSelectedTemplateId(filtered[prev].id);
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, handleCreate, filtered, selectedTemplateId, selectedCategory, handleCategoryChange]);
+
+  // Auto-focus modal on mount
+  useEffect(() => { modalRef.current?.focus(); }, []);
 
   return createPortal(
     <AnimatePresence>
@@ -298,7 +385,9 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
         className="fixed inset-0 z-[9981] flex items-center justify-center pointer-events-none"
       >
         <div
-          className="pointer-events-auto flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+          ref={modalRef}
+          tabIndex={-1}
+          className="pointer-events-auto flex flex-col rounded-2xl shadow-2xl overflow-hidden outline-none"
           style={{
             width: 860,
             height: 580,
@@ -318,7 +407,6 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
               borderBottom: "1px solid rgba(255,255,255,0.07)",
             }}
           >
-            {/* macOS close button */}
             <button
               onClick={onClose}
               className="group flex items-center justify-center"
@@ -326,17 +414,17 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
             >
               <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "rgba(80,0,0,0.75)" }} />
             </button>
-            {/* Yellow + green dots (decorative) */}
             <div style={{ width: 13, height: 13, borderRadius: "50%", background: "#febc2e", border: "0.5px solid rgba(0,0,0,0.2)" }} />
             <div style={{ width: 13, height: 13, borderRadius: "50%", background: "#28c840", border: "0.5px solid rgba(0,0,0,0.2)" }} />
             <span className="flex-1 text-center text-[13px] font-medium text-white/50 -ml-8 select-none">
               Choose a Template
             </span>
+            <span className="text-[10px] text-white/20 select-none">↑↓←→ navigate · Tab switch category · ↵ create · Esc cancel</span>
           </div>
 
           {/* Body: sidebar + content */}
           <div className="flex flex-1 min-h-0">
-            {/* Left sidebar */}
+            {/* Left sidebar — Tab navigates categories */}
             <div
               className="flex flex-col gap-0.5 py-4 px-2 overflow-y-auto"
               style={{
@@ -345,11 +433,13 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
                 borderRight: "1px solid rgba(255,255,255,0.07)",
               }}
             >
-              <p className="text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 mb-1.5">Categories</p>
-              {CATEGORIES.map(cat => (
+              <p className="text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 mb-1.5">
+                Categories <span className="text-white/15 normal-case tracking-normal">(Tab)</span>
+              </p>
+              {CATEGORIES.map((cat, idx) => (
                 <button
                   key={cat}
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => handleCategoryChange(cat)}
                   className="w-full text-left px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-150"
                   style={{
                     background: selectedCategory === cat ? "rgba(59,130,246,0.9)" : "transparent",
@@ -381,7 +471,6 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
                         onClick={() => setSelectedTemplateId(template.id)}
                         onDoubleClick={handleCreate}
                       >
-                        {/* Thumbnail card */}
                         <div
                           className="transition-all duration-200"
                           style={{
@@ -397,8 +486,6 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
                         >
                           {template.thumbnail}
                         </div>
-
-                        {/* Label */}
                         <div className="text-center">
                           <p
                             className="text-[12px] font-semibold transition-colors"
