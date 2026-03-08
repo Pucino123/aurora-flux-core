@@ -392,13 +392,13 @@ const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
         </button>
       </div>
 
-      {/* Slide tag labels */}
-      <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
+      {/* Slide tag labels — horizontal scroll on mobile */}
+      <div className="flex items-center gap-2 mt-6 overflow-x-auto no-scrollbar px-2 pb-1 justify-start md:justify-center">
         {SLIDES.map((s, i) => (
           <button
             key={i}
             onClick={() => go(i, i > idx ? 1 : -1)}
-            className={`text-xs px-3 py-1 rounded-full transition-all duration-200 ${i === idx ? "text-white font-semibold" : "text-white/35 hover:text-white/60"}`}
+            className={`flex-shrink-0 text-xs px-3 py-1 rounded-full transition-all duration-200 ${i === idx ? "text-white font-semibold" : "text-white/35 hover:text-white/60"}`}
             style={i === idx ? { background: slide.accentColor, border: `1px solid ${slide.tagBorder}` } : {}}
           >
             {s.tag}
