@@ -372,13 +372,14 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r},${g},${b},${alpha})`;
   };
-  const barBg = hexToRgba("#000000", toolbarStyle.bgOpacity / 100);
+  const barBg = hexToRgba(toolbarStyle.bgColor || "#000000", toolbarStyle.bgOpacity / 100);
   const barBorder = toolbarStyle.borderWidth > 0
     ? `${toolbarStyle.borderWidth}px solid ${hexToRgba(toolbarStyle.borderColor, toolbarStyle.borderOpacity / 100)}`
     : "1px solid rgba(255,255,255,0.12)";
   const barRadius = toolbarStyle.borderRadius;
   const barBlur = toolbarStyle.blurAmount;
   const textAlpha = toolbarStyle.textOpacity / 100;
+  const textRgba = hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha);
 
   return (
     <>
