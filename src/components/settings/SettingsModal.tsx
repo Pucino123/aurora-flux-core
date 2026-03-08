@@ -356,8 +356,83 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                     </motion.div>
                   )}
 
-                   {/* ── INTEGRATIONS ── */}
-                   {tab === "integrations" && (
+                  {/* ── COMPANY PROFILE ── */}
+                  {tab === "company" && (
+                    <motion.div key="company" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
+                      <h2 className="text-base font-bold text-foreground mb-1">Company Profile</h2>
+                      <p className="text-xs text-muted-foreground mb-5">Used on invoices and billing documents.</p>
+                      <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+
+                      {/* Logo */}
+                      <div className="flex items-center gap-4 mb-5">
+                        <div
+                          className="w-16 h-16 rounded-2xl border-2 border-dashed border-border/40 flex items-center justify-center cursor-pointer hover:border-primary/40 transition-colors overflow-hidden group"
+                          onClick={() => logoRef.current?.click()}
+                        >
+                          {company.logo_url ? (
+                            <img src={company.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                          ) : (
+                            <div className="flex flex-col items-center gap-1 text-muted-foreground group-hover:text-primary transition-colors">
+                              {uploadingLogo ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                              <span className="text-[9px]">Logo</span>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-foreground">Company Logo</p>
+                          <p className="text-[11px] text-muted-foreground">Click to upload (PNG, JPG)</p>
+                          {company.logo_url && (
+                            <button onClick={() => setCompany(p => ({ ...p, logo_url: "" }))} className="text-[10px] text-destructive/70 hover:text-destructive mt-0.5">Remove</button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 max-w-lg">
+                        {[
+                          { key: "company_name", label: "Company Name", full: true },
+                          { key: "vat_number", label: "VAT / CVR Number" },
+                          { key: "address", label: "Street Address", full: true },
+                          { key: "zip_code", label: "ZIP Code" },
+                          { key: "city", label: "City" },
+                          { key: "country", label: "Country" },
+                          { key: "bank_name", label: "Bank Name" },
+                          { key: "iban", label: "IBAN" },
+                          { key: "swift_bic", label: "SWIFT / BIC" },
+                          { key: "payment_terms", label: "Payment Terms" },
+                        ].map(({ key, label, full }) => (
+                          <div key={key} className={`space-y-1.5 ${full ? "col-span-2" : ""}`}>
+                            <label className="text-xs text-muted-foreground font-medium">{label}</label>
+                            <input
+                              value={(company as any)[key]}
+                              onChange={e => setCompany(p => ({ ...p, [key]: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-xl text-sm bg-secondary/50 border border-border/30 text-foreground outline-none focus:border-primary/40 transition-colors"
+                            />
+                          </div>
+                        ))}
+                        <div className="col-span-2 space-y-1.5">
+                          <label className="text-xs text-muted-foreground font-medium">Invoice Footer Note</label>
+                          <textarea
+                            value={company.invoice_footer}
+                            onChange={e => setCompany(p => ({ ...p, invoice_footer: e.target.value }))}
+                            rows={2}
+                            className="w-full px-3 py-2 rounded-xl text-sm bg-secondary/50 border border-border/30 text-foreground outline-none focus:border-primary/40 transition-colors resize-none"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleSaveCompany}
+                        disabled={savingCompany}
+                        className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        {savingCompany ? <Loader2 size={12} className="animate-spin" /> : null}
+                        Save Company Profile
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {/* ── INTEGRATIONS ── */}
+                  {tab === "integrations" && (
                     <motion.div key="integrations" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
                       <h2 className="text-base font-bold text-foreground mb-1">Integrations</h2>
                       <p className="text-xs text-muted-foreground mb-5">Connect your external calendars to see everything in one place.</p>
