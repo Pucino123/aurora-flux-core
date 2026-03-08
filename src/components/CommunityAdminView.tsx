@@ -19,17 +19,14 @@ interface Slot {
   createdAt: string;
 }
 
-const StatCard = ({
-  icon: Icon,
-  label,
-  value,
-  color,
-}: {
+interface StatCardProps {
   icon: React.ElementType;
   label: string;
   value: number;
   color: string;
-}) => (
+}
+
+const StatCard = ({ icon: Icon, label, value, color }: StatCardProps) => (
   <div className="rounded-2xl border border-border/40 bg-card p-5 flex items-center gap-4">
     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
       <Icon size={18} />
