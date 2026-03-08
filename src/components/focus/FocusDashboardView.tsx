@@ -840,6 +840,8 @@ const FocusContent = () => {
   const { moveToTrash } = useTrash();
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null, moveToTrash);
   const { openWindow, closeWindow, windows, updateWindowPosition, focusedId } = useWindowManager();
+  // Extra docs opened from folders (not in desktopDocs since folder_id != null)
+  const [folderOpenedDocs, setFolderOpenedDocs] = useState<Record<string, DbDocument>>({});
 
   // Listen for document restore from trash — add its ID back to page 1 visibleDocIds
   useEffect(() => {
