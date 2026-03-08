@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck, Clock, CheckCircle, X, ExternalLink, Loader2,
   RefreshCw, Users, TrendingUp, Activity, AlertTriangle, Trash2,
-  Search, MoreHorizontal, Shield, Ban, Cpu
+  Search, MoreHorizontal, Shield, Ban, Cpu, ImagePlus
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
