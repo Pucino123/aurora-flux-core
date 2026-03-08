@@ -321,6 +321,26 @@ const FocusContent = () => {
     setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, spaceSettings: s } : p));
   }, [activePageIndex, setPages]);
 
+  // Per-page folder/doc positions — override global context positions for current page
+  const pageFolderPositions: Record<string, { x: number; y: number }> = currentPage?.folderPositions ?? desktopFolderPositions;
+  const pageDocPositions: Record<string, { x: number; y: number }> = currentPage?.docPositions ?? desktopDocPositions;
+
+  const updatePageFolderPosition = useCallback((id: string, pos: { x: number; y: number }) => {
+    updateDesktopFolderPosition(id, pos); // keep global in sync
+    setPages(prev => prev.map((p, i) => i === activePageIndex ? {
+      ...p,
+      folderPositions: { ...(p.folderPositions ?? desktopFolderPositions), [id]: pos },
+    } : p));
+  }, [activePageIndex, setPages, updateDesktopFolderPosition, desktopFolderPositions]);
+
+  const updatePageDocPosition = useCallback((id: string, pos: { x: number; y: number }) => {
+    updateDesktopDocPosition(id, pos); // keep global in sync
+    setPages(prev => prev.map((p, i) => i === activePageIndex ? {
+      ...p,
+      docPositions: { ...(p.docPositions ?? desktopDocPositions), [id]: pos },
+    } : p));
+  }, [activePageIndex, setPages, updateDesktopDocPosition, desktopDocPositions]);
+
   // Touch swipe
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
