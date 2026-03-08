@@ -74,6 +74,8 @@ type DashboardPage = {
   docPositions?: Record<string, { x: number; y: number }>;    // per-page doc positions
   visibleFolderIds?: string[];  // which folders are on this page
   visibleDocIds?: string[];     // which docs are on this page
+  pinnedFolderIds?: string[];   // pinned to ALL pages (always visible everywhere)
+  pinnedDocIds?: string[];      // pinned docs to ALL pages
 };
 
 // Screenshot cache for dot hover thumbnails
