@@ -248,7 +248,7 @@ const ExpandedFolderOverlay = ({
               <Folder size={40} style={{ color: iconColor, opacity: 0.4 }} />
               <p className="text-sm">This folder is empty</p>
               <button
-                onClick={async () => { await createDocument("Untitled Document", "text", folderId); }}
+                onClick={() => setShowTemplateChooser(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
                 style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
