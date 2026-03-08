@@ -8,10 +8,11 @@ import { TrendingUp, BarChart2, Clock, Sparkles, TrendingDown, RotateCcw, Star }
 import { supabase } from "@/integrations/supabase/client";
 
 const PERSONA_CONFIG: Record<string, { name: string; color: string }> = {
-  elena:  { name: "Elena",  color: "#34d399" },
-  helen:  { name: "Helen",  color: "#fbbf24" },
-  anton:  { name: "Anton",  color: "#f87171" },
-  margot: { name: "Margot", color: "#22d3ee" },
+  strategist: { name: "Strategist", color: "#a78bfa" },
+  operator:   { name: "Operator",   color: "#34d399" },
+  skeptic:    { name: "Skeptic",    color: "#f87171" },
+  advocate:   { name: "Advocate",   color: "#22d3ee" },
+  growth:     { name: "Growth",     color: "#fbbf24" },
 };
 
 interface Props {
