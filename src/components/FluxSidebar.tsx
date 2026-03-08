@@ -194,15 +194,6 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
             <span>CRM</span>
           </button>
 
-          {/* CommHub */}
-          <button
-            onClick={() => nav("inbox")}
-            className={`sidebar-item w-full ${activeView === ("inbox" as any) ? "sidebar-item-active" : ""}`}
-          >
-            <MessageSquare size={18} className="shrink-0" />
-            <span>CommHub</span>
-          </button>
-
           {/* Council */}
           <button
             onClick={() => { nav("council"); setFilterPersona(null); }}
