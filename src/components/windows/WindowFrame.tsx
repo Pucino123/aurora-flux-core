@@ -114,6 +114,44 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     duplicateWindow, groupWindows, ungroupWindow, windows,
   } = useWindowManager();
 
+  const { user } = useAuth();
+  const { fetchFolders } = useFolders();
+  const [folders, setFolders] = useState<{ id: string; title: string; icon?: string | null }[]>([]);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(win.title);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Load folders for "Move to Folder" submenu
+  const loadFolders = useCallback(async () => {
+    const data = await fetchFolders();
+    setFolders(data || []);
+  }, [fetchFolders]);
+
+  const commitRename = useCallback(async () => {
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === win.title) { setIsRenaming(false); return; }
+    if (win.type === "document" && user) {
+      await supabase.from("documents").update({ title: trimmed }).eq("id", win.contentId).eq("user_id", user.id);
+    }
+    // Update window title via context — patch the windows array
+    setWindows_((prev: AppWindow[]) => prev.map((w: AppWindow) => w.id === win.id ? { ...w, title: trimmed } : w));
+    setIsRenaming(false);
+  }, [renameValue, win, user]);
+
+  const handleRenameKey = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") commitRename();
+    if (e.key === "Escape") { setIsRenaming(false); setRenameValue(win.title); }
+  }, [commitRename, win.title]);
+
+  useEffect(() => {
+    if (isRenaming) setTimeout(() => renameInputRef.current?.select(), 30);
+  }, [isRenaming]);
+
+  const moveToFolder = useCallback(async (folderId: string | null) => {
+    if (!user) return;
+    await supabase.from("documents").update({ folder_id: folderId }).eq("id", win.contentId).eq("user_id", user.id);
+  }, [win.contentId, user]);
+
   const isFloating = win.layout === "floating";
   const prevLayoutRef = useRef<WindowLayout>(win.layout);
   const preFullscreenState = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
