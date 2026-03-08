@@ -192,12 +192,16 @@ const DraggableWidget = ({
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
-      if (dragging.current) {
-        e.preventDefault();
-        const nx = e.clientX - offset.current.x;
-        const ny = e.clientY - offset.current.y;
-        updateWidgetPosition(id, { x: nx, y: ny });
-      }
+      if (!dragging.current || dragCancelled.current) return;
+      const dx = e.clientX - dragStartPos.current.x;
+      const dy = e.clientY - dragStartPos.current.y;
+      // Only activate drag after exceeding threshold
+      if (!isDragging && Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
+      e.preventDefault();
+      if (!isDragging) setIsDragging(true);
+      const nx = e.clientX - offset.current.x;
+      const ny = e.clientY - offset.current.y;
+      updateWidgetPosition(id, { x: nx, y: ny });
     };
 
     const onUp = () => {
