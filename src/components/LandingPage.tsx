@@ -499,16 +499,51 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         </motion.div>
       </section>
 
+      {/* Product Video Section */}
+      <section className="relative z-10 px-4 md:px-8 pb-20 md:pb-28">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
+              See it in <em style={{ fontStyle: "italic" }}>action</em>
+            </h2>
+            <p className="text-sm text-white/50">Watch how Dashiii adapts to the way you work.</p>
+          </div>
+          <div
+            className="relative rounded-3xl overflow-hidden aspect-video flex items-center justify-center"
+            style={{
+              background: isDark ? "rgba(12,10,20,0.70)" : "rgba(255,255,255,0.12)",
+              backdropFilter: "blur(32px)",
+              WebkitBackdropFilter: "blur(32px)",
+              border: isDark ? "1.5px solid rgba(255,255,255,0.10)" : "1.5px solid rgba(255,255,255,0.28)",
+              boxShadow: "0 40px 100px rgba(0,0,0,0.3)",
+            }}
+          >
+            {/* Ambient glow */}
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(167,139,250,0.18), transparent 70%)" }} />
+            {/* Play button placeholder */}
+            <div className="flex flex-col items-center gap-4 relative z-10">
+              <div
+                className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.3)", backdropFilter: "blur(8px)" }}
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="white" className="ml-1 opacity-90"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+              <p className="text-white/40 text-sm">Product demo coming soon</p>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
       {/* Final CTA */}
       <section className="relative z-10 px-4 md:px-6 pb-24">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           className="max-w-2xl mx-auto rounded-3xl p-10 text-center"
           style={{
-            background: isDark ? "rgba(12,10,18,0.72)" : "rgba(255,255,255,0.10)",
+            background: isDark ? "rgba(12,10,18,0.68)" : "rgba(255,255,255,0.12)",
             backdropFilter: "blur(40px)",
             WebkitBackdropFilter: "blur(40px)",
             border: isDark ? "1.5px solid rgba(255,255,255,0.10)" : "1.5px solid rgba(255,255,255,0.28)",
-            boxShadow: "0 32px 80px rgba(0,0,0,0.35)",
+            boxShadow: "0 32px 80px rgba(0,0,0,0.25)",
           }}>
           <div className="text-3xl mb-4">✨</div>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
