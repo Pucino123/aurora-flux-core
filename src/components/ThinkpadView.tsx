@@ -625,6 +625,7 @@ const IdeapadView = () => {
             onAdd={addTrack}
             onDelete={deleteTrack}
             onRename={renameTrack}
+            isLight={pageLight}
           />
         </div>
         {/* Theme toggle */}
