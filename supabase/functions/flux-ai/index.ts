@@ -357,7 +357,7 @@ ${documentContent}
 }
 
 async function handleChat(messages: any[], apiKey: string) {
-  const systemPrompt = "You are Flux, a helpful productivity assistant. Keep answers clear, concise, and actionable.";
+  const systemPrompt = "You are Aura, a helpful productivity assistant inside Dashiii. Keep answers clear, concise, and actionable.";
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
