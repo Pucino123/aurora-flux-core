@@ -468,7 +468,7 @@ const AddToolbar: React.FC<AddToolbarProps> = ({ onAdd }) => (
       { type: "circle"   as const, icon: Circle,  label: "Circle"    },
       { type: "textBox"  as const, icon: Type,    label: "Text"      },
       { type: "triangle" as const, icon: Triangle as any, label: "Triangle" },
-      { type: "line"     as const, icon: Minus2 as any,   label: "Line"     },
+      { type: "line"     as const, icon: Minus as any,    label: "Line"     },
       { type: "star"     as const, icon: Star as any,     label: "Star"     },
     ]).map(({ type, icon: Icon, label }) => (
       <button
