@@ -1455,7 +1455,7 @@ ${PERSONAS.map(p => {
 ACTION PLAN:
 ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
-— Flux Boardroom · aurora-flux-core.lovable.app`;
+— Dashiii Boardroom · aurora-flux-core.lovable.app`;
 
   // ── Notion-formatted digest ──
   const notionText = `# 🏛️ Council Boardroom Analysis
