@@ -113,6 +113,8 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
   });
   const [sending, setSending] = useState(false);
   const [includeBankDetails, setIncludeBankDetails] = useState(true);
+  const [profile, setProfile] = useState<PaymentProfile>(loadProfile);
+  const [showBankSettings, setShowBankSettings] = useState(false);
 
   const total = items.reduce((s, it) => s + it.qty * it.price, 0);
   const tax = total * 0.2;
