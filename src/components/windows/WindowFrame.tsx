@@ -29,8 +29,16 @@ const MIN_H = 240;
 const DEFAULT_W = 820;
 const DEFAULT_H = 620;
 
-// Spring config for silky floating drag
-const DRAG_SPRING = { stiffness: 260, damping: 28, mass: 0.6 };
+// Snappier spring — much less lag on float drag
+const DRAG_SPRING = { stiffness: 520, damping: 36, mass: 0.45 };
+
+// Layout pill indicator color
+const LAYOUT_PILL_COLORS: Record<WindowLayout, string> = {
+  floating:    "bg-emerald-500",
+  fullscreen:  "bg-blue-400",
+  "split-left":  "bg-violet-400",
+  "split-right": "bg-violet-400",
+};
 
 const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
   const {
@@ -39,9 +47,13 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
   } = useWindowManager();
 
   const isFloating = win.layout === "floating";
-  const prevLayoutRef = useRef<WindowLayout>(win.layout);
 
-  // ── Spring-based position for butter-smooth drag ──────────────────────────
+  // Track previous layout so toggling fullscreen restores to it
+  const prevLayoutRef = useRef<WindowLayout>(win.layout);
+  // Remember exact position/size before going fullscreen
+  const preFullscreenState = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  // ── Spring-based position — snappier config ───────────────────────────────
   const rawX = useRef(win.position.x);
   const rawY = useRef(win.position.y);
   const motionX = useMotionValue(win.position.x);
@@ -69,18 +81,46 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
   const resizing = useRef<string | null>(null);
   const resizeStart = useRef({ mouseX: 0, mouseY: 0, w: 0, h: 0 });
 
+  // ── Fullscreen toggle helpers ──────────────────────────────────────────────
+  const enterFullscreen = useCallback(() => {
+    preFullscreenState.current = {
+      x: rawX.current,
+      y: rawY.current,
+      w: size.w,
+      h: size.h,
+    };
+    prevLayoutRef.current = win.layout;
+    setWindowLayout(win.id, "fullscreen");
+  }, [win.id, win.layout, setWindowLayout, size]);
+
+  const exitFullscreen = useCallback(() => {
+    const prev = preFullscreenState.current;
+    const restoreLayout = prevLayoutRef.current === "fullscreen" ? "floating" : prevLayoutRef.current;
+    setWindowLayout(win.id, restoreLayout);
+    if (prev && restoreLayout === "floating") {
+      // Restore exact position & size after layout change settles
+      requestAnimationFrame(() => {
+        motionX.set(prev.x);
+        motionY.set(prev.y);
+        rawX.current = prev.x;
+        rawY.current = prev.y;
+        updateWindowPosition(win.id, prev.x, prev.y);
+        setSize({ w: prev.w, h: prev.h });
+        updateWindowSize(win.id, prev.w, prev.h);
+      });
+    }
+  }, [win.id, setWindowLayout, motionX, motionY, updateWindowPosition, updateWindowSize]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (win.layout === "fullscreen") exitFullscreen();
+    else enterFullscreen();
+  }, [win.layout, enterFullscreen, exitFullscreen]);
+
   // ── Double-click header → toggle fullscreen ────────────────────────────────
   const handleHeaderDoubleClick = useCallback((e: React.MouseEvent) => {
-    // Ignore double-clicks on buttons
     if ((e.target as HTMLElement).closest("button")) return;
-    if (win.layout === "fullscreen") {
-      // Restore to previous layout (floating if unknown)
-      setWindowLayout(win.id, prevLayoutRef.current === "fullscreen" ? "floating" : prevLayoutRef.current);
-    } else {
-      prevLayoutRef.current = win.layout;
-      setWindowLayout(win.id, "fullscreen");
-    }
-  }, [win.id, win.layout, setWindowLayout]);
+    toggleFullscreen();
+  }, [toggleFullscreen]);
 
   // ── DRAG handlers ─────────────────────────────────────────────────────────
   const handlePillPointerDown = useCallback((e: React.PointerEvent) => {
@@ -174,7 +214,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     return { width: size.w, height: size.h };
   }, [win.layout, size.w, size.h]);
 
-  // ── Minimized: shrink + fly toward dock via shared layoutId ───────────────
+  // ── Minimized: ghost div that flies toward dock ────────────────────────────
   if (win.minimized) {
     return (
       <motion.div
@@ -193,6 +233,8 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
       />
     );
   }
+
+  const layoutPillColor = LAYOUT_PILL_COLORS[win.layout];
 
   return (
     <>
@@ -257,35 +299,48 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
           className="relative flex items-center px-3 py-2 border-b border-border/20 shrink-0 h-9"
           onDoubleClick={handleHeaderDoubleClick}
         >
-          {/* Traffic-light buttons */}
+          {/* Traffic-light + layout indicator */}
           <div className="flex items-center gap-1.5 z-[62]">
+            {/* Red — close */}
             <button
               onClick={() => closeWindow(win.id)}
               className="group w-3.5 h-3.5 rounded-full bg-red-500/60 hover:bg-red-500 transition-colors flex items-center justify-center"
-              title="Close"
+              title="Close (⌘W)"
             >
               <X size={7} className="opacity-0 group-hover:opacity-100 text-red-900" />
             </button>
+
+            {/* Amber — minimize */}
             <button
               onClick={() => minimizeWindow(win.id)}
               className="group w-3.5 h-3.5 rounded-full bg-amber-400/60 hover:bg-amber-400 transition-colors flex items-center justify-center"
-              title="Minimize"
+              title="Minimize (⌘M)"
             >
               <Minus size={7} className="opacity-0 group-hover:opacity-100 text-amber-900" />
             </button>
+
+            {/* Green — fullscreen toggle */}
             <button
-              onClick={() => {
-                prevLayoutRef.current = win.layout;
-                setWindowLayout(win.id, win.layout === "fullscreen" ? (prevLayoutRef.current === "fullscreen" ? "floating" : prevLayoutRef.current) : "fullscreen");
-              }}
+              onClick={toggleFullscreen}
               className="group w-3.5 h-3.5 rounded-full bg-emerald-500/60 hover:bg-emerald-500 transition-colors flex items-center justify-center"
               title={win.layout === "fullscreen" ? "Restore" : "Full Screen"}
             >
               <Maximize2 size={7} className="opacity-0 group-hover:opacity-100 text-emerald-900" />
             </button>
+
+            {/* Layout mode indicator pill — shows current layout with color */}
+            <span
+              className={`inline-flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide opacity-70 ${layoutPillColor} text-black/80`}
+              title={`Layout: ${win.layout}`}
+            >
+              {win.layout === "floating"     && "float"}
+              {win.layout === "fullscreen"   && "full"}
+              {win.layout === "split-left"   && "⬤ left"}
+              {win.layout === "split-right"  && "right ⬤"}
+            </span>
           </div>
 
-          {/* Title — double-click area hint */}
+          {/* Title */}
           <span
             className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[40%] pointer-events-none select-none"
             title="Double-click to toggle fullscreen"
@@ -293,7 +348,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
             {win.title}
           </span>
 
-          {/* ── Drag pill + layout menu ──────────────────────────────────── */}
+          {/* ── Drag pill + layout menu ───────────────────────────────────── */}
           <div
             className={`absolute left-1/2 -translate-x-1/2 top-1 flex items-center justify-center w-10 h-[18px] bg-foreground/8 hover:bg-foreground/15 rounded-full transition-colors z-[60] ${isFloating ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
             onPointerDown={handlePillPointerDown}
@@ -314,7 +369,16 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
                 {LAYOUT_OPTIONS.map((opt) => (
                   <DropdownMenuItem
                     key={opt.value}
-                    onClick={() => setWindowLayout(win.id, opt.value)}
+                    onClick={() => {
+                      if (opt.value === "fullscreen" && win.layout !== "fullscreen") enterFullscreen();
+                      else if (opt.value !== "fullscreen" && win.layout === "fullscreen") {
+                        // restore then switch
+                        prevLayoutRef.current = opt.value;
+                        exitFullscreen();
+                      } else {
+                        setWindowLayout(win.id, opt.value);
+                      }
+                    }}
                     className={`flex items-center gap-2.5 text-xs ${win.layout === opt.value ? "text-primary font-semibold" : ""}`}
                   >
                     {opt.icon}
@@ -324,13 +388,13 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => minimizeWindow(win.id)} className="flex items-center gap-2.5 text-xs">
-                  <Minus size={13} /> Minimize
+                  <Minus size={13} /> Minimize <span className="ml-auto text-foreground/30">⌘M</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => closeWindow(win.id)}
                   className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive"
                 >
-                  <X size={13} /> Close Window
+                  <X size={13} /> Close Window <span className="ml-auto text-foreground/30">⌘W</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
