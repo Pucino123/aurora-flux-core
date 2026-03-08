@@ -1483,7 +1483,7 @@ const FocusContent = () => {
               <Plus size={14} strokeWidth={2.5} />
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Build mode: show pagination button when hidden */}
