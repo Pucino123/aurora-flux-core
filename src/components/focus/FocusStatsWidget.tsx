@@ -47,7 +47,7 @@ export function logFocusMinutes(minutes: number) {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-const DAILY_GOAL_MIN = 300; // 5 h
+const DAILY_GOAL_MIN = 1; // lowered to 1 min for testing (normally 300 = 5h)
 const POMODORO_SECS = 25 * 60;
 
 /** Returns Mon-Sun dates for the current week */
