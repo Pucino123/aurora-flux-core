@@ -75,6 +75,12 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <SEO
+        title={isSignUp ? "Create Account" : "Sign In"}
+        description="Sign in to your Dashiii workspace — your AI-powered productivity hub."
+        url="/auth"
+        keywords="login, sign up, Dashiii workspace, AI productivity app"
+      />
       {/* Background */}
       <div className="fixed inset-0 z-0 bg-cover bg-center scale-110 transition-all duration-700"
         style={{ backgroundImage: `url(${cherryBg})`, filter: isDark ? "blur(22px) brightness(0.45) saturate(0.6)" : "blur(18px)" }} />
