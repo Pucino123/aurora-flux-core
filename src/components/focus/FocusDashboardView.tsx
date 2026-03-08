@@ -44,8 +44,36 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, Clock, Music, StickyNote as StickyNoteIcon, BarChart2, Smile } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X } from "lucide-react";
 import { toast } from "sonner";
+
+// Quick gradient/solid presets for per-page background picker in dot context menu
+const PAGE_BG_PRESETS = [
+  { id: "aurora-northern", label: "Aurora", colors: ["210 90% 50%", "160 70% 45%", "270 60% 55%"] as [string,string,string] },
+  { id: "aurora-sunset",   label: "Sunset",  colors: ["25 90% 55%", "340 80% 60%", "300 70% 50%"] as [string,string,string] },
+  { id: "aurora-ocean",    label: "Ocean",   colors: ["185 80% 40%", "220 70% 30%", "195 90% 55%"] as [string,string,string] },
+  { id: "aurora-cosmic",   label: "Cosmic",  colors: ["270 70% 50%", "240 60% 40%", "330 70% 55%"] as [string,string,string] },
+  { id: "aurora-ember",    label: "Ember",   colors: ["10 85% 50%", "35 90% 55%", "350 75% 45%"] as [string,string,string] },
+  { id: "aurora-twilight", label: "Twilight",colors: ["240 50% 35%", "280 60% 45%", "200 70% 50%"] as [string,string,string] },
+  { id: "aurora-rose",     label: "Rose",    colors: ["345 60% 65%", "20 50% 70%", "330 40% 55%"] as [string,string,string] },
+  { id: "aurora-neon",     label: "Neon",    colors: ["300 90% 55%", "180 90% 50%", "60 90% 55%"] as [string,string,string] },
+  { id: "cozy-fireplace",  label: "Video 1", colors: null },
+  { id: "cozy-library",    label: "Video 2", colors: null },
+  { id: "nature-rain",     label: "Rain",    colors: null },
+  { id: "nature-ocean",    label: "Lofi",    colors: null },
+  { id: "urban-tokyo",     label: "Tokyo",   colors: null },
+  { id: "nature-forest",   label: "Forest",  colors: null },
+  { id: "urban-cafe",      label: "Café",    colors: null },
+  { id: "scenic-beach",    label: "Beach",   colors: null },
+  { id: "scenic-sakura",   label: "Sakura",  colors: null },
+  { id: "cine-clouds",     label: "Clouds",  colors: null },
+] as const;
+
+// Solid color presets (HSL)
+const SOLID_COLORS = [
+  "0 0% 4%", "220 30% 8%", "250 30% 10%", "210 40% 10%",
+  "260 50% 12%", "0 60% 12%", "30 60% 12%", "160 50% 10%",
+];
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
