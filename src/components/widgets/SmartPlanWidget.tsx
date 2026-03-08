@@ -586,7 +586,7 @@ const SmartPlanWidget = () => {
         </button>
       </div>
 
-      {/* Suggestion chips */}
+      {/* Suggestion chips + Focus Block shortcut */}
       <div className="flex gap-1.5 shrink-0 flex-wrap">
         {["✨ Optimize Schedule", "✨ Find Focus Time", "+ Add Break"].map(chip => (
           <button
@@ -597,6 +597,14 @@ const SmartPlanWidget = () => {
             {chip}
           </button>
         ))}
+        {/* ⚡ Focus Block one-click shortcut */}
+        <button
+          onClick={addFocusBlock}
+          title="Add 90-min deep work block at next round hour"
+          className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/20 text-[10px] text-blue-300 hover:bg-blue-500/30 hover:border-blue-400/40 transition-all"
+        >
+          <Zap size={9} /> Focus Block
+        </button>
       </div>
 
       {/* Today vs Scheduled toggle + date header */}
