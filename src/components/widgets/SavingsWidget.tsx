@@ -715,6 +715,16 @@ const SavingsWidget = () => {
           </span>
         </div>
       )}
+
+      {/* 100% Goal celebration overlay */}
+      <AnimatePresence>
+        {celebratingGoal && (
+          <GoalCelebrationOverlay
+            goal={celebratingGoal}
+            onDone={() => setCelebratingGoal(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
