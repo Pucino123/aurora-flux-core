@@ -327,42 +327,48 @@ const CommunityAdminView = () => {
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="px-4 py-3 flex items-center gap-3" style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <Search size={13} className="text-white/30" />
-              <input placeholder="Search users…" className="bg-transparent text-sm outline-none text-white placeholder:text-white/20 flex-1" />
-              <span className="text-xs text-white/30">{MOCK_USERS.length} users</span>
+              <input placeholder="Search submissions…" className="bg-transparent text-sm outline-none text-white placeholder:text-white/20 flex-1" />
+              <span className="text-xs text-white/30">{slots.length} entries</span>
             </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                  {["User", "Email", "Plan", "Joined", ""].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-[11px] font-medium text-white/30 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_USERS.map((u) => (
-                  <tr key={u.id} className="transition-colors hover:bg-white/[0.03]" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0" style={{ background: "rgba(99,102,241,0.2)", color: "#a5b4fc" }}>{u.avatar}</div>
-                        <span className="text-white/80 font-medium">{u.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-white/40 text-xs">{u.email}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{
-                        background: u.plan === "Pro" ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.06)",
-                        color: u.plan === "Pro" ? "#a5b4fc" : "rgba(255,255,255,0.4)",
-                        border: u.plan === "Pro" ? "1px solid rgba(99,102,241,0.25)" : "1px solid rgba(255,255,255,0.1)",
-                      }}>{u.plan}</span>
-                    </td>
-                    <td className="px-4 py-3 text-white/30 text-xs">{u.joined}</td>
-                    <td className="px-4 py-3">
-                      <button className="p-1.5 rounded-lg hover:bg-white/10 text-white/20 hover:text-white/60 transition-colors"><MoreHorizontal size={14} /></button>
-                    </td>
+            {slots.length === 0 ? (
+              <div className="text-center py-16 text-white/30 text-sm">No submissions yet</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                    {["Project", "URL", "Slot", "Status", "Submitted", ""].map((h) => (
+                      <th key={h} className="text-left px-4 py-3 text-[11px] font-medium text-white/30 uppercase tracking-wider">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {slots.map((slot) => (
+                    <tr key={slot.id} className="transition-colors hover:bg-white/[0.03]" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shrink-0" style={{ background: "rgba(99,102,241,0.2)" }}>
+                            {slot.thumbnailUrl ? <img src={slot.thumbnailUrl} className="w-full h-full object-cover" alt="" /> : <span className="text-[11px] font-bold text-indigo-400">{slot.projectName?.[0] ?? "?"}</span>}
+                          </div>
+                          <span className="text-white/80 font-medium text-xs">{slot.projectName || "—"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-white/40 text-xs max-w-[120px] truncate">{slot.websiteUrl || "—"}</td>
+                      <td className="px-4 py-3 text-white/40 text-xs">#{slot.slotIndex}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{
+                          background: slot.status === "approved" ? "rgba(34,197,94,0.15)" : slot.status === "pending" ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.06)",
+                          color: slot.status === "approved" ? "#4ade80" : slot.status === "pending" ? "#fbbf24" : "rgba(255,255,255,0.4)",
+                        }}>{slot.status}</span>
+                      </td>
+                      <td className="px-4 py-3 text-white/30 text-xs">{timeAgo(slot.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-white/20 hover:text-white/60 transition-colors"><MoreHorizontal size={14} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
