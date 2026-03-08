@@ -1704,8 +1704,6 @@ const FocusContent = () => {
             >
               <Plus size={14} strokeWidth={2.5} />
             </button>
-            {/* Divider */}
-            <div className="w-px h-4 bg-white/20" />
         </motion.div>
       )}
 
