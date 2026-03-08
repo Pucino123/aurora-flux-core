@@ -215,12 +215,12 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
             <span className="flex-1 text-left">{t("council.nav")}</span>
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               {PERSONAS.map((p) => {
-                const expressions: Record<string, "smile" | "straight" | "frown" | "calm" | "wide"> = {
+                const expressions: Record<string, import("./council/BaymaxFace").BaymaxExpression> = {
                   strategist: "smile",
                   operator: "straight",
                   skeptic: "frown",
-                  advocate: "straight",
-                  growth: "wide",
+                  advocate: "analytical",
+                  growth: "wide-smile",
                 };
                 const isActive = filterPersona === p.key;
                 return (
