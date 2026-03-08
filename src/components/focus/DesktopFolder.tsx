@@ -316,8 +316,12 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
           />
         ) : null}
 
-        {/* Icon */}
-        <div className="relative z-10" style={{ opacity: isDragging ? 0.5 : 1, marginBottom: titleGap }}>
+        {/* Icon — double-click opens the space */}
+        <div
+          className="relative z-10"
+          style={{ opacity: isDragging ? 0.5 : 1, marginBottom: titleGap }}
+          onDoubleClick={(e) => { e.stopPropagation(); if (!renaming) handleDoubleClick(); }}
+        >
           {customIconUrl ? (
             <img src={customIconUrl} alt="" className="rounded-lg object-cover" style={{ width: iconSize, height: iconSize, filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" }} />
           ) : (
@@ -338,8 +342,8 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
                 if (e.key === "Escape") { setRenaming(false); }
               }}
               onFocus={(e) => e.target.select()}
-              className="w-full text-center bg-transparent outline-none text-foreground ring-1 ring-primary/50 rounded px-1 transition-all"
-              style={{ fontSize: `${titleSize}px` }}
+              className="w-full text-center bg-transparent outline-none ring-1 ring-primary/50 rounded px-1 transition-all"
+              style={{ fontSize: `${titleSize}px`, color: "rgba(255,255,255,0.95)" }}
               autoFocus
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
@@ -347,8 +351,8 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
             />
           ) : (
             <span
-              className="font-medium text-foreground/90 text-center leading-tight truncate w-full block hover:text-foreground transition-colors"
-              style={{ fontSize: `${titleSize}px` }}
+              className="font-medium text-center leading-tight truncate w-full block transition-colors"
+              style={{ fontSize: `${titleSize}px`, color: "rgba(255,255,255,0.88)" }}
               onDoubleClick={(e) => { e.stopPropagation(); setRenameValue(folder.title); setRenaming(true); }}
             >
               {folder.title}
