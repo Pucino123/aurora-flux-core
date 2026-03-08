@@ -570,6 +570,9 @@ const GridDashboard = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── Recent Activity ─── */}
+      <RecentActivityFeed />
     </div>
   );
 };
