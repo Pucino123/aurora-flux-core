@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Sparkles, Zap, GripVertical, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+
 import { useFlux } from "@/context/FluxContext";
 import { useTrash } from "@/context/TrashContext";
 import { toast } from "sonner";
@@ -34,7 +34,7 @@ interface KanbanBoardProps {
 const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
   const { tasks: allTasks, createTask, updateTask, removeTask } = useFlux();
   const { moveToTrash } = useTrash();
-  const { theme, setTheme } = useTheme();
+  const [pageLight, setPageLight] = useState(false);
   const tasks = propTasks || allTasks;
 
   const [newTaskCol, setNewTaskCol]       = useState<string | null>(null);
@@ -107,8 +107,8 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
 
   return (
     <div
-      className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden relative"
-      style={{ background: "radial-gradient(ellipse at top, rgba(139,92,246,0.04) 0%, transparent 60%)" }}
+      className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden relative ${pageLight ? "page-light" : ""}`}
+      style={{ background: pageLight ? undefined : "radial-gradient(ellipse at top, rgba(139,92,246,0.04) 0%, transparent 60%)" }}
     >
       {/* Scan line */}
       <AnimatePresence>
@@ -150,11 +150,11 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
 
           {/* Dark/Light toggle */}
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => setPageLight(p => !p)}
             className="p-1.5 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
-            title={theme === "dark" ? "Light mode" : "Dark mode"}
+            title={pageLight ? "Dark mode" : "Light mode"}
           >
-            {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+            {pageLight ? <Moon size={13} /> : <Sun size={13} />}
           </button>
 
           {/* AI Prioritize button */}

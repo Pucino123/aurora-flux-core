@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
-import { useTheme } from "next-themes";
 
 /* ─── Types ─── */
 interface IdeaTrack {
@@ -542,7 +541,7 @@ const TabBar = ({
 /* ─── Main view ─── */
 const IdeapadView = () => {
   const STORAGE_KEY = "ideapad_tracks";
-  const { theme, setTheme } = useTheme();
+  const [pageLight, setPageLight] = useState(false);
 
   const loadTracks = (): IdeaTrack[] => {
     try {
@@ -590,11 +589,12 @@ const IdeapadView = () => {
   };
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-screen" style={{ background: "#06080f" }}>
+    <div className={`flex flex-col flex-1 h-full min-h-screen ${pageLight ? "page-light" : ""}`}
+      style={{ background: pageLight ? undefined : "#06080f" }}>
       <SEO title="Ideapad" description="Multi-track infinite canvas for idea mapping." />
 
       {/* Tab bar with theme toggle */}
-      <div className="flex items-center" style={{ background: "rgba(6,8,15,0.9)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="flex items-center" style={{ background: pageLight ? "rgba(255,255,255,0.95)" : "rgba(6,8,15,0.9)", borderBottom: pageLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex-1 overflow-x-auto">
           <TabBar
             tracks={tracks}
@@ -607,12 +607,12 @@ const IdeapadView = () => {
         </div>
         {/* Theme toggle */}
         <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={() => setPageLight(p => !p)}
           className="shrink-0 mr-3 p-2 rounded-lg transition-colors hover:bg-white/10"
-          style={{ color: "rgba(255,255,255,0.5)" }}
-          title="Toggle theme"
+          style={{ color: pageLight ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)" }}
+          title="Toggle light/dark mode"
         >
-          {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+          {pageLight ? <Moon size={14} /> : <Sun size={14} />}
         </button>
       </div>
 

@@ -13,7 +13,7 @@ import {
   RefreshCw, CheckCheck, Calendar, Globe, Sparkles, Zap, CheckSquare, CalendarOff,
   ChevronRight as Collapse, Sun, Moon,
 } from "lucide-react";
-import { useTheme } from "next-themes";
+
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Calendar as MiniCalendar } from "@/components/ui/calendar";
@@ -698,7 +698,7 @@ const CalendarView = () => {
   const { tasks, scheduleBlocks, updateTask, createTask, scheduleTask } = useFlux();
   const { deals } = useCRM();
   const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const [pageLight, setPageLight] = useState(false);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalView>("week");
@@ -984,7 +984,7 @@ const CalendarView = () => {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex h-full overflow-hidden">
+      <div className={`flex h-full overflow-hidden ${pageLight ? "page-light" : ""}`}>
         {/* ── Left Sidebar ── */}
         <div className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border/30 overflow-y-auto p-4 gap-5"
           style={{ background: "hsl(var(--card) / 0.5)" }}>
@@ -1072,11 +1072,11 @@ const CalendarView = () => {
                 ))}
               </div>
               <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                onClick={() => setPageLight(p => !p)}
                 className="p-2 rounded-xl hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
-                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                title={pageLight ? "Switch to dark mode" : "Switch to light mode"}
               >
-                {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+                {pageLight ? <Moon size={14} /> : <Sun size={14} />}
               </button>
               <button onClick={() => { setAddDefaultDate(format(new Date(), "yyyy-MM-dd")); setShowAddModal(true); }}
                 className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90">
