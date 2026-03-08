@@ -12,6 +12,7 @@ import { toast } from "sonner";
 interface DesktopFolderProps {
   folder: FolderNode;
   onOpenModal?: (folderId: string) => void;
+  layoutId?: string;
   dragState?: { id: string; x: number; y: number } | null;
   docDragState?: { id: string; x: number; y: number } | null;
   onDragStateChange?: (state: { id: string; x: number; y: number } | null) => void;
