@@ -57,7 +57,7 @@ const WordsToolbar = ({
   editorRef, onContentChange, exec, renaming, setRenaming, renameValue, setRenameValue,
   commitRename, documentTitle, documentId = "", confirmDelete, setConfirmDelete, onDelete,
   studioMode, onToggleStudio, zoom, onZoomChange, lightMode = false, onToggleLightMode,
-  isStreaming = false, onStopStream, onFinishStream,
+  isStreaming = false, onStopStream, onFinishStream, canvasMode = false, onToggleCanvasMode,
 }: WordsToolbarProps) => {
   const lm = lightMode;
   const { visible, hiddenSegments, hideSegment, showSegment, showAll, reset } = useToolbarVisibility("words", ALL_SEGMENTS);
