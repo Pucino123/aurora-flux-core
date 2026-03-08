@@ -125,13 +125,15 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     });
   }, []);
 
-  // ── Spring position ───────────────────────────────────────────────────────
+  // ── Direct position (no spring during drag — pixel-perfect tracking) ────────
   const rawX = useRef(win.position.x);
   const rawY = useRef(win.position.y);
   const motionX = useMotionValue(win.position.x);
   const motionY = useMotionValue(win.position.y);
+  // Spring only used for programmatic moves (restore, snap), not live drag
   const springX = useSpring(motionX, DRAG_SPRING);
   const springY = useSpring(motionY, DRAG_SPRING);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (isFloating) {
