@@ -222,7 +222,7 @@ const CRMPage: React.FC = () => {
   const totalValue = filtered.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+    <div className={`flex-1 overflow-y-auto px-4 md:px-8 py-6 ${pageLight ? "page-light" : ""}`}>
       <SEO title="CRM" description="Manage contacts, deals, sales pipeline and send professional invoices from one place." url="/" keywords="CRM, contacts, sales pipeline, invoice generator, deals management" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -232,11 +232,11 @@ const CRMPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => setPageLight(p => !p)}
             className="p-2 rounded-xl hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground border border-border/30"
-            title={theme === "dark" ? "Light mode" : "Dark mode"}
+            title={pageLight ? "Dark mode" : "Light mode"}
           >
-            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            {pageLight ? <Moon size={15} /> : <Sun size={15} />}
           </button>
           <button onClick={() => setShowForm(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
