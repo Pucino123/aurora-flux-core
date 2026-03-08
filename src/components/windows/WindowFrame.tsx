@@ -5,7 +5,10 @@ import {
   X, Maximize2, PanelLeft, PanelRight, Square, Minus, Sun, Moon,
   Copy, Group, Ungroup,
 } from "lucide-react";
-import { useWindowManager, AppWindow, WindowLayout, OVERLAY_Z } from "@/context/WindowManagerContext";
+import { useWindowManager, AppWindow, WindowLayout } from "@/context/WindowManagerContext";
+
+// Non-floating layouts must sit above pill (z-9999) and dock (z-10150)
+const OVERLAY_Z = 10300;
 import {
   ContextMenu,
   ContextMenuContent,
