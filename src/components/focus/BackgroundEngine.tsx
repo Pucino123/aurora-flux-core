@@ -470,11 +470,11 @@ const BackgroundEngine = ({
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r},${g},${b},${alpha})`;
   };
-  const spacesBg = hexToRgba("#000000", spacesStyle.bgOpacity / 100);
+  const spacesBg = hexToRgba(spacesStyle.bgColor || "#000000", spacesStyle.bgOpacity / 100);
   const spacesBorder = spacesStyle.borderWidth > 0
     ? `${spacesStyle.borderWidth}px solid ${hexToRgba(spacesStyle.borderColor, spacesStyle.borderOpacity / 100)}`
     : "1px solid rgba(255,255,255,0.15)";
-  const spacesTextColor = `rgba(255,255,255,${spacesStyle.textOpacity / 100})`;
+  const spacesTextColor = hexToRgba(spacesStyle.textColor || "#ffffff", spacesStyle.textOpacity / 100);
   const spacesPosStyle: React.CSSProperties = spacesPos
     ? { left: spacesPos.x, top: spacesPos.y, bottom: "auto" }
     : { left: 268, bottom: 24, top: "auto" };
