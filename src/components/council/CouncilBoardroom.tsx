@@ -1233,6 +1233,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
         setResponses(newResponses);
         setRevealedCount(4);
         revealedCountRef.current = 4;
+        setIsSharedView(true);
         const clean = new URL(window.location.href);
         clean.searchParams.delete("boardroom");
         window.history.replaceState({}, "", clean.toString());
@@ -1327,6 +1328,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       setSavedIdeaId(ideaData.id);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 3000);
+      // Show digest modal
+      setShowDigest(true);
     } catch {
       setSaveState("idle");
     }
