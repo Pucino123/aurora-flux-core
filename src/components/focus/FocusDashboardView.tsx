@@ -1738,9 +1738,8 @@ const FocusContent = () => {
       />
 
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
-          <motion.button
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
+
+      {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
             exit={{ opacity: 0, y: -16 }}
 
 
