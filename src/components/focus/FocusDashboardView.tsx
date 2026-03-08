@@ -271,8 +271,9 @@ const FocusContent = () => {
       spaceSettings: source.spaceSettings ? { ...source.spaceSettings } : undefined,
       folderPositions: source.folderPositions ? { ...source.folderPositions } : undefined,
       docPositions: source.docPositions ? { ...source.docPositions } : undefined,
-      visibleFolderIds: source.visibleFolderIds ? [...source.visibleFolderIds] : undefined,
-      visibleDocIds: source.visibleDocIds ? [...source.visibleDocIds] : undefined,
+      // Duplicate carries the same visible items
+      visibleFolderIds: source.visibleFolderIds ? [...source.visibleFolderIds] : [],
+      visibleDocIds: source.visibleDocIds ? [...source.visibleDocIds] : [],
     };
     const insertAt = idx + 1;
     setPages(prev => { const next = [...prev]; next.splice(insertAt, 0, newPage); return next; });
