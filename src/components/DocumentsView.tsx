@@ -119,17 +119,19 @@ const DocumentsView = () => {
       )}
 
       {showTemplateChooser && (
-        <TemplateChooserModal
-          onClose={() => setShowTemplateChooser(false)}
-          onCreateDocument={async (title, type, content) => {
-            const doc = await createDocument(title, type, undefined, content);
-            if (doc) {
-              openInWorkspace(doc);
-              setActiveView("multitask" as any);
-            }
-            setShowTemplateChooser(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <TemplateChooserModal
+            onClose={() => setShowTemplateChooser(false)}
+            onCreateDocument={async (title, type, content) => {
+              const doc = await createDocument(title, type, undefined, content);
+              if (doc) {
+                openInWorkspace(doc);
+                setActiveView("multitask" as any);
+              }
+              setShowTemplateChooser(false);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );
