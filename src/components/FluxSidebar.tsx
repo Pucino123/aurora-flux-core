@@ -86,8 +86,15 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
   const { activeView, activeFolder, setActiveView, setActiveFolder, filterPersona, setFilterPersona } = useFlux();
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
-  const { sparksBalance, openBilling } = useMonetization();
+  const { sparksBalance, openBilling, closeBilling } = useMonetization();
   const { theme, setTheme } = useTheme();
+
+  // Every nav click must close any open billing/overlay, then switch view
+  const nav = (view: typeof activeView | string) => {
+    closeBilling();
+    setActiveFolder(null);
+    setActiveView(view as any);
+  };
 
   const isHomeActive = activeView === "focus" && activeFolder === null;
 
