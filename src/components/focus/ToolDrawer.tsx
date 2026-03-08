@@ -113,6 +113,7 @@ const BORDER_STYLES_LIST = [
 ];
 
 const SWATCH_COLORS = ["#ffffff", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc", "#fca5a5"];
+const BG_SWATCHES = ["#000000", "#1a1a2e", "#0f172a", "#1e293b", "#0c0c0c", "#14041e", "#0a1628"];
 
 // ── Style panel ──────────────────────────────────────────────────────
 const ToolbarStylePanel = ({ style, onUpdate, onReset, onClose }: {
@@ -120,7 +121,9 @@ const ToolbarStylePanel = ({ style, onUpdate, onReset, onClose }: {
   onUpdate: (patch: Partial<ToolbarStyle>) => void;
   onReset: () => void;
   onClose: () => void;
-}) => (
+}) => {
+  const [colorTab, setColorTab] = useState<"text" | "bg">("text");
+  return (
   <motion.div
     initial={{ opacity: 0, scale: 0.92, y: 8 }}
     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -140,10 +143,47 @@ const ToolbarStylePanel = ({ style, onUpdate, onReset, onClose }: {
     </div>
 
     <div className="space-y-4">
+      {/* Color tabs */}
+      <div className="space-y-2">
+        <div className="flex gap-1 p-0.5 rounded-xl bg-white/[0.05]">
+          {(["text", "bg"] as const).map(m => (
+            <button key={m} onClick={() => setColorTab(m)}
+              className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${colorTab === m ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"}`}>
+              {m === "text" ? "Text" : "Background"}
+            </button>
+          ))}
+        </div>
+        {colorTab === "text" ? (
+          <div className="flex gap-1.5 flex-wrap">
+            {["#ffffff", "#f0f0f0", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc"].map(c => (
+              <button key={c} onClick={() => onUpdate({ textColor: c })}
+                className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                style={{ backgroundColor: c, borderColor: style.textColor === c ? "rgba(255,255,255,0.9)" : "transparent" }} />
+            ))}
+            <label className="w-6 h-6 rounded-full cursor-pointer overflow-hidden border border-white/20 hover:scale-110 transition-transform"
+              style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+              <input type="color" value={style.textColor || "#ffffff"} onChange={e => onUpdate({ textColor: e.target.value })} className="opacity-0 w-full h-full" />
+            </label>
+          </div>
+        ) : (
+          <div className="flex gap-1.5 flex-wrap">
+            {BG_SWATCHES.map(c => (
+              <button key={c} onClick={() => onUpdate({ bgColor: c })}
+                className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                style={{ backgroundColor: c, borderColor: style.bgColor === c ? "rgba(255,255,255,0.9)" : "transparent", border: c === "#000000" ? "2px solid rgba(255,255,255,0.2)" : undefined }} />
+            ))}
+            <label className="w-6 h-6 rounded-full cursor-pointer overflow-hidden border border-white/20 hover:scale-110 transition-transform"
+              style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+              <input type="color" value={style.bgColor || "#000000"} onChange={e => onUpdate({ bgColor: e.target.value })} className="opacity-0 w-full h-full" />
+            </label>
+          </div>
+        )}
+      </div>
+
       {/* Background opacity */}
       <div className="space-y-1.5">
         <div className="flex justify-between items-center">
-          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Background</span>
+          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">BG Opacity</span>
           <span className="text-[10px] text-white/30 tabular-nums">{style.bgOpacity}%</span>
         </div>
         <Slider value={[style.bgOpacity]} onValueChange={([v]) => onUpdate({ bgOpacity: v })} min={0} max={80} step={1}
@@ -219,7 +259,8 @@ const ToolbarStylePanel = ({ style, onUpdate, onReset, onClose }: {
       </div>
     </div>
   </motion.div>
-);
+  );
+};
 
 interface ToolDrawerProps {
   pageActiveWidgets?: string[];
