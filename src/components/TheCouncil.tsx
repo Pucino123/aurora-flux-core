@@ -558,8 +558,8 @@ const TheCouncil = () => {
 
                   {/* 3-column grid — each column scrolls independently */}
                   <div className={`flex-1 min-h-0 grid gap-4 md:gap-5 ${isMobile ? "grid-cols-1 overflow-y-auto" : "grid-cols-3"}`}>
-                    {/* ═══ LEFT COLUMN: Input + Idea ═══ */}
-                    <div className="space-y-4">
+                    {/* ═══ LEFT COLUMN: Input + Tools ═══ */}
+                    <div className="space-y-3 overflow-y-auto council-hidden-scrollbar pb-4">
                       {/* Compact input card */}
                       <div className="council-glass-card p-4">
                          <textarea
