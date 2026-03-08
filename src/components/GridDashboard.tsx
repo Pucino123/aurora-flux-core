@@ -19,6 +19,7 @@ import type { BudgetRow } from "./BudgetTable";
 import { PinOff, FileText, Check } from "lucide-react";
 import { toast } from "sonner";
 import RecentActivityFeed from "./RecentActivityFeed";
+import CRMDashboardWidget from "./widgets/CRMDashboardWidget";
 
 interface WidgetConfig {
   id: string;
@@ -40,6 +41,7 @@ const WIDGET_REGISTRY: WidgetConfig[] = [
   { id: "recent-notes", type: "recent-notes", label: "widget.recent_notes", category: "notes" },
   { id: "pinned-note", type: "pinned-note", label: "widget.pinned_note", category: "notes" },
   { id: "today-todo", type: "today-todo", label: "Today's Tasks", category: "productivity" },
+  { id: "crm-widget", type: "crm-widget", label: "CRM Pipeline", category: "productivity" },
 ];
 
 const renderWidget = (type: string) => {
@@ -56,6 +58,7 @@ const renderWidget = (type: string) => {
     case "recent-notes": return <RecentNotesWidget />;
     case "pinned-note": return <PinnedNoteWidget />;
     case "today-todo": return <TodayTodoWidget />;
+    case "crm-widget": return <CRMDashboardWidget />;
     default: return null;
   }
 };
