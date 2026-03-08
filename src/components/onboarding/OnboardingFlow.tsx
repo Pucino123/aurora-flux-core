@@ -183,11 +183,11 @@ const OnboardingFlow = () => {
                     })}
                   </div>
 
-                  <button onClick={() => setPhase("accent")}
+                  <button onClick={() => setPhase("reward")}
                     className="w-full py-3 rounded-2xl text-sm font-semibold text-primary-foreground flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
                     style={{ background: "hsl(var(--primary))" }}
                   >
-                    Personalise Interface <ChevronRight size={15} />
+                    Claim Your Sparks <ChevronRight size={15} />
                   </button>
                 </div>
               </motion.div>
