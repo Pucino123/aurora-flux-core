@@ -79,7 +79,7 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
       rightRotate = -18;
       leftEyeCX  = cx - baseSpread * 0.9;
       rightEyeCX = cx + baseSpread * 0.9;
-      barPath = `M ${leftEyeCX} ${barY + S * 0.01} L ${rightEyeCX} ${barY + S * 0.01}`;
+      barPath = `M ${leftEyeCX} ${barY + S * 0.06} Q ${cx} ${barY - S * 0.02} ${rightEyeCX} ${barY + S * 0.06}`;
       break;
     }
     case "straight":
@@ -128,17 +128,8 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
         </filter>
       </defs>
 
-      {/* Pulsing aura halo */}
-      {shouldAnimate ? (
-        <motion.circle
-          cx={cx} cy={cy} r={shellR + S * 0.06}
-          fill={color}
-          animate={{ opacity: [0.14, 0.28, 0.14], r: [shellR + S * 0.04, shellR + S * 0.10, shellR + S * 0.04] }}
-          transition={{ duration: auraDurations[pi] || 3, repeat: Infinity, ease: "easeInOut" }}
-        />
-      ) : (
-        <circle cx={cx} cy={cy} r={shellR + S * 0.06} fill={color} opacity={0.18} />
-      )}
+      {/* Static aura halo — no pulse */}
+      <circle cx={cx} cy={cy} r={shellR + S * 0.06} fill={color} opacity={0.15} />
 
       {/* Main circular shell */}
       <circle
@@ -223,8 +214,6 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
   return (
     <motion.div
       style={{ display: "inline-flex" }}
-      animate={{ y: [-1.5, 1.5, -1.5] }}
-      transition={{ duration: breathDurations[pi] || 4, repeat: Infinity, ease: "easeInOut" }}
       whileHover={{ scale: 1.15, filter: "brightness(1.3)" }}
     >
       {svgContent}

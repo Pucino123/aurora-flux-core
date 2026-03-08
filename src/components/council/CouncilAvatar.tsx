@@ -234,22 +234,18 @@ const CouncilAvatar = ({
   return (
     <motion.div
       style={{ display: "inline-flex", position: "relative", cursor: onClick ? "pointer" : "default" }}
-      animate={{ y: [-1.5, 1.5, -1.5] }}
-      transition={{ duration: breathDurations[pi] || 4, repeat: Infinity, ease: "easeInOut" }}
       whileHover={{ scale: 1.15, filter: "brightness(1.3)" }}
       onClick={onClick}
     >
-      {/* Pulsing aura behind */}
-      <motion.div
+      {/* Static aura — no pulse */}
+      <div
         style={{
           position: "absolute",
           inset: -S * 0.12,
           borderRadius: "50%",
-          background: `radial-gradient(circle, ${color}55 0%, transparent 70%)`,
+          background: `radial-gradient(circle, ${color}33 0%, transparent 70%)`,
           pointerEvents: "none",
         }}
-        animate={{ opacity: [0.6, 1, 0.6], scale: [0.95, 1.05, 0.95] }}
-        transition={{ duration: auraDurations[pi] || 3, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
         animate={getBodyAnimation()}
