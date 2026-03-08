@@ -1030,6 +1030,66 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     }
   }, [onRestoreIdea, handleRestore]);
 
+  // ── New Session: reset everything ──
+  const handleNewSession = useCallback(() => {
+    setIdea("");
+    setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
+    setResponses({ elena: null, helen: null, anton: null, margot: null });
+    setActionPlan(DEFAULT_ACTION_PLAN);
+    setRevealedCount(0);
+    revealedCountRef.current = 0;
+    setExpandedCard(null);
+    setFullscreenPersona(null);
+    setSavedIdeaId(null);
+    setSaveState("idle");
+    setFloatingEmojis({ elena: [], helen: [], anton: [], margot: [] });
+    sessionIdRef.current = resetSessionId();
+  }, []);
+
+  // ── PDF Export ──
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const handleExportPDF = useCallback(async () => {
+    if (!boardroomRef.current || isExportingPDF) return;
+    setIsExportingPDF(true);
+    try {
+      const canvas = await html2canvas(boardroomRef.current, {
+        backgroundColor: "#0a0814",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        ignoreElements: (el) => {
+          // Skip buttons/inputs that don't render well in PDF
+          return el.tagName === "BUTTON" && (el as HTMLButtonElement).type === "button" && (el as HTMLElement).dataset.noPdf === "true";
+        },
+      });
+      const imgData = canvas.toDataURL("image/png");
+      // Build a simple print page
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Boardroom — ${idea.slice(0, 60) || "Analysis"}</title>
+              <style>
+                body { margin: 0; background: #0a0814; display: flex; justify-content: center; align-items: flex-start; padding: 24px; }
+                img { max-width: 100%; border-radius: 16px; box-shadow: 0 0 60px rgba(139,92,246,0.4); }
+              </style>
+            </head>
+            <body>
+              <img src="${imgData}" alt="Boardroom Export" />
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => printWindow.print(), 800);
+      }
+    } catch (e) {
+      console.error("PDF export failed:", e);
+    }
+    setIsExportingPDF(false);
+  }, [idea, isExportingPDF]);
+
   const handleConsult = async () => {
     if (isConsulting) return;
     setIsConsulting(true);
@@ -1043,8 +1103,14 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     setSaveState("idle");
     // Fresh session for new consult
     sessionIdRef.current = resetSessionId();
+    // Broadcast "consulting" presence state
+    if (realtimeChannelRef.current && user) {
+      const displayName = user.email?.split("@")[0] || "Anonymous";
+      realtimeChannelRef.current.track({ displayName, isConsulting: true }).catch(() => {});
+    }
 
     let aiPersonas: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+    let finalActionPlan: string[] = DEFAULT_ACTION_PLAN;
     try {
       const { data, error } = await supabase.functions.invoke("flux-ai", {
         body: { type: "boardroom-consult", idea: idea || "Should I start a new business?" },
@@ -1054,11 +1120,25 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
           if (p.key) aiPersonas[p.key] = { analysis: p.analysis, question: p.question, confidence: p.confidence };
         });
         if (data.action_plan && Array.isArray(data.action_plan)) {
-          setActionPlan(data.action_plan);
+          finalActionPlan = data.action_plan;
+          setActionPlan(finalActionPlan);
         }
       }
     } catch {
       // fallback to mock
+    }
+
+    // Broadcast results to team members watching the boardroom
+    if (realtimeChannelRef.current && user) {
+      const broadcastPayload = {
+        userId: user.id,
+        idea: idea || "Should I start a new business?",
+        responses: PERSONAS.map(p => ({ key: p.key, ...(aiPersonas[p.key] || MOCK_RESPONSES[p.key]) })),
+        actionPlan: finalActionPlan,
+      };
+      realtimeChannelRef.current.send({ type: "broadcast", event: "boardroom-consult", payload: broadcastPayload }).catch(() => {});
+      const displayName = user.email?.split("@")[0] || "Anonymous";
+      realtimeChannelRef.current.track({ displayName, isConsulting: false }).catch(() => {});
     }
 
     await revealPersonaSequence(aiPersonas);
