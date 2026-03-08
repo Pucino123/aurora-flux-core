@@ -95,7 +95,7 @@ const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref
               </div>
               <h1 className="text-2xl font-bold text-foreground mb-3">Welcome to your new Workspace.</h1>
               <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-                Flux is designed to help you think clearer, work faster, and make better decisions with your own personal AI advisory board.
+                Dashiii is designed to help you think clearer, work faster, and make better decisions with your own personal AI advisory board.
               </p>
               <button
                 onClick={() => setPhase("tour")}

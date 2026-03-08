@@ -244,9 +244,16 @@ const BillingView = () => {
   ];
 
   const SPARK_PACKS = [
-    { sparks: 50, price: "$4.99", label: "Starter" },
-    { sparks: 200, price: "$12.99", label: "Best Value", highlight: true },
-    { sparks: 500, price: "$24.99", label: "Power User" },
+    { sparks: 50, price: "$5.00", label: "Starter", bonus: 0, rate: "10¢ / Spark" },
+    { sparks: 120, price: "$10.00", label: "Most Popular", bonus: 20, highlight: true, rate: "8¢ / Spark" },
+    { sparks: 300, price: "$20.00", label: "Mega", bonus: 100, rate: "6.7¢ / Spark" },
+  ];
+
+  const SPARK_ACTIONS = [
+    { cost: 1, label: "Quick AI Answer / Basic Generation" },
+    { cost: 2, label: "Live Council Context Review" },
+    { cost: 3, label: "Deep Document Analysis / Smart Plan" },
+    { cost: 5, label: "Full Council Consult (4 Advisors)" },
   ];
 
   return (
