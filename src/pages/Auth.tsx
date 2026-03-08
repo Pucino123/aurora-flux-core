@@ -23,7 +23,7 @@ const Auth = () => {
   const isDark = theme === "dark";
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundImage: `url(${cherryBg})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundImage: `url(${gradientBg})`, backgroundSize: "cover", backgroundPosition: "center" }}>
       <div className="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full" />
     </div>
   );
