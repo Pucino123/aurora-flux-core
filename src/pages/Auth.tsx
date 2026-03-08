@@ -7,6 +7,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { t } from "@/lib/i18n";
 import { Eye, EyeOff, ArrowLeft, Sparkles, Sun, Moon } from "lucide-react";
 import cherryBg from "@/assets/bg-cherry-blossom.jpg";
+import SEO from "@/components/SEO";
 
 const Auth = () => {
   const { user, loading, signIn, signUp } = useAuth();
