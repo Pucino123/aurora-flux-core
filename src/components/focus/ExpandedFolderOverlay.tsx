@@ -113,8 +113,8 @@ const ExpandedFolderOverlay = ({
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [docCtxMenu, setDocCtxMenu] = useState<{ doc: DbDocument; x: number; y: number } | null>(null);
 
-  // Track a stable "window id" so we can minimize/layout switch it
-  const windowIdRef = useRef<string | null>(null);
+
+
 
   // Modal drag — locked to pixel-based position
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
