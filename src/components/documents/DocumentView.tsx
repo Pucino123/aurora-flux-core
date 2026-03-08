@@ -520,6 +520,8 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
         lightMode={lm}
         onToggleLightMode={onToggleLightMode}
         isStreaming={isStreaming}
+        canvasMode={isCanvas}
+        onToggleCanvasMode={toggleCanvasMode}
         onStopStream={() => {
           // Hard stop — kill both legacy word-stream and new chunk-stream
           streamCancelRef.current?.();

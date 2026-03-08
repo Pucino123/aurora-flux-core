@@ -1,6 +1,6 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Square, FastForward } from "lucide-react";
+import { Square, FastForward, LayoutTemplate } from "lucide-react";
 import FileMenu from "./FileMenu";
 import TypographyPanel from "./TypographyPanel";
 import StructureTools from "./StructureTools";
