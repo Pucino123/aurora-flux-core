@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { jsPDF } from "jspdf";
 import BoardroomPersonalitySliders, { DEFAULT_ALL_SLIDERS, AllSliders } from "./BoardroomPersonalitySliders";
+import BoardroomOnboardingTour from "./BoardroomOnboardingTour";
 import { toast } from "sonner";
 
 // ── Types ──
@@ -900,6 +901,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const [sharedByName, setSharedByName] = useState<string | null>(null);
   // Council Digest modal (shown after saving)
   const [showDigest, setShowDigest] = useState(false);
+  // Onboarding tour for first-time users
+  const [showTour, setShowTour] = useState(false);
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
@@ -962,6 +965,13 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // Show onboarding tour for first-time users
+  useEffect(() => {
+    if (localStorage.getItem("boardroom_tour_done")) return;
+    const timer = setTimeout(() => setShowTour(true), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   const getConsensusLabel = () => {
     if (avgRing >= 70) return { label: "Strong Consensus — Proceed", color: "#34d399" };
@@ -1376,9 +1386,49 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
 — Flux Boardroom · aurora-flux-core.lovable.app`;
 
+  // ── Notion-formatted digest ──
+  const notionText = `# 🏛️ Council Boardroom Analysis
+
+> **${idea || "Your Idea"}**
+
+---
+
+## 📊 Consensus Score: ${avgRing}% — ${consensus.label}
+
+*Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}*
+
+---
+
+## 🧠 Advisor Verdicts
+
+${PERSONAS.map(p => {
+    const r = responses[p.key];
+    if (!r) return "";
+    const voteEmoji = r.confidence >= 70 ? "✅" : r.confidence >= 40 ? "⚠️" : "❌";
+    return `### ${voteEmoji} ${p.name} — ${p.title} (${r.confidence}% confidence)\n\n${r.analysis}\n\n> 💬 **${p.name} asks:** ${r.question}`;
+  }).filter(Boolean).join("\n\n---\n\n")}
+
+---
+
+## 📋 Recommended Action Plan
+
+${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+---
+
+*Powered by Flux Boardroom · [aurora-flux-core.lovable.app](https://aurora-flux-core.lovable.app)*`;
+
   return (
     <div ref={boardroomRef} className="flex flex-col h-full min-h-0 gap-4">
-      {/* Shared session banner */}
+      {/* Onboarding tour */}
+      <AnimatePresence>
+        {showTour && (
+          <BoardroomOnboardingTour onDismiss={() => {
+            setShowTour(false);
+            localStorage.setItem("boardroom_tour_done", "1");
+          }} />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {isSharedView && (
           <motion.div
@@ -1501,6 +1551,14 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             title="Share Verdict Card"
           >
             <Share2 size={15} />
+          </button>
+          {/* Help / Onboarding tour trigger */}
+          <button
+            onClick={() => setShowTour(true)}
+            title="How to use the Boardroom"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/20 hover:text-white/50 hover:bg-white/8 transition-colors shrink-0"
+          >
+            <span className="text-[13px] font-bold">?</span>
           </button>
         </div>
 
@@ -1686,6 +1744,14 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                     style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.3)" }}
                   >
                     <Copy size={11} /> Copy Digest
+                  </button>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(notionText); toast.success("Notion-formatted digest copied!"); }}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors"
+                    style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.55)" }}
+                    title="Formatted for Notion with headers, bullets and callout blocks"
+                  >
+                    <FileText size={11} /> Notion
                   </button>
                   <button
                     onClick={() => { handleExportPDF(); setShowDigest(false); }}

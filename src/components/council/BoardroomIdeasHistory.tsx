@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, ChevronRight, Star, Trash2, BookOpen,
@@ -74,6 +74,8 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
   // tag editing state per idea
   const [editingTagsFor, setEditingTagsFor] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const tagInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadBoardroomIdeas();
@@ -165,12 +167,14 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
     return "#f87171";
   };
 
-  // All unique tags across all sessions
-  const allTags = useMemo(() => {
-    const set = new Set<string>();
-    ideas.forEach(i => i.tags.forEach(t => set.add(t)));
-    return Array.from(set).sort();
+  // All unique tags across all sessions, with usage counts
+  const allTagsWithCount = useMemo(() => {
+    const counts: Record<string, number> = {};
+    ideas.forEach(i => i.tags.forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([tag]) => tag);
   }, [ideas]);
+
+  const allTags = allTagsWithCount;
 
   // ── Filtering logic ──
   const filteredIdeas = useMemo(() => {
@@ -557,28 +561,75 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
                             )}
                           </div>
                           {isEditingTags && (
-                            <div className="flex gap-1.5 mt-2">
-                              <input
-                                value={tagInput}
-                                onChange={e => setTagInput(e.target.value)}
-                                onKeyDown={e => {
-                                  if (e.key === "Enter" || e.key === ",") {
-                                    e.preventDefault();
-                                    handleAddTag(idea.id, tagInput);
-                                    setTagInput("");
-                                  }
-                                }}
-                                placeholder="startup, product, pivot…"
-                                className="flex-1 bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-[10px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/15 transition-colors"
-                                onClick={e => e.stopPropagation()}
-                              />
-                              <button
-                                onClick={e => { e.stopPropagation(); handleAddTag(idea.id, tagInput); setTagInput(""); }}
-                                className="px-2 py-1 rounded-lg text-[9px] font-semibold text-purple-300 transition-colors"
-                                style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.25)" }}
-                              >
-                                Add
-                              </button>
+                            <div className="relative mt-2" onClick={e => e.stopPropagation()}>
+                              <div className="flex gap-1.5">
+                                <input
+                                  ref={tagInputRef}
+                                  value={tagInput}
+                                  onChange={e => { setTagInput(e.target.value); setShowTagSuggestions(true); }}
+                                  onFocus={() => setShowTagSuggestions(true)}
+                                  onBlur={() => setTimeout(() => setShowTagSuggestions(false), 120)}
+                                  onKeyDown={e => {
+                                    if (e.key === "Enter" || e.key === ",") {
+                                      e.preventDefault();
+                                      handleAddTag(idea.id, tagInput);
+                                      setTagInput("");
+                                      setShowTagSuggestions(false);
+                                    }
+                                    if (e.key === "Escape") setShowTagSuggestions(false);
+                                  }}
+                                  placeholder="startup, product, pivot…"
+                                  className="flex-1 bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-[10px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/15 transition-colors"
+                                />
+                                <button
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => { handleAddTag(idea.id, tagInput); setTagInput(""); setShowTagSuggestions(false); }}
+                                  className="px-2 py-1 rounded-lg text-[9px] font-semibold text-purple-300 transition-colors"
+                                  style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.25)" }}
+                                >
+                                  Add
+                                </button>
+                              </div>
+                              {/* Suggestions dropdown */}
+                              <AnimatePresence>
+                                {showTagSuggestions && (() => {
+                                  const suggestions = allTagsWithCount.filter(
+                                    t => !idea.tags.includes(t) &&
+                                    (tagInput === "" || t.includes(tagInput.toLowerCase()))
+                                  ).slice(0, 6);
+                                  if (suggestions.length === 0) return null;
+                                  return (
+                                    <motion.div
+                                      initial={{ opacity: 0, y: -4 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: -4 }}
+                                      transition={{ duration: 0.15 }}
+                                      className="absolute top-full left-0 right-8 mt-1 rounded-xl overflow-hidden z-50"
+                                      style={{ background: "rgba(14,10,30,0.97)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
+                                    >
+                                      <p className="px-2.5 pt-2 pb-1 text-[8px] text-white/25 uppercase tracking-widest">Suggested tags</p>
+                                      {suggestions.map(tag => {
+                                        const c = tagColor(tag);
+                                        return (
+                                          <button
+                                            key={tag}
+                                            onMouseDown={e => e.preventDefault()}
+                                            onClick={() => { handleAddTag(idea.id, tag); setTagInput(""); setShowTagSuggestions(false); }}
+                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] hover:bg-white/5 transition-colors text-left"
+                                          >
+                                            <span
+                                              className="px-1.5 py-0.5 rounded-full text-[8px] font-semibold"
+                                              style={{ background: `${c}18`, color: c, border: `1px solid ${c}28` }}
+                                            >
+                                              {tag}
+                                            </span>
+                                          </button>
+                                        );
+                                      })}
+                                    </motion.div>
+                                  );
+                                })()}
+                              </AnimatePresence>
                             </div>
                           )}
                         </div>
