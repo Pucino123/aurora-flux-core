@@ -481,8 +481,55 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         </motion.div>
       </section>
 
+      {/* Product Video — first thing after hero */}
+      <section className="relative z-10 px-4 md:px-8 pb-20 md:pb-28">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
+              See it in <em style={{ fontStyle: "italic" }}>action</em>
+            </h2>
+            <p className="text-sm text-white/50">Watch how Dashiii adapts to the way you work.</p>
+          </div>
+          <div
+            className="relative rounded-3xl overflow-hidden aspect-video"
+            style={{
+              background: isDark ? "rgba(12,10,20,0.70)" : "rgba(255,255,255,0.12)",
+              backdropFilter: "blur(32px)",
+              WebkitBackdropFilter: "blur(32px)",
+              border: isDark ? "1.5px solid rgba(255,255,255,0.10)" : "1.5px solid rgba(255,255,255,0.28)",
+              boxShadow: "0 40px 100px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(100,140,255,0.18), transparent 70%)" }} />
+            {/* To embed: replace the div below with:
+                <iframe className="w-full h-full absolute inset-0" src="https://www.youtube.com/embed/YOUR_VIDEO_ID?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10">
+              <div
+                className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.3)", backdropFilter: "blur(8px)" }}
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="white" className="ml-1 opacity-90"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+              <p className="text-white/40 text-sm">Product demo coming soon</p>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Feature Marquee */}
+      <section className="relative z-10 pb-16 md:pb-20">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-8 px-5">
+          <h2 className="text-2xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
+            More than just <em style={{ fontStyle: "italic" }}>tasks</em>
+          </h2>
+          <p className="text-sm text-white/50">One workspace that replaces all your productivity apps.</p>
+        </motion.div>
+        <FeatureMarquee isDark={isDark} />
+      </section>
+
       {/* Social Proof Strip */}
-      <section className="relative z-10 pb-14 md:pb-20 px-4">
+      <section className="relative z-10 pb-16 md:pb-24 px-4">
         <motion.div
           initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
           className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4"
@@ -502,15 +549,12 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
                 border: isDark ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(255,255,255,0.32)",
               }}
             >
-              {/* Stars */}
               <div className="flex gap-0.5">
                 {Array.from({ length: t.stars }).map((_, i) => (
                   <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill="#fbbf24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 ))}
               </div>
-              {/* Quote */}
               <p className="text-sm text-white/75 leading-relaxed flex-1">"{t.quote}"</p>
-              {/* Author */}
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
                   style={{ background: "rgba(139,92,246,0.5)", border: "1px solid rgba(139,92,246,0.4)" }}>
@@ -526,57 +570,10 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         </motion.div>
       </section>
 
-      {/* Feature Marquee */}
-      <section className="relative z-10 pb-16 md:pb-20">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-8 px-5">
-          <h2 className="text-2xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
-            More than just <em style={{ fontStyle: "italic" }}>tasks</em>
-          </h2>
-          <p className="text-sm text-white/50">One workspace that replaces all your productivity apps.</p>
-        </motion.div>
-        <FeatureMarquee isDark={isDark} />
-      </section>
-
       {/* Feature Slideshow */}
       <section className="relative z-10 px-4 md:px-8 pb-24 md:pb-32">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
           <FeatureSlideshow isDark={isDark} />
-        </motion.div>
-      </section>
-
-      {/* Product Video Section */}
-      <section className="relative z-10 px-4 md:px-8 pb-20 md:pb-28">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>
-              See it in <em style={{ fontStyle: "italic" }}>action</em>
-            </h2>
-            <p className="text-sm text-white/50">Watch how Dashiii adapts to the way you work.</p>
-          </div>
-          <div
-            className="relative rounded-3xl overflow-hidden aspect-video"
-            style={{
-              background: isDark ? "rgba(12,10,20,0.70)" : "rgba(255,255,255,0.12)",
-              backdropFilter: "blur(32px)",
-              WebkitBackdropFilter: "blur(32px)",
-              border: isDark ? "1.5px solid rgba(255,255,255,0.10)" : "1.5px solid rgba(255,255,255,0.28)",
-              boxShadow: "0 40px 100px rgba(0,0,0,0.3)",
-            }}
-          >
-            {/* Ambient glow */}
-            <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(100,140,255,0.18), transparent 70%)" }} />
-            {/* Placeholder — replace src with real YouTube embed when ready */}
-            {/* To embed: <iframe className="w-full h-full" src="https://www.youtube.com/embed/YOUR_VIDEO_ID?autoplay=0&rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 relative z-10">
-              <div
-                className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200"
-                style={{ background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.3)", backdropFilter: "blur(8px)" }}
-              >
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="white" className="ml-1 opacity-90"><path d="M8 5v14l11-7z"/></svg>
-              </div>
-              <p className="text-white/40 text-sm">Product demo coming soon</p>
-            </div>
-          </div>
         </motion.div>
       </section>
 
