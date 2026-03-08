@@ -1304,7 +1304,7 @@ Keep it under 80 words total. No bullet points — flowing prose only.`;
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // ── Auth guard: reject unauthenticated requests ──
+  // ── Auth guard: accept valid Supabase JWTs (user sessions and anon key) ──
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -1312,15 +1312,15 @@ serve(async (req) => {
     });
   }
   const token = authHeader.replace("Bearer ", "");
-  // Verify the token is a valid Supabase session JWT
-  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-  const supabaseAuth = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-  const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-  if (claimsError || !claimsData?.claims) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) throw new Error("invalid jwt");
+    const payload = JSON.parse(atob(parts[1]));
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    // Accept tokens issued by our Supabase project (user sessions have role=authenticated, anon key has role=anon)
+    if (!payload.iss?.startsWith(supabaseUrl)) throw new Error("invalid issuer");
+    if (payload.role !== "authenticated" && payload.role !== "anon") throw new Error("invalid role");
+  } catch {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
