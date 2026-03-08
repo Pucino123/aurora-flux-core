@@ -841,6 +841,7 @@ const CouncilBoardroom: React.FC = () => {
     elena: [], helen: [], anton: [], margot: [],
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [savedIdeaId, setSavedIdeaId] = useState<string | null>(null);
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
 
