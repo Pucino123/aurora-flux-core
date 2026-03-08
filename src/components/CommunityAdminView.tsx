@@ -52,36 +52,8 @@ const ActivityItem = ({ avatar, name, action, time }: { avatar: string; name: st
   </div>
 );
 
-/* ─── Mock data ─── */
-const MOCK_ACTIVITY = [
-  { avatar: "S", name: "Sarah K.", action: "created a new Idea Frame", time: "2m ago" },
-  { avatar: "M", name: "Mike R.", action: "published 'Alpha Dashboard' to Community", time: "14m ago" },
-  { avatar: "A", name: "Anna L.", action: "upgraded to Pro plan", time: "1h ago" },
-  { avatar: "J", name: "James T.", action: "submitted 'DevTrack' for approval", time: "2h ago" },
-  { avatar: "P", name: "Priya M.", action: "joined via invite link", time: "3h ago" },
-  { avatar: "T", name: "Tom H.", action: "connected Google Calendar", time: "5h ago" },
-];
 
-const MOCK_REPORTS = [
-  { id: 1, project: "SpamFarm Pro", reason: "Inappropriate content", user: "anon@test.com" },
-  { id: 2, project: "CryptoScam.io", reason: "Phishing attempt", user: "bad@actor.net" },
-];
 
-const MOCK_USERS = [
-  { id: 1, avatar: "S", name: "Sarah K.", email: "sarah@example.com", plan: "Pro", joined: "Jan 12, 2025" },
-  { id: 2, avatar: "M", name: "Mike R.", email: "mike@devco.io", plan: "Pro", joined: "Feb 3, 2025" },
-  { id: 3, avatar: "A", name: "Anna L.", email: "anna@startup.com", plan: "Starter", joined: "Feb 18, 2025" },
-  { id: 4, avatar: "J", name: "James T.", email: "james@freelancer.io", plan: "Starter", joined: "Mar 1, 2025" },
-  { id: 5, avatar: "P", name: "Priya M.", email: "priya@design.co", plan: "Pro", joined: "Mar 5, 2025" },
-];
-
-const MOCK_LOGS = [
-  { time: "08:14:32", event: "User login", detail: "kevin.therkildsen@icloud.com — IP 192.168.1.1" },
-  { time: "08:02:11", event: "Slot approved", detail: "Slot #4 'Alpha Dashboard' approved by admin" },
-  { time: "07:50:05", event: "New signup", detail: "Priya M. created account" },
-  { time: "07:31:20", event: "Invoice generated", detail: "Invoice #INV-042 sent to Mike R." },
-  { time: "06:45:00", event: "System health check", detail: "All services operational — 99.9% uptime" },
-];
 
 /* ─── Main Admin View ─── */
 const CommunityAdminView = () => {
@@ -90,7 +62,7 @@ const CommunityAdminView = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"pending" | "approved" | "all">("pending");
   const [adminTab, setAdminTab] = useState<AdminTab>("overview");
-  const [reports, setReports] = useState(MOCK_REPORTS);
+  const [reports, setReports] = useState<{ id: number; project: string; reason: string; user: string }[]>([]);
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   const fetchSlots = useCallback(async () => {
@@ -193,24 +165,39 @@ const CommunityAdminView = () => {
 
         {adminTab === "overview" && (
           <>
-            {/* KPI Row */}
+            {/* KPI Row — based on real slot data */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard icon={Users} label="Total Users" value="1,248" sub="↑ +12% this week" />
-              <KpiCard icon={Cpu} label="Active Workspaces" value="342" sub="↑ +8 today" subColor="text-blue-400" />
-              <KpiCard icon={AlertTriangle} label="Pending Reports" value={String(reports.length)} sub={reports.length > 0 ? "Requires attention" : "All clear"} subColor={reports.length > 0 ? "text-red-400" : "text-emerald-400"} pulse={reports.length > 0} />
-              <KpiCard icon={Activity} label="System Health" value="99.9%" sub="Uptime this month" />
+              <KpiCard icon={Users} label="Total Submissions" value={String(slots.length)} sub={`${approvedSlots.length} approved`} />
+              <KpiCard icon={Cpu} label="Live Slots" value={String(approvedSlots.length)} sub="Visible on board" subColor="text-blue-400" />
+              <KpiCard icon={AlertTriangle} label="Pending Review" value={String(pendingSlots.length)} sub={pendingSlots.length > 0 ? "Requires attention" : "All clear"} subColor={pendingSlots.length > 0 ? "text-red-400" : "text-emerald-400"} pulse={pendingSlots.length > 0} />
+              <KpiCard icon={Activity} label="Available Slots" value={String(Math.max(0, 18 - slots.length))} sub="Free to claim" subColor="text-amber-400" />
             </div>
 
             {/* Two-col split */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Activity Feed */}
+              {/* Recent submissions */}
               <div className="rounded-2xl p-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Activity size={14} className="text-indigo-400" /> Live Activity</h3>
-                <div>
-                  {MOCK_ACTIVITY.map((a, i) => (
-                    <ActivityItem key={i} {...a} />
-                  ))}
-                </div>
+                <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Activity size={14} className="text-indigo-400" /> Recent Submissions</h3>
+                {slots.length === 0 ? (
+                  <div className="text-center py-8 text-white/30 text-sm">No submissions yet</div>
+                ) : (
+                  <div>
+                    {slots.slice(0, 6).map((slot, i) => (
+                      <div key={slot.id} className="flex items-start gap-3 py-2.5 border-b last:border-0" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0" style={{ background: "rgba(99,102,241,0.2)", color: "#a5b4fc" }}>
+                          {slot.projectName?.[0] ?? "#"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white/80"><span className="font-semibold text-white">{slot.projectName || "Unnamed project"}</span> submitted slot #{slot.slotIndex}</p>
+                          <p className="text-[10px] text-white/30 mt-0.5">{timeAgo(slot.createdAt)}</p>
+                        </div>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${slot.status === "approved" ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+                          {slot.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Moderation Queue */}
@@ -312,42 +299,48 @@ const CommunityAdminView = () => {
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="px-4 py-3 flex items-center gap-3" style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <Search size={13} className="text-white/30" />
-              <input placeholder="Search users…" className="bg-transparent text-sm outline-none text-white placeholder:text-white/20 flex-1" />
-              <span className="text-xs text-white/30">{MOCK_USERS.length} users</span>
+              <input placeholder="Search submissions…" className="bg-transparent text-sm outline-none text-white placeholder:text-white/20 flex-1" />
+              <span className="text-xs text-white/30">{slots.length} entries</span>
             </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                  {["User", "Email", "Plan", "Joined", ""].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-[11px] font-medium text-white/30 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_USERS.map((u) => (
-                  <tr key={u.id} className="transition-colors hover:bg-white/[0.03]" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0" style={{ background: "rgba(99,102,241,0.2)", color: "#a5b4fc" }}>{u.avatar}</div>
-                        <span className="text-white/80 font-medium">{u.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-white/40 text-xs">{u.email}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{
-                        background: u.plan === "Pro" ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.06)",
-                        color: u.plan === "Pro" ? "#a5b4fc" : "rgba(255,255,255,0.4)",
-                        border: u.plan === "Pro" ? "1px solid rgba(99,102,241,0.25)" : "1px solid rgba(255,255,255,0.1)",
-                      }}>{u.plan}</span>
-                    </td>
-                    <td className="px-4 py-3 text-white/30 text-xs">{u.joined}</td>
-                    <td className="px-4 py-3">
-                      <button className="p-1.5 rounded-lg hover:bg-white/10 text-white/20 hover:text-white/60 transition-colors"><MoreHorizontal size={14} /></button>
-                    </td>
+            {slots.length === 0 ? (
+              <div className="text-center py-16 text-white/30 text-sm">No submissions yet</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                    {["Project", "URL", "Slot", "Status", "Submitted", ""].map((h) => (
+                      <th key={h} className="text-left px-4 py-3 text-[11px] font-medium text-white/30 uppercase tracking-wider">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {slots.map((slot) => (
+                    <tr key={slot.id} className="transition-colors hover:bg-white/[0.03]" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shrink-0" style={{ background: "rgba(99,102,241,0.2)" }}>
+                            {slot.thumbnailUrl ? <img src={slot.thumbnailUrl} className="w-full h-full object-cover" alt="" /> : <span className="text-[11px] font-bold text-indigo-400">{slot.projectName?.[0] ?? "?"}</span>}
+                          </div>
+                          <span className="text-white/80 font-medium text-xs">{slot.projectName || "—"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-white/40 text-xs max-w-[120px] truncate">{slot.websiteUrl || "—"}</td>
+                      <td className="px-4 py-3 text-white/40 text-xs">#{slot.slotIndex}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{
+                          background: slot.status === "approved" ? "rgba(34,197,94,0.15)" : slot.status === "pending" ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.06)",
+                          color: slot.status === "approved" ? "#4ade80" : slot.status === "pending" ? "#fbbf24" : "rgba(255,255,255,0.4)",
+                        }}>{slot.status}</span>
+                      </td>
+                      <td className="px-4 py-3 text-white/30 text-xs">{timeAgo(slot.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <button className="p-1.5 rounded-lg hover:bg-white/10 text-white/20 hover:text-white/60 transition-colors"><MoreHorizontal size={14} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
@@ -356,17 +349,23 @@ const CommunityAdminView = () => {
             <div className="px-4 py-3 flex items-center gap-2" style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <Ban size={13} className="text-indigo-400" />
               <span className="text-sm font-semibold text-white">System Logs</span>
-              <span className="ml-auto text-xs text-white/30">Today</span>
+              <span className="ml-auto text-xs text-white/30">Approval history</span>
             </div>
-            <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-              {MOCK_LOGS.map((log, i) => (
-                <div key={i} className="flex items-start gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                  <span className="text-[10px] text-white/20 font-mono shrink-0 mt-0.5">{log.time}</span>
-                  <span className="text-xs font-medium text-indigo-400 shrink-0">{log.event}</span>
-                  <span className="text-xs text-white/40 truncate">{log.detail}</span>
-                </div>
-              ))}
-            </div>
+            {slots.length === 0 ? (
+              <div className="text-center py-16 text-white/30 text-sm">No activity yet</div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+                {slots.map((slot) => (
+                  <div key={slot.id} className="flex items-start gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                    <span className="text-[10px] text-white/20 font-mono shrink-0 mt-0.5">{new Date(slot.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                    <span className={`text-xs font-medium shrink-0 ${slot.status === "approved" ? "text-emerald-400" : "text-amber-400"}`}>
+                      {slot.status === "approved" ? "Slot approved" : "Submission pending"}
+                    </span>
+                    <span className="text-xs text-white/40 truncate">Slot #{slot.slotIndex} — {slot.projectName || "Unnamed"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
