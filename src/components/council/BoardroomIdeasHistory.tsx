@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, ChevronRight, Star, Trash2, BookOpen,
-  Search, SlidersHorizontal, X, RotateCcw, Calendar, Tag,
+  Search, SlidersHorizontal, X, RotateCcw, Calendar, Tag, Play,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
