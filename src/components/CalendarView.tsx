@@ -438,7 +438,7 @@ const CalendarView = () => {
       if (date) out.push({ id: `task-${t.id}`, title: t.title, date, type: "task", color: t.priority === "high" ? "bg-red-500" : "bg-emerald-500", done: t.done, priority: t.priority || undefined });
     });
     scheduleBlocks.forEach(b => {
-      if (b.scheduled_date) out.push({ id: `block-${b.id}`, title: b.title, date: b.scheduled_date, startTime: b.time || undefined, endTime: b.end_time || undefined, type: "block", color: "bg-blue-500" });
+      if (b.scheduled_date) out.push({ id: `block-${b.id}`, title: b.title, date: b.scheduled_date, startTime: (b as any).time || undefined, endTime: (b as any).end_time || undefined, type: "block", color: "bg-blue-500" });
     });
     customEvents.forEach(e => out.push(e));
     return out;
