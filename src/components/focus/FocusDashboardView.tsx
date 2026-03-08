@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import type { DbDocument } from "@/hooks/useDocuments";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FocusProvider, useFocusStore } from "@/context/FocusContext";
