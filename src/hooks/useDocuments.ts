@@ -28,7 +28,7 @@ function lsSetDocs(docs: DbDocument[]) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(docs)); } catch {}
 }
 
-export function useDocuments(folderId?: string | null) {
+export function useDocuments(folderId?: string | null, onMoveToTrash?: MoveToTrashFn) {
   const { user } = useAuth();
   const [documents, setDocumentsRaw] = useState<DbDocument[]>([]);
   const [loading, setLoading] = useState(true);
