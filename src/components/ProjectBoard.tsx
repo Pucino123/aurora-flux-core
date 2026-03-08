@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useFlux } from "@/context/FluxContext";
+import { useTrash } from "@/context/TrashContext";
 import { Check, Trash2, FileText, Pencil, X, CheckCircle2, Circle, ListTodo, AlertTriangle, Calendar, Pin, Columns3, List, Table, Plus } from "lucide-react";
 import KanbanBoard from "./KanbanBoard";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,6 +59,7 @@ interface ProjectBoardProps {
 
 const ProjectBoard = ({ folderId }: ProjectBoardProps) => {
   const { findFolderNode, createTask, updateTask, removeTask, goals, updateFolder, tasks, getDescendantFolderIds } = useFlux();
+  const { moveToTrash } = useTrash();
   const { documents: folderDocs, createDocument, updateDocument, removeDocument } = useDocuments(folderId);
   const [activeDoc, setActiveDoc] = useState<any>(null);
   const [confettiId, setConfettiId] = useState<string | null>(null);
@@ -265,6 +267,7 @@ const ProjectBoard = ({ folderId }: ProjectBoardProps) => {
                   <Pencil size={12} />
                 </button>
                 <button onClick={() => {
+                  moveToTrash({ id: item.id, type: "task", title: item.title, originalData: item });
                   removeTask(item.id);
                   toast(t("board.deleted"), {
                     action: {

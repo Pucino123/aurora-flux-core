@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useFlux } from "@/context/FluxContext";
+import { useTrash } from "@/context/TrashContext";
 import { Check, Trash2, AlertTriangle, Calendar, ListTodo, Mail, MessageSquare, Search, Plus, Reply, Forward, Archive, Users, MailPlus, Send, Users2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -364,6 +365,7 @@ const MailTab = () => {
 /* ─── TASKS TAB ─── */
 const TasksTab = () => {
   const { inboxTasks, updateTask, removeTask, createTask } = useFlux();
+  const { moveToTrash } = useTrash();
   const [filter, setFilter] = useState<TaskFilter>("today");
   const [search, setSearch] = useState("");
 
@@ -440,7 +442,7 @@ const TasksTab = () => {
                       )}
                     </div>
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary/60 text-muted-foreground shrink-0">Inbox</span>
-                    <button onClick={() => { removeTask(item.id); toast(t("inbox.deleted")); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all">
+                    <button onClick={() => { moveToTrash({ id: item.id, type: "task", title: item.title, originalData: item }); removeTask(item.id); toast(t("inbox.deleted")); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all">
                       <Trash2 size={11} />
                     </button>
                   </motion.div>

@@ -84,7 +84,9 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
     if (!restored) return;
 
     if (restored.type === "task") {
-      await createTask(restored.originalData);
+      // Restore task with all original fields (folder, sort_order, priority, etc.)
+      const { id: _id, user_id: _uid, created_at: _ca, updated_at: _ua, ...taskData } = restored.originalData;
+      await createTask({ ...taskData, title: restored.originalData.title });
       toast.success(`"${restored.title}" restored to Tasks`);
     } else if (restored.type === "document") {
       // Re-insert document into DB

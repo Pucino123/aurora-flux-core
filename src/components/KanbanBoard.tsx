@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, GripVertical, MoreHorizontal, Trash2, Edit2 } from "lucide-react";
 import { useFlux } from "@/context/FluxContext";
+import { useTrash } from "@/context/TrashContext";
 
 const COLUMNS = [
   { key: "todo", label: "To Do", color: "hsl(var(--aurora-blue))" },
@@ -16,6 +17,7 @@ interface KanbanBoardProps {
 
 const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
   const { tasks: allTasks, createTask, updateTask, removeTask } = useFlux();
+  const { moveToTrash } = useTrash();
   const tasks = propTasks || allTasks;
   const [newTaskCol, setNewTaskCol] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -92,7 +94,7 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
                           </button>
                         )}
                         <button
-                          onClick={() => removeTask(task.id)}
+                          onClick={() => { moveToTrash({ id: task.id, type: "task", title: task.title, originalData: task }); removeTask(task.id); }}
                           className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 size={12} />
