@@ -60,25 +60,25 @@ const PERSONAS: Persona[] = [
 ];
 
 const MOCK_RESPONSES: Record<string, { analysis: string; question: string; confidence: number }> = {
-  elena: {
+  strategist: {
     analysis: "The logistics check out — foot traffic analysis shows strong potential in urban eco-districts. Your supply chain for fair-trade sourcing is viable at scale. However, I'd recommend piloting with a pop-up before committing to a lease. Focus on unit economics first: your target of 200 cups/day at $6 average means $1,200/day revenue, which is achievable.",
     question: "**Have you modeled your break-even point at different occupancy rates?**",
     confidence: 85,
   },
-  helen: {
-    analysis: "I have to build on Elena's optimism here — the positioning opportunity is real. 'Eco-friendly coffee' is becoming mainstream, which is both an opportunity and a threat. You need a differentiated brand story beyond just the eco angle. Think about rituals, community, and the emotional journey. I'd advise against the term 'eco-friendly' — it's overused. Instead, lead with radical transparency.",
+  operator: {
+    analysis: "The positioning opportunity is real. 'Eco-friendly coffee' is becoming mainstream, which is both an opportunity and a threat. You need a differentiated brand story beyond just the eco angle. Think about rituals, community, and the emotional journey. I'd advise against the term 'eco-friendly' — it's overused. Instead, lead with radical transparency.",
     question: "**What is the one sentence that will make a customer choose you over a $6 Starbucks oat latte?**",
     confidence: 60,
   },
-  anton: {
-    analysis: "Let me be the one to say what no one wants to hear. You've calculated the monthly loan, but you've completely left out insurance, staff churn, and depreciation on equipment. That's a massive hidden cost structure. Also, the eco-premium market is increasingly competitive. What's your moat? I disagree with Elena's rosy unit economics — those numbers assume near-full occupancy.",
+  skeptic: {
+    analysis: "Let me be the one to say what no one wants to hear. You've calculated the monthly loan, but you've completely left out insurance, staff churn, and depreciation on equipment. That's a massive hidden cost structure. Also, the eco-premium market is increasingly competitive. What's your moat? The rosy unit economics assume near-full occupancy — that's unrealistic.",
     question: "**Have you calculated your 12-month burn rate assuming 40% below projected revenue?**",
     confidence: 30,
   },
-  margot: {
-    analysis: "This idea has genuine transformative potential — and I love that. Building on Helen's branding insight: an eco-coffee shop is not just a business, it's a community node. If you design it right, this becomes a gathering point for sustainable entrepreneurs, creators, and advocates. The long-term brand equity here is enormous, far beyond what Anton's skepticism accounts for.",
+  advocate: {
+    analysis: "This idea has genuine transformative potential — and I love that. An eco-coffee shop is not just a business, it's a community node. If you design it right, this becomes a gathering point for sustainable entrepreneurs, creators, and advocates. The long-term brand equity here is enormous.",
     question: "**What if this wasn't just a café, but the headquarters of a local sustainability movement?**",
-    confidence: 95,
+    confidence: 70,
   },
 };
 
