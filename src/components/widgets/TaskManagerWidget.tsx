@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useRef } from "react";
-import { Plus, Check, Calendar, Flag, List, Clock, Pencil, Sparkles } from "lucide-react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
+import { Plus, Check, Calendar, Flag, List, Clock, Pencil, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFlux } from "@/context/FluxContext";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
 const SMART_LISTS = [
@@ -27,7 +28,9 @@ const TaskManagerWidget = () => {
   const [completing, setCompleting] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [auraLoading, setAuraLoading] = useState(false);
   const editRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const todayTasks = useMemo(() => fluxTasks.filter(t => t.type === "task" && (t.scheduled_date === today || t.due_date === today)), [fluxTasks, today]);
   const scheduledTasks = useMemo(() => fluxTasks.filter(t => t.type === "task" && t.due_date && t.due_date !== today), [fluxTasks, today]);
@@ -69,6 +72,55 @@ const TaskManagerWidget = () => {
     if (editValue.trim()) updateTask(id, { title: editValue.trim() });
     setEditingId(null);
   };
+
+  // ── Aura AI: break a task into subtasks ────────────────────────────────
+  const handleAuraBreakdown = useCallback(async () => {
+    const title = newTitle.trim();
+    if (!title || auraLoading) return;
+    setAuraLoading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke("flux-ai", {
+        body: {
+          messages: [
+            {
+              role: "user",
+              content: `Break this task into 3-5 concrete, actionable subtasks. Reply ONLY with a JSON array of strings, each being one subtask. No explanation, no markdown, just the JSON array. Task: "${title}"`,
+            },
+          ],
+          action: "chat",
+          context: { currentPage: "stream" },
+        },
+      });
+
+      let subtasks: string[] = [];
+
+      // Try to parse response
+      const raw = response.data?.content || response.data?.message || "";
+      const match = raw.match(/\[[\s\S]*?\]/);
+      if (match) {
+        subtasks = JSON.parse(match[0]);
+      }
+
+      if (subtasks.length > 0) {
+        // Create parent task first
+        createTask({ title, type: "task", scheduled_date: today });
+        // Create subtasks
+        for (const sub of subtasks) {
+          if (typeof sub === "string" && sub.trim()) {
+            createTask({ title: `↳ ${sub.trim()}`, type: "task", scheduled_date: today });
+          }
+        }
+        setNewTitle("");
+      }
+    } catch (err) {
+      console.error("Aura breakdown failed:", err);
+    } finally {
+      setAuraLoading(false);
+      inputRef.current?.focus();
+    }
+  }, [newTitle, auraLoading, createTask, today]);
 
   const cfg = SMART_LISTS.find(l => l.key === activeList)!;
 
@@ -201,6 +253,7 @@ const TaskManagerWidget = () => {
           <Plus size={14} />
         </button>
         <input
+          ref={inputRef}
           value={newTitle}
           onChange={e => setNewTitle(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleAdd()}
@@ -210,15 +263,22 @@ const TaskManagerWidget = () => {
         <motion.button
           whileHover={{ scale: 1.15 }}
           whileTap={{ scale: 0.9 }}
-          title="Ask Aura to break down this task"
-          className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all"
+          onClick={handleAuraBreakdown}
+          disabled={!newTitle.trim() || auraLoading}
+          title={newTitle.trim() ? "Ask Aura to break down this task" : "Type a task first"}
+          className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
           style={{
-            background: "linear-gradient(135deg, rgba(139,92,246,0.3), rgba(16,185,129,0.3))",
-            boxShadow: "0 0 6px rgba(139,92,246,0.5)",
+            background: newTitle.trim()
+              ? "linear-gradient(135deg, rgba(139,92,246,0.5), rgba(16,185,129,0.5))"
+              : "linear-gradient(135deg, rgba(139,92,246,0.2), rgba(16,185,129,0.2))",
+            boxShadow: newTitle.trim() ? "0 0 8px rgba(139,92,246,0.6)" : "none",
             border: "0.5px solid rgba(139,92,246,0.4)",
           }}
         >
-          <Sparkles size={9} className="text-violet-300" />
+          {auraLoading
+            ? <Loader2 size={9} className="text-violet-300 animate-spin" />
+            : <Sparkles size={9} className="text-violet-300" />
+          }
         </motion.button>
       </div>
     </div>

@@ -1709,16 +1709,9 @@ const FocusContent = () => {
         <TemplateChooserModal
           onCreateDocument={async (title, type, content) => {
             const pos = contextMenuPosRef.current;
-            const doc = await createDocument(title, type, null);
+            const doc = await createDocument(title, type, null, content);
             if (doc) {
               if (pos) updatePageDocPosition(doc.id, pos);
-              if (content) {
-                // Trigger a document update via supabase/localStorage after creation
-                const updates = { content };
-                if (user) {
-                  (supabase as any).from("documents").update(updates).eq("id", doc.id).then(() => refetchDesktopDocs());
-                }
-              }
               setPages(prev => prev.map((p, i) => i === activePageIndex
                 ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
                 : p

@@ -580,7 +580,208 @@ const TEMPLATES: Template[] = [
     },
   },
 
+  // ── CREATIVE ─────────────────────────────────────────────────────────────
+  {
+    id: "creative-resume",
+    title: "Creative Resume",
+    subtitle: "Two-column dark sidebar layout",
+    type: "text",
+    category: "Creative",
+    content: {
+      html: `<div style="display:flex;max-width:800px;min-height:900px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);border-radius:12px;overflow:hidden;font-family:system-ui,sans-serif">
+  <aside style="width:33%;background:#0f172a;color:#e2e8f0;padding:32px 24px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div style="width:96px;height:96px;border-radius:50%;background:#1e293b;border:3px solid #334155;display:flex;align-items:center;justify-content:center;font-size:32px">👤</div>
+      <h2 style="color:white;font-size:22px;font-weight:800;margin:0;text-align:center">YOUR NAME</h2>
+      <p style="color:#94a3b8;font-size:13px;margin:0;text-align:center">Job Title</p>
+    </div>
+    <div>
+      <h3 style="color:#60a5fa;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px">Contact</h3>
+      <p style="color:#cbd5e1;font-size:12px;margin:0 0 6px">📧 email@example.com</p>
+      <p style="color:#cbd5e1;font-size:12px;margin:0 0 6px">📞 +1 234 567 890</p>
+      <p style="color:#cbd5e1;font-size:12px;margin:0">🌐 yourwebsite.com</p>
+    </div>
+    <div>
+      <h3 style="color:#60a5fa;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px">Skills</h3>
+      <p style="color:#94a3b8;font-size:12px;line-height:1.8;margin:0">React &amp; TypeScript<br/>UI / UX Design<br/>Product Strategy<br/>Data Analysis<br/>Team Leadership</p>
+    </div>
+    <div>
+      <h3 style="color:#60a5fa;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px">Education</h3>
+      <p style="color:#e2e8f0;font-size:13px;font-weight:600;margin:0 0 2px">BSc Computer Science</p>
+      <p style="color:#94a3b8;font-size:11px;margin:0">University Name · 2018</p>
+    </div>
+  </aside>
+  <main style="flex:1;background:white;padding:36px 32px">
+    <h1 style="font-size:40px;font-weight:900;color:#0f172a;margin:0 0 4px;letter-spacing:-1px">YOUR NAME</h1>
+    <p style="color:#3b82f6;font-size:16px;font-weight:600;margin:0 0 24px">Lead Product Designer</p>
+    <div style="border-top:2px solid #e2e8f0;padding-top:20px;margin-bottom:24px">
+      <h2 style="font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0f172a;margin:0 0 16px">Experience</h2>
+      <div style="margin-bottom:16px">
+        <p style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Senior Designer · Company Name</p>
+        <p style="font-size:12px;color:#64748b;margin:2px 0 6px">2021 – Present</p>
+        <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">Describe your key responsibilities and achievements here. Focus on impact and outcomes.</p>
+      </div>
+      <div>
+        <p style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Designer · Previous Company</p>
+        <p style="font-size:12px;color:#64748b;margin:2px 0 6px">2018 – 2021</p>
+        <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">Another role description with measurable achievements.</p>
+      </div>
+    </div>
+    <div>
+      <h2 style="font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0f172a;margin:0 0 12px">Projects</h2>
+      <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">Highlight key projects that showcase your best work here.</p>
+    </div>
+  </main>
+</div>`,
+    },
+    thumbnail: (isDark) => {
+      const sidebarBg = "#0f172a";
+      const mainBg = isDark ? "#1e293b" : "#ffffff";
+      const accentColor = "#3b82f6";
+      return (
+        <div className="w-full h-full flex overflow-hidden" style={{ background: mainBg }}>
+          {/* Dark sidebar */}
+          <div className="flex flex-col items-center p-2 gap-1.5" style={{ width: "35%", background: sidebarBg, flexShrink: 0 }}>
+            {/* Avatar circle */}
+            <div className="w-8 h-8 rounded-full mt-1" style={{ background: "#334155", border: "2px solid #475569" }} />
+            {/* Name */}
+            <div className="w-10 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.6)" }} />
+            <div className="w-7 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.3)" }} />
+            {/* Divider */}
+            <div className="w-full h-px mt-1" style={{ background: "#334155" }} />
+            {/* Skills label */}
+            <div className="w-6 h-1 rounded-full self-start" style={{ background: accentColor, opacity: 0.7 }} />
+            {[55, 70, 48, 60].map((w, i) => (
+              <div key={i} className="h-0.5 rounded-full self-start" style={{ width: `${w}%`, background: "rgba(255,255,255,0.25)" }} />
+            ))}
+          </div>
+          {/* Light main */}
+          <div className="flex flex-col p-2 gap-1.5" style={{ flex: 1 }}>
+            <div className="w-4/5 h-2.5 rounded-full" style={{ background: isDark ? "#e2e8f0" : "#0f172a" }} />
+            <div className="w-2/5 h-1.5 rounded-full" style={{ background: accentColor, opacity: 0.7 }} />
+            <div className="w-full h-px mt-0.5" style={{ background: isDark ? "#334155" : "#e2e8f0" }} />
+            {/* Section label */}
+            <div className="w-1/2 h-1 rounded-full" style={{ background: isDark ? "#94a3b8" : "#0f172a" }} />
+            {[100, 70, 100, 85].map((w, i) => (
+              <div key={i} className="h-0.5 rounded-full" style={{ width: `${w}%`, background: isDark ? "#475569" : "#cbd5e1" }} />
+            ))}
+            <div className="w-full h-px" style={{ background: isDark ? "#334155" : "#e2e8f0" }} />
+            <div className="w-1/2 h-1 rounded-full" style={{ background: isDark ? "#94a3b8" : "#0f172a" }} />
+            {[100, 65].map((w, i) => (
+              <div key={i} className="h-0.5 rounded-full" style={{ width: `${w}%`, background: isDark ? "#475569" : "#cbd5e1" }} />
+            ))}
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "event-poster",
+    title: "Event Poster",
+    subtitle: "Full-bleed bold typography",
+    type: "text",
+    category: "Creative",
+    content: {
+      html: `<div style="text-align:center;background:#000000;color:#ffffff;padding:48px 40px;min-height:700px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;font-family:system-ui,sans-serif">
+  <div style="width:100%;height:240px;background:linear-gradient(135deg,#1e293b,#0f172a);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:40px;border:2px dashed rgba(255,255,255,0.15)">
+    <p style="color:rgba(255,255,255,0.3);font-size:14px;margin:0">🖼️  Replace with Event Image</p>
+  </div>
+  <p style="color:rgba(255,255,255,0.5);font-size:13px;letter-spacing:6px;text-transform:uppercase;margin:0 0 16px">PRESENTS</p>
+  <h1 style="font-size:72px;font-weight:900;letter-spacing:-3px;text-transform:uppercase;line-height:0.9;margin:0 0 24px;color:white">EVENT<br/>TITLE</h1>
+  <div style="width:60px;height:4px;background:white;margin:0 0 24px"></div>
+  <p style="color:rgba(255,255,255,0.7);font-size:18px;font-weight:500;margin:0 0 8px">📅 Day, Month DD, YYYY</p>
+  <p style="color:rgba(255,255,255,0.5);font-size:15px;margin:0 0 32px">🕖 7:00 PM · 📍 Venue Name, City</p>
+  <div style="background:white;color:black;padding:14px 40px;border-radius:9999px;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;display:inline-block">Get Tickets</div>
+</div>`,
+    },
+    thumbnail: (isDark) => {
+      return (
+        <div className="w-full h-full flex flex-col items-center" style={{ background: "#000" }}>
+          {/* Image block */}
+          <div className="w-full flex items-center justify-center" style={{ height: "42%", background: "#1e293b", borderBottom: "1px dashed rgba(255,255,255,0.15)" }}>
+            <div className="text-[5px]" style={{ color: "rgba(255,255,255,0.3)" }}>IMAGE</div>
+          </div>
+          {/* Typography block */}
+          <div className="flex flex-col items-center gap-1 mt-2 px-2">
+            <div className="w-8 h-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.35)" }} />
+            <div className="w-14 h-3 rounded" style={{ background: "white", opacity: 0.9 }} />
+            <div className="w-12 h-2 rounded" style={{ background: "white", opacity: 0.75 }} />
+            <div className="w-2 h-0.5 my-0.5" style={{ background: "white" }} />
+            <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.4)" }} />
+            <div className="w-8 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
+          </div>
+          {/* CTA */}
+          <div className="mt-1.5 px-3 py-0.5 rounded-full" style={{ background: "white" }}>
+            <div className="w-10 h-1 rounded-full" style={{ background: "#000" }} />
+          </div>
+        </div>
+      );
+    },
+  },
+
   // ── CRM & SALES ──────────────────────────────────────────────────────────
+  {
+    id: "project-budget",
+    title: "Project Budget",
+    subtitle: "Green header, alternating rows",
+    type: "spreadsheet",
+    category: "Business & Finance",
+    content: {
+      rows: [
+        ["Category", "Expected ($)", "Actual ($)", "Variance ($)"],
+        ["Design & Branding", "5,000", "4,200", "800"],
+        ["Development", "25,000", "27,500", "-2,500"],
+        ["Marketing", "8,000", "7,100", "900"],
+        ["Infrastructure", "3,000", "3,400", "-400"],
+        ["Legal & Compliance", "2,500", "2,200", "300"],
+        ["Contingency (10%)", "4,350", "0", "4,350"],
+        ["", "", "", ""],
+        ["TOTAL", "47,850", "44,400", "3,450"],
+      ],
+      cellFormats: {
+        "0-0": { bold: true, background: "#059669", color: "#ffffff" },
+        "0-1": { bold: true, background: "#059669", color: "#ffffff" },
+        "0-2": { bold: true, background: "#059669", color: "#ffffff" },
+        "0-3": { bold: true, background: "#059669", color: "#ffffff" },
+        "8-0": { bold: true, background: "#dc2626", color: "#ffffff" },
+        "8-1": { bold: true, background: "#dc2626", color: "#ffffff" },
+        "8-2": { bold: true, background: "#dc2626", color: "#ffffff" },
+        "8-3": { bold: true, background: "#dc2626", color: "#ffffff" },
+      },
+    },
+    thumbnail: (isDark) => {
+      const mainBg = isDark ? "#1e293b" : "#ffffff";
+      const altRow = isDark ? "#0f2a1e" : "#f0fdf4";
+      const greenBg = "#059669";
+      const redBg = "#dc2626";
+      const rows = ["Design", "Development", "Marketing", "Infrastructure", "Legal"];
+      return (
+        <div className="w-full h-full flex flex-col" style={{ background: mainBg }}>
+          {/* Green header */}
+          <div className="flex gap-0.5 px-1.5 py-1.5" style={{ background: greenBg }}>
+            {["Category", "Expected", "Actual", "Var"].map((h, i) => (
+              <div key={i} className="flex-1 text-[3.5px] font-bold" style={{ color: "white" }}>{h}</div>
+            ))}
+          </div>
+          {/* Data rows alternating */}
+          {rows.map((label, i) => (
+            <div key={i} className="flex gap-0.5 px-1.5 py-0.5" style={{ background: i % 2 === 0 ? mainBg : altRow, borderBottom: `0.5px solid ${isDark ? "#334155" : "#d1fae5"}` }}>
+              <div className="flex-1 text-[3px]" style={{ color: isDark ? "#94a3b8" : "#374151" }}>{label}</div>
+              {["$X,XXX", "$X,XXX", "+/-"].map((v, j) => (
+                <div key={j} className="flex-1 text-[3px]" style={{ color: isDark ? "#64748b" : "#6b7280" }}>{v}</div>
+              ))}
+            </div>
+          ))}
+          {/* Red total row */}
+          <div className="flex gap-0.5 px-1.5 py-1 mt-auto" style={{ background: redBg }}>
+            {["TOTAL", "$47,850", "$44,400", "$3,450"].map((v, i) => (
+              <div key={i} className="flex-1 text-[3.5px] font-bold" style={{ color: "white" }}>{v}</div>
+            ))}
+          </div>
+        </div>
+      );
+    },
+  },
   {
     id: "crm-pipeline",
     title: "CRM Pipeline",
@@ -630,7 +831,7 @@ const TEMPLATES: Template[] = [
 
 const CATEGORIES = [
   "Favorites", "All", "Blank", "Basic", "Business & Finance",
-  "Project Management", "Notes & Meetings", "CRM & Sales",
+  "Project Management", "Notes & Meetings", "CRM & Sales", "Creative",
 ];
 
 interface TemplateChooserModalProps {

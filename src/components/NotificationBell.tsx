@@ -106,10 +106,14 @@ function NotificationDropdown({
       exit={{ opacity: 0, y: -8, scale: 0.96 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
       className="fixed z-[9990] w-80 rounded-2xl bg-[hsl(var(--card))] border border-border/40 shadow-2xl overflow-hidden"
-      style={{
-        top:   (anchorRef.current?.getBoundingClientRect().bottom ?? 60) + 8,
-        right: window.innerWidth - (anchorRef.current?.getBoundingClientRect().right ?? 200),
-      }}
+      style={(() => {
+        const rect = anchorRef.current?.getBoundingClientRect();
+        const top = (rect?.bottom ?? 60) + 8;
+        // Prefer anchoring to the right of the button, but clamp so it never overflows left edge
+        const rawRight = window.innerWidth - (rect?.right ?? 200);
+        const right = Math.max(8, Math.min(rawRight, window.innerWidth - 328));
+        return { top, right };
+      })()}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">

@@ -361,8 +361,7 @@ const ExpandedFolderOverlay = ({
         <TemplateChooserModal
           onClose={() => setShowTemplateChooser(false)}
           onCreateDocument={async (title, type, content) => {
-            const doc = await createDocument(title, type, folderId);
-            if (doc && content) updateDocument(doc.id, { content });
+            const doc = await createDocument(title, type, folderId, content);
             refetch();
             setShowTemplateChooser(false);
           }}
