@@ -62,19 +62,27 @@ const BuildModeGrid = () => (
   </div>
 );
 
+type DashboardPage = { id: string; label: string; activeWidgets?: string[] };
+
+// Pagination settings persisted in FocusContext state-adjacent localStorage key
+const PAGINATION_SETTINGS_KEY = "flux-pagination-settings";
+interface PaginationSettings { showLabel: boolean; pillOpacity: number; }
+function loadPaginationSettings(): PaginationSettings {
+  try { const r = localStorage.getItem(PAGINATION_SETTINGS_KEY); if (r) return JSON.parse(r); } catch {}
+  return { showLabel: true, pillOpacity: 82 };
+}
+
 const FocusContent = () => {
   const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
 
   // iOS-style dashboard pages state
-  type DashboardPage = { id: string; label: string; activeWidgets?: string[] };
   const [dashboardPages, setDashboardPages] = useState<DashboardPage[]>(() => {
     try {
       const raw = localStorage.getItem("flux-dashboard-pages");
       if (raw) {
         const parsed = JSON.parse(raw);
-        // Migrate old format (just {id}) to new format
         return parsed.map((p: any) => ({ id: p.id, label: p.label || "Home", activeWidgets: p.activeWidgets }));
       }
     } catch {}
@@ -85,13 +93,75 @@ const FocusContent = () => {
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
   const [editingLabelValue, setEditingLabelValue] = useState("");
   const labelInputRef = useRef<HTMLInputElement>(null);
-  // Touch swipe state
+  // Touch swipe
   const touchStartX = useRef<number | null>(null);
+  // Dot context menu (delete)
+  const [dotMenu, setDotMenu] = useState<{ idx: number; x: number; y: number } | null>(null);
+  const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null);
+  // Drag-to-reorder
+  const dragDotIdx = useRef<number | null>(null);
+  const [draggingDotIdx, setDraggingDotIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  // Build-mode pagination settings
+  const [paginationSettings, setPaginationSettings] = useState<PaginationSettings>(loadPaginationSettings);
+  const [showPillSettings, setShowPillSettings] = useState(false);
+  // Cloud sync debounce
+  const cloudSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Persist pages
+  // Persist pages locally
   useEffect(() => {
     localStorage.setItem("flux-dashboard-pages", JSON.stringify(dashboardPages));
   }, [dashboardPages]);
+
+  // Persist pagination settings
+  useEffect(() => {
+    localStorage.setItem(PAGINATION_SETTINGS_KEY, JSON.stringify(paginationSettings));
+  }, [paginationSettings]);
+
+  // Load pages from cloud on mount
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled || !data?.state) return;
+      const s = data.state as any;
+      if (Array.isArray(s.dashboardPages) && s.dashboardPages.length > 0) {
+        setDashboardPages(s.dashboardPages.map((p: any) => ({
+          id: p.id, label: p.label || "Home", activeWidgets: p.activeWidgets,
+        })));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // Sync pages to cloud (debounced)
+  const syncPagesToCloud = useCallback((pages: DashboardPage[]) => {
+    if (!user) return;
+    if (cloudSyncTimer.current) clearTimeout(cloudSyncTimer.current);
+    cloudSyncTimer.current = setTimeout(async () => {
+      const { data: existing } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const prev = (existing?.state as Record<string, unknown>) || {};
+      await (supabase.from as any)("dashboard_state").upsert(
+        { user_id: user.id, state: { ...prev, dashboardPages: pages }, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
+    }, 1200);
+  }, [user]);
+
+  const setPages = useCallback((updater: (prev: DashboardPage[]) => DashboardPage[]) => {
+    setDashboardPages(prev => {
+      const next = updater(prev);
+      syncPagesToCloud(next);
+      return next;
+    });
+  }, [syncPagesToCloud]);
 
   const goToPage = useCallback((idx: number) => {
     setPageDir(idx > activePageIndex ? 1 : -1);
@@ -100,14 +170,19 @@ const FocusContent = () => {
 
   const addPage = useCallback(() => {
     const newPage: DashboardPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
-    setDashboardPages(prev => {
-      const next = [...prev, newPage];
-      localStorage.setItem("flux-dashboard-pages", JSON.stringify(next));
-      return next;
-    });
+    setPages(prev => [...prev, newPage]);
     setPageDir(1);
     setActivePageIndex(dashboardPages.length);
-  }, [dashboardPages.length]);
+  }, [dashboardPages.length, setPages]);
+
+  const deletePage = useCallback((idx: number) => {
+    if (dashboardPages.length <= 1) { toast.error("Can't delete the only page"); return; }
+    setPages(prev => prev.filter((_, i) => i !== idx));
+    setActivePageIndex(prev => Math.min(prev, dashboardPages.length - 2));
+    setDeleteConfirmIdx(null);
+    setDotMenu(null);
+    toast.success("Page deleted");
+  }, [dashboardPages.length, setPages]);
 
   const startLabelEdit = useCallback((idx: number) => {
     setEditingLabelIdx(idx);
@@ -118,23 +193,22 @@ const FocusContent = () => {
   const commitLabelEdit = useCallback(() => {
     if (editingLabelIdx === null) return;
     const trimmed = editingLabelValue.trim() || dashboardPages[editingLabelIdx]?.label || "Page";
-    setDashboardPages(prev => prev.map((p, i) => i === editingLabelIdx ? { ...p, label: trimmed } : p));
+    setPages(prev => prev.map((p, i) => i === editingLabelIdx ? { ...p, label: trimmed } : p));
     setEditingLabelIdx(null);
-  }, [editingLabelIdx, editingLabelValue, dashboardPages]);
+  }, [editingLabelIdx, editingLabelValue, dashboardPages, setPages]);
 
-  // Per-page active widgets — current page overrides global if set
+  // Per-page active widgets
   const currentPage = dashboardPages[activePageIndex];
   const pageActiveWidgets: string[] = currentPage?.activeWidgets ?? activeWidgets;
 
   const updatePageWidgets = useCallback((widgets: string[]) => {
-    setDashboardPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, activeWidgets: widgets } : p));
-  }, [activePageIndex]);
+    setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, activeWidgets: widgets } : p));
+  }, [activePageIndex, setPages]);
 
-  // Touch swipe handlers
+  // Touch swipe
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
   }, []);
-
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
@@ -143,6 +217,49 @@ const FocusContent = () => {
     if (dx < 0 && activePageIndex < dashboardPages.length - 1) goToPage(activePageIndex + 1);
     if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
   }, [activePageIndex, dashboardPages.length, goToPage]);
+
+  // Dot drag-to-reorder handlers
+  const handleDotDragStart = useCallback((i: number) => {
+    dragDotIdx.current = i;
+    setDraggingDotIdx(i);
+  }, []);
+  const handleDotDragOver = useCallback((i: number, e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverIdx(i);
+  }, []);
+  const handleDotDrop = useCallback((targetIdx: number) => {
+    const fromIdx = dragDotIdx.current;
+    if (fromIdx === null || fromIdx === targetIdx) { setDraggingDotIdx(null); setDragOverIdx(null); return; }
+    setPages(prev => {
+      const next = [...prev];
+      const [removed] = next.splice(fromIdx, 1);
+      next.splice(targetIdx, 0, removed);
+      return next;
+    });
+    // Adjust active index to follow the moved page
+    setActivePageIndex(prev => {
+      if (prev === fromIdx) return targetIdx;
+      if (fromIdx < prev && targetIdx >= prev) return prev - 1;
+      if (fromIdx > prev && targetIdx <= prev) return prev + 1;
+      return prev;
+    });
+    dragDotIdx.current = null;
+    setDraggingDotIdx(null);
+    setDragOverIdx(null);
+    setPageDir(targetIdx > fromIdx ? 1 : -1);
+  }, [setPages]);
+
+  // Long-press for mobile delete
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleDotTouchStart = useCallback((i: number, e: React.TouchEvent) => {
+    longPressTimer.current = setTimeout(() => {
+      const touch = e.touches[0];
+      setDotMenu({ idx: i, x: touch.clientX, y: touch.clientY - 80 });
+    }, 600);
+  }, []);
+  const handleDotTouchEnd = useCallback(() => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  }, []);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
@@ -898,47 +1015,102 @@ const FocusContent = () => {
         }}
       />
 
-      {/* ── iOS-style Dashboard Pagination ── positioned just above ToolDrawer (~60px from bottom) */}
-      <div className="fixed left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-1.5"
-        style={{ bottom: "68px" }}
+      {/* ── iOS-style Dashboard Pagination ── raised above toolbar */}
+      <div
+        className="fixed left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-1.5"
+        style={{ bottom: "88px" }}
       >
-        {/* Page labels row — show only active page label (or inline edit) */}
-        <div className="flex items-center gap-3 h-5">
-          {dashboardPages.map((page, i) => {
-            if (i !== activePageIndex) return null;
-            if (editingLabelIdx === i) {
-              return (
-                <input
-                  key={page.id}
-                  ref={labelInputRef}
-                  value={editingLabelValue}
-                  onChange={e => setEditingLabelValue(e.target.value)}
-                  onBlur={commitLabelEdit}
-                  onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
-                  className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 text-white w-24"
-                  maxLength={20}
-                  autoFocus
-                />
-              );
-            }
-            return (
-              <span
-                key={page.id}
-                className="text-[11px] font-medium text-white/70 cursor-default select-none"
-                onDoubleClick={() => startLabelEdit(i)}
-                title="Double-click to rename"
-              >
-                {page.label || "Home"}
-              </span>
-            );
-          })}
-        </div>
+        {/* Build mode: settings gear */}
+        <AnimatePresence>
+          {systemMode === "build" && (
+            <motion.button
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+              onClick={() => setShowPillSettings(v => !v)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all mb-0.5"
+              style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}
+              title="Customize pagination"
+            >
+              <span style={{ fontSize: 11 }}>⚙</span> Customize
+            </motion.button>
+          )}
+        </AnimatePresence>
 
-        {/* Pill — dots + plus */}
+        {/* Build-mode settings panel */}
+        <AnimatePresence>
+          {showPillSettings && systemMode === "build" && (
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ duration: 0.18 }}
+              className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 px-4 py-3 rounded-2xl flex flex-col gap-2.5 min-w-[200px]"
+              style={{ background: "rgba(10,8,20,0.9)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}
+            >
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Pagination Style</p>
+              <label className="flex items-center justify-between gap-3 cursor-pointer">
+                <span className="text-[11px] text-white/70">Show page label</span>
+                <button
+                  onClick={() => setPaginationSettings(s => ({ ...s, showLabel: !s.showLabel }))}
+                  className={`w-8 h-4 rounded-full transition-colors relative ${paginationSettings.showLabel ? "bg-white/30" : "bg-white/10"}`}
+                >
+                  <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${paginationSettings.showLabel ? "left-[18px]" : "left-0.5"}`} />
+                </button>
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span className="text-[11px] text-white/70">Pill opacity</span>
+                <input
+                  type="range" min={20} max={100} value={paginationSettings.pillOpacity}
+                  onChange={e => setPaginationSettings(s => ({ ...s, pillOpacity: Number(e.target.value) }))}
+                  className="w-20 accent-white"
+                />
+              </label>
+              <button
+                onClick={() => setShowPillSettings(false)}
+                className="text-[10px] text-white/30 hover:text-white/60 text-center mt-1"
+              >Done</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Page label */}
+        {paginationSettings.showLabel && (
+          <div className="flex items-center h-5">
+            {dashboardPages.map((page, i) => {
+              if (i !== activePageIndex) return null;
+              if (editingLabelIdx === i) {
+                return (
+                  <input
+                    key={page.id}
+                    ref={labelInputRef}
+                    value={editingLabelValue}
+                    onChange={e => setEditingLabelValue(e.target.value)}
+                    onBlur={commitLabelEdit}
+                    onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
+                    className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 text-white w-28"
+                    maxLength={20}
+                    autoFocus
+                  />
+                );
+              }
+              return (
+                <span
+                  key={page.id}
+                  className="text-[11px] font-medium text-white/70 cursor-default select-none"
+                  onDoubleClick={() => startLabelEdit(i)}
+                  title="Double-click to rename"
+                >
+                  {page.label || "Home"}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pill: dots + reorder + delete + plus */}
         <div
-          className="flex items-center gap-2.5 px-4 py-2 rounded-full"
+          className="flex items-center gap-2.5 px-4 py-2 rounded-full select-none"
           style={{
-            background: "rgba(15,12,25,0.82)",
+            background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
             backdropFilter: "blur(24px)",
             WebkitBackdropFilter: "blur(24px)",
             border: "1px solid rgba(255,255,255,0.18)",
@@ -948,16 +1120,32 @@ const FocusContent = () => {
           {dashboardPages.map((page, i) => (
             <button
               key={page.id}
-              onClick={() => goToPage(i)}
+              onClick={() => { if (draggingDotIdx === null) goToPage(i); }}
               onDoubleClick={() => startLabelEdit(i)}
-              className="transition-all duration-300 flex-shrink-0"
+              onContextMenu={(e) => { e.preventDefault(); setDotMenu({ idx: i, x: e.clientX, y: e.clientY - 80 }); }}
+              onTouchStart={(e) => handleDotTouchStart(i, e)}
+              onTouchEnd={handleDotTouchEnd}
+              draggable
+              onDragStart={() => handleDotDragStart(i)}
+              onDragOver={(e) => handleDotDragOver(i, e)}
+              onDrop={() => handleDotDrop(i)}
+              onDragEnd={() => { setDraggingDotIdx(null); setDragOverIdx(null); }}
+              className="transition-all duration-300 flex-shrink-0 cursor-grab active:cursor-grabbing"
               title={page.label || `Page ${i + 1}`}
               style={{
                 width: i === activePageIndex ? 24 : 8,
                 height: 8,
                 borderRadius: 9999,
-                background: i === activePageIndex ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.35)",
-                boxShadow: i === activePageIndex ? "0 0 10px rgba(255,255,255,0.7)" : "none",
+                background: draggingDotIdx === i
+                  ? "rgba(255,255,255,0.15)"
+                  : dragOverIdx === i
+                  ? "rgba(255,255,255,0.7)"
+                  : i === activePageIndex
+                  ? "rgba(255,255,255,1)"
+                  : "rgba(255,255,255,0.35)",
+                boxShadow: i === activePageIndex && draggingDotIdx !== i ? "0 0 10px rgba(255,255,255,0.7)" : "none",
+                opacity: draggingDotIdx === i ? 0.4 : 1,
+                transform: dragOverIdx === i && draggingDotIdx !== i ? "scale(1.4)" : "scale(1)",
               }}
             />
           ))}
@@ -976,6 +1164,65 @@ const FocusContent = () => {
           </button>
         </div>
       </div>
+
+      {/* Dot context menu (right-click / long-press) */}
+      {dotMenu && (
+        <>
+          <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); }} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed z-[10001] rounded-xl py-1.5 min-w-[160px] overflow-hidden"
+            style={{ left: dotMenu.x, top: dotMenu.y, background: "rgba(10,8,20,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)", transform: "translateX(-50%)" }}
+          >
+            <div className="px-3 py-1.5 text-[10px] font-semibold text-white/35 uppercase tracking-wider">
+              {dashboardPages[dotMenu.idx]?.label || `Page ${dotMenu.idx + 1}`}
+            </div>
+            <div className="h-px bg-white/10 mx-2 mb-1" />
+            <button
+              onClick={() => { startLabelEdit(dotMenu.idx); setDotMenu(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
+            >
+              ✏️ Rename
+            </button>
+            <button
+              onClick={() => goToPage(dotMenu.idx)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
+            >
+              → Switch to page
+            </button>
+            {dashboardPages.length > 1 && (
+              deleteConfirmIdx === dotMenu.idx ? (
+                <div className="px-3 py-2">
+                  <p className="text-[11px] text-white/60 mb-2">
+                    {dashboardPages[dotMenu.idx]?.activeWidgets
+                      ? "This page has custom widgets. Delete anyway?"
+                      : "Delete this page?"}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => deletePage(dotMenu.idx)}
+                      className="flex-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-red-500/70 hover:bg-red-500/90 transition-colors"
+                    >Delete</button>
+                    <button
+                      onClick={() => setDeleteConfirmIdx(null)}
+                      className="flex-1 px-2 py-1 rounded-lg text-[11px] text-white/50 hover:bg-white/8 transition-colors"
+                    >Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setDeleteConfirmIdx(dotMenu.idx)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  🗑 Delete page
+                </button>
+              )
+            )}
+          </motion.div>
+        </>
+      )}
     </div>
     </StyleEditorProvider>
   );
