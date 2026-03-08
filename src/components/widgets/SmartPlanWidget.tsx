@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check, CalendarDays, LayoutList, Calendar as CalendarIcon } from "lucide-react";
+import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check, CalendarDays, LayoutList, Calendar as CalendarIcon, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, isToday, isTomorrow, differenceInDays, parseISO, startOfDay } from "date-fns";
 import {
