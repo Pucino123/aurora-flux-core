@@ -17,6 +17,8 @@ import DesktopDocumentViewer from "./DesktopDocumentViewer";
 import MusicWidget from "./MusicWidget";
 import TodaysPlanWidget from "./TodaysPlanWidget";
 import FocusStickyNotes from "./FocusStickyNotes";
+import NotesWidget from "./NotesWidget";
+import CRMWidget from "./CRMWidget";
 import ClockWidget from "./ClockWidget";
 import FocusStatsWidget from "./FocusStatsWidget";
 import ScratchpadWidget from "./ScratchpadWidget";
@@ -39,6 +41,7 @@ import {
   FocusSmartPlanWidget,
   FocusGamificationWidget,
   FocusChatWidget,
+  FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks } from "lucide-react";
