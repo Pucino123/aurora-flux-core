@@ -130,7 +130,7 @@ const PersonaProfile = ({ personaKey, onClose }: PersonaProfileProps) => {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-3">
-            <CouncilAvatar color={persona.color} size={52} />
+            <CouncilAvatar color={persona.color} size={52} personaKey={persona.key} />
             <div>
               <h3 className="font-bold font-display text-lg sm:text-xl">{t(persona.name)}</h3>
               <p className="text-xs sm:text-sm text-muted-foreground font-medium">{persona.key}</p>

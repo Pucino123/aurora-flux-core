@@ -2,10 +2,11 @@
  * LayoutCanvas — Framer Motion free-drag entity canvas for creative templates.
  * Entities: rect | circle | textBox — draggable, resizable, colour-customisable.
  * Right-click context menu: Duplicate, Delete, Bring to Front, Send to Back.
+ * Supports isCanvasMode to lock/unlock dragging for "Design" vs "Text" mode.
  */
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle, Copy } from "lucide-react";
+import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle, Copy, Paintbrush } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,9 @@ interface LayoutCanvasProps {
   entities: CanvasEntity[];
   onChange: (entities: CanvasEntity[]) => void;
   lightMode?: boolean;
+  /** External canvas mode override (pass from parent if you manage the toggle there) */
+  isCanvasMode?: boolean;
+  onCanvasModeChange?: (v: boolean) => void;
 }
 
 // ── Colour palettes ───────────────────────────────────────────────────────────
@@ -297,14 +301,14 @@ interface EntityNodeProps {
   onResizeEnd: (id: string, dw: number, dh: number) => void;
   onContentChange: (id: string, content: string) => void;
   onContextMenu: (e: React.MouseEvent, id: string) => void;
+  isDraggable: boolean;
 }
 
 const EntityNode: React.FC<EntityNodeProps> = ({
-  entity, isSelected, canvasRef, onSelect, onDragEnd, onResizeEnd, onContentChange, onContextMenu,
+  entity, isSelected, canvasRef, onSelect, onDragEnd, onResizeEnd, onContentChange, onContextMenu, isDraggable,
 }) => {
   const { type, position, size, style, content, zIndex } = entity;
   const resizeStart = useRef<{ mx: number; my: number; w: number; h: number } | null>(null);
-  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
   const didDrag = useRef(false);
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
@@ -312,9 +316,7 @@ const EntityNode: React.FC<EntityNodeProps> = ({
     resizeStart.current = { mx: e.clientX, my: e.clientY, w: size.w, h: size.h };
     const onMove = (ev: MouseEvent) => {
       if (!resizeStart.current) return;
-      const dw = ev.clientX - resizeStart.current.mx;
-      const dh = ev.clientY - resizeStart.current.my;
-      onResizeEnd(entity.id, dw, dh);
+      onResizeEnd(entity.id, ev.clientX - resizeStart.current.mx, ev.clientY - resizeStart.current.my);
     };
     const onUp = () => {
       resizeStart.current = null;
@@ -332,14 +334,35 @@ const EntityNode: React.FC<EntityNodeProps> = ({
     border:         style.strokeWidth > 0 ? `${style.strokeWidth}px solid ${style.stroke}` : "none",
     borderRadius:   type === "circle" ? "50%" : `${style.borderRadius}px`,
     opacity:        style.opacity,
-    outline:        isSelected ? "2.5px solid rgba(99,102,241,0.9)" : "none",
+    outline:        isDraggable && isSelected ? "2.5px solid rgba(99,102,241,0.9)" : "none",
     outlineOffset:  3,
-    boxShadow:      isSelected ? "0 0 0 5px rgba(99,102,241,0.18), 0 8px 24px rgba(0,0,0,0.3)" : undefined,
+    boxShadow:      isDraggable && isSelected ? "0 0 0 5px rgba(99,102,241,0.18), 0 8px 24px rgba(0,0,0,0.3)" : undefined,
     overflow:       "hidden",
     display:        "flex",
     alignItems:     "center",
     justifyContent: "center",
   };
+
+  if (!isDraggable) {
+    // Text mode — fully static, no drag, no selection chrome
+    return (
+      <div
+        style={{ zIndex, position: "absolute", left: position.x, top: position.y, ...shapeStyle }}
+      >
+        {type === "textBox" && (
+          <div
+            contentEditable
+            suppressContentEditableWarning
+            onInput={e => onContentChange(entity.id, (e.target as HTMLDivElement).innerText)}
+            className="w-full h-full p-2 outline-none text-sm leading-snug cursor-text"
+            style={{ color: style.stroke || "#ffffff", fontSize: 13 }}
+          >
+            {content || ""}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -354,29 +377,14 @@ const EntityNode: React.FC<EntityNodeProps> = ({
       onDragEnd={(_, info) => {
         const canvas = canvasRef.current?.getBoundingClientRect();
         if (!canvas) return;
-        const nx = clamp(position.x + info.offset.x, 0, canvas.width - size.w);
-        const ny = clamp(position.y + info.offset.y, 0, canvas.height - size.h);
-        onDragEnd(entity.id, nx, ny);
+        onDragEnd(entity.id, clamp(position.x + info.offset.x, 0, canvas.width - size.w), clamp(position.y + info.offset.y, 0, canvas.height - size.h));
       }}
-      onPointerDown={e => {
-        e.stopPropagation();
-        pointerDownPos.current = { x: e.clientX, y: e.clientY };
-        didDrag.current = false;
-      }}
-      onPointerUp={e => {
-        e.stopPropagation();
-        if (!didDrag.current) {
-          onSelect(entity.id);
-        }
-        pointerDownPos.current = null;
-      }}
-      onContextMenu={e => {
-        e.preventDefault();
-        e.stopPropagation();
-        onContextMenu(e, entity.id);
-      }}
+      onPointerDown={e => { e.stopPropagation(); didDrag.current = false; }}
+      onPointerUp={e => { e.stopPropagation(); if (!didDrag.current) onSelect(entity.id); }}
+      onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, entity.id); }}
       className="absolute cursor-move touch-none"
       style={{ zIndex, position: "absolute", left: position.x, top: position.y, willChange: "transform" }}
+      whileHover={{ filter: "brightness(1.06)" }}
     >
       <div style={shapeStyle}>
         {type === "textBox" && (
@@ -392,8 +400,7 @@ const EntityNode: React.FC<EntityNodeProps> = ({
           </div>
         )}
       </div>
-
-      {/* Resize handle — bottom-right corner */}
+      {/* Resize handle */}
       {isSelected && (
         <div
           onMouseDown={handleResizeMouseDown}
@@ -437,12 +444,19 @@ const AddToolbar: React.FC<AddToolbarProps> = ({ onAdd }) => (
 
 // ── Main Canvas ───────────────────────────────────────────────────────────────
 
-const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMode = false }) => {
+const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMode = false, isCanvasMode: externalCanvasMode, onCanvasModeChange }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entityId: string } | null>(null);
+  const [internalCanvasMode, setInternalCanvasMode] = useState(true);
 
-  const selected = entities.find(e => e.id === selectedId) ?? null;
+  // If parent controls the mode, use that; otherwise use internal state
+  const isDraggable = externalCanvasMode !== undefined ? externalCanvasMode : internalCanvasMode;
+  const setDraggable = (v: boolean) => {
+    if (onCanvasModeChange) onCanvasModeChange(v);
+    else setInternalCanvasMode(v);
+    if (!v) setSelectedId(null);
+  };
 
   const update = useCallback((id: string, patch: Partial<CanvasEntity>) => {
     onChange(entities.map(e => e.id === id ? { ...e, ...patch } : e));
@@ -528,6 +542,8 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
     setContextMenu(null);
   };
 
+  const selected = entities.find(e => e.id === selectedId) ?? null;
+
   return (
     <div
       ref={canvasRef}
@@ -536,8 +552,27 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
       onClick={() => { setSelectedId(null); setContextMenu(null); }}
       onContextMenu={handleCanvasContextMenu}
     >
-      {/* Add toolbar */}
-      <AddToolbar onAdd={handleAdd} />
+      {/* Mode toggle pill */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-1 px-1.5 py-1 rounded-full shadow-2xl"
+        style={{ background: "rgba(10,8,24,0.85)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(18px)" }}
+        onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={() => setDraggable(true)}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all ${isDraggable ? "bg-indigo-500 text-white shadow-md" : "text-slate-400 hover:text-slate-200"}`}
+        >
+          <Paintbrush size={10} /> Design Layout
+        </button>
+        <button
+          onClick={() => setDraggable(false)}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all ${!isDraggable ? "bg-indigo-500 text-white shadow-md" : "text-slate-400 hover:text-slate-200"}`}
+        >
+          <Type size={10} /> Edit Text
+        </button>
+      </div>
+
+      {/* Add toolbar — only in design mode */}
+      {isDraggable && <AddToolbar onAdd={handleAdd} />}
 
       {/* Entities */}
       {entities.map(entity => (
@@ -551,12 +586,13 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
           onResizeEnd={handleResizeEnd}
           onContentChange={handleContentChange}
           onContextMenu={handleContextMenu}
+          isDraggable={isDraggable}
         />
       ))}
 
-      {/* Style toolbar for selected entity */}
+      {/* Style toolbar for selected entity — only in design mode */}
       <AnimatePresence>
-        {selected && (
+        {isDraggable && selected && (
           <StyleToolbar
             entity={selected}
             onUpdate={update}
@@ -570,7 +606,7 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
 
       {/* Right-click context menu */}
       <AnimatePresence>
-        {contextMenu && (
+        {isDraggable && contextMenu && (
           <ContextMenu
             key="ctx-menu"
             x={contextMenu.x}
@@ -587,10 +623,9 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
 
       {/* Empty state */}
       {entities.length === 0 && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none" style={{ top: 48 }}>
           <p className="text-[13px] text-muted-foreground/30 font-medium">Layout Canvas</p>
           <p className="text-[11px] text-muted-foreground/20">Use the toolbar above to add shapes and text boxes</p>
-          <p className="text-[10px] text-muted-foreground/15 mt-1">Right-click any element for quick actions</p>
         </div>
       )}
     </div>
