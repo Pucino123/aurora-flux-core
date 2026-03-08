@@ -300,11 +300,24 @@ const FocusContent = () => {
     if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
   }, [activePageIndex, dashboardPages.length, goToPage]);
 
-  // Arrow key navigation — only fires when no input/textarea is focused
+  // Arrow key navigation + Cmd/Ctrl+T for new page
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea" || (document.activeElement as HTMLElement)?.isContentEditable) return;
+      const isEditing = tag === "input" || tag === "textarea" || (document.activeElement as HTMLElement)?.isContentEditable;
+
+      // Cmd/Ctrl+T → add new page (intercept before browser tab open)
+      if ((e.metaKey || e.ctrlKey) && e.key === "t") {
+        e.preventDefault();
+        const newPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
+        setPages(prev => [...prev, newPage]);
+        setPageDir(1);
+        setActivePageIndex(dashboardPages.length);
+        toast.success(`Page ${dashboardPages.length + 1} added`, { description: "⌘T to add more pages" });
+        return;
+      }
+
+      if (isEditing) return;
       if (e.key === "ArrowRight" && activePageIndex < dashboardPages.length - 1) {
         e.preventDefault();
         goToPage(activePageIndex + 1);
@@ -315,7 +328,7 @@ const FocusContent = () => {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activePageIndex, dashboardPages.length, goToPage]);
+  }, [activePageIndex, dashboardPages.length, goToPage, setPages]);
 
   // Dot drag-to-reorder handlers
   const handleDotDragStart = useCallback((i: number) => {
