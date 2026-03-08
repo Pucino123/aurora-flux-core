@@ -94,7 +94,7 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
                           </button>
                         )}
                         <button
-                          onClick={() => removeTask(task.id)}
+                          onClick={() => { moveToTrash({ id: task.id, type: "task", title: task.title, originalData: task }); removeTask(task.id); }}
                           className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 size={12} />
