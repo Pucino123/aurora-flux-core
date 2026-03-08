@@ -831,7 +831,7 @@ const TEMPLATES: Template[] = [
 
 const CATEGORIES = [
   "Favorites", "All", "Blank", "Basic", "Business & Finance",
-  "Project Management", "Notes & Meetings", "CRM & Sales",
+  "Project Management", "Notes & Meetings", "CRM & Sales", "Creative",
 ];
 
 interface TemplateChooserModalProps {
