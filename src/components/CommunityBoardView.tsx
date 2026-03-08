@@ -299,6 +299,32 @@ const CommunityBoardView = () => {
     else { toast.success("Submitted for approval! We'll review it shortly."); fetchSlots(); }
   }, [setupSlot, user, fetchSlots]);
 
+  // Admin: upload/replace thumbnail for any slot
+  const handleAdminThumbnailUpload = useCallback(async (file: File, slotIndex: number) => {
+    const slot = slots.find(s => s.slotIndex === slotIndex);
+    if (!slot?.id) return;
+    setAdminUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `community/admin-${slotIndex}-${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage.from("document-images").upload(path, file, { upsert: true });
+      let url = "";
+      if (!error && data) {
+        const { data: urlData } = supabase.storage.from("document-images").getPublicUrl(data.path);
+        url = urlData.publicUrl;
+      } else {
+        await new Promise<void>((res) => {
+          const reader = new FileReader();
+          reader.onload = (e) => { url = e.target?.result as string; res(); };
+          reader.readAsDataURL(file);
+        });
+      }
+      const { error: updateError } = await supabase.from("community_slots").update({ thumbnail_url: url }).eq("id", slot.id);
+      if (!updateError) { toast.success("Thumbnail updated!"); fetchSlots(); }
+      else toast.error("Failed to update thumbnail");
+    } finally { setAdminUploading(false); setAdminUploadSlot(null); }
+  }, [slots, fetchSlots]);
+
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
       <SEO title="Community Board" description="Discover projects from the Dashiii community and claim your digital space." />
