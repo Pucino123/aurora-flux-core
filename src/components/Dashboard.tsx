@@ -14,7 +14,7 @@ import ProjectsOverview from "./ProjectsOverview";
 import DocumentsView from "./DocumentsView";
 import SettingsView from "./SettingsView";
 import CreateFolderModal, { suggestIcon } from "./CreateFolderModal";
-import TeamChatWidget from "./chat/TeamChatWidget";
+import CommHub from "./CommHub";
 import MultitaskingView from "./MultitaskingView";
 import CommunityBoardView from "./CommunityBoardView";
 import CommunityAdminView from "./CommunityAdminView";
