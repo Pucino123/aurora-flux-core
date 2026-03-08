@@ -133,6 +133,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return; // only left-click drags
+    if (renaming) return; // don't drag while renaming
     e.stopPropagation();
     // If this item is part of a marquee group selection, start group drag
     if (isMarqueeSelected && onGroupDragStart && onGroupDragStart(e, folder.id)) return;
@@ -140,7 +141,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
     dragging.current = true;
     didDrag.current = false;
     offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-  }, [pos.x, pos.y, isMarqueeSelected, onGroupDragStart, folder.id]);
+  }, [pos.x, pos.y, isMarqueeSelected, onGroupDragStart, folder.id, renaming]);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
