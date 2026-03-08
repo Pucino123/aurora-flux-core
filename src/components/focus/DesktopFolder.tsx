@@ -264,11 +264,11 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
         initial={{ opacity: 0, scale: 0.88, y: 10 }}
         animate={flyingOff
           ? { x: flyingOff.dir * (window.innerWidth * 0.6), opacity: 0, scale: 0.7, rotate: flyingOff.dir * 12 }
-          : { opacity: 1, scale: justAbsorbed ? [1, 1.15, 0.92, 1.05, 1] : (isDropTarget ? 1.08 : 1), x: 0, rotate: 0, y: 0 }
+          : { opacity: 1, scale: justAbsorbed ? [1, 1.15, 0.92, 1.05, 1] : dropBounce ? [1, 1.06, 0.95, 1.02, 1] : (isDropTarget ? 1.08 : 1), x: 0, rotate: 0, y: 0 }
         }
         transition={flyingOff
           ? { duration: 0.38, ease: [0.4, 0, 1, 1] }
-          : justAbsorbed ? { duration: 0.4, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }
+          : (justAbsorbed || dropBounce) ? { duration: 0.42, ease: [0.22, 1.2, 0.36, 1] } : { type: "spring", stiffness: 260, damping: 20 }
         }
         className={`desktop-folder absolute flex flex-col items-center justify-center p-2 pb-1 cursor-pointer select-none rounded-2xl transition-shadow duration-200 ${
           isDropTarget ? "ring-2 ring-[rgba(0,122,255,0.6)]" : (!isMarqueeSelected && selected && !isDragging ? "ring-2 ring-[rgba(0,122,255,0.5)]" : "")
