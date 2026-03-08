@@ -1441,6 +1441,15 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const fullscreenP = fullscreenPersona ? PERSONAS.find(p => p.key === fullscreenPersona) : null;
   const fullscreenR = fullscreenPersona ? responses[fullscreenPersona] : null;
 
+  // ── Inline saved sessions for right panel ──
+  const [savedSessions, setSavedSessions] = useState<{ id: string; content: string; consensus_score: number | null; created_at: string }[]>([]);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("council_ideas").select("id, content, consensus_score, created_at")
+      .eq("user_id", user.id).order("created_at", { ascending: false }).limit(20)
+      .then(({ data }) => { if (data) setSavedSessions(data); });
+  }, [user, savedIdeaId]); // re-fetch after saving
+
   // ── Council Digest text ──
   const digestText = `THE COUNCIL — BOARDROOM ANALYSIS
 Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
