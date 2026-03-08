@@ -1339,8 +1339,62 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const fullscreenP = fullscreenPersona ? PERSONAS.find(p => p.key === fullscreenPersona) : null;
   const fullscreenR = fullscreenPersona ? responses[fullscreenPersona] : null;
 
+  // ── Council Digest text ──
+  const digestText = `THE COUNCIL — BOARDROOM ANALYSIS
+Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+
+IDEA: ${idea || "Your Idea"}
+CONSENSUS SCORE: ${avgRing}%  —  ${consensus.label}
+
+ADVISOR VERDICTS:
+${PERSONAS.map(p => {
+    const r = responses[p.key];
+    if (!r) return "";
+    return `▸ ${p.name} (${p.title}) — ${r.confidence}% confidence\n  ${r.analysis}\n  ${r.question}`;
+  }).filter(Boolean).join("\n\n")}
+
+ACTION PLAN:
+${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+— Flux Boardroom · aurora-flux-core.lovable.app`;
+
   return (
     <div ref={boardroomRef} className="flex flex-col h-full min-h-0 gap-4">
+      {/* Shared session banner */}
+      <AnimatePresence>
+        {isSharedView && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl"
+            style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}
+          >
+            <div className="flex items-center gap-2">
+              <Eye size={12} className="text-purple-400/70 shrink-0" />
+              <div>
+                <p className="text-[11px] font-semibold text-purple-300">You're viewing a shared Boardroom analysis</p>
+                <p className="text-[9px] text-white/35">This analysis was shared with you. Sign up to save your own sessions and consult the board.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {!user && (
+                <a
+                  href="/auth"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-purple-200 transition-colors"
+                  style={{ background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.35)" }}
+                >
+                  <Sparkles size={9} /> Sign up free
+                </a>
+              )}
+              <button onClick={() => setIsSharedView(false)} className="w-5 h-5 flex items-center justify-center text-white/25 hover:text-white/50 transition-colors">
+                <X size={11} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Realtime collaborators pill */}
       <AnimatePresence>
         {collaborators.length > 0 && (
