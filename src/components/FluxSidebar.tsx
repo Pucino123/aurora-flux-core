@@ -22,6 +22,7 @@ interface FluxSidebarProps {
 
 const UserSection = () => {
   const { user, signOut } = useAuth();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const name = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
   const fileRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);

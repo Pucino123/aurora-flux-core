@@ -471,7 +471,7 @@ function bindCheckboxes(el: HTMLElement) {
 }
 
 /* ─── Spreadsheet Editor ─── */
-const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode }: EditorProps) => {
+const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode, splitViewButton }: EditorProps) => {
   const lm = lightMode;
   const [studioMode, setStudioMode] = useState(false);
 
