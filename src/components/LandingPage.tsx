@@ -2,7 +2,13 @@ import { useState, useRef } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { ArrowRight, Sparkles, CheckSquare, Calendar, Brain, LayoutGrid, Play, Upload, Zap, Target, Music, BarChart3, Users, FileText, Clock, Star, LucideIcon, Sun, Moon, Briefcase, FolderKanban, Dumbbell, Smile, MessageCircle, Globe, Layers, GitBranch, Wallet, HeartPulse } from "lucide-react";
+import { ArrowRight, Sparkles, CheckSquare, Calendar, Brain, LayoutGrid, Play, Upload, Zap, Target, Music, BarChart3, Users, FileText, Clock, Star, LucideIcon, Sun, Moon, Briefcase, FolderKanban, Dumbbell, MessageCircle, Globe, Layers, GitBranch, HeartPulse } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import cherryBg from "@/assets/bg-cherry-blossom.jpg";
+
+interface LandingPageProps {
+  onEnter: (text: string) => void;
+}
 
 const FEATURES_ROW1 = [
   { icon: LayoutGrid, title: "Personal Dashboard" },
