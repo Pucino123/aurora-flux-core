@@ -7,6 +7,7 @@ import DocumentView from "./documents/DocumentView";
 import { useFlux } from "@/context/FluxContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useTrash } from "@/context/TrashContext";
+import TemplateChooserModal from "./focus/TemplateChooserModal";
 
 const DocumentsView = () => {
   const { moveToTrash } = useTrash();
@@ -15,6 +16,7 @@ const DocumentsView = () => {
   const { openInWorkspace } = useWorkspace();
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [showTemplateChooser, setShowTemplateChooser] = useState(false);
 
   // Open pending document from sidebar click → go to workspace
   useEffect(() => {
@@ -38,26 +40,12 @@ const DocumentsView = () => {
           <h2 className="text-xl font-bold font-display flex items-center gap-2"><FileText size={22} /> Documents</h2>
           <p className="text-sm text-muted-foreground">Click a document to open it in Workspace — drag to open side by side</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={async () => {
-              const doc = await createDocument("Untitled", "text");
-              if (doc) { openInWorkspace(doc); setActiveView("multitask" as any); }
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary text-secondary-foreground hover:opacity-90 transition-opacity border border-border"
-          >
-            <Plus size={14} /> Doc
-          </button>
-          <button
-            onClick={async () => {
-              const doc = await createDocument("Untitled Sheet", "spreadsheet");
-              if (doc) { openInWorkspace(doc); setActiveView("multitask" as any); }
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-          >
-            <Table size={14} /> Sheet
-          </button>
-        </div>
+        <button
+          onClick={() => setShowTemplateChooser(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+        >
+          <Plus size={14} /> New Document
+        </button>
       </div>
 
       <div className="relative mb-4">
@@ -78,7 +66,12 @@ const DocumentsView = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flux-card text-center py-16">
           <FileText size={32} className="mx-auto mb-4 text-muted-foreground/30" />
           <h3 className="font-semibold font-display mb-2 text-lg">No documents yet</h3>
-          <p className="text-sm text-muted-foreground">Create your first document to get started.</p>
+          <button
+            onClick={() => setShowTemplateChooser(true)}
+            className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity mx-auto"
+          >
+            <Plus size={14} /> New Document
+          </button>
         </motion.div>
       ) : (
         <div className="space-y-2">
@@ -101,8 +94,8 @@ const DocumentsView = () => {
                 >
                   <div className="flex items-center gap-3">
                     {doc.type === "spreadsheet"
-                      ? <Table size={16} className="text-emerald-500 shrink-0" />
-                      : <FileText size={16} className="text-blue-400 shrink-0" />}
+                      ? <Table size={16} className="text-accent shrink-0" />
+                      : <FileText size={16} className="text-primary shrink-0" />}
                     <div className="text-left">
                       <p className="text-sm font-medium">{doc.title}</p>
                       <p className="text-[10px] text-muted-foreground">
@@ -121,6 +114,21 @@ const DocumentsView = () => {
             ))}
           </AnimatePresence>
         </div>
+      )}
+
+      {showTemplateChooser && (
+        <TemplateChooserModal
+          onClose={() => setShowTemplateChooser(false)}
+          onCreateDocument={async (title, type, content) => {
+            const doc = await createDocument(title, type);
+            if (doc) {
+              if (content) updateDocument(doc.id, { content });
+              openInWorkspace(doc);
+              setActiveView("multitask" as any);
+            }
+            setShowTemplateChooser(false);
+          }}
+        />
       )}
     </div>
   );

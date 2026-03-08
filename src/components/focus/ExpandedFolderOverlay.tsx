@@ -11,6 +11,7 @@ import { FOLDER_ICONS } from "@/components/CreateFolderModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import TemplateChooserModal from "./TemplateChooserModal";
 
 interface ExpandedFolderOverlayProps {
   folderId: string;
@@ -40,9 +41,10 @@ const ExpandedFolderOverlay = ({
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [draggingOutId, setDraggingOutId] = useState<string | null>(null);
+  const [showTemplateChooser, setShowTemplateChooser] = useState(false);
 
   const folder = findFolderNode(folderId);
-  const { documents, loading, createDocument, refetch } = useDocuments(folderId, moveToTrash);
+  const { documents, loading, createDocument, updateDocument, refetch } = useDocuments(folderId, moveToTrash);
 
   const commitRename = useCallback(() => {
     if (renameValue.trim() && folder && renameValue.trim() !== folder.title) {
@@ -107,7 +109,7 @@ const ExpandedFolderOverlay = ({
   const IconComp = customIcon ? customIcon.icon : Folder;
   const iconColor = folder.color || "hsl(var(--muted-foreground))";
 
-  return createPortal(
+  const portal = createPortal(
     <AnimatePresence>
       {/* Backdrop */}
       <motion.div
@@ -204,9 +206,7 @@ const ExpandedFolderOverlay = ({
               <Pencil size={14} />
             </button>
             <button
-              onClick={async () => {
-                await createDocument("Untitled Document", "text", folderId);
-              }}
+              onClick={() => setShowTemplateChooser(true)}
               className="p-2 rounded-lg transition-colors"
               style={{ color: "rgba(255,255,255,0.35)" }}
               onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
@@ -248,7 +248,7 @@ const ExpandedFolderOverlay = ({
               <Folder size={40} style={{ color: iconColor, opacity: 0.4 }} />
               <p className="text-sm">This folder is empty</p>
               <button
-                onClick={async () => { await createDocument("Untitled Document", "text", folderId); }}
+                onClick={() => setShowTemplateChooser(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
                 style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
@@ -352,6 +352,23 @@ const ExpandedFolderOverlay = ({
       </motion.div>
     </AnimatePresence>,
     document.body
+  );
+
+  return (
+    <>
+      {portal}
+      {showTemplateChooser && (
+        <TemplateChooserModal
+          onClose={() => setShowTemplateChooser(false)}
+          onCreateDocument={async (title, type, content) => {
+            const doc = await createDocument(title, type, folderId);
+            if (doc && content) updateDocument(doc.id, { content });
+            refetch();
+            setShowTemplateChooser(false);
+          }}
+        />
+      )}
+    </>
   );
 };
 

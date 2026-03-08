@@ -866,7 +866,6 @@ const FocusContent = () => {
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
-  const [showDocPicker, setShowDocPicker] = useState(false);
   const [auraImages, setAuraImages] = useState<{ id: string; url: string; prompt: string }[]>([]);
   const [dragState, setDragState] = useState<{ id: string; x: number; y: number } | null>(null);
   const [docDragState, setDocDragState] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -943,7 +942,6 @@ const FocusContent = () => {
 
   const handleCreateDocument = useCallback(async (type: "text" | "spreadsheet") => {
     const pos = contextMenuPosRef.current;
-    setShowDocPicker(false);
     setContextMenu(null);
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
     const doc = await createDocument(title, type, null);
@@ -1612,7 +1610,7 @@ const FocusContent = () => {
       {/* Canvas right-click context menu */}
       {contextMenu && (
         <>
-          <div className="fixed inset-0 z-[90]" onClick={() => { setContextMenu(null); setShowDocPicker(false); }} />
+          <div className="fixed inset-0 z-[90]" onClick={() => setContextMenu(null)} />
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -1627,33 +1625,11 @@ const FocusContent = () => {
               <FolderPlus size={14} className="text-muted-foreground" /> New Folder
             </button>
             <button
-              onClick={() => setShowDocPicker(!showDocPicker)}
+              onClick={() => { setContextMenu(null); setShowTemplateChooser(true); }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"
             >
-              <FileText size={14} className="text-muted-foreground" /> New Document
+              <FileText size={14} className="text-muted-foreground" /> New Document…
             </button>
-            {showDocPicker && (
-              <div className="mx-2 mb-1.5 rounded-lg border border-border/40 overflow-hidden">
-                <button
-                  onClick={() => handleCreateDocument("text")}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors"
-                >
-                  <FileText size={13} className="text-primary" /> Text Document
-                </button>
-                <button
-                  onClick={() => handleCreateDocument("spreadsheet")}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors"
-                >
-                  <Table size={13} className="text-accent-foreground" /> Spreadsheet
-                </button>
-                <button
-                  onClick={() => { setContextMenu(null); setShowDocPicker(false); setShowTemplateChooser(true); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors"
-                >
-                  <Sparkles size={13} className="text-primary" /> From Template…
-                </button>
-              </div>
-            )}
             <button
               onClick={handleAddStickyNote}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors rounded-lg"

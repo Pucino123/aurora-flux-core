@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, MoreHorizontal, Pencil, Trash2, Copy, FolderPlus, FileText, Table,
   ChevronRight, LayoutGrid, List, Folder, ArrowLeft, Search, SlidersHorizontal,
-  Sparkles, Sun, Moon,
+  Sparkles, Sun, Moon, Plus,
 } from "lucide-react";
+import TemplateChooserModal from "./TemplateChooserModal";
 
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { useDocuments, DbDocument } from "@/hooks/useDocuments";
@@ -55,6 +56,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const [sortMode, setSortMode] = useState<SortMode>("name");
   const [showSort, setShowSort] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showInlineTemplate, setShowInlineTemplate] = useState(false);
 
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -426,22 +428,10 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
                   <FolderPlus size={12} /> Folder
                 </button>
                 <button
-                  onClick={() => handleCreateDocument("text")}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <FileText size={12} /> Doc
-                </button>
-                <button
-                  onClick={() => handleCreateDocument("spreadsheet")}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Table size={12} /> Sheet
-                </button>
-                <button
-                  onClick={() => setShowTemplates(true)}
+                  onClick={() => setShowInlineTemplate(true)}
                   className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
-                  <Sparkles size={12} /> Templates
+                  <Plus size={12} /> New…
                 </button>
               </div>
             </div>
@@ -498,6 +488,17 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
             onClose={() => setShowTemplates(false)}
             onCreateDocument={handleCreateFromTemplate}
           />
+
+          {/* Inline Template Chooser */}
+          {showInlineTemplate && (
+            <TemplateChooserModal
+              onClose={() => setShowInlineTemplate(false)}
+              onCreateDocument={async (title, type, content) => {
+                await handleCreateFromTemplate(title, type, content);
+                setShowInlineTemplate(false);
+              }}
+            />
+          )}
         </div>
       </motion.div>
     </AnimatePresence>,
