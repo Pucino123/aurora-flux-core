@@ -459,18 +459,19 @@ const TheCouncil = () => {
                         ))}
                       </div>
 
-                      {/* Textarea */}
-                      <textarea
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-                        onFocus={() => setInputFocused(true)}
-                        onBlur={() => setInputFocused(false)}
-                        placeholder={t("council.placeholder") || "Beskriv din idé, strategi eller beslutning…"}
-                        rows={isMobile ? 3 : 4}
-                        className="w-full bg-white/50 rounded-2xl px-4 py-3 sm:px-5 sm:py-4 outline-none text-sm sm:text-base resize-none border border-white/60 placeholder:text-muted-foreground/40 focus:border-[hsl(var(--aurora-violet)/0.3)] focus:bg-white/70 transition-all duration-300 leading-relaxed"
-                        disabled={loading}
-                      />
+                       {/* Textarea */}
+                       <textarea
+                         value={input}
+                         onChange={(e) => setInput(e.target.value)}
+                         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+                         onFocus={() => setInputFocused(true)}
+                         onBlur={() => setInputFocused(false)}
+                         placeholder={t("council.placeholder") || "Beskriv din idé, strategi eller beslutning…"}
+                         rows={isMobile ? 3 : 4}
+                         className="w-full rounded-2xl px-4 py-3 sm:px-5 sm:py-4 outline-none text-sm sm:text-base resize-none border transition-all duration-300 leading-relaxed text-slate-200 placeholder:text-slate-500"
+                         style={{ background: "hsl(240 20% 10% / 0.8)", borderColor: "hsl(255 30% 50% / 0.2)" }}
+                         disabled={loading}
+                       />
 
                        {/* Submit */}
                       <motion.button
