@@ -1015,35 +1015,63 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     stopFloatingEmojis();
   }, [startFloatingEmojis, stopFloatingEmojis]);
 
+  // Replay mode state
+  const [isReplaying, setIsReplaying] = useState(false);
+
   // Restore a previously saved boardroom session
-  const handleRestore = useCallback((savedIdea: RestorableBoardroomIdea) => {
+  const handleRestore = useCallback((savedIdea: RestorableBoardroomIdea, replay = false) => {
     setIdea(savedIdea.content);
     setSavedIdeaId(savedIdea.id);
-    const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
-    const newResponses: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+
+    // Build the saved responses map (used for both instant restore + replay)
+    const savedResponses: Record<string, BoardroomPersonaResponse | null> = {
+      elena: null, helen: null, anton: null, margot: null,
+    };
     savedIdea.responses.forEach(r => {
-      if (r.persona_key in newStates) {
-        newStates[r.persona_key] = "revealed";
-        // Merge with MOCK_RESPONSES for question field (not stored in DB)
+      if (r.persona_key in savedResponses) {
         const mock = MOCK_RESPONSES[r.persona_key];
-        newResponses[r.persona_key] = {
+        savedResponses[r.persona_key] = {
           analysis: r.analysis || mock?.analysis || "",
           question: mock?.question || "",
           confidence: r.vote_score ?? mock?.confidence ?? 50,
         };
       }
     });
-    setCardStates(newStates);
-    setResponses(newResponses);
-    setRevealedCount(savedIdea.responses.filter(r => r.persona_key in newStates).length);
-    revealedCountRef.current = savedIdea.responses.filter(r => r.persona_key in newStates).length;
-    setSaveState("saved");
-    setTimeout(() => setSaveState("idle"), 3000);
-    // Reset session id so new chats go to a fresh session
-    sessionIdRef.current = resetSessionId();
-    // Scroll to top of boardroom
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+
+    if (replay) {
+      // Reset to idle first, then animate the reveal sequence
+      setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
+      setResponses({ elena: null, helen: null, anton: null, margot: null });
+      setRevealedCount(0);
+      revealedCountRef.current = 0;
+      setExpandedCard(null);
+      setSaveState("idle");
+      setIsReplaying(true);
+      sessionIdRef.current = resetSessionId();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Delay slightly so idle state renders first
+      setTimeout(async () => {
+        await revealPersonaSequence(savedResponses);
+        setIsReplaying(false);
+        setSaveState("saved");
+        setTimeout(() => setSaveState("idle"), 3000);
+      }, 300);
+    } else {
+      // Instant restore
+      const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
+      savedIdea.responses.forEach(r => {
+        if (r.persona_key in newStates) newStates[r.persona_key] = "revealed";
+      });
+      setCardStates(newStates);
+      setResponses(savedResponses);
+      setRevealedCount(savedIdea.responses.filter(r => r.persona_key in newStates).length);
+      revealedCountRef.current = savedIdea.responses.filter(r => r.persona_key in newStates).length;
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 3000);
+      sessionIdRef.current = resetSessionId();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [revealPersonaSequence]);
 
   // Expose restore to parent via onRestoreIdea prop
   useEffect(() => {
