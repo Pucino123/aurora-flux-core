@@ -44,22 +44,23 @@ const App = () => (
             <FluxProvider>
               <WorkspaceProvider>
                 <CRMProvider>
-                <FocusProvider>
-                  <TooltipProvider>
-                    <DarkModeShortcut />
-                    <Toaster />
-                    <Sonner />
-                    <BrowserRouter>
-                      <Routes>
-                        <Route path="/focus" element={<Focus />} />
-                        <Route path="/auth" element={<Auth />} />
-                        <Route path="/calendar" element={<CalendarCallback />} />
-                        <Route path="/" element={<Index />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </BrowserRouter>
-                  </TooltipProvider>
-                </FocusProvider>
+                  <FocusProvider>
+                    <TooltipProvider>
+                      <DarkModeShortcut />
+                      <Toaster />
+                      <Sonner />
+                      <BrowserRouter>
+                        <Routes>
+                          <Route path="/focus" element={<Focus />} />
+                          <Route path="/auth" element={<Auth />} />
+                          <Route path="/calendar" element={<CalendarCallback />} />
+                          <Route path="/" element={<Index />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </BrowserRouter>
+                    </TooltipProvider>
+                  </FocusProvider>
+                </CRMProvider>
               </WorkspaceProvider>
             </FluxProvider>
           </MonetizationProvider>
