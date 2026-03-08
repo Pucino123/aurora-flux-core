@@ -282,6 +282,7 @@ const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState(1);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const go = (next: number, direction: number) => {
     setDir(direction);
@@ -298,6 +299,19 @@ const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      go(idx + (diff > 0 ? 1 : -1), diff > 0 ? 1 : -1);
+    }
+    touchStartX.current = null;
+  };
 
   const slide = SLIDES[idx];
 
@@ -317,6 +331,8 @@ const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
       {/* Main slide card */}
       <div
         className="relative rounded-3xl overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{
           background: isDark ? "rgba(14,12,22,0.72)" : "rgba(255,255,255,0.12)",
           backdropFilter: "blur(32px)",
@@ -428,12 +444,12 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-700"
         style={{
           backgroundImage: `url(${gradientBg})`,
-          filter: isDark ? "blur(8px) brightness(0.45) saturate(1.1)" : "blur(6px) brightness(0.88) saturate(1.1)",
+          filter: isDark ? "blur(8px) brightness(0.55) saturate(1.1)" : "blur(6px) brightness(0.88) saturate(1.1)",
           transform: "scale(1.06)",
         }}
       />
       <div className="fixed inset-0 z-0 pointer-events-none transition-colors duration-700"
-        style={{ background: isDark ? "rgba(4,2,10,0.55)" : "rgba(10,8,30,0.18)" }} />
+        style={{ background: isDark ? "rgba(4,2,10,0.38)" : "rgba(10,8,30,0.18)" }} />
 
       {/* Navbar */}
       <nav className="relative z-20 flex items-center justify-between px-5 md:px-16 py-4 md:py-5">
