@@ -891,6 +891,11 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
+  // Realtime presence: collaborators watching the boardroom
+  const [collaborators, setCollaborators] = useState<{ userId: string; displayName: string; isConsulting: boolean }[]>([]);
+  const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // PDF export ref
+  const boardroomRef = useRef<HTMLDivElement>(null);
 
   const allRevealed = revealedCount === 4;
   const avgRing = Math.round(
