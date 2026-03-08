@@ -85,8 +85,8 @@ const CouncilAvatar = ({
       rightRotate = -20;
       leftEyeCX  = cx - baseSpread * 0.88;
       rightEyeCX = cx + baseSpread * 0.88;
-      // Frown in SVG: endpoints at eye-level, control point BELOW → arc sags down = sad drooping mouth
-      barPath = `M ${leftEyeCX} ${barY} Q ${cx} ${barY + S * 0.18} ${rightEyeCX} ${barY}`;
+      // Frown: control point ABOVE endpoints (lower Y in SVG = higher visually) → arc bows upward = ∩ = sad face
+      barPath = `M ${leftEyeCX} ${barY + S * 0.02} Q ${cx} ${barY - S * 0.16} ${rightEyeCX} ${barY + S * 0.02}`;
       break;
     case "straight":
     default:
