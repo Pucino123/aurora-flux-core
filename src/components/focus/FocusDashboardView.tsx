@@ -1461,20 +1461,6 @@ const FocusContent = () => {
           {openFolderId && (
             <FolderModal folderId={openFolderId} onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }} />
           )}
-          {openDesktopDoc && (
-            <DesktopDocumentViewer
-              document={openDesktopDoc}
-              onClose={() => { setOpenDesktopDoc(null); refetchDesktopDocs(); }}
-              onUpdate={(id, updates) => {
-                updateDesktopDoc(id, updates);
-                setOpenDesktopDoc(prev => prev ? { ...prev, ...updates } : null);
-              }}
-              onDelete={(id) => {
-                removeDesktopDoc(id);
-                setOpenDesktopDoc(null);
-              }}
-            />
-          )}
 
           {/* ── iPadOS Window Manager Layer ─────────────────────────── */}
           <AnimatePresence>
