@@ -112,12 +112,14 @@ const DEFAULT_STATE: FocusState = {
   desktopFolderIconStrokeOpacities: {},
   desktopFolderCustomIcons: {},
   desktopFolderBgColors: {},
+  desktopFolderTitleGaps: {},
   desktopDocPositions: {},
   desktopDocOpacities: {},
   desktopDocTitleSizes: {},
   desktopDocBgColors: {},
   desktopDocCustomIcons: {},
   desktopDocIconColors: {},
+  desktopDocTitleGaps: {},
 };
 
 const STORAGE_KEY = "flux-focus-prefs";
