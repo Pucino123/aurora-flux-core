@@ -247,7 +247,13 @@ const FocusContent = () => {
   }, [activePageIndex, dashboardPages]);
 
   const addPage = useCallback(() => {
-    const newPage: DashboardPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
+    // New pages always start completely empty — strict isolation
+    const newPage: DashboardPage = {
+      id: `page-${Date.now()}`,
+      label: `Page ${dashboardPages.length + 1}`,
+      visibleFolderIds: [],
+      visibleDocIds: [],
+    };
     setPages(prev => [...prev, newPage]);
     setPageDir(1);
     setActivePageIndex(dashboardPages.length);
