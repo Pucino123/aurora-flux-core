@@ -48,6 +48,7 @@ import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChec
 import { toast } from "sonner";
 import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
 import WindowFrame from "@/components/windows/WindowFrame";
+import WindowDock from "@/components/windows/WindowDock";
 import DocumentView from "@/components/documents/DocumentView";
 
 const BuildModeGrid = () => (
