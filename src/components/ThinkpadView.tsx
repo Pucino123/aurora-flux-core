@@ -260,10 +260,21 @@ const IdeaCanvas = ({
         nodesDraggable={!isLocked}
         nodesConnectable={!isLocked}
         elementsSelectable={!isLocked}
+        panOnDrag={!isLocked}
+        zoomOnScroll={!isLocked}
         deleteKeyCode={isLocked ? null : "Delete"}
         style={{ background: "transparent" }}
         proOptions={{ hideAttribution: true }}
       >
+        {/* Lock overlay — captures all pointer events so nodes cannot be dragged */}
+        {isLocked && (
+          <div
+            className="absolute inset-0 z-[9998]"
+            style={{ cursor: "not-allowed" }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        )}
         <Background color="rgba(255,255,255,0.06)" gap={28} size={1} />
         {/* Hide default Controls — we use our own toolbar */}
         <MiniMap
