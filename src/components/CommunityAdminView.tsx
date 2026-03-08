@@ -26,17 +26,20 @@ interface StatCardProps {
   color: string;
 }
 
-const StatCard = ({ icon: Icon, label, value, color }: StatCardProps) => (
-  <div className="rounded-2xl border border-border/40 bg-card p-5 flex items-center gap-4">
-    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
-      <Icon size={18} />
+const StatCard = ({ icon: Icon, label, value, color }: StatCardProps) => {
+  const I = Icon as React.FC<{ size?: number }>;
+  return (
+    <div className="rounded-2xl border border-border/40 bg-card p-5 flex items-center gap-4">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
+        <I size={18} />
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-foreground">{value}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
+      </div>
     </div>
-    <div>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
-  </div>
-);
+  );
+};
 
 const CommunityAdminView = () => {
   const [slots, setSlots] = useState<Slot[]>([]);
