@@ -557,17 +557,18 @@ const TheCouncil = () => {
                     <div className="space-y-4">
                       {/* Compact input card */}
                       <div className="council-glass-card p-4">
-                        <textarea
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-                          onFocus={() => setInputFocused(true)}
-                          onBlur={() => setInputFocused(false)}
-                          placeholder="Ny idé eller opfølgning…"
-                          rows={2}
-                          className="w-full bg-white/50 rounded-xl px-3 py-2.5 outline-none text-sm resize-none border border-white/60 placeholder:text-muted-foreground/40 focus:border-[hsl(var(--aurora-violet)/0.3)] focus:bg-white/70 transition-all duration-300"
-                          disabled={loading}
-                        />
+                         <textarea
+                           value={input}
+                           onChange={(e) => setInput(e.target.value)}
+                           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+                           onFocus={() => setInputFocused(true)}
+                           onBlur={() => setInputFocused(false)}
+                           placeholder="Ny idé eller opfølgning…"
+                           rows={2}
+                           className="w-full rounded-xl px-3 py-2.5 outline-none text-sm resize-none border transition-all duration-300 text-slate-200 placeholder:text-slate-500"
+                           style={{ background: "hsl(240 20% 10% / 0.8)", borderColor: "hsl(255 30% 50% / 0.2)" }}
+                           disabled={loading}
+                         />
                         <motion.button
                           onClick={handleSubmit}
                           disabled={loading || !input.trim()}
