@@ -70,6 +70,10 @@ type DashboardPage = {
   stickyNotes?: StickyNote[];
   background?: string; // override global bg
   spaceSettings?: SpaceSettings; // per-page brightness/blur/vignette/volume
+  folderPositions?: Record<string, { x: number; y: number }>; // per-page folder positions
+  docPositions?: Record<string, { x: number; y: number }>;    // per-page doc positions
+  visibleFolderIds?: string[];  // which folders are on this page
+  visibleDocIds?: string[];     // which docs are on this page
 };
 
 // Screenshot cache for dot hover thumbnails
@@ -136,6 +140,10 @@ const FocusContent = () => {
   const [pillBouncing, setPillBouncing] = useState(false);
   // Cloud sync debounce
   const cloudSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keyboard shortcuts cheat sheet
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  // Deleted page undo buffer
+  const deletedPageBuffer = useRef<{ page: DashboardPage; idx: number } | null>(null);
 
   // Persist pages locally
   useEffect(() => {
@@ -165,6 +173,10 @@ const FocusContent = () => {
           stickyNotes: p.stickyNotes,
           background: p.background,
           spaceSettings: p.spaceSettings,
+          folderPositions: p.folderPositions,
+          docPositions: p.docPositions,
+          visibleFolderIds: p.visibleFolderIds,
+          visibleDocIds: p.visibleDocIds,
         })));
       }
     })();
@@ -236,6 +248,10 @@ const FocusContent = () => {
       stickyNotes: source.stickyNotes ? source.stickyNotes.map(n => ({ ...n, id: `fn-${Date.now()}-${Math.random().toString(36).slice(2,6)}` })) : undefined,
       background: source.background,
       spaceSettings: source.spaceSettings ? { ...source.spaceSettings } : undefined,
+      folderPositions: source.folderPositions ? { ...source.folderPositions } : undefined,
+      docPositions: source.docPositions ? { ...source.docPositions } : undefined,
+      visibleFolderIds: source.visibleFolderIds ? [...source.visibleFolderIds] : undefined,
+      visibleDocIds: source.visibleDocIds ? [...source.visibleDocIds] : undefined,
     };
     const insertAt = idx + 1;
     setPages(prev => { const next = [...prev]; next.splice(insertAt, 0, newPage); return next; });
@@ -245,14 +261,32 @@ const FocusContent = () => {
     toast.success("Page duplicated");
   }, [dashboardPages, setPages]);
 
-  const deletePage = useCallback((idx: number) => {
+  const deletePage = useCallback((idx: number, skipConfirm = false) => {
     if (dashboardPages.length <= 1) { toast.error("Can't delete the only page"); return; }
+    const pageToDelete = dashboardPages[idx];
+    deletedPageBuffer.current = { page: pageToDelete, idx };
     setPages(prev => prev.filter((_, i) => i !== idx));
     setActivePageIndex(prev => Math.min(prev, dashboardPages.length - 2));
     setDeleteConfirmIdx(null);
     setDotMenu(null);
-    toast.success("Page deleted");
-  }, [dashboardPages.length, setPages]);
+    toast.success(`"${pageToDelete.label || `Page ${idx + 1}`}" deleted`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const buf = deletedPageBuffer.current;
+          if (!buf) return;
+          setPages(prev => {
+            const next = [...prev];
+            next.splice(buf.idx, 0, buf.page);
+            return next;
+          });
+          setActivePageIndex(buf.idx);
+          deletedPageBuffer.current = null;
+          toast.success("Page restored");
+        },
+      },
+    });
+  }, [dashboardPages, setPages]);
 
   const startLabelEdit = useCallback((idx: number) => {
     setEditingLabelIdx(idx);
@@ -287,6 +321,26 @@ const FocusContent = () => {
     setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, spaceSettings: s } : p));
   }, [activePageIndex, setPages]);
 
+  // Per-page folder/doc positions — override global context positions for current page
+  const pageFolderPositions: Record<string, { x: number; y: number }> = currentPage?.folderPositions ?? desktopFolderPositions;
+  const pageDocPositions: Record<string, { x: number; y: number }> = currentPage?.docPositions ?? desktopDocPositions;
+
+  const updatePageFolderPosition = useCallback((id: string, pos: { x: number; y: number }) => {
+    updateDesktopFolderPosition(id, pos); // keep global in sync
+    setPages(prev => prev.map((p, i) => i === activePageIndex ? {
+      ...p,
+      folderPositions: { ...(p.folderPositions ?? desktopFolderPositions), [id]: pos },
+    } : p));
+  }, [activePageIndex, setPages, updateDesktopFolderPosition, desktopFolderPositions]);
+
+  const updatePageDocPosition = useCallback((id: string, pos: { x: number; y: number }) => {
+    updateDesktopDocPosition(id, pos); // keep global in sync
+    setPages(prev => prev.map((p, i) => i === activePageIndex ? {
+      ...p,
+      docPositions: { ...(p.docPositions ?? desktopDocPositions), [id]: pos },
+    } : p));
+  }, [activePageIndex, setPages, updateDesktopDocPosition, desktopDocPositions]);
+
   // Touch swipe
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -300,11 +354,18 @@ const FocusContent = () => {
     if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
   }, [activePageIndex, dashboardPages.length, goToPage]);
 
-  // Arrow key navigation + Cmd/Ctrl+T for new page
+  // Arrow key navigation + Cmd/Ctrl+T for new page + Cmd/Ctrl+W to close + Cmd/Ctrl+? for cheat sheet
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase();
       const isEditing = tag === "input" || tag === "textarea" || (document.activeElement as HTMLElement)?.isContentEditable;
+
+      // Cmd/Ctrl+? → toggle shortcuts cheat sheet
+      if ((e.metaKey || e.ctrlKey) && e.key === "?") {
+        e.preventDefault();
+        setShowShortcuts(v => !v);
+        return;
+      }
 
       // Cmd/Ctrl+T → add new page (intercept before browser tab open)
       if ((e.metaKey || e.ctrlKey) && e.key === "t") {
@@ -314,6 +375,13 @@ const FocusContent = () => {
         setPageDir(1);
         setActivePageIndex(dashboardPages.length);
         toast.success(`Page ${dashboardPages.length + 1} added`, { description: "⌘T to add more pages" });
+        return;
+      }
+
+      // Cmd/Ctrl+W → delete current page with undo
+      if ((e.metaKey || e.ctrlKey) && e.key === "w") {
+        e.preventDefault();
+        deletePage(activePageIndex);
         return;
       }
 
@@ -328,7 +396,7 @@ const FocusContent = () => {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activePageIndex, dashboardPages.length, goToPage, setPages]);
+  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage]);
 
   // Dot drag-to-reorder handlers
   const handleDotDragStart = useCallback((i: number) => {
@@ -497,11 +565,11 @@ const FocusContent = () => {
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
     const doc = await createDocument(title, type, null);
     if (doc && pos) {
-      updateDesktopDocPosition(doc.id, pos);
+      updatePageDocPosition(doc.id, pos);
     }
     contextMenuPosRef.current = null;
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-  }, [createDocument, updateDesktopDocPosition]);
+  }, [createDocument, updatePageDocPosition]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
@@ -649,11 +717,11 @@ const FocusContent = () => {
       if (r - l < 5 && b - t < 5) return new Set<string>();
       const ns = new Set<string>();
       folderTree.forEach(folder => {
-        const fPos = desktopFolderPositions[folder.id] || { x: 40, y: 40 };
+        const fPos = pageFolderPositions[folder.id] || { x: 40, y: 40 };
         if (fPos.x < r && fPos.x + 90 > l && fPos.y < b && fPos.y + 90 > t) ns.add(folder.id);
       });
       desktopDocs.forEach(doc => {
-        const dPos = desktopDocPositions[doc.id] || { x: 0, y: 0 };
+        const dPos = pageDocPositions[doc.id] || { x: 0, y: 0 };
         if (dPos.x < r && dPos.x + 90 > l && dPos.y < b && dPos.y + 90 > t) ns.add(doc.id);
       });
       return ns;
@@ -681,9 +749,9 @@ const FocusContent = () => {
           const startPos = groupDragStartPositions.current[id];
           if (!startPos) return;
           if (folderTree.some(f => f.id === id)) {
-            updateDesktopFolderPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
+            updatePageFolderPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
           } else {
-            updateDesktopDocPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
+            updatePageDocPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
           }
         });
         // Update drag badge position
@@ -744,7 +812,7 @@ const FocusContent = () => {
     window.addEventListener("pointermove", onMouseMove);
     window.addEventListener("pointerup", onMouseUp);
     return () => { window.removeEventListener("pointermove", onMouseMove); window.removeEventListener("pointerup", onMouseUp); };
-  }, [folderTree, desktopDocs, desktopFolderPositions, desktopDocPositions, toCanvasCoords, updateDesktopFolderPosition, updateDesktopDocPosition, moveFolder, user, refetchDesktopDocs]);
+  }, [folderTree, desktopDocs, pageFolderPositions, pageDocPositions, toCanvasCoords, updatePageFolderPosition, updatePageDocPosition, moveFolder, user, refetchDesktopDocs]);
 
   const handleGroupDragStart = useCallback((e: React.PointerEvent, itemId: string) => {
     if (e.button !== 0) return false;
@@ -755,14 +823,14 @@ const FocusContent = () => {
     const positions: Record<string, { x: number; y: number }> = {};
     selectedIdsRef.current.forEach((id) => {
       if (folderTree.some(f => f.id === id)) {
-        positions[id] = desktopFolderPositions[id] || { x: 40, y: 40 };
+        positions[id] = pageFolderPositions[id] || { x: 40, y: 40 };
       } else {
-        positions[id] = desktopDocPositions[id] || { x: 0, y: 0 };
+        positions[id] = pageDocPositions[id] || { x: 0, y: 0 };
       }
     });
     groupDragStartPositions.current = positions;
     return true;
-  }, [folderTree, desktopFolderPositions, desktopDocPositions]);
+  }, [folderTree, pageFolderPositions, pageDocPositions]);
 
   // Single-click select: selects only this item, clears rest
   const handleSingleSelect = useCallback((id: string) => {
@@ -951,6 +1019,8 @@ const FocusContent = () => {
               onGroupDragStart={handleGroupDragStart}
               onSingleSelect={handleSingleSelect}
               onBulkContextMenu={handleBulkContextMenu}
+              positionOverride={pageFolderPositions[folder.id]}
+              onPositionChange={updatePageFolderPosition}
             />
           ))}
 
@@ -968,6 +1038,8 @@ const FocusContent = () => {
               onGroupDragStart={handleGroupDragStart}
               onSingleSelect={handleSingleSelect}
               onBulkContextMenu={handleBulkContextMenu}
+              positionOverride={pageDocPositions[doc.id]}
+              onPositionChange={updatePageDocPosition}
             />
           ))}
 
@@ -1111,7 +1183,7 @@ const FocusContent = () => {
             const parent = await createFolder({ title: data.title, type: "project", color: data.color, icon: data.icon });
             if (parent) {
               if (pos) {
-                updateDesktopFolderPosition(parent.id, { x: pos.x, y: pos.y });
+                updatePageFolderPosition(parent.id, { x: pos.x, y: pos.y });
               }
               if (data.subfolders.length > 0) {
                 for (const sub of data.subfolders) {
@@ -1553,6 +1625,51 @@ const FocusContent = () => {
           </motion.div>
         </>
       )}
+
+      {/* ── Keyboard Shortcuts Cheat Sheet (Cmd+?) ── */}
+      <AnimatePresence>
+        {showShortcuts && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[10002]"
+              style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+              onClick={() => setShowShortcuts(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 16 }}
+              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed z-[10003] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl px-6 py-5 min-w-[300px]"
+              style={{ background: "rgba(10,8,20,0.96)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.14)", boxShadow: "0 24px 64px rgba(0,0,0,0.7)" }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Keyboard Shortcuts</p>
+                <button onClick={() => setShowShortcuts(false)} className="text-white/30 hover:text-white/70 text-lg leading-none">×</button>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {[
+                  { keys: ["←", "→"], label: "Navigate pages" },
+                  { keys: ["⌘T"], label: "New page" },
+                  { keys: ["⌘W"], label: "Close current page (Undo available)" },
+                  { keys: ["⌘?"], label: "Toggle this cheat sheet" },
+                ].map(({ keys, label }) => (
+                  <div key={label} className="flex items-center justify-between gap-6">
+                    <span className="text-[12px] text-white/60">{label}</span>
+                    <div className="flex items-center gap-1">
+                      {keys.map(k => (
+                        <kbd key={k} className="px-2 py-0.5 rounded-md text-[11px] font-mono text-white/70" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.18)" }}>{k}</kbd>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[9px] text-white/20 text-center mt-4">Windows: Ctrl instead of ⌘</p>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
     </StyleEditorProvider>
   );

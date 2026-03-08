@@ -23,6 +23,8 @@ interface DesktopDocumentProps {
   onGroupDragStart?: (e: React.PointerEvent, itemId: string) => boolean;
   onSingleSelect?: (id: string) => void;
   onBulkContextMenu?: (e: React.MouseEvent) => void;
+  positionOverride?: { x: number; y: number };
+  onPositionChange?: (id: string, pos: { x: number; y: number }) => void;
 }
 
 const ICON_COLORS = [
@@ -47,11 +49,15 @@ const BG_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu }: DesktopDocumentProps) => {
+const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange }: DesktopDocumentProps) => {
   const { user } = useAuth();
   const store = useFocusStore();
   const { folders, createBlock } = useFlux();
-  const pos = store.desktopDocPositions[doc.id] ?? { x: 0, y: 0 };
+  const pos = positionOverride ?? store.desktopDocPositions[doc.id] ?? { x: 0, y: 0 };
+  const _updatePos = useCallback((id: string, p: { x: number; y: number }) => {
+    if (onPositionChange) onPositionChange(id, p);
+    else store.updateDesktopDocPosition(id, p);
+  }, [onPositionChange, store.updateDesktopDocPosition]);
   const docOpacity = store.desktopDocOpacities[doc.id] ?? 1;
   const titleSize = store.desktopDocTitleSizes[doc.id] ?? 10;
   const bgColor = store.desktopDocBgColors[doc.id] ?? "";
@@ -102,19 +108,19 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
       didDrag.current = true;
       const nx = Math.max(0, e.clientX - offset.current.x);
       const ny = Math.max(0, e.clientY - offset.current.y);
-      store.updateDesktopDocPosition(doc.id, { x: nx, y: ny });
+      _updatePos(doc.id, { x: nx, y: ny });
       onDragStateChange?.({ id: doc.id, x: e.clientX, y: e.clientY });
     };
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
       if (!dragging.current) return;
       dragging.current = false;
       setIsDraggingActive(false);
-      if (didDrag.current && onDragStateChange) { onDragStateChange(null); }
+      onDragStateChange?.(null);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
-  }, [doc.id, store.updateDesktopDocPosition]);
+  }, [doc.id, _updatePos]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();

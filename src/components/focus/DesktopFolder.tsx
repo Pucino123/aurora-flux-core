@@ -20,6 +20,8 @@ interface DesktopFolderProps {
   onGroupDragStart?: (e: React.PointerEvent, itemId: string) => boolean;
   onSingleSelect?: (id: string) => void;
   onBulkContextMenu?: (e: React.MouseEvent) => void;
+  positionOverride?: { x: number; y: number };
+  onPositionChange?: (id: string, pos: { x: number; y: number }) => void;
 }
 
 const FOLDER_COLORS = [
@@ -33,7 +35,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
@@ -53,7 +55,11 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   const updateBgColor = focusStore.updateDesktopFolderBgColor;
   const systemMode = focusStore.systemMode ?? "focus";
 
-  const pos = desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };
+  const pos = positionOverride ?? desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };
+  const _updatePos = useCallback((id: string, p: { x: number; y: number }) => {
+    if (onPositionChange) onPositionChange(id, p);
+    else updateDesktopFolderPosition(id, p);
+  }, [onPositionChange, updateDesktopFolderPosition]);
   const folderOpacity = desktopFolderOpacities[folder.id] ?? 1;
   const titleSize = desktopFolderTitleSizes[folder.id] ?? 11;
   const iconFillOp = iconFillOpacities[folder.id] ?? 0.75;
@@ -132,18 +138,18 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
       didDrag.current = true;
       const nx = Math.max(0, e.clientX - offset.current.x);
       const ny = Math.max(0, e.clientY - offset.current.y);
-      updateDesktopFolderPosition(folder.id, { x: nx, y: ny });
+      _updatePos(folder.id, { x: nx, y: ny });
       onDragStateChange?.({ id: folder.id, x: e.clientX, y: e.clientY });
     };
     const onUp = () => {
-      if (!dragging.current) return;
       dragging.current = false;
-      if (didDrag.current && onDragStateChange) { onDragStateChange(null); }
+      setSelected(false);
+      onDragStateChange?.(null);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
-  }, [folder.id, updateDesktopFolderPosition, onDragStateChange]);
+  }, [folder.id, _updatePos, onDragStateChange]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
@@ -151,23 +157,29 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
     setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
-  const commitRename = () => {
-    if (renameValue.trim() && renameValue !== folder.title) { updateFolder(folder.id, { title: renameValue.trim() }); }
-    setRenaming(false);
-  };
-
-  const handleDelete = async () => { setContextMenu(null); await removeFolder(folder.id); toast.success("Folder deleted"); };
-
   const handleDuplicate = async () => {
     setContextMenu(null);
     const newFolder = await createFolder({ parent_id: folder.parent_id, title: `${folder.title} (copy)`, type: folder.type, color: folder.color ?? undefined, icon: folder.icon ?? undefined });
     if (newFolder) {
       const srcPos = desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };
-      updateDesktopFolderPosition(newFolder.id, { x: srcPos.x + 30, y: srcPos.y + 30 });
+      _updatePos(newFolder.id, { x: srcPos.x + 30, y: srcPos.y + 30 });
       if (folderOpacity !== 1) updateDesktopFolderOpacity(newFolder.id, folderOpacity);
       if (titleSize !== 11) updateDesktopFolderTitleSize(newFolder.id, titleSize);
       toast.success("Folder duplicated");
     }
+  };
+
+  const commitRename = () => {
+    if (renameValue.trim()) {
+      updateFolder(folder.id, { title: renameValue.trim() });
+    }
+    setRenaming(false);
+  };
+
+  const handleDelete = async () => {
+    setContextMenu(null);
+    await removeFolder(folder.id);
+    toast.success("Folder deleted");
   };
 
   const handleMoveTo = async (targetParentId: string | null) => {
