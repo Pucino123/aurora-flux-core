@@ -1418,10 +1418,11 @@ const FocusContent = () => {
                 .map((folder) => {
                   const isPinned = dashboardPages.some(p => p.pinnedFolderIds?.includes(folder.id));
                   return (
-                <DesktopFolder
+                  <DesktopFolder
                   key={folder.id}
                   folder={folder}
                   onOpenModal={setOpenFolderId}
+                  layoutId={`folder-expand-${folder.id}`}
                   dragState={dragState}
                   docDragState={docDragState}
                   onDragStateChange={handleDragStateChange}
