@@ -904,7 +904,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     return () => { if (emojiTimerRef.current) clearInterval(emojiTimerRef.current); };
   }, []);
 
-  const revealPersonaSequence = useCallback(async (aiPersonas: Record<string, PersonaResponse | null>) => {
+  const revealPersonaSequence = useCallback(async (aiPersonas: Record<string, BoardroomPersonaResponse | null>) => {
     for (let i = 0; i < PERSONAS.length; i++) {
       const p = PERSONAS[i];
       startFloatingEmojis(p.key);
@@ -919,6 +919,43 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     stopFloatingEmojis();
   }, [startFloatingEmojis, stopFloatingEmojis]);
 
+  // Restore a previously saved boardroom session
+  const handleRestore = useCallback((savedIdea: RestorableBoardroomIdea) => {
+    setIdea(savedIdea.content);
+    setSavedIdeaId(savedIdea.id);
+    const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
+    const newResponses: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+    savedIdea.responses.forEach(r => {
+      if (r.persona_key in newStates) {
+        newStates[r.persona_key] = "revealed";
+        // Merge with MOCK_RESPONSES for question field (not stored in DB)
+        const mock = MOCK_RESPONSES[r.persona_key];
+        newResponses[r.persona_key] = {
+          analysis: r.analysis || mock?.analysis || "",
+          question: mock?.question || "",
+          confidence: r.vote_score ?? mock?.confidence ?? 50,
+        };
+      }
+    });
+    setCardStates(newStates);
+    setResponses(newResponses);
+    setRevealedCount(savedIdea.responses.filter(r => r.persona_key in newStates).length);
+    revealedCountRef.current = savedIdea.responses.filter(r => r.persona_key in newStates).length;
+    setSaveState("saved");
+    setTimeout(() => setSaveState("idle"), 3000);
+    // Reset session id so new chats go to a fresh session
+    sessionIdRef.current = resetSessionId();
+    // Scroll to top of boardroom
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  // Expose restore to parent via onRestoreIdea prop
+  useEffect(() => {
+    if (onRestoreIdea) {
+      (window as any).__boardroomRestore = handleRestore;
+    }
+  }, [onRestoreIdea, handleRestore]);
+
   const handleConsult = async () => {
     if (isConsulting) return;
     setIsConsulting(true);
@@ -928,8 +965,12 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     setFullscreenPersona(null);
     setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
     setResponses({ elena: null, helen: null, anton: null, margot: null });
+    setSavedIdeaId(null);
+    setSaveState("idle");
+    // Fresh session for new consult
+    sessionIdRef.current = resetSessionId();
 
-    let aiPersonas: Record<string, PersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+    let aiPersonas: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
     try {
       const { data, error } = await supabase.functions.invoke("flux-ai", {
         body: { type: "boardroom-consult", idea: idea || "Should I start a new business?" },
