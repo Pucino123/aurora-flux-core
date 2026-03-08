@@ -84,16 +84,242 @@ let thumbnailCaptureScheduled = false;
 
 // Pagination settings persisted per-session
 const PAGINATION_SETTINGS_KEY = "flux-pagination-settings";
+const PILL_STYLE_KEY = "flux-pill-style";
 interface PaginationSettings {
   showLabel: boolean;
   pillOpacity: number;
   showPagination: boolean;
   pillPosition: { x: number; y: number } | null; // null = default centered
 }
+interface PillStyle {
+  bgOpacity: number;
+  bgColor: string;
+  textColor: string;
+  blurAmount: number;
+  borderOpacity: number;
+  borderRadius: number;
+  borderWidth: number;
+  borderColor: string;
+  textOpacity: number;
+}
+const DEFAULT_PILL_STYLE: PillStyle = {
+  bgOpacity: 15,
+  bgColor: "#0f0c19",
+  textColor: "#ffffff",
+  blurAmount: 24,
+  borderOpacity: 18,
+  borderRadius: 50,
+  borderWidth: 1,
+  borderColor: "#ffffff",
+  textOpacity: 80,
+};
 function loadPaginationSettings(): PaginationSettings {
   try { const r = localStorage.getItem(PAGINATION_SETTINGS_KEY); if (r) return { showLabel: true, pillOpacity: 82, showPagination: true, pillPosition: null, ...JSON.parse(r) }; } catch {}
   return { showLabel: true, pillOpacity: 82, showPagination: true, pillPosition: null };
 }
+function loadPillStyle(): PillStyle {
+  try { const r = localStorage.getItem(PILL_STYLE_KEY); if (r) return { ...DEFAULT_PILL_STYLE, ...JSON.parse(r) }; } catch {}
+  return DEFAULT_PILL_STYLE;
+}
+function savePillStyle(s: PillStyle) { localStorage.setItem(PILL_STYLE_KEY, JSON.stringify(s)); }
+
+// ── Pill Style Panel ──────────────────────────────────────────────────────
+const PILL_BORDER_RADIUS_PRESETS = [
+  { label: "Soft", value: 12 },
+  { label: "Round", value: 24 },
+  { label: "Pill", value: 50 },
+];
+const PILL_BORDER_STYLES = [
+  { label: "None", value: 0 },
+  { label: "Thin", value: 1 },
+  { label: "Med", value: 2 },
+  { label: "Bold", value: 3 },
+];
+const PILL_TEXT_SWATCHES = ["#ffffff", "#f0f0f0", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc"];
+const PILL_BG_SWATCHES = ["#0f0c19", "#000000", "#1a1a2e", "#0f172a", "#1e293b", "#0c0c0c", "#14041e"];
+
+const hexToRgbaPill = (hex: string, alpha: number) => {
+  try {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  } catch { return `rgba(15,12,25,${alpha})`; }
+};
+
+const PillStylePanel = ({ style, onUpdate, onReset, onClose, showLabel, onToggleLabel, showPagination, onTogglePagination }: {
+  style: PillStyle;
+  onUpdate: (patch: Partial<PillStyle>) => void;
+  onReset: () => void;
+  onClose: () => void;
+  showLabel: boolean;
+  onToggleLabel: () => void;
+  showPagination: boolean;
+  onTogglePagination: () => void;
+}) => {
+  const [colorTab, setColorTab] = React.useState<"text" | "bg">("text");
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.92, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.92, y: 8 }}
+      transition={{ type: "spring", stiffness: 420, damping: 30 }}
+      className="absolute bottom-[calc(100%+52px)] left-1/2 -translate-x-1/2 w-72 rounded-2xl p-4 shadow-2xl z-[10200] pointer-events-auto"
+      style={{ background: "rgba(10,8,20,0.96)", backdropFilter: "blur(48px)", border: "1px solid rgba(255,255,255,0.1)" }}
+      onPointerDown={e => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-[11px] font-semibold text-white/50 uppercase tracking-widest">Pill Style</span>
+        <div className="flex items-center gap-2">
+          <button onClick={onReset} className="text-[9px] text-white/30 hover:text-white/60 transition-colors px-1.5 py-0.5 rounded hover:bg-white/5">Reset</button>
+          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors"><X size={13} /></button>
+        </div>
+      </div>
+
+      <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+        {/* Visibility toggles */}
+        <div className="space-y-2">
+          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider block">Visibility</span>
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <span className="text-[11px] text-white/70">Show page label</span>
+            <button onClick={onToggleLabel}
+              className={`w-8 h-4 rounded-full transition-colors relative ${showLabel ? "bg-white/30" : "bg-white/10"}`}>
+              <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showLabel ? "left-[18px]" : "left-0.5"}`} />
+            </button>
+          </label>
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <span className="text-[11px] text-white/70">Show pagination</span>
+            <button onClick={onTogglePagination}
+              className={`w-8 h-4 rounded-full transition-colors relative ${showPagination ? "bg-white/30" : "bg-white/10"}`}>
+              <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showPagination ? "left-[18px]" : "left-0.5"}`} />
+            </button>
+          </label>
+        </div>
+
+        {/* Color tabs */}
+        <div className="space-y-2">
+          <div className="flex gap-1 p-0.5 rounded-xl bg-white/[0.05]">
+            {(["text", "bg"] as const).map(m => (
+              <button key={m} onClick={() => setColorTab(m)}
+                className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${colorTab === m ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"}`}>
+                {m === "text" ? "Text / Dot" : "Background"}
+              </button>
+            ))}
+          </div>
+          {colorTab === "text" ? (
+            <div className="flex gap-1.5 flex-wrap">
+              {PILL_TEXT_SWATCHES.map(c => (
+                <button key={c} onClick={() => onUpdate({ textColor: c })}
+                  className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{ backgroundColor: c, borderColor: style.textColor === c ? "rgba(255,255,255,0.9)" : "transparent" }} />
+              ))}
+              <label className="w-6 h-6 rounded-full cursor-pointer overflow-hidden border border-white/20 hover:scale-110 transition-transform"
+                style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+                <input type="color" value={style.textColor || "#ffffff"} onChange={e => onUpdate({ textColor: e.target.value })} className="opacity-0 w-full h-full" />
+              </label>
+            </div>
+          ) : (
+            <div className="flex gap-1.5 flex-wrap">
+              {PILL_BG_SWATCHES.map(c => (
+                <button key={c} onClick={() => onUpdate({ bgColor: c })}
+                  className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{ backgroundColor: c, borderColor: style.bgColor === c ? "rgba(255,255,255,0.9)" : "transparent", outline: c === "#000000" ? "1px solid rgba(255,255,255,0.2)" : undefined }} />
+              ))}
+              <label className="w-6 h-6 rounded-full cursor-pointer overflow-hidden border border-white/20 hover:scale-110 transition-transform"
+                style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+                <input type="color" value={style.bgColor || "#0f0c19"} onChange={e => onUpdate({ bgColor: e.target.value })} className="opacity-0 w-full h-full" />
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* BG opacity */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">BG Opacity</span>
+            <span className="text-[10px] text-white/30 tabular-nums">{style.bgOpacity}%</span>
+          </div>
+          <input type="range" min={0} max={80} step={1} value={style.bgOpacity}
+            onChange={e => onUpdate({ bgOpacity: Number(e.target.value) })}
+            className="w-full accent-white h-1" />
+        </div>
+
+        {/* Blur */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Blur</span>
+            <span className="text-[10px] text-white/30 tabular-nums">{style.blurAmount}px</span>
+          </div>
+          <input type="range" min={0} max={40} step={1} value={style.blurAmount}
+            onChange={e => onUpdate({ blurAmount: Number(e.target.value) })}
+            className="w-full accent-white h-1" />
+        </div>
+
+        {/* Text opacity */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Text Opacity</span>
+            <span className="text-[10px] text-white/30 tabular-nums">{style.textOpacity}%</span>
+          </div>
+          <input type="range" min={10} max={100} step={1} value={style.textOpacity}
+            onChange={e => onUpdate({ textOpacity: Number(e.target.value) })}
+            className="w-full accent-white h-1" />
+        </div>
+
+        {/* Shape */}
+        <div className="space-y-1.5">
+          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider block">Shape</span>
+          <div className="flex gap-1.5">
+            {PILL_BORDER_RADIUS_PRESETS.map(p => (
+              <button key={p.label} onClick={() => onUpdate({ borderRadius: p.value })}
+                className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${style.borderRadius === p.value ? "bg-white/15 text-white" : "text-white/35 hover:bg-white/8 hover:text-white/60 border border-white/8"}`}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Border */}
+        <div className="space-y-1.5">
+          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider block">Border</span>
+          <div className="flex gap-1.5">
+            {PILL_BORDER_STYLES.map(b => (
+              <button key={b.label} onClick={() => onUpdate({ borderWidth: b.value })}
+                className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${style.borderWidth === b.value ? "bg-white/15 text-white" : "text-white/35 hover:bg-white/8 hover:text-white/60 border border-white/8"}`}>
+                {b.label}
+              </button>
+            ))}
+          </div>
+          {style.borderWidth > 0 && (
+            <div className="space-y-1.5 mt-1">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Border Opacity</span>
+                <span className="text-[10px] text-white/30 tabular-nums">{style.borderOpacity}%</span>
+              </div>
+              <input type="range" min={0} max={100} step={5} value={style.borderOpacity}
+                onChange={e => onUpdate({ borderOpacity: Number(e.target.value) })}
+                className="w-full accent-white h-1" />
+              <div className="flex gap-1.5 flex-wrap mt-1">
+                {PILL_TEXT_SWATCHES.map(c => (
+                  <button key={c} onClick={() => onUpdate({ borderColor: c })}
+                    className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                    style={{ backgroundColor: c, borderColor: style.borderColor === c ? "rgba(255,255,255,0.9)" : "transparent" }} />
+                ))}
+                <label className="w-6 h-6 rounded-full cursor-pointer overflow-hidden border border-white/20 hover:scale-110 transition-transform"
+                  style={{ background: "conic-gradient(hsl(0 80% 60%), hsl(120 80% 60%), hsl(240 80% 60%), hsl(300 80% 60%))" }}>
+                  <input type="color" value={style.borderColor} onChange={e => onUpdate({ borderColor: e.target.value })} className="opacity-0 w-full h-full cursor-pointer" />
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <p className="text-[9px] text-white/30 text-center pt-1">Change page background via the Spaces menu ↙</p>
+      </div>
+    </motion.div>
+  );
+};
 
 const FocusContent = () => {
   const { activeWidgets, systemMode, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();

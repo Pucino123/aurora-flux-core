@@ -394,7 +394,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
       ` }} />
       <DialogContent
         data-collab-modal
-        className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden"
+        className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
         onOpenAutoFocus={e => e.preventDefault()}
         onPointerDownOutside={e => {
           // Prevent dialog from closing when clicking the context menu portal
@@ -405,8 +405,8 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
         style={{
           fontFamily: "-apple-system, 'SF Pro Text', 'SF Pro Display', BlinkMacSystemFont, sans-serif",
           maxWidth: "820px",
-          width: "100%",
-          height: "600px",
+          width: "calc(100vw - 32px)",
+          height: "min(600px, calc(100vh - 80px))",
           borderRadius: "14px",
           background: dark
             ? "rgba(28,28,30,0.88)"
