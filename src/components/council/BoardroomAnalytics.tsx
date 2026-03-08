@@ -14,7 +14,10 @@ const PERSONA_CONFIG: Record<string, { name: string; color: string }> = {
   margot: { name: "Margot", color: "#22d3ee" },
 };
 
-interface Props { userId: string }
+interface Props {
+  userId: string;
+  onRestoreIdea?: (idea: SessionRow) => void;
+}
 
 interface SessionRow {
   created_at: string;
