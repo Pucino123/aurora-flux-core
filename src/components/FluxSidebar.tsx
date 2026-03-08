@@ -184,15 +184,21 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                 <Users size={18} className="shrink-0" />
                 <span className="flex-1 text-left">{t("council.nav")}</span>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  {PERSONAS.map((p) => (
-                    <button
-                      key={p.key}
-                      onClick={(e) => { e.stopPropagation(); setActiveFolder(null); setActiveView("council"); setFilterPersona(filterPersona === p.key ? null : p.key); }}
-                      className={`w-[7px] h-[7px] rounded-full transition-all duration-150 hover:scale-150 ${filterPersona === p.key ? "ring-[1.5px] ring-foreground/50 scale-150" : "opacity-50 hover:opacity-100"}`}
-                      style={{ backgroundColor: p.color }}
-                      title={t(p.name)}
-                    />
-                  ))}
+                  {PERSONAS.map((p) => {
+                    const initials = t(p.name).slice(0, 2).toUpperCase();
+                    const isActive = filterPersona === p.key;
+                    return (
+                      <button
+                        key={p.key}
+                        onClick={(e) => { e.stopPropagation(); setActiveFolder(null); setActiveView("council"); setFilterPersona(isActive ? null : p.key); }}
+                        title={t(p.name)}
+                        className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-150 ${isActive ? "ring-[1.5px] ring-white/40 scale-110" : "opacity-50 hover:opacity-90 hover:scale-105"}`}
+                        style={{ backgroundColor: p.color, color: "#fff" }}
+                      >
+                        {initials}
+                      </button>
+                    );
+                  })}
                 </div>
               </button>
 
