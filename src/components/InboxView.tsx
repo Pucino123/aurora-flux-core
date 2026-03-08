@@ -57,60 +57,201 @@ const SegmentedControl = ({ tabs, active, onChange }: {
   </div>
 );
 
-/* ─── CHAT TAB ─── */
-const ChatTab = () => (
-  <div className="flex flex-1 min-h-0 gap-0">
-    {/* Left: team list */}
-    <div className="w-[30%] min-w-[200px] border-r border-border/20 flex flex-col">
-      <div className="px-3 py-3 border-b border-border/10">
-        <div className="relative">
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input placeholder="Search chats…" className="w-full pl-7 pr-3 py-1.5 rounded-lg text-xs bg-secondary/40 border border-border/30 outline-none focus:border-primary/40 text-foreground placeholder:text-muted-foreground" />
+/* ─── CHAT TAB (real teams from useTeamChat) ─── */
+const ChatTab = () => {
+  const {
+    teams, activeTeamId, setActiveTeamId,
+    messages, members, onlineUsers, unreadPerTeam,
+    sendMessage, loading, markAsRead, handleTypingChange, typingUsers,
+  } = useTeamChat();
+  const [input, setInput] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const [search, setSearch] = useState("");
+
+  const activeTeam = teams.find((t) => t.id === activeTeamId);
+  const activeMessages = messages.filter((m) => m.team_id === activeTeamId);
+  const activeMembers = members.filter((m) => m.team_id === activeTeamId);
+
+  const filteredTeams = teams.filter((t) =>
+    t.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeMessages.length]);
+
+  useEffect(() => {
+    if (activeTeamId) markAsRead();
+  }, [activeTeamId, activeMessages.length, markAsRead]);
+
+  const handleSend = () => {
+    if (!input.trim()) return;
+    sendMessage(input.trim());
+    setInput("");
+  };
+
+  const getMemberName = (userId: string) => {
+    const m = activeMembers.find((m) => m.user_id === userId);
+    return m?.display_name || "Member";
+  };
+
+  if (!loading && teams.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8">
+        <div
+          className="text-center p-8 rounded-3xl max-w-xs"
+          style={{ background: "hsl(var(--card)/0.6)", backdropFilter: "blur(20px)", border: "1.5px solid hsl(var(--border)/0.4)" }}
+        >
+          <Users2 size={28} className="mx-auto mb-3 text-muted-foreground/50" />
+          <h3 className="text-sm font-semibold text-foreground mb-1">No teams yet</h3>
+          <p className="text-xs text-muted-foreground">
+            Create or join a team from the Collab widget to start chatting here.
+          </p>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto py-1">
-        {[
-          { name: "Design Team", last: "Alex: mockups ready 🎨", time: "2m", unread: 3, online: true },
-          { name: "Marketing Sync", last: "You: sounds good!", time: "1h", unread: 0, online: false },
-          { name: "Engineering", last: "Sarah: PR merged", time: "3h", unread: 1, online: true },
-        ].map((chat) => (
-          <button key={chat.name} className="w-full px-3 py-2.5 flex items-center gap-2.5 hover:bg-secondary/30 transition-colors text-left group">
-            <div className="relative shrink-0">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                {chat.name[0]}
-              </div>
-              {chat.online && <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-background" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-foreground truncate">{chat.name}</span>
-                <span className="text-[10px] text-muted-foreground shrink-0 ml-1">{chat.time}</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{chat.last}</p>
-            </div>
-            {chat.unread > 0 && (
-              <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center shrink-0">
-                {chat.unread}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
+    );
+  }
 
-    {/* Right: chat thread */}
-    <div className="flex-1 flex flex-col min-h-0 min-w-0">
-      <div className="px-4 py-2.5 border-b border-border/10 flex items-center gap-2 shrink-0">
-        <Users size={14} className="text-muted-foreground" />
-        <span className="text-sm font-semibold text-foreground">Design Team</span>
-        <span className="ml-auto text-[10px] text-muted-foreground">3 members</span>
+  return (
+    <div className="flex flex-1 min-h-0 gap-0">
+      {/* Left: real team list */}
+      <div className="w-[30%] min-w-[180px] border-r border-border/20 flex flex-col">
+        <div className="px-3 py-3 border-b border-border/10">
+          <div className="relative">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search chats…"
+              className="w-full pl-7 pr-3 py-1.5 rounded-lg text-xs bg-secondary/40 border border-border/30 outline-none focus:border-primary/40 text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto py-1">
+          {loading ? (
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground">Loading…</div>
+          ) : filteredTeams.map((team) => {
+            const lastMsg = messages.filter((m) => m.team_id === team.id).at(-1);
+            const unread = unreadPerTeam[team.id] || 0;
+            return (
+              <button
+                key={team.id}
+                onClick={() => setActiveTeamId(team.id)}
+                className={`w-full px-3 py-2.5 flex items-center gap-2.5 transition-colors text-left ${
+                  activeTeamId === team.id ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-secondary/30"
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0 ${getUserColor(team.id)}`}>
+                  {team.name[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs truncate ${unread > 0 ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>
+                      {team.name}
+                    </span>
+                    {lastMsg && (
+                      <span className="text-[10px] text-muted-foreground shrink-0 ml-1">
+                        {timeAgo(lastMsg.created_at)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                    {lastMsg ? lastMsg.content : "No messages yet"}
+                  </p>
+                </div>
+                {unread > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center shrink-0">
+                    {unread}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <TeamChatView />
+
+      {/* Right: chat thread */}
+      <div className="flex-1 flex flex-col min-h-0 min-w-0">
+        {activeTeam ? (
+          <>
+            <div className="px-4 py-2.5 border-b border-border/10 flex items-center gap-2 shrink-0">
+              <Users size={14} className="text-muted-foreground" />
+              <span className="text-sm font-semibold text-foreground">{activeTeam.name}</span>
+              <span className="ml-auto text-[10px] text-muted-foreground">
+                {activeMembers.length} member{activeMembers.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
+              {activeMessages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-2">
+                  <MessageSquare size={24} className="opacity-30" />
+                  <p className="text-xs">No messages yet — say hello!</p>
+                </div>
+              ) : activeMessages.map((msg) => {
+                const senderName = getMemberName(msg.user_id);
+                return (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-end gap-2"
+                  >
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-primary-foreground shrink-0 ${getUserColor(msg.user_id)}`}>
+                      {senderName[0].toUpperCase()}
+                    </div>
+                    <div className="max-w-[70%] rounded-2xl rounded-bl-md px-3.5 py-2 bg-secondary/60 text-foreground">
+                      <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">{senderName}</p>
+                      <p className="text-sm leading-relaxed">{msg.content}</p>
+                      <p className="text-[9px] mt-1 text-muted-foreground">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+              {typingUsers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold">…</div>
+                  <div className="bg-secondary/60 rounded-2xl rounded-bl-md px-4 py-2.5">
+                    <div className="flex items-center gap-1">
+                      {[0, 150, 300].map((d) => (
+                        <span key={d} className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+            <div className="px-4 pb-4 pt-2 shrink-0">
+              <div className="flex items-center gap-2 rounded-2xl px-4 py-2 border border-border/30 bg-secondary/30">
+                <input
+                  value={input}
+                  onChange={(e) => { setInput(e.target.value); handleTypingChange(); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                  placeholder="Type a message…"
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  className="p-2 rounded-full bg-primary text-primary-foreground disabled:opacity-40 transition-all hover:bg-primary/90"
+                >
+                  <Send size={14} />
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <Users size={24} className="mb-2 opacity-30" />
+            <p className="text-sm">Select a team to view messages</p>
+          </div>
+        )}
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 /* ─── MAIL TAB ─── */
 const MailTab = () => {
