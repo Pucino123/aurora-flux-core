@@ -19,10 +19,11 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash2, Save, Lightbulb, Zap, Target, Rocket,
-  Code, Database, Star, Heart, Brain, LayoutTemplate, X, Pencil, Check
+  Code, Database, Star, Heart, Brain, LayoutTemplate, X, Pencil, Check, Sun, Moon
 } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
+import { useTheme } from "next-themes";
 
 /* ─── Types ─── */
 interface IdeaTrack {
