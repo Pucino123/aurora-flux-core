@@ -121,8 +121,9 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
     emptyTrash();
     setConfirmEmpty(false);
     toast.info("Trash emptied");
-    onClose();
   };
+
+  const cancelEmpty = () => setConfirmEmpty(false);
 
   return createPortal(
     <AnimatePresence>
