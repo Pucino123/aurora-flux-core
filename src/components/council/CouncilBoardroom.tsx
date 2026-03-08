@@ -1096,6 +1096,59 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     setIsExportingPDF(false);
   }, [idea, isExportingPDF]);
 
+  // ── Shared Session: generate shareable URL with base64-encoded analysis ──
+  const handleShareSession = useCallback(async () => {
+    if (!allRevealed) return;
+    try {
+      const payload = {
+        idea: idea || "Should I start a new business?",
+        responses: PERSONAS.map(p => ({
+          key: p.key,
+          analysis: responses[p.key]?.analysis || "",
+          question: responses[p.key]?.question || "",
+          confidence: responses[p.key]?.confidence ?? p.ringPct,
+        })),
+        actionPlan,
+      };
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+      const url = `${window.location.origin}${window.location.pathname}?boardroom=${encoded}`;
+      await navigator.clipboard.writeText(url);
+      toast.success("Shareable link copied!", { description: "Anyone with the link can view this analysis." });
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  }, [allRevealed, idea, responses, actionPlan]);
+
+  // ── On mount: check for shared session in URL ──
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get("boardroom");
+    if (!encoded) return;
+    try {
+      const payload = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+      if (payload?.responses && payload?.idea) {
+        setIdea(payload.idea);
+        if (payload.actionPlan) setActionPlan(payload.actionPlan);
+        const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
+        const newResponses: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+        (payload.responses as { key: string; analysis: string; question: string; confidence: number }[]).forEach(r => {
+          if (r.key in newStates) {
+            newStates[r.key] = "revealed";
+            newResponses[r.key] = { analysis: r.analysis, question: r.question, confidence: r.confidence };
+          }
+        });
+        setCardStates(newStates);
+        setResponses(newResponses);
+        setRevealedCount(4);
+        revealedCountRef.current = 4;
+        const clean = new URL(window.location.href);
+        clean.searchParams.delete("boardroom");
+        window.history.replaceState({}, "", clean.toString());
+      }
+    } catch { /* malformed — ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleConsult = async () => {
     if (isConsulting) return;
     setIsConsulting(true);
