@@ -52,13 +52,13 @@ const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref
   if (done) return null;
 
   const skip = () => {
-    localStorage.setItem("flux_onboarding_done_v1", "1");
+    localStorage.setItem("dashiii_onboarding_done_v1", "1");
     setDone(true);
   };
 
   const finish = () => {
     addSparks(SPARKS_REWARD);
-    localStorage.setItem("flux_onboarding_done_v1", "1");
+    localStorage.setItem("dashiii_onboarding_done_v1", "1");
     setDone(true);
   };
 

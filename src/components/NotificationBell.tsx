@@ -228,7 +228,7 @@ const NotificationBell = () => {
   // Watch for overdue tasks and push new notifications
   useEffect(() => {
     const today = format(new Date(), "yyyy-MM-dd");
-    const overdueKey = "flux-notif-overdue-sent";
+    const overdueKey = "dashiii-notif-overdue-sent";
     const sentIds: Set<string> = new Set(
       JSON.parse(localStorage.getItem(overdueKey) ?? "[]")
     );

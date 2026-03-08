@@ -91,11 +91,11 @@ const VideoSection = () => {
 
   return (
     <div className="rounded-3xl overflow-hidden border border-white/20 shadow-[0_40px_100px_rgba(0,0,0,0.28)] bg-black/50 backdrop-blur-2xl relative">
-      <div className="flex items-center gap-2 px-5 py-3 border-b border-white/10 bg-white/[0.04]">
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-white/10 bg-white/[0.04]">
         <div className="w-3 h-3 rounded-full bg-red-400/80" />
         <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
         <div className="w-3 h-3 rounded-full bg-green-400/80" />
-        <div className="flex-1 mx-4 bg-white/10 rounded-full px-4 py-1 text-[11px] text-white/30 text-center">flux.app · Overview</div>
+        <div className="flex-1 mx-4 bg-white/10 rounded-full px-4 py-1 text-[11px] text-white/30 text-center">dashiii.app · Overview</div>
       </div>
       <div className="relative aspect-video bg-black/40">
         {videoUrl ? (
