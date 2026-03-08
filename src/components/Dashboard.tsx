@@ -175,7 +175,6 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             {(effectiveView as string) === "community"       && <CommunityBoardView />}
             {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
             {(effectiveView as string) === "crm"             && <CRMPage />}
-            {(effectiveView as string) === "inbox"           && <CommHub />}
             {effectiveView === "billing"                     && <BillingView />}
             {!VIEWS_WITHOUT_SCHEDULER.includes(effectiveView as string) && <Scheduler />}
           </motion.div>
