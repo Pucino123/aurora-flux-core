@@ -1644,40 +1644,33 @@ const FocusContent = () => {
           the pill's exact visual position regardless of build/focus mode. All floating UI
           (label, build controls, settings panel, hover cards) is positioned absolutely
           above via bottom: calc(100% + Npx) so it never affects the wrapper's own size. */}
-      {paginationSettings.showPagination && (
+      {paginationSettings.showPagination && (() => {
+        const pillBg = hexToRgbaPill(pillStyle.bgColor || "#0f0c19", pillStyle.bgOpacity / 100);
+        const pillBorder = pillStyle.borderWidth > 0
+          ? `${pillStyle.borderWidth}px solid ${hexToRgbaPill(pillStyle.borderColor, pillStyle.borderOpacity / 100)}`
+          : "none";
+        const pillTextAlpha = pillStyle.textOpacity / 100;
+        const pillTextRgba = hexToRgbaPill(pillStyle.textColor || "#ffffff", pillTextAlpha);
+        const pillSharedStyle: React.CSSProperties = {
+          cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
+          background: pillBg,
+          backdropFilter: `blur(${pillStyle.blurAmount}px)`,
+          WebkitBackdropFilter: `blur(${pillStyle.blurAmount}px)`,
+          border: pillBorder || (systemMode === "build" ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)"),
+          borderRadius: pillStyle.borderRadius,
+          boxShadow: isDraggingPill
+            ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
+            : "0 8px 32px rgba(0,0,0,0.55)",
+        };
+        return (
         <motion.div
           ref={pillRef}
-          className="fixed z-[9999] group flex items-center gap-2.5 px-4 py-2 rounded-full select-none"
+          className="fixed z-[9999] group flex items-center gap-2.5 px-4 py-2 select-none"
           animate={pillBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
           transition={pillBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
-          style={
-            pillPos
-              ? {
-                  left: pillPos.x,
-                  top: pillPos.y,
-                  transform: "none",
-                  cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
-                  background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
-                  backdropFilter: "blur(24px)",
-                  WebkitBackdropFilter: "blur(24px)",
-                  border: systemMode === "build" ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
-                  boxShadow: isDraggingPill
-                    ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
-                    : "0 8px 32px rgba(0,0,0,0.55)",
-                }
-              : {
-                  left: "50%",
-                  bottom: "88px",
-                  transform: "translateX(-50%)",
-                  cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
-                  background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
-                  backdropFilter: "blur(24px)",
-                  WebkitBackdropFilter: "blur(24px)",
-                  border: systemMode === "build" ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
-                  boxShadow: isDraggingPill
-                    ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
-                    : "0 8px 32px rgba(0,0,0,0.55)",
-                }
+          style={pillPos
+            ? { left: pillPos.x, top: pillPos.y, transform: "none", ...pillSharedStyle }
+            : { left: "50%", bottom: "88px", transform: "translateX(-50%)", ...pillSharedStyle }
           }
           onPointerDown={handlePillPointerDown}
           onPointerMove={handlePillPointerMove}
@@ -1697,10 +1690,10 @@ const FocusContent = () => {
                   <button
                     onClick={() => setShowPillSettings(v => !v)}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all"
-                    style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}
+                    style={{ background: showPillSettings ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.18)" }}
                     onPointerDown={e => e.stopPropagation()}
                   >
-                    ⚙ Customize
+                    🎨 Style
                   </button>
                   <button
                     onClick={() => setPillPos(null)}
@@ -1729,7 +1722,8 @@ const FocusContent = () => {
                         onChange={e => setEditingLabelValue(e.target.value)}
                         onBlur={commitLabelEdit}
                         onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
-                        className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 text-white w-28"
+                        className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 w-28"
+                        style={{ color: pillTextRgba }}
                         maxLength={20}
                         autoFocus
                       />
@@ -1738,7 +1732,8 @@ const FocusContent = () => {
                   return (
                     <span
                       key={page.id}
-                      className="text-[11px] font-medium text-white/70 cursor-default select-none"
+                      className="text-[11px] font-medium cursor-default select-none"
+                      style={{ color: hexToRgbaPill(pillStyle.textColor || "#ffffff", pillTextAlpha * 0.7) }}
                       onDoubleClick={() => startLabelEdit(i)}
                       title="Double-click to rename"
                     >
@@ -1750,51 +1745,19 @@ const FocusContent = () => {
             )}
           </div>
 
-          {/* Build-mode settings panel — absolute above pill */}
+          {/* Full style panel — build mode only */}
           <AnimatePresence>
             {showPillSettings && systemMode === "build" && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                transition={{ duration: 0.18 }}
-                className="absolute bottom-[calc(100%+52px)] left-1/2 -translate-x-1/2 px-4 py-3 rounded-2xl flex flex-col gap-3 min-w-[220px] pointer-events-auto"
-                style={{ background: "rgba(10,8,20,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.7)" }}
-                onPointerDown={e => e.stopPropagation()}
-              >
-                <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Pagination Style</p>
-                <label className="flex items-center justify-between gap-3 cursor-pointer">
-                  <span className="text-[11px] text-white/70">Show page label</span>
-                  <button
-                    onClick={() => setPaginationSettings(s => ({ ...s, showLabel: !s.showLabel }))}
-                    className={`w-8 h-4 rounded-full transition-colors relative ${paginationSettings.showLabel ? "bg-white/30" : "bg-white/10"}`}
-                  >
-                    <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${paginationSettings.showLabel ? "left-[18px]" : "left-0.5"}`} />
-                  </button>
-                </label>
-                <label className="flex items-center justify-between gap-3 cursor-pointer">
-                  <span className="text-[11px] text-white/70">Show pagination</span>
-                  <button
-                    onClick={() => setPaginationSettings(s => ({ ...s, showPagination: !s.showPagination }))}
-                    className={`w-8 h-4 rounded-full transition-colors relative ${paginationSettings.showPagination ? "bg-white/30" : "bg-white/10"}`}
-                  >
-                    <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${paginationSettings.showPagination ? "left-[18px]" : "left-0.5"}`} />
-                  </button>
-                </label>
-                <label className="flex items-center justify-between gap-3">
-                  <span className="text-[11px] text-white/70">Pill opacity</span>
-                  <input
-                    type="range" min={20} max={100} value={paginationSettings.pillOpacity}
-                    onChange={e => setPaginationSettings(s => ({ ...s, pillOpacity: Number(e.target.value) }))}
-                    className="w-20 accent-white"
-                  />
-                </label>
-                <p className="text-[9px] text-white/30 text-center">Change page background via the Spaces menu ↙</p>
-                <button
-                  onClick={() => setShowPillSettings(false)}
-                  className="text-[10px] text-white/30 hover:text-white/60 text-center"
-                >Done</button>
-              </motion.div>
+              <PillStylePanel
+                style={pillStyle}
+                onUpdate={updatePillStyle}
+                onReset={resetPillStyle}
+                onClose={() => setShowPillSettings(false)}
+                showLabel={paginationSettings.showLabel}
+                onToggleLabel={() => setPaginationSettings(s => ({ ...s, showLabel: !s.showLabel }))}
+                showPagination={paginationSettings.showPagination}
+                onTogglePagination={() => setPaginationSettings(s => ({ ...s, showPagination: !s.showPagination }))}
+              />
             )}
           </AnimatePresence>
 
@@ -1828,6 +1791,7 @@ const FocusContent = () => {
                 exit={{ opacity: 0, y: 4 }}
                 className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
               >
+
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: "rgba(10,8,20,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
                   <span className="text-[10px] text-white/40">✥ drag pill</span>
                   <span className="text-[9px] text-white/20">·</span>
