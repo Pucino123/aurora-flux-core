@@ -140,6 +140,10 @@ const FocusContent = () => {
   const [pillBouncing, setPillBouncing] = useState(false);
   // Cloud sync debounce
   const cloudSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keyboard shortcuts cheat sheet
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  // Deleted page undo buffer
+  const deletedPageBuffer = useRef<{ page: DashboardPage; idx: number } | null>(null);
 
   // Persist pages locally
   useEffect(() => {
