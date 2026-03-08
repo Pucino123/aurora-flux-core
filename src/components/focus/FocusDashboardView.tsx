@@ -104,7 +104,17 @@ const FocusContent = () => {
       const raw = localStorage.getItem("flux-dashboard-pages");
       if (raw) {
         const parsed = JSON.parse(raw);
-        return parsed.map((p: any) => ({ id: p.id, label: p.label || "Home", activeWidgets: p.activeWidgets }));
+        return parsed.map((p: any) => ({
+          id: p.id, label: p.label || "Home",
+          activeWidgets: p.activeWidgets,
+          stickyNotes: p.stickyNotes,
+          background: p.background,
+          spaceSettings: p.spaceSettings,
+          folderPositions: p.folderPositions,
+          docPositions: p.docPositions,
+          visibleFolderIds: p.visibleFolderIds,
+          visibleDocIds: p.visibleDocIds,
+        }));
       }
     } catch {}
     return [{ id: "page-1", label: "Home" }];
@@ -144,6 +154,10 @@ const FocusContent = () => {
   const [showShortcuts, setShowShortcuts] = useState(false);
   // Deleted page undo buffer
   const deletedPageBuffer = useRef<{ page: DashboardPage; idx: number } | null>(null);
+  // Mission Control overlay (hold arrow key 300ms)
+  const [showMissionControl, setShowMissionControl] = useState(false);
+  const arrowHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const arrowHoldKey = useRef<string | null>(null);
 
   // Persist pages locally
   useEffect(() => {
@@ -354,7 +368,7 @@ const FocusContent = () => {
     if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
   }, [activePageIndex, dashboardPages.length, goToPage]);
 
-  // Arrow key navigation + Cmd/Ctrl+T for new page + Cmd/Ctrl+W to close + Cmd/Ctrl+? for cheat sheet
+  // Arrow key navigation + Mission Control (hold 300ms) + Cmd shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase();
@@ -367,7 +381,7 @@ const FocusContent = () => {
         return;
       }
 
-      // Cmd/Ctrl+T → add new page (intercept before browser tab open)
+      // Cmd/Ctrl+T → add new page
       if ((e.metaKey || e.ctrlKey) && e.key === "t") {
         e.preventDefault();
         const newPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
@@ -386,17 +400,47 @@ const FocusContent = () => {
       }
 
       if (isEditing) return;
-      if (e.key === "ArrowRight" && activePageIndex < dashboardPages.length - 1) {
+
+      // Arrow keys: hold 300ms → Mission Control; tap → navigate
+      if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && !e.repeat) {
         e.preventDefault();
-        goToPage(activePageIndex + 1);
-      } else if (e.key === "ArrowLeft" && activePageIndex > 0) {
-        e.preventDefault();
-        goToPage(activePageIndex - 1);
+        // Start hold timer for Mission Control
+        if (arrowHoldKey.current !== e.key) {
+          arrowHoldKey.current = e.key;
+          if (arrowHoldTimer.current) clearTimeout(arrowHoldTimer.current);
+          arrowHoldTimer.current = setTimeout(() => {
+            setShowMissionControl(true);
+            arrowHoldTimer.current = null;
+          }, 300);
+        }
+      }
+      if (e.key === "Escape" && showMissionControl) {
+        setShowMissionControl(false);
       }
     };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        if (arrowHoldTimer.current) {
+          // Timer still pending → it was a tap, not a hold → navigate
+          clearTimeout(arrowHoldTimer.current);
+          arrowHoldTimer.current = null;
+          if (!showMissionControl) {
+            if (e.key === "ArrowRight" && activePageIndex < dashboardPages.length - 1) goToPage(activePageIndex + 1);
+            if (e.key === "ArrowLeft" && activePageIndex > 0) goToPage(activePageIndex - 1);
+          }
+        }
+        arrowHoldKey.current = null;
+      }
+    };
+
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage]);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage, showMissionControl]);
 
   // Dot drag-to-reorder handlers
   const handleDotDragStart = useCallback((i: number) => {
@@ -564,12 +608,17 @@ const FocusContent = () => {
     setContextMenu(null);
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
     const doc = await createDocument(title, type, null);
-    if (doc && pos) {
-      updatePageDocPosition(doc.id, pos);
+    if (doc) {
+      if (pos) updatePageDocPosition(doc.id, pos);
+      // Register doc to this page only
+      setPages(prev => prev.map((p, i) => i === activePageIndex
+        ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
+        : p
+      ));
     }
     contextMenuPosRef.current = null;
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-  }, [createDocument, updatePageDocPosition]);
+  }, [createDocument, updatePageDocPosition, activePageIndex, setPages]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
@@ -1005,8 +1054,10 @@ const FocusContent = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Desktop Folders */}
-          {folderTree.map((folder) => (
+          {/* Desktop Folders — only show folders registered to this page (or legacy: all if none registered yet) */}
+          {folderTree
+            .filter(folder => !currentPage?.visibleFolderIds || currentPage.visibleFolderIds.includes(folder.id))
+            .map((folder) => (
             <DesktopFolder
               key={folder.id}
               folder={folder}
@@ -1024,8 +1075,10 @@ const FocusContent = () => {
             />
           ))}
 
-          {/* Desktop Documents (unfiled) */}
-          {desktopDocs.map((doc) => (
+          {/* Desktop Documents (unfiled) — only show docs registered to this page */}
+          {desktopDocs
+            .filter(doc => !currentPage?.visibleDocIds || currentPage.visibleDocIds.includes(doc.id))
+            .map((doc) => (
             <DesktopDocument
               key={doc.id}
               doc={doc}
@@ -1182,9 +1235,12 @@ const FocusContent = () => {
             const pos = contextMenuPosRef.current;
             const parent = await createFolder({ title: data.title, type: "project", color: data.color, icon: data.icon });
             if (parent) {
-              if (pos) {
-                updatePageFolderPosition(parent.id, { x: pos.x, y: pos.y });
-              }
+              if (pos) updatePageFolderPosition(parent.id, { x: pos.x, y: pos.y });
+              // Register folder to this page only
+              setPages(prev => prev.map((p, i) => i === activePageIndex
+                ? { ...p, visibleFolderIds: [...(p.visibleFolderIds ?? []), parent.id] }
+                : p
+              ));
               if (data.subfolders.length > 0) {
                 for (const sub of data.subfolders) {
                   const subIcon = suggestIcon(sub);
@@ -1651,6 +1707,7 @@ const FocusContent = () => {
               <div className="flex flex-col gap-2.5">
                 {[
                   { keys: ["←", "→"], label: "Navigate pages" },
+                  { keys: ["← hold", "→ hold"], label: "Mission Control" },
                   { keys: ["⌘T"], label: "New page" },
                   { keys: ["⌘W"], label: "Close current page (Undo available)" },
                   { keys: ["⌘?"], label: "Toggle this cheat sheet" },
@@ -1666,6 +1723,93 @@ const FocusContent = () => {
                 ))}
               </div>
               <p className="text-[9px] text-white/20 text-center mt-4">Windows: Ctrl instead of ⌘</p>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mission Control overlay (hold ←/→ for 300ms) ── */}
+      <AnimatePresence>
+        {showMissionControl && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[10200]"
+              style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
+              onClick={() => setShowMissionControl(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 16 }}
+              transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed inset-0 z-[10201] flex flex-col items-center justify-center gap-6 pointer-events-none"
+            >
+              <p className="text-[11px] font-bold text-white/30 uppercase tracking-[0.2em]">Mission Control</p>
+              <div
+                className="flex flex-wrap items-center justify-center gap-4 px-8 pointer-events-auto"
+                style={{ maxWidth: Math.min(window.innerWidth - 40, Math.ceil(Math.sqrt(dashboardPages.length)) * 200) }}
+              >
+                {dashboardPages.map((page, i) => {
+                  const isActive = i === activePageIndex;
+                  const thumb = pageThumbnails[page.id];
+                  const widgets = page.activeWidgets ?? activeWidgets;
+                  const WC: Record<string, string> = { clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa", notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c", quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc" };
+                  const WL: Record<string, string> = { clock: "🕐", timer: "⏱", music: "🎵", planner: "📋", notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️", quote: "💬", breathing: "🫁", council: "🤝", aura: "✨" };
+                  return (
+                    <motion.button
+                      key={page.id}
+                      onClick={() => { goToPage(i); setShowMissionControl(false); }}
+                      initial={{ opacity: 0, y: 16, scale: 0.88 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.22, delay: i * 0.04, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      whileHover={{ scale: 1.06, y: -4 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="flex flex-col items-center gap-2 group"
+                    >
+                      {/* Thumbnail card */}
+                      <div
+                        className="relative rounded-2xl overflow-hidden transition-all duration-200"
+                        style={{
+                          width: 160, height: 100,
+                          border: isActive ? "2px solid rgba(255,255,255,0.7)" : "2px solid rgba(255,255,255,0.12)",
+                          boxShadow: isActive
+                            ? "0 0 0 3px rgba(255,255,255,0.15), 0 16px 48px rgba(0,0,0,0.7)"
+                            : "0 8px 32px rgba(0,0,0,0.5)",
+                        }}
+                      >
+                        {thumb ? (
+                          <img src={thumb} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <>
+                            <div className="absolute inset-0" style={{ background: page.background ? "rgba(30,20,60,0.85)" : "rgba(20,15,40,0.8)" }} />
+                            <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "12px 12px" }} />
+                            <div className="absolute inset-0 p-2 grid grid-cols-4 gap-1 content-start">
+                              {widgets.slice(0, 8).map((w) => (
+                                <div key={w} className="flex items-center justify-center rounded" style={{ height: 20, background: `${WC[w] || "#6b7280"}22`, border: `1px solid ${WC[w] || "#6b7280"}44` }}>
+                                  <span style={{ fontSize: 9 }}>{WL[w] || "□"}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {isActive && (
+                          <div className="absolute inset-0 rounded-2xl ring-2 ring-white/60" />
+                        )}
+                      </div>
+                      {/* Label */}
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[12px] font-semibold text-white/80 group-hover:text-white transition-colors">{page.label || `Page ${i + 1}`}</span>
+                        <span className="text-[10px] text-white/30">{widgets.length} widget{widgets.length !== 1 ? "s" : ""}</span>
+                      </div>
+                      {/* Active indicator dot */}
+                      {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/70" />}
+                    </motion.button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-white/20 pointer-events-none">Click a page to jump · Esc to close</p>
             </motion.div>
           </>
         )}
