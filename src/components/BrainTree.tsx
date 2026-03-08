@@ -212,6 +212,7 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
     removeFolder, updateFolder, moveFolder, getAllFoldersFlat, setPendingDocumentId,
   } = useFlux();
   const { user } = useAuth();
+  const { openInWorkspace } = useWorkspace();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [iconSearch, setIconSearch] = useState("");
