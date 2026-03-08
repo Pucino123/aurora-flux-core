@@ -980,9 +980,9 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   }, []);
 
   const getConsensusLabel = () => {
-    if (avgRing >= 70) return { label: "Strong Consensus — Proceed", color: "#34d399" };
-    if (avgRing >= 40) return { label: "Mixed Opinions — Proceed with Caution", color: "#fbbf24" };
-    return { label: "Divided — Further Analysis Required", color: "#f87171" };
+    if (avgRing >= 70) return { label: "Strong Buy-In", sublabel: "Board is aligned — proceed with confidence", color: "#34d399", emoji: "✅" };
+    if (avgRing >= 40) return { label: "Mixed Opinions", sublabel: "Proceed with caution, validate key risks first", color: "#fbbf24", emoji: "⚠️" };
+    return { label: "High Skepticism", sublabel: "Significant concerns raised — revisit the fundamentals", color: "#f87171", emoji: "🚨" };
   };
 
   const startFloatingEmojis = useCallback((typingKey: string) => {
@@ -1646,34 +1646,77 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
           onChange={setPersonalitySliders}
         />
 
-        <AnimatePresence>
-          {allRevealed && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
+      </div>
+
+      {/* ── Council Consensus Score Bar — always visible, updates live ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="shrink-0 px-4 py-3 rounded-2xl border backdrop-blur-sm overflow-hidden relative"
+        style={{
+          background: `linear-gradient(135deg, ${consensus.color}06, ${consensus.color}03)`,
+          borderColor: `${consensus.color}25`,
+        }}
+      >
+        {/* Subtle ambient glow */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: `radial-gradient(ellipse at 20% 50%, ${consensus.color}08, transparent 70%)` }}
+        />
+        <div className="relative flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-base leading-none">{consensus.emoji}</span>
+            <div>
+              <p className="text-[12px] font-bold" style={{ color: consensus.color }}>{consensus.label}</p>
+              <p className="text-[9px] text-muted-foreground/60 leading-tight">{consensus.sublabel}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <motion.p
+              key={avgRing}
+              initial={{ scale: 1.2, opacity: 0.5 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-[22px] font-black tabular-nums leading-none"
+              style={{ color: consensus.color }}
             >
-              <div className="px-4 py-3 rounded-2xl bg-secondary/60 border border-border/50">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Board Consensus</span>
-                  <span className="text-[11px] font-bold" style={{ color: consensus.color }}>{consensus.label}</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
+              {avgRing}%
+            </motion.p>
+            <p className="text-[8px] text-muted-foreground/40 uppercase tracking-widest">consensus</p>
+          </div>
+        </div>
+        {/* Per-advisor mini bars */}
+        <div className="flex gap-1.5 mb-2">
+          {PERSONAS.map(p => {
+            const conf = responses[p.key]?.confidence ?? (cardStates[p.key] === "idle" ? 0 : p.ringPct);
+            const pColor = SENTIMENT_COLORS[p.sentiment];
+            return (
+              <div key={p.key} className="flex-1 flex flex-col gap-0.5">
+                <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${avgRing}%` }}
-                    transition={{ duration: 1.2, ease: "easeOut" }}
+                    animate={{ width: cardStates[p.key] === "revealed" ? `${conf}%` : "0%" }}
+                    transition={{ duration: 1.0, ease: "easeOut", delay: p.delay / 1000 }}
                     className="h-full rounded-full"
-                    style={{ background: `linear-gradient(90deg, ${consensus.color}80, ${consensus.color})` }}
+                    style={{ background: pColor }}
                   />
                 </div>
-                <p className="text-[9px] text-muted-foreground/60 mt-1">{avgRing}% average confidence across all 4 advisors</p>
+                <p className="text-[8px] text-muted-foreground/40 text-center truncate">{p.initials}</p>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            );
+          })}
+        </div>
+        {/* Main composite bar */}
+        <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${avgRing}%` }}
+            transition={{ duration: 1.4, ease: "easeOut" }}
+            className="h-full rounded-full"
+            style={{ background: `linear-gradient(90deg, ${consensus.color}70, ${consensus.color})` }}
+          />
+        </div>
+      </motion.div>
 
       {/* 2×2 grid with flex for expand */}
       <div className="flex-1 flex gap-3 min-h-0">

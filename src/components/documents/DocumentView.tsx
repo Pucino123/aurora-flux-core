@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { DbDocument } from "@/hooks/useDocuments";
 import DocumentAiChat from "./DocumentAiChat";
 import WordsToolbar from "./toolbar/WordsToolbar";
@@ -68,6 +69,22 @@ interface EditorProps {
 }
 
 /* ─── Text Editor ─── */
+// ── Slash Command palette config ──
+const SLASH_COMMANDS = [
+  { icon: "H1", label: "Heading 1", desc: "Large section header", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "h1") },
+  { icon: "H2", label: "Heading 2", desc: "Medium section header", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "h2") },
+  { icon: "H3", label: "Heading 3", desc: "Small section header", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "h3") },
+  { icon: "•", label: "Bullet List", desc: "Unordered list", action: (exec: (c: string, v?: string) => void) => exec("insertUnorderedList") },
+  { icon: "1.", label: "Numbered List", desc: "Ordered numbered list", action: (exec: (c: string, v?: string) => void) => exec("insertOrderedList") },
+  { icon: '❝', label: "Quote", desc: "Block quote for citations", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "blockquote") },
+  { icon: "</>", label: "Code Block", desc: "Monospace code formatting", action: (exec: (c: string, v?: string) => void) => exec("formatBlock", "pre") },
+  { icon: "—", label: "Divider", desc: "Horizontal rule separator", action: (exec: (c: string, v?: string) => void) => exec("insertHorizontalRule") },
+  { icon: "✨", label: "Ask Aura", desc: "AI writes into your document", action: (_exec: (c: string, v?: string) => void, editorRef: React.RefObject<HTMLDivElement>) => {
+    window.dispatchEvent(new CustomEvent("aura:open-panel"));
+    editorRef.current?.blur();
+  }},
+];
+
 const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, renameValue, setRenameValue, commitRename, confirmDelete, setConfirmDelete, lightMode = false, onToggleLightMode, splitViewButton }: EditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
@@ -78,6 +95,12 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const streamCancelRef = useRef<(() => void) | null>(null);
   const streamFinishRef = useRef<(() => void) | null>(null);
   const lm = lightMode;
+  // Slash commands
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashPos, setSlashPos] = useState<{ top: number; left: number } | null>(null);
+  const slashRangeRef = useRef<Range | null>(null);
 
   useEffect(() => {
     if (editorRef.current && !initialized.current) {
@@ -320,9 +343,72 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     editorRef.current.focus();
   }, [ghostText, doc.id, onUpdate]);
 
+  const filteredSlashCmds = SLASH_COMMANDS.filter(c =>
+    c.label.toLowerCase().includes(slashQuery.toLowerCase()) ||
+    c.desc.toLowerCase().includes(slashQuery.toLowerCase())
+  );
+
+  const closeSlash = useCallback(() => {
+    setSlashOpen(false);
+    setSlashQuery("");
+    setSlashIndex(0);
+    slashRangeRef.current = null;
+  }, []);
+
+  const applySlashCommand = useCallback((cmd: typeof SLASH_COMMANDS[0]) => {
+    // Delete the slash + query text typed so far
+    const sel = window.getSelection();
+    if (sel && slashRangeRef.current) {
+      sel.removeAllRanges();
+      const r = slashRangeRef.current.cloneRange();
+      // Extend range back by (1 + slashQuery.length) chars to cover "/query"
+      r.setStart(r.endContainer, Math.max(0, (r.endOffset - 1 - slashQuery.length)));
+      r.deleteContents();
+      sel.addRange(r);
+    }
+    cmd.action(exec, editorRef);
+    setTimeout(() => handleInput(), 50);
+    closeSlash();
+  }, [exec, slashQuery, closeSlash, handleInput]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Slash palette navigation
+    if (slashOpen) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setSlashIndex(i => Math.min(i + 1, filteredSlashCmds.length - 1)); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setSlashIndex(i => Math.max(i - 1, 0)); return; }
+      if (e.key === "Enter") { e.preventDefault(); if (filteredSlashCmds[slashIndex]) applySlashCommand(filteredSlashCmds[slashIndex]); return; }
+      if (e.key === "Escape") { closeSlash(); return; }
+      if (e.key === "Backspace" && slashQuery === "") { closeSlash(); return; }
+      // Keep typing to filter
+      return;
+    }
+
     if (e.key === "Tab" && ghostText) { e.preventDefault(); acceptGhost(); return; }
     if (ghostText && !e.metaKey && !e.ctrlKey && e.key.length === 1) setGhostText(null);
+
+    // Open slash palette on "/"
+    if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const editorRect = editorRef.current?.getBoundingClientRect();
+        if (editorRect) {
+          const top = rect.bottom - editorRect.top + 4;
+          const left = Math.min(rect.left - editorRect.left, editorRect.width - 260);
+          setSlashPos({ top, left });
+          // Store range AFTER the "/" (we'll type it normally; detect on next keyup)
+          const savedRange = range.cloneRange();
+          savedRange.collapse(false);
+          slashRangeRef.current = savedRange;
+          setSlashOpen(true);
+          setSlashQuery("");
+          setSlashIndex(0);
+        }
+      }
+      return; // let "/" be typed naturally
+    }
+
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
     const key = e.key.toLowerCase();
@@ -343,7 +429,37 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     if (e.shiftKey && key === "9") { e.preventDefault(); exec("formatBlock", "blockquote"); return; }
     if (e.altKey && ["1", "2", "3"].includes(key)) { e.preventDefault(); exec("formatBlock", `h${key}`); return; }
     if (shortcuts[key]) { e.preventDefault(); shortcuts[key](); }
-  }, [exec, ghostText, acceptGhost]);
+  }, [exec, ghostText, acceptGhost, slashOpen, slashQuery, slashIndex, filteredSlashCmds, applySlashCommand, closeSlash]);
+
+  // Update slash query as user types after "/"
+  const handleInputWithSlash = useCallback(() => {
+    if (editorRef.current) {
+      onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+    }
+    if (slashOpen) {
+      // Read what the user typed after the "/"
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && slashRangeRef.current) {
+        const currentRange = sel.getRangeAt(0);
+        try {
+          const textNode = currentRange.startContainer;
+          if (textNode.nodeType === Node.TEXT_NODE) {
+            const text = textNode.textContent || "";
+            const slashIdx = text.lastIndexOf("/");
+            if (slashIdx !== -1) {
+              const query = text.slice(slashIdx + 1);
+              setSlashQuery(query);
+              setSlashIndex(0);
+            } else {
+              closeSlash();
+            }
+          }
+        } catch {
+          closeSlash();
+        }
+      }
+    }
+  }, [doc.id, onUpdate, slashOpen, closeSlash]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -412,7 +528,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          onInput={handleInput}
+          onInput={handleInputWithSlash}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => { handleClick(e); editorRef.current?.focus(); }}
           onKeyDown={handleKeyDown}
@@ -445,6 +561,55 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
             ${lm ? "selection:bg-primary/20" : "selection:bg-primary/20"}`}
           data-placeholder="Start typing..."
         />
+        {/* ── Slash Command Palette ── */}
+        <AnimatePresence>
+          {slashOpen && slashPos && filteredSlashCmds.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.97 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="absolute z-[200] w-60 rounded-2xl border border-border/50 shadow-2xl overflow-hidden"
+              style={{
+                top: slashPos.top,
+                left: Math.max(8, slashPos.left),
+                background: lm ? "rgba(255,255,255,0.98)" : "rgba(20,18,32,0.98)",
+                backdropFilter: "blur(20px)",
+              }}
+              onMouseDown={e => e.preventDefault()}
+            >
+              <div className="px-3 py-1.5 border-b border-border/30">
+                <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">Insert block</p>
+              </div>
+              <div className="py-1 max-h-52 overflow-y-auto">
+                {filteredSlashCmds.map((cmd, i) => (
+                  <button
+                    key={cmd.label}
+                    onMouseDown={e => { e.preventDefault(); applySlashCommand(cmd); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                      i === slashIndex
+                        ? "bg-primary/15 text-primary"
+                        : lm ? "hover:bg-gray-100 text-gray-800" : "hover:bg-white/5 text-foreground/80"
+                    }`}
+                  >
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                      i === slashIndex ? "bg-primary/20 text-primary" : "bg-secondary/60 text-muted-foreground"
+                    }`}>
+                      {cmd.icon}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-medium leading-tight">{cmd.label}</p>
+                      <p className="text-[9px] text-muted-foreground/60 truncate">{cmd.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="px-3 py-1.5 border-t border-border/20">
+                <p className="text-[8px] text-muted-foreground/40">↑↓ navigate · Enter to apply · Esc to dismiss</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
         <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
       </div>
