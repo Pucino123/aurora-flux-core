@@ -22,6 +22,9 @@ interface DesktopFolderProps {
   onBulkContextMenu?: (e: React.MouseEvent) => void;
   positionOverride?: { x: number; y: number };
   onPositionChange?: (id: string, pos: { x: number; y: number }) => void;
+  allPages?: { id: string; label: string; index: number }[];
+  currentPageIndex?: number;
+  onMoveToPage?: (folderId: string, targetPageIndex: number) => void;
 }
 
 const FOLDER_COLORS = [

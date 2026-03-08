@@ -25,6 +25,9 @@ interface DesktopDocumentProps {
   onBulkContextMenu?: (e: React.MouseEvent) => void;
   positionOverride?: { x: number; y: number };
   onPositionChange?: (id: string, pos: { x: number; y: number }) => void;
+  allPages?: { id: string; label: string; index: number }[];
+  currentPageIndex?: number;
+  onMoveToPage?: (docId: string, targetPageIndex: number) => void;
 }
 
 const ICON_COLORS = [
