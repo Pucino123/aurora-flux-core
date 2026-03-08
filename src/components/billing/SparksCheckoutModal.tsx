@@ -8,15 +8,23 @@ import { useMonetization } from "@/context/MonetizationContext";
 
 interface Package {
   sparks: number;
+  bonus?: number;
   price: string;
   label: string;
-  popular?: boolean;
+  bestValue?: boolean;
 }
 
 const PACKAGES: Package[] = [
-  { sparks: 60,  price: "$5",  label: "Starter Pack" },
-  { sparks: 150, price: "$10", label: "Power Pack", popular: true },
-  { sparks: 400, price: "$25", label: "Pro Bundle" },
+  { sparks: 50,  price: "$5",  label: "Starter Pack" },
+  { sparks: 100, bonus: 20, price: "$10", label: "Power Pack", bestValue: true },
+  { sparks: 200, bonus: 100, price: "$20", label: "Pro Bundle" },
+];
+
+const VALUE_ITEMS = [
+  { icon: "🧠", label: "Ask Aura AI",       cost: "1–3 Sparks" },
+  { icon: "⚖️", label: "Council Session",   cost: "5 Sparks" },
+  { icon: "📄", label: "AI Document Draft", cost: "4 Sparks" },
+  { icon: "📊", label: "Smart Plan",        cost: "2 Sparks" },
 ];
 
 type PayState = "idle" | "processing" | "success";
@@ -115,10 +123,11 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
               }}
             >
               {/* Header */}
+              {/* Header */}
               <div className="flex items-center justify-between px-6 pt-6 pb-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                    <Sparkles size={18} className="text-amber-400" />
+                  <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <Sparkles size={18} className="text-primary" />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-foreground">Top Up Sparks</p>
@@ -131,7 +140,7 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
                 </button>
               </div>
 
-              {/* Success state */}
+              {/* Success/Checkout states */}
               <AnimatePresence mode="wait">
                 {payState === "success" ? (
                   <motion.div
@@ -141,26 +150,25 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
                     exit={{ opacity: 0 }}
                     className="px-6 pb-8 flex flex-col items-center text-center gap-4"
                   >
-                    {/* Burst ring */}
                     <motion.div
                       initial={{ scale: 0, opacity: 1 }}
                       animate={{ scale: 2.5, opacity: 0 }}
                       transition={{ duration: 0.7, ease: "easeOut" }}
-                      className="absolute w-16 h-16 rounded-full border-2 border-emerald-400/50"
+                      className="absolute w-16 h-16 rounded-full border-2 border-primary/50"
                     />
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.1 }}
-                      className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.5)]"
+                      className="w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-[0_0_30px_hsl(var(--primary)/0.5)]"
                     >
-                      <Check size={28} className="text-white" />
+                      <Check size={28} className="text-primary-foreground" />
                     </motion.div>
                     <div>
                       <p className="text-lg font-bold text-foreground mb-1">Payment Successful!</p>
                       <motion.p
                         key={displayCount}
-                        className="text-4xl font-black text-amber-400"
+                        className="text-4xl font-black text-primary"
                       >
                         +{displayCount} ✨
                       </motion.p>
@@ -170,43 +178,71 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
                 ) : (
                   <motion.div key="checkout" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     {/* Package selector */}
-                    <div className="px-6 pb-4 space-y-2.5">
-                      {PACKAGES.map(pkg => (
-                        <button
-                          key={pkg.sparks}
-                          onClick={() => setSelected(pkg)}
-                          className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                            selected.sparks === pkg.sparks
-                              ? "border-emerald-500/40 bg-emerald-500/8 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
-                              : "border-border/30 hover:border-border/60 hover:bg-secondary/30"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                              selected.sparks === pkg.sparks ? "bg-emerald-500/15" : "bg-secondary/60"
-                            }`}>
-                              <Zap size={15} className={selected.sparks === pkg.sparks ? "text-emerald-400" : "text-muted-foreground"} />
-                            </div>
-                            <div className="text-left">
-                              <p className="text-sm font-semibold text-foreground">{pkg.sparks} Sparks</p>
-                              <p className="text-[11px] text-muted-foreground">{pkg.label}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {pkg.popular && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-medium">Popular</span>
+                    <div className="px-6 pb-4 space-y-2">
+                      {PACKAGES.map(pkg => {
+                        const isSelected = selected.sparks === pkg.sparks && selected.price === pkg.price;
+                        const totalSparks = pkg.sparks + (pkg.bonus ?? 0);
+                        return (
+                          <button
+                            key={pkg.price}
+                            onClick={() => setSelected(pkg)}
+                            className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all relative overflow-hidden ${
+                              isSelected
+                                ? "border-primary/40 bg-primary/8 shadow-[0_0_12px_hsl(var(--primary)/0.15)]"
+                                : "border-border/30 hover:border-border/60 hover:bg-secondary/30"
+                            }`}
+                          >
+                            {/* Best Value ribbon */}
+                            {pkg.bestValue && (
+                              <span className="absolute top-0 right-0 text-[9px] font-bold px-2 py-0.5 rounded-bl-xl bg-primary text-primary-foreground tracking-wide">
+                                BEST VALUE
+                              </span>
                             )}
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                                isSelected ? "bg-primary/15" : "bg-secondary/60"
+                              }`}>
+                                <Zap size={15} className={isSelected ? "text-primary" : "text-muted-foreground"} />
+                              </div>
+                              <div className="text-left">
+                                <p className="text-sm font-semibold text-foreground">
+                                  {totalSparks} Sparks
+                                  {pkg.bonus && (
+                                    <span className="ml-1.5 text-[10px] font-bold text-primary">+{pkg.bonus} bonus</span>
+                                  )}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground">{pkg.label}</p>
+                              </div>
+                            </div>
                             <span className="text-sm font-bold text-foreground">{pkg.price}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Value breakdown */}
+                    <div className="mx-6 mb-4 rounded-xl border border-border/20 bg-secondary/20 overflow-hidden">
+                      <p className="px-3 pt-2.5 pb-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                        What does a Spark get you?
+                      </p>
+                      <div className="grid grid-cols-2 gap-px bg-border/20">
+                        {VALUE_ITEMS.map(item => (
+                          <div key={item.label} className="flex items-center gap-2 px-3 py-2 bg-card/60">
+                            <span className="text-base leading-none">{item.icon}</span>
+                            <div>
+                              <p className="text-[11px] font-medium text-foreground leading-tight">{item.label}</p>
+                              <p className="text-[10px] text-muted-foreground">{item.cost}</p>
+                            </div>
                           </div>
-                        </button>
-                      ))}
+                        ))}
+                      </div>
                     </div>
 
                     {/* Payment method */}
                     <div className="mx-6 mb-4 flex items-center gap-2.5 p-3 rounded-xl border border-border/20 bg-secondary/20">
                       <CreditCard size={14} className="text-muted-foreground" />
                       <span className="text-xs text-muted-foreground flex-1">Visa ending in <span className="text-foreground font-medium">4242</span></span>
-                      <span className="text-[10px] text-emerald-400 font-medium">Active</span>
+                      <span className="text-[10px] text-primary font-medium">Active</span>
                     </div>
 
                     {/* Pay button */}
@@ -215,8 +251,7 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
                         onClick={handlePay}
                         disabled={payState === "processing"}
                         whileTap={{ scale: 0.97 }}
-                        className="w-full py-3.5 rounded-2xl font-bold text-sm text-white relative overflow-hidden shadow-lg"
-                        style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
+                        className="w-full py-3.5 rounded-2xl font-bold text-sm text-primary-foreground relative overflow-hidden shadow-lg bg-primary hover:opacity-90 transition-opacity"
                       >
                         <AnimatePresence mode="wait">
                           {payState === "processing" ? (
@@ -230,7 +265,7 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
                               <motion.div
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-                                className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                                className="w-4 h-4 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground"
                               />
                               Processing…
                             </motion.span>
@@ -243,7 +278,7 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
                               className="flex items-center justify-center gap-2"
                             >
                               <Sparkles size={16} />
-                              Pay {selected.price} · Get {selected.sparks} Sparks
+                              Pay {selected.price} · Get {selected.sparks + (selected.bonus ?? 0)} Sparks
                             </motion.span>
                           )}
                         </AnimatePresence>
