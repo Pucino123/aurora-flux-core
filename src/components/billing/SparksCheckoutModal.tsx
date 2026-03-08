@@ -123,12 +123,37 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
               }}
             >
               {/* Header */}
+              {/* Header */}
               <div className="flex items-center justify-between px-6 pt-6 pb-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
                     <Sparkles size={18} className="text-primary" />
                   </div>
-...
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Top Up Sparks</p>
+                    <p className="text-[11px] text-muted-foreground">Power your AI workspace</p>
+                  </div>
+                </div>
+                <button onClick={handleClose} disabled={payState === "processing"}
+                  className="p-1.5 rounded-xl hover:bg-secondary transition-colors text-muted-foreground">
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Success/Checkout states */}
+              <AnimatePresence mode="wait">
+                {payState === "success" ? (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="px-6 pb-8 flex flex-col items-center text-center gap-4"
+                  >
+                    <motion.div
+                      initial={{ scale: 0, opacity: 1 }}
+                      animate={{ scale: 2.5, opacity: 0 }}
+                      transition={{ duration: 0.7, ease: "easeOut" }}
                       className="absolute w-16 h-16 rounded-full border-2 border-primary/50"
                     />
                     <motion.div
