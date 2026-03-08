@@ -1321,6 +1321,100 @@ const TEMPLATES: Template[] = [
       );
     },
   },
+  // ── CREATIVE MOOD BOARD (Canvas) ─────────────────────────────────────────
+  {
+    id: "creative-mood-board",
+    title: "Creative Mood Board",
+    subtitle: "Drag & drop visual canvas",
+    type: "text",
+    category: "Creative",
+    content: {
+      entities: [
+        { id: "mb1", type: "rect",    position: { x: 40, y: 40 },   size: { w: 200, h: 120 }, style: { fill: "#7c3aed", stroke: "#5b21b6", strokeWidth: 0, borderRadius: 16, opacity: 0.9 }, content: "", zIndex: 1 },
+        { id: "mb2", type: "circle",  position: { x: 280, y: 60 },  size: { w: 90,  h: 90  }, style: { fill: "#ec4899", stroke: "#be185d", strokeWidth: 0, borderRadius: 50, opacity: 1   }, content: "", zIndex: 2 },
+        { id: "mb3", type: "rect",    position: { x: 400, y: 30 },  size: { w: 160, h: 80  }, style: { fill: "#0ea5e9", stroke: "#0369a1", strokeWidth: 0, borderRadius: 12, opacity: 0.85}, content: "", zIndex: 3 },
+        { id: "mb4", type: "textBox", position: { x: 50, y: 200 },  size: { w: 220, h: 55  }, style: { fill: "transparent", stroke: "#f0abfc", strokeWidth: 1.5, borderRadius: 8, opacity: 1 }, content: "My Vision ✨", zIndex: 4 },
+        { id: "mb5", type: "circle",  position: { x: 420, y: 160 }, size: { w: 130, h: 130 }, style: { fill: "#f59e0b", stroke: "#d97706", strokeWidth: 0, borderRadius: 50, opacity: 0.8 }, content: "", zIndex: 5 },
+        { id: "mb6", type: "rect",    position: { x: 160, y: 290 }, size: { w: 180, h: 100 }, style: { fill: "#10b981", stroke: "#065f46", strokeWidth: 0, borderRadius: 20, opacity: 0.75}, content: "", zIndex: 6 },
+        { id: "mb7", type: "textBox", position: { x: 370, y: 320 }, size: { w: 200, h: 50  }, style: { fill: "rgba(255,255,255,0.08)", stroke: "#e2e8f0", strokeWidth: 1, borderRadius: 8, opacity: 1 }, content: "Add your ideas here", zIndex: 7 },
+      ],
+    },
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      return (
+        <div className="w-full h-full relative overflow-hidden" style={{ background: isDark ? "#0f0a1e" : "#f8f4ff" }}>
+          <div className="absolute rounded-xl" style={{ left: "5%",  top: "8%",  width: "38%", height: "30%", background: "#7c3aed", opacity: 0.85 }} />
+          <div className="absolute rounded-full" style={{ left: "48%", top: "10%", width: "18%", height: "25%", background: "#ec4899" }} />
+          <div className="absolute rounded-lg"  style={{ left: "68%", top: "6%",  width: "28%", height: "22%", background: "#0ea5e9", opacity: 0.85 }} />
+          <div className="absolute rounded-full" style={{ left: "70%", top: "35%", width: "25%", height: "35%", background: "#f59e0b", opacity: 0.8 }} />
+          <div className="absolute rounded-2xl" style={{ left: "25%", top: "60%", width: "32%", height: "28%", background: "#10b981", opacity: 0.75 }} />
+          <div className="absolute rounded-md"  style={{ left: "6%",  top: "52%", width: "35%", height: "9%",  background: "transparent", border: "1.5px solid #f0abfc" }}>
+            <span style={{ fontSize: 4, color: "#f0abfc", padding: "0 3px" }}>My Vision ✨</span>
+          </div>
+        </div>
+      );
+    },
+  },
+
+  // ── WIREFRAME PROTOTYPE (Canvas) ──────────────────────────────────────────
+  {
+    id: "wireframe-prototype",
+    title: "Wireframe Prototype",
+    subtitle: "App screen wireframe canvas",
+    type: "text",
+    category: "Creative",
+    content: {
+      entities: [
+        // Screen frame
+        { id: "wf-frame",    type: "rect",    position: { x: 30,  y: 20  }, size: { w: 320, h: 480 }, style: { fill: "transparent",      stroke: "#64748b", strokeWidth: 2, borderRadius: 12, opacity: 1 }, content: "", zIndex: 1 },
+        // Nav bar
+        { id: "wf-nav",      type: "rect",    position: { x: 30,  y: 20  }, size: { w: 320, h: 44  }, style: { fill: "#1e293b",           stroke: "#334155", strokeWidth: 1, borderRadius: 12, opacity: 1 }, content: "", zIndex: 2 },
+        { id: "wf-nav-txt",  type: "textBox", position: { x: 130, y: 30  }, size: { w: 120, h: 24  }, style: { fill: "transparent",      stroke: "#94a3b8", strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "App Title", zIndex: 3 },
+        // Hero banner
+        { id: "wf-hero",     type: "rect",    position: { x: 50,  y: 80  }, size: { w: 280, h: 100 }, style: { fill: "#334155",           stroke: "#475569", strokeWidth: 1, borderRadius: 8,  opacity: 1 }, content: "", zIndex: 4 },
+        { id: "wf-hero-txt", type: "textBox", position: { x: 90,  y: 110 }, size: { w: 200, h: 40  }, style: { fill: "transparent",      stroke: "#94a3b8", strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "Hero Image / Banner", zIndex: 5 },
+        // Buttons
+        { id: "wf-btn1",     type: "rect",    position: { x: 50,  y: 200 }, size: { w: 128, h: 36  }, style: { fill: "#3b82f6",           stroke: "#2563eb", strokeWidth: 0, borderRadius: 8,  opacity: 1 }, content: "", zIndex: 6 },
+        { id: "wf-btn1t",    type: "textBox", position: { x: 68,  y: 208 }, size: { w: 92,  h: 20  }, style: { fill: "transparent",      stroke: "#ffffff", strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "Primary CTA", zIndex: 7 },
+        { id: "wf-btn2",     type: "rect",    position: { x: 202, y: 200 }, size: { w: 128, h: 36  }, style: { fill: "transparent",      stroke: "#64748b", strokeWidth: 1, borderRadius: 8,  opacity: 1 }, content: "", zIndex: 8 },
+        { id: "wf-btn2t",    type: "textBox", position: { x: 216, y: 208 }, size: { w: 100, h: 20  }, style: { fill: "transparent",      stroke: "#94a3b8", strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "Secondary", zIndex: 9 },
+        // Cards row
+        { id: "wf-card1",    type: "rect",    position: { x: 50,  y: 260 }, size: { w: 80,  h: 80  }, style: { fill: "#1e293b",           stroke: "#334155", strokeWidth: 1, borderRadius: 8,  opacity: 1 }, content: "", zIndex: 10 },
+        { id: "wf-card2",    type: "rect",    position: { x: 150, y: 260 }, size: { w: 80,  h: 80  }, style: { fill: "#1e293b",           stroke: "#334155", strokeWidth: 1, borderRadius: 8,  opacity: 1 }, content: "", zIndex: 11 },
+        { id: "wf-card3",    type: "rect",    position: { x: 250, y: 260 }, size: { w: 80,  h: 80  }, style: { fill: "#1e293b",           stroke: "#334155", strokeWidth: 1, borderRadius: 8,  opacity: 1 }, content: "", zIndex: 12 },
+        // Bottom tab bar
+        { id: "wf-tabs",     type: "rect",    position: { x: 30,  y: 424 }, size: { w: 320, h: 56  }, style: { fill: "#1e293b",           stroke: "#334155", strokeWidth: 1, borderRadius: 0,  opacity: 1 }, content: "", zIndex: 13 },
+        { id: "wf-tab1",     type: "circle",  position: { x: 75,  y: 440 }, size: { w: 24,  h: 24  }, style: { fill: "#3b82f6",           stroke: "#2563eb", strokeWidth: 0, borderRadius: 50, opacity: 1 }, content: "", zIndex: 14 },
+        { id: "wf-tab2",     type: "circle",  position: { x: 175, y: 440 }, size: { w: 24,  h: 24  }, style: { fill: "#475569",           stroke: "#64748b", strokeWidth: 0, borderRadius: 50, opacity: 1 }, content: "", zIndex: 15 },
+        { id: "wf-tab3",     type: "circle",  position: { x: 275, y: 440 }, size: { w: 24,  h: 24  }, style: { fill: "#475569",           stroke: "#64748b", strokeWidth: 0, borderRadius: 50, opacity: 1 }, content: "", zIndex: 16 },
+      ],
+    },
+    thumbnail: (isDark) => (
+      <div className="w-full h-full flex items-center justify-center" style={{ background: isDark ? "#0f172a" : "#f1f5f9" }}>
+        <div className="relative" style={{ width: "62%", height: "88%", border: `1.5px solid ${isDark ? "#475569" : "#94a3b8"}`, borderRadius: 8 }}>
+          {/* Nav */}
+          <div className="absolute inset-x-0 top-0 h-[10%]" style={{ background: isDark ? "#1e293b" : "#e2e8f0", borderRadius: "6px 6px 0 0" }} />
+          {/* Hero */}
+          <div className="absolute" style={{ left: "5%", top: "13%", right: "5%", height: "22%", background: isDark ? "#334155" : "#cbd5e1", borderRadius: 4 }} />
+          {/* Buttons */}
+          <div className="absolute flex gap-1" style={{ left: "5%", top: "40%", right: "5%" }}>
+            <div style={{ flex: 1, height: 8, background: "#3b82f6", borderRadius: 3 }} />
+            <div style={{ flex: 1, height: 8, background: "transparent", border: `1px solid ${isDark ? "#64748b" : "#94a3b8"}`, borderRadius: 3 }} />
+          </div>
+          {/* Cards */}
+          <div className="absolute flex gap-1" style={{ left: "5%", top: "55%", right: "5%" }}>
+            {[0,1,2].map(i => <div key={i} style={{ flex: 1, height: 18, background: isDark ? "#1e293b" : "#e2e8f0", borderRadius: 3, border: `0.5px solid ${isDark ? "#334155" : "#cbd5e1"}` }} />)}
+          </div>
+          {/* Tabs */}
+          <div className="absolute inset-x-0 bottom-0 h-[12%] flex items-center justify-around px-1" style={{ background: isDark ? "#1e293b" : "#e2e8f0", borderRadius: "0 0 6px 6px" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#3b82f6" }} />
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: isDark ? "#475569" : "#94a3b8" }} />
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: isDark ? "#475569" : "#94a3b8" }} />
+          </div>
+        </div>
+      </div>
+    ),
+  },
 ];
 
 const CATEGORIES = [
