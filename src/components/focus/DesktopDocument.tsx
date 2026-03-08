@@ -86,6 +86,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const [showMoveFolder, setShowMoveFolder] = useState(false);
   const [showMoveToPageMenu, setShowMoveToPageMenu] = useState(false);
   const [flyingOff, setFlyingOff] = useState<{ dir: 1 | -1 } | null>(null);
+  const [dropBounce, setDropBounce] = useState(false);
 
   const rootFolders = useMemo(() => folders.filter(f => !f.parent_id), [folders]);
 
@@ -125,6 +126,10 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
       dragging.current = false;
       setIsDraggingActive(false);
       onDragStateChange?.(null);
+      if (didDrag.current) {
+        setDropBounce(true);
+        setTimeout(() => setDropBounce(false), 500);
+      }
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -195,11 +200,11 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
         initial={{ opacity: 0, scale: 0.88, y: 10 }}
         animate={flyingOff
           ? { x: flyingOff.dir * (window.innerWidth * 0.6), opacity: 0, scale: 0.7, rotate: flyingOff.dir * 12 }
-          : { x: 0, opacity: 1, scale: 1, rotate: 0, y: 0 }
+          : { x: 0, opacity: 1, scale: dropBounce ? [1, 1.06, 0.95, 1.02, 1] : 1, rotate: 0, y: 0 }
         }
         transition={flyingOff
           ? { duration: 0.38, ease: [0.4, 0, 1, 1] }
-          : { type: "spring", stiffness: 260, damping: 20 }
+          : dropBounce ? { duration: 0.42, ease: [0.22, 1.2, 0.36, 1] } : { type: "spring", stiffness: 260, damping: 20 }
         }
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,
