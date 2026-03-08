@@ -190,8 +190,8 @@ function buildEmailHtml(opts: {
           <!-- Footer -->
           <tr>
             <td style="background:#f9fafb;padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;">
-              <p style="font-size:12px;color:#9ca3af;margin:0 0 4px;">Sent by <strong style="color:#6366f1;">Flux</strong> — Your AI Productivity OS</p>
-              <p style="font-size:11px;color:#d1d5db;margin:0;">You're receiving this because you have a Flux account.</p>
+              <p style="font-size:12px;color:#9ca3af;margin:0 0 4px;">Sent by <strong style="color:#6366f1;">Dashiii</strong> — Your AI Productivity OS</p>
+              <p style="font-size:11px;color:#d1d5db;margin:0;">You're receiving this because you have a Dashiii account.</p>
             </td>
           </tr>
 
