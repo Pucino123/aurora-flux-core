@@ -193,24 +193,39 @@ const CommunityAdminView = () => {
 
         {adminTab === "overview" && (
           <>
-            {/* KPI Row */}
+            {/* KPI Row — based on real slot data */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard icon={Users} label="Total Users" value="1,248" sub="↑ +12% this week" />
-              <KpiCard icon={Cpu} label="Active Workspaces" value="342" sub="↑ +8 today" subColor="text-blue-400" />
-              <KpiCard icon={AlertTriangle} label="Pending Reports" value={String(reports.length)} sub={reports.length > 0 ? "Requires attention" : "All clear"} subColor={reports.length > 0 ? "text-red-400" : "text-emerald-400"} pulse={reports.length > 0} />
-              <KpiCard icon={Activity} label="System Health" value="99.9%" sub="Uptime this month" />
+              <KpiCard icon={Users} label="Total Submissions" value={String(slots.length)} sub={`${approvedSlots.length} approved`} />
+              <KpiCard icon={Cpu} label="Live Slots" value={String(approvedSlots.length)} sub="Visible on board" subColor="text-blue-400" />
+              <KpiCard icon={AlertTriangle} label="Pending Review" value={String(pendingSlots.length)} sub={pendingSlots.length > 0 ? "Requires attention" : "All clear"} subColor={pendingSlots.length > 0 ? "text-red-400" : "text-emerald-400"} pulse={pendingSlots.length > 0} />
+              <KpiCard icon={Activity} label="Available Slots" value={String(Math.max(0, 18 - slots.length))} sub="Free to claim" subColor="text-amber-400" />
             </div>
 
             {/* Two-col split */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Activity Feed */}
+              {/* Recent submissions */}
               <div className="rounded-2xl p-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Activity size={14} className="text-indigo-400" /> Live Activity</h3>
-                <div>
-                  {MOCK_ACTIVITY.map((a, i) => (
-                    <ActivityItem key={i} {...a} />
-                  ))}
-                </div>
+                <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Activity size={14} className="text-indigo-400" /> Recent Submissions</h3>
+                {slots.length === 0 ? (
+                  <div className="text-center py-8 text-white/30 text-sm">No submissions yet</div>
+                ) : (
+                  <div>
+                    {slots.slice(0, 6).map((slot, i) => (
+                      <div key={slot.id} className="flex items-start gap-3 py-2.5 border-b last:border-0" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0" style={{ background: "rgba(99,102,241,0.2)", color: "#a5b4fc" }}>
+                          {slot.projectName?.[0] ?? "#"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white/80"><span className="font-semibold text-white">{slot.projectName || "Unnamed project"}</span> submitted slot #{slot.slotIndex}</p>
+                          <p className="text-[10px] text-white/30 mt-0.5">{timeAgo(slot.createdAt)}</p>
+                        </div>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${slot.status === "approved" ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+                          {slot.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Moderation Queue */}
