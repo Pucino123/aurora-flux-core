@@ -41,11 +41,13 @@ const WidgetToggleBar = () => {
 
   return (
     <>
-      <motion.div
+        <motion.div
+        layout
+        layoutId="widget-toggle-bar"
         animate={{ opacity: isFocusModeActive ? 0 : 1, y: isFocusModeActive ? 40 : 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.3, layout: { duration: 0.25, ease: "easeInOut" } }}
         style={{ pointerEvents: isFocusModeActive ? "none" : undefined }}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 px-2 py-1.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 shadow-lg transition-all duration-300"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 px-2 py-1.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 shadow-lg"
       >
         {/* ── Static widget toggles ── */}
         {PRIMARY_WIDGETS.map(({ id, label, icon: Icon }) => {
