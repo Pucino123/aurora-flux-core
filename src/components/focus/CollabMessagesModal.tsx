@@ -384,24 +384,13 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Override default Radix overlay & content animations */}
+      {/* Smooth fade+scale overlay */}
       <style dangerouslySetInnerHTML={{ __html: `
         [data-state="open"][class*="bg-black"] { background: rgba(0,0,0,0.35) !important; backdrop-filter: blur(4px); }
-        @keyframes genie-in {
-          0%   { opacity:0; transform: scaleY(0.04) scaleX(0.40); filter: blur(6px); }
-          35%  { opacity:1; transform: scaleY(0.55) scaleX(0.78); filter: blur(2px); }
-          68%  { transform: scaleY(1.04) scaleX(1.01); filter: blur(0); }
-          83%  { transform: scaleY(0.978) scaleX(1.004); }
-          100% { opacity:1; transform: scaleY(1) scaleX(1); filter: blur(0); }
-        }
-        @keyframes genie-out {
-          0%   { opacity:1; transform: scaleY(1) scaleX(1); }
-          20%  { transform: scaleY(0.82) scaleX(0.92); }
-          60%  { transform: scaleY(0.18) scaleX(0.55); filter: blur(2px); }
-          100% { opacity:0; transform: scaleY(0.03) scaleX(0.38); filter: blur(6px); }
-        }
-        [data-collab-modal][data-state="open"]  { animation: genie-in  0.48s cubic-bezier(0.22,1.2,0.36,1) forwards !important; transform-origin: center center !important; }
-        [data-collab-modal][data-state="closed"] { animation: genie-out 0.32s cubic-bezier(0.4,0,1,1) forwards !important; transform-origin: center center !important; }
+        [data-collab-modal][data-state="open"]  { animation: collab-in  0.32s cubic-bezier(0.22,1,0.36,1) forwards !important; }
+        [data-collab-modal][data-state="closed"] { animation: collab-out 0.22s ease-in forwards !important; }
+        @keyframes collab-in  { from { opacity:0; transform: scale(0.94) translateY(8px); } to { opacity:1; transform: scale(1) translateY(0); } }
+        @keyframes collab-out { from { opacity:1; transform: scale(1); } to { opacity:0; transform: scale(0.96); } }
       ` }} />
       <DialogContent
         data-collab-modal
