@@ -28,6 +28,7 @@ import ProactiveIntelligence from "./council/ProactiveIntelligence";
 import CouncilBoardroom from "./council/CouncilBoardroom";
 import BoardroomIdeasHistory from "./council/BoardroomIdeasHistory";
 import BoardroomAnalytics from "./council/BoardroomAnalytics";
+import BoardroomComparison from "./council/BoardroomComparison";
 
 // ── Types ──
 
