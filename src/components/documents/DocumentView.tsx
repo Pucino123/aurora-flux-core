@@ -103,12 +103,17 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const [studioMode, setStudioMode] = useState(false);
   const [zoom, setZoom] = useState(100);
 
-  // Layout canvas mode: if doc.content has an entities array, show canvas instead of text editor
-  const isCanvas = Array.isArray((doc.content as any)?.entities);
+  // Layout canvas mode: if doc.content has an entities array, OR canvasMode is toggled on
+  const [canvasMode, setCanvasMode] = useState(false);
+  const isCanvas = canvasMode || Array.isArray((doc.content as any)?.entities);
   const canvasEntities: CanvasEntity[] = (doc.content as any)?.entities || [];
   const handleCanvasChange = useCallback((entities: CanvasEntity[]) => {
     onUpdate(doc.id, { content: { ...(doc.content as any), entities } });
   }, [doc.id, doc.content, onUpdate]);
+
+  const toggleCanvasMode = useCallback(() => {
+    setCanvasMode(prev => !prev);
+  }, []);
   const [ghostText, setGhostText] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const streamCancelRef = useRef<(() => void) | null>(null);
