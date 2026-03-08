@@ -350,11 +350,13 @@ const ExpandedFolderOverlay = ({
           </span>
         </div>
       </motion.div>
-    </AnimatePresence>;
+    </AnimatePresence>,
+    document.body
+  );
 
   return (
     <>
-      {createPortal(portal, document.body)}
+      {portal}
       {showTemplateChooser && (
         <TemplateChooserModal
           onClose={() => setShowTemplateChooser(false)}
