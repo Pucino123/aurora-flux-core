@@ -8,7 +8,7 @@ import { useDocuments } from "@/hooks/useDocuments";
 import { useAuth } from "@/hooks/useAuth";
 import { useWidgetStyle } from "@/hooks/useWidgetStyle";
 import { StyleEditorProvider } from "./StyleEditorContext";
-import BackgroundEngine from "./BackgroundEngine";
+import BackgroundEngine, { SpaceSettings, DEFAULT_SPACE_SETTINGS } from "./BackgroundEngine";
 import FocusTimer from "./FocusTimer";
 import DesktopFolder from "./DesktopFolder";
 import DesktopDocument from "./DesktopDocument";
@@ -69,7 +69,12 @@ type DashboardPage = {
   activeWidgets?: string[];
   stickyNotes?: StickyNote[];
   background?: string; // override global bg
+  spaceSettings?: SpaceSettings; // per-page brightness/blur/vignette/volume
 };
+
+// Screenshot cache for dot hover thumbnails
+const PAGE_THUMBNAILS: Record<string, string> = {};
+let thumbnailCaptureScheduled = false;
 
 // Pagination settings persisted per-session
 const PAGINATION_SETTINGS_KEY = "flux-pagination-settings";
@@ -114,8 +119,10 @@ const FocusContent = () => {
   const dragDotIdx = useRef<number | null>(null);
   const [draggingDotIdx, setDraggingDotIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  // Dot hover preview
+  // Dot hover preview + screenshot thumbnails
   const [hoverDotIdx, setHoverDotIdx] = useState<number | null>(null);
+  const [pageThumbnails, setPageThumbnails] = useState<Record<string, string>>({});
+  const thumbnailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Build-mode pagination settings
   const [paginationSettings, setPaginationSettings] = useState<PaginationSettings>(loadPaginationSettings);
   const [showPillSettings, setShowPillSettings] = useState(false);
@@ -156,6 +163,7 @@ const FocusContent = () => {
           activeWidgets: p.activeWidgets,
           stickyNotes: p.stickyNotes,
           background: p.background,
+          spaceSettings: p.spaceSettings,
         })));
       }
     })();
@@ -188,9 +196,27 @@ const FocusContent = () => {
   }, [syncPagesToCloud]);
 
   const goToPage = useCallback((idx: number) => {
+    // Capture screenshot of current page before leaving
+    if (idx !== activePageIndex) {
+      const pageId = dashboardPages[activePageIndex]?.id;
+      if (pageId) {
+        if (thumbnailTimerRef.current) clearTimeout(thumbnailTimerRef.current);
+        thumbnailTimerRef.current = setTimeout(() => {
+          import("html2canvas").then(({ default: html2canvas }) => {
+            const el = document.querySelector("[data-canvas-root]") as HTMLElement;
+            if (!el) return;
+            html2canvas(el, { scale: 0.15, useCORS: true, allowTaint: true, logging: false, backgroundColor: "#0a0814" })
+              .then(canvas => {
+                setPageThumbnails(prev => ({ ...prev, [pageId]: canvas.toDataURL("image/jpeg", 0.6) }));
+              })
+              .catch(() => {});
+          });
+        }, 200);
+      }
+    }
     setPageDir(idx > activePageIndex ? 1 : -1);
     setActivePageIndex(idx);
-  }, [activePageIndex]);
+  }, [activePageIndex, dashboardPages]);
 
   const addPage = useCallback(() => {
     const newPage: DashboardPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
@@ -198,6 +224,25 @@ const FocusContent = () => {
     setPageDir(1);
     setActivePageIndex(dashboardPages.length);
   }, [dashboardPages.length, setPages]);
+
+  const duplicatePage = useCallback((idx: number) => {
+    const source = dashboardPages[idx];
+    if (!source) return;
+    const newPage: DashboardPage = {
+      id: `page-${Date.now()}`,
+      label: `${source.label} Copy`,
+      activeWidgets: source.activeWidgets ? [...source.activeWidgets] : undefined,
+      stickyNotes: source.stickyNotes ? source.stickyNotes.map(n => ({ ...n, id: `fn-${Date.now()}-${Math.random().toString(36).slice(2,6)}` })) : undefined,
+      background: source.background,
+      spaceSettings: source.spaceSettings ? { ...source.spaceSettings } : undefined,
+    };
+    const insertAt = idx + 1;
+    setPages(prev => { const next = [...prev]; next.splice(insertAt, 0, newPage); return next; });
+    setPageDir(1);
+    setActivePageIndex(insertAt);
+    setDotMenu(null);
+    toast.success("Page duplicated");
+  }, [dashboardPages, setPages]);
 
   const deletePage = useCallback((idx: number) => {
     if (dashboardPages.length <= 1) { toast.error("Can't delete the only page"); return; }
@@ -233,6 +278,12 @@ const FocusContent = () => {
   const pageStickyNotes: StickyNote[] = currentPage?.stickyNotes ?? focusStickyNotes;
   const setPageStickyNotes = useCallback((notes: StickyNote[]) => {
     setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, stickyNotes: notes } : p));
+  }, [activePageIndex, setPages]);
+
+  // Per-page space settings
+  const pageSpaceSettings = currentPage?.spaceSettings;
+  const updatePageSpaceSettings = useCallback((s: SpaceSettings) => {
+    setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, spaceSettings: s } : p));
   }, [activePageIndex, setPages]);
 
   // Touch swipe
@@ -771,6 +822,7 @@ const FocusContent = () => {
     <StyleEditorProvider value={{ openEditor: handleOpenStyleEditor, activeWidgetId: styleEditorTarget }}>
     <div
       ref={canvasRef}
+      data-canvas-root
       className="relative w-full h-[100dvh] overflow-hidden bg-black"
       onContextMenu={handleContextMenu}
       onMouseDown={handleCanvasMouseDown}
@@ -779,11 +831,26 @@ const FocusContent = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <BackgroundEngine
-        embedded
-        pageBackground={currentPage?.background}
-        onPageBackgroundChange={(id) => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: id } : p))}
-      />
+      {/* Background — animate in/out with parallax on page switch */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`bg-${activePageIndex}`}
+          initial={{ x: pageDir * 40, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: pageDir * -40, opacity: 0 }}
+          transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="absolute inset-0"
+          style={{ zIndex: 0 }}
+        >
+          <BackgroundEngine
+            embedded
+            pageBackground={currentPage?.background}
+            onPageBackgroundChange={(id) => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: id } : p))}
+            pageSpaceSettings={pageSpaceSettings}
+            onPageSpaceSettingsChange={updatePageSpaceSettings}
+          />
+        </motion.div>
+      </AnimatePresence>
       {/* Vignette always visible */}
       <div
         className="absolute inset-0 z-[15] pointer-events-none"
@@ -1283,76 +1350,51 @@ const FocusContent = () => {
                       width: 160,
                     }}
                   >
-                    {/* Mini canvas preview */}
-                    <div
-                      className="relative w-full"
-                      style={{
-                        height: 90,
-                        background: dashboardPages[hoverDotIdx]?.background
-                          ? "rgba(30,20,60,0.8)"
-                          : "rgba(20,15,40,0.7)",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {/* Tiny dot grid mimicking build grid */}
-                      <div className="absolute inset-0" style={{
-                        backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
-                        backgroundSize: "14px 14px",
-                      }} />
-                      {/* Widget pill representations */}
-                      {(() => {
-                        const widgets = dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets;
-                        const WIDGET_COLORS: Record<string, string> = {
-                          clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa",
-                          notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c",
-                          quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc",
-                          routine: "#4ade80", "budget-preview": "#f59e0b", "savings-ring": "#10b981",
-                          "weekly-workout": "#ef4444", "project-status": "#3b82f6", "top-tasks": "#8b5cf6",
-                          "smart-plan": "#06b6d4", gamification: "#f97316",
-                        };
-                        const WIDGET_LABELS: Record<string, string> = {
-                          clock: "🕐", timer: "⏱", music: "🎵", planner: "📋",
-                          notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️",
-                          quote: "💬", breathing: "🫁", council: "🤝", aura: "✨",
-                          routine: "🔄", "budget-preview": "💰", "savings-ring": "🏦",
-                          "weekly-workout": "💪", "project-status": "📌", "top-tasks": "✅",
-                          "smart-plan": "🧠", gamification: "🏆",
-                        };
-                        // Layout a grid of mini widget blocks
-                        const cols = 4;
-                        const cellW = 34;
-                        const cellH = 22;
-                        const gap = 4;
-                        const padX = 8;
-                        const padY = 8;
-                        return widgets.slice(0, 8).map((w, wi) => {
-                          const col = wi % cols;
-                          const row = Math.floor(wi / cols);
-                          const x = padX + col * (cellW + gap);
-                          const y = padY + row * (cellH + gap);
-                          const color = WIDGET_COLORS[w] || "#6b7280";
-                          const emoji = WIDGET_LABELS[w] || "□";
-                          return (
-                            <div
-                              key={w}
-                              className="absolute flex items-center justify-center rounded"
-                              style={{
-                                left: x, top: y, width: cellW, height: cellH,
-                                background: `${color}22`,
-                                border: `1px solid ${color}44`,
-                              }}
-                            >
-                              <span style={{ fontSize: 10 }}>{emoji}</span>
-                            </div>
-                          );
-                        });
-                      })()}
-                      {/* Background badge */}
-                      {dashboardPages[hoverDotIdx]?.background && (
-                        <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[7px] font-medium"
-                          style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)" }}>
-                          {dashboardPages[hoverDotIdx].background!.split("-").slice(-1)[0]}
-                        </div>
+                    {/* Mini canvas preview — real screenshot if available, else emoji grid */}
+                    <div className="relative w-full overflow-hidden" style={{ height: 90 }}>
+                      {pageThumbnails[dashboardPages[hoverDotIdx]?.id] ? (
+                        <img
+                          src={pageThumbnails[dashboardPages[hoverDotIdx].id]}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <>
+                          <div className="absolute inset-0" style={{
+                            background: dashboardPages[hoverDotIdx]?.background ? "rgba(30,20,60,0.8)" : "rgba(20,15,40,0.7)",
+                          }} />
+                          <div className="absolute inset-0" style={{
+                            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
+                            backgroundSize: "14px 14px",
+                          }} />
+                          {(() => {
+                            const widgets = dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets;
+                            const WIDGET_COLORS: Record<string, string> = {
+                              clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa",
+                              notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c",
+                              quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc",
+                              routine: "#4ade80",
+                            };
+                            const WIDGET_LABELS: Record<string, string> = {
+                              clock: "🕐", timer: "⏱", music: "🎵", planner: "📋",
+                              notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️",
+                              quote: "💬", breathing: "🫁", council: "🤝", aura: "✨",
+                              routine: "🔄",
+                            };
+                            const cols = 4; const cellW = 34; const cellH = 22; const gap = 4; const padX = 8; const padY = 8;
+                            return widgets.slice(0, 8).map((w, wi) => {
+                              const col = wi % cols; const row = Math.floor(wi / cols);
+                              const x = padX + col * (cellW + gap); const y = padY + row * (cellH + gap);
+                              const color = WIDGET_COLORS[w] || "#6b7280";
+                              return (
+                                <div key={w} className="absolute flex items-center justify-center rounded"
+                                  style={{ left: x, top: y, width: cellW, height: cellH, background: `${color}22`, border: `1px solid ${color}44` }}>
+                                  <span style={{ fontSize: 10 }}>{WIDGET_LABELS[w] || "□"}</span>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </>
                       )}
                     </div>
                     {/* Label row */}
@@ -1446,7 +1488,7 @@ const FocusContent = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed z-[10001] rounded-xl py-1.5 min-w-[160px] overflow-hidden"
+            className="fixed z-[10001] rounded-xl py-1.5 min-w-[170px] overflow-hidden"
             style={{ left: dotMenu.x, top: dotMenu.y, background: "rgba(10,8,20,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)", transform: "translateX(-50%)" }}
           >
             <div className="px-3 py-1.5 text-[10px] font-semibold text-white/35 uppercase tracking-wider">
@@ -1461,6 +1503,10 @@ const FocusContent = () => {
               onClick={() => { goToPage(dotMenu.idx); setDotMenu(null); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
             >→ Switch to page</button>
+            <button
+              onClick={() => duplicatePage(dotMenu.idx)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
+            >⧉ Duplicate page</button>
             {dashboardPages.length > 1 && (
               deleteConfirmIdx === dotMenu.idx ? (
                 <div className="px-3 py-2">
