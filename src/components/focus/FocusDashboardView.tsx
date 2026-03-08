@@ -360,21 +360,21 @@ const FocusContent = () => {
   }, []);
 
   // Pill drag-to-reposition (pointer events so it works on touch too)
+  // Only active in Build mode
   const handlePillPointerDown = useCallback((e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button, input')) return; // don't drag on interactive children
+    if (systemMode !== "build") return; // drag only in build mode
+    if ((e.target as HTMLElement).closest('button, input')) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    // Always use the pill's actual rendered bounding rect as the source of truth
     const rect = pillRef.current?.getBoundingClientRect();
     if (!rect) return;
-    // Use actual rendered top-left from DOM — this is always correct regardless of CSS positioning
     const currentX = rect.left;
     const currentY = rect.top;
     pillDragOrigin.current = { mx: e.clientX, my: e.clientY, px: currentX, py: currentY };
-    // Immediately lock to absolute position so there's no jump
     setPillPos({ x: currentX, y: currentY });
     setIsDraggingPill(true);
-  }, []);
+    setPillBouncing(false);
+  }, [systemMode]);
 
   const handlePillPointerMove = useCallback((e: React.PointerEvent) => {
     if (!pillDragOrigin.current) return;
@@ -389,8 +389,12 @@ const FocusContent = () => {
   }, []);
 
   const handlePillPointerUp = useCallback(() => {
+    if (!pillDragOrigin.current) return;
     pillDragOrigin.current = null;
     setIsDraggingPill(false);
+    // Trigger spring bounce animation on drop
+    setPillBouncing(true);
+    setTimeout(() => setPillBouncing(false), 500);
   }, []);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
