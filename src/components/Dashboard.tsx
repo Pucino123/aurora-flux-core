@@ -19,6 +19,7 @@ import CreateFolderModal, { suggestIcon } from "./CreateFolderModal";
 import TeamChatWidget from "./chat/TeamChatWidget";
 import MultitaskingView from "./MultitaskingView";
 import CommunityBoardView from "./CommunityBoardView";
+import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
 import { UpgradeModal, OutOfSparksModal } from "./billing/BillingView";
 import { useFlux } from "@/context/FluxContext";
