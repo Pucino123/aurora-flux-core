@@ -1550,7 +1550,7 @@ export default FocusDashboardView;
         >
           Show pagination
         </button>
-      }}
+      )}
 
       {/* Dot context menu (right-click / long-press) */}
       {dotMenu && (
