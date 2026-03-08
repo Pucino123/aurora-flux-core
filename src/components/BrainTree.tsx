@@ -180,15 +180,21 @@ const FolderNodeComponent = ({
             {folderDocs.map((doc) => (
               <button
                 key={doc.id}
+                draggable
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  e.dataTransfer.setData("application/flux-doc", JSON.stringify(doc));
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
                 onClick={() => onDocClick?.(doc.id)}
                 className="sidebar-item w-full group text-muted-foreground hover:text-foreground"
                 style={{ paddingLeft: `${8 + (depth + 1) * 16}px` }}
               >
                 <span className="w-4" />
                 {doc.type === "spreadsheet" ? (
-                  <Table size={14} className="shrink-0 text-emerald-500" />
+                  <Table size={14} className="shrink-0" style={{ color: "hsl(142 71% 45%)" }} />
                 ) : (
-                  <FileText size={14} className="shrink-0 text-blue-400" />
+                  <FileText size={14} className="shrink-0" style={{ color: "hsl(217 91% 65%)" }} />
                 )}
                 <span className="truncate flex-1 text-left text-[12px]">{doc.title}</span>
               </button>
