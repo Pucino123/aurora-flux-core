@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Grid, Plus, ExternalLink, CheckCircle, Clock, X, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { Grid, Plus, ExternalLink, Clock, X, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
