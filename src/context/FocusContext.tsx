@@ -210,6 +210,8 @@ interface FocusContextValue extends FocusState {
   updateDesktopFolderCustomIcon: (folderId: string, url: string) => void;
   desktopFolderBgColors: Record<string, string>;
   updateDesktopFolderBgColor: (folderId: string, color: string) => void;
+  desktopFolderTitleGaps: Record<string, number>;
+  updateDesktopFolderTitleGap: (folderId: string, gap: number) => void;
   // Document customization
   desktopDocPositions: Record<string, { x: number; y: number }>;
   updateDesktopDocPosition: (docId: string, pos: { x: number; y: number }) => void;
@@ -223,6 +225,8 @@ interface FocusContextValue extends FocusState {
   updateDesktopDocCustomIcon: (docId: string, url: string) => void;
   desktopDocIconColors: Record<string, string>;
   updateDesktopDocIconColor: (docId: string, color: string) => void;
+  desktopDocTitleGaps: Record<string, number>;
+  updateDesktopDocTitleGap: (docId: string, gap: number) => void;
   resetDashboard: () => void;
 }
 
