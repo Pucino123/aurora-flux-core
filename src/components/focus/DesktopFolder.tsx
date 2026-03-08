@@ -402,7 +402,10 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
                           .map(p => (
                             <button
                               key={p.id}
-                              onClick={() => { onMoveToPage?.(folder.id, p.index); setContextMenu(null); }}
+                              onClick={() => {
+                                setContextMenu(null);
+                                triggerFlyOff(p.index, () => onMoveToPage?.(folder.id, p.index));
+                              }}
                               className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
                             >
                               <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[9px] flex items-center justify-center font-bold">{p.index + 1}</span>
@@ -412,6 +415,16 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
                       </div>
                     )}
                   </div>
+                )}
+                {/* Show on all pages pin toggle */}
+                {onTogglePin && (
+                  <button
+                    onClick={() => { onTogglePin(folder.id); setContextMenu(null); }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${isPinned ? "text-primary" : "text-foreground"}`}
+                  >
+                    {isPinned ? <PinOff size={13} className="text-primary" /> : <Pin size={13} className="text-muted-foreground" />}
+                    {isPinned ? "Unpin from all pages" : "Show on all pages"}
+                  </button>
                 )}
                 <div className="relative">
                   <button onClick={() => setShowCalendarPicker(!showCalendarPicker)} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-foreground hover:bg-secondary transition-colors">
