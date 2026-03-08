@@ -282,6 +282,7 @@ const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState(1);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const go = (next: number, direction: number) => {
     setDir(direction);
@@ -298,6 +299,19 @@ const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      go(idx + (diff > 0 ? 1 : -1), diff > 0 ? 1 : -1);
+    }
+    touchStartX.current = null;
+  };
 
   const slide = SLIDES[idx];
 
@@ -317,6 +331,8 @@ const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
       {/* Main slide card */}
       <div
         className="relative rounded-3xl overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{
           background: isDark ? "rgba(14,12,22,0.72)" : "rgba(255,255,255,0.12)",
           backdropFilter: "blur(32px)",
