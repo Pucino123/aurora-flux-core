@@ -41,11 +41,13 @@ const WidgetToggleBar = () => {
 
   return (
     <>
-      <motion.div
+        <motion.div
+        layout
+        layoutId="widget-toggle-bar"
         animate={{ opacity: isFocusModeActive ? 0 : 1, y: isFocusModeActive ? 40 : 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.3, layout: { duration: 0.25, ease: "easeInOut" } }}
         style={{ pointerEvents: isFocusModeActive ? "none" : undefined }}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 px-2 py-1.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 shadow-lg transition-all duration-300"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 px-2 py-1.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 shadow-lg"
       >
         {/* ── Static widget toggles ── */}
         {PRIMARY_WIDGETS.map(({ id, label, icon: Icon }) => {
@@ -63,9 +65,14 @@ const WidgetToggleBar = () => {
         {/* ── More overflow menu ── */}
         <div className="relative">
           <button onClick={() => setMoreOpen(!moreOpen)} title="More tools"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${moreOpen ? "bg-white/15 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
+            className={`relative flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${moreOpen ? "bg-white/15 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
             <Plus size={15} className={`transition-transform ${moreOpen ? "rotate-45" : ""}`} />
             <span className="hidden sm:inline">More</span>
+            {windows.length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-black/30 sm:hidden">
+                {windows.length > 9 ? "9+" : windows.length}
+              </span>
+            )}
           </button>
           <AnimatePresence>
             {moreOpen && (
@@ -114,7 +121,7 @@ const WidgetToggleBar = () => {
                 const isFocused   = win.id === focusedId && !isMinimized;
                 const isHovered   = hoveredWin === win.id;
                 return (
-                  <motion.div key={win.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.15 }}
+                  <motion.div key={win.id} layoutId={`window-${win.id}`} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.15, layout: { duration: 0.3, ease: "easeInOut" } }}
                     className="relative shrink-0"
                     onMouseEnter={() => setHoveredWin(win.id)}
                     onMouseLeave={() => setHoveredWin(null)}>
