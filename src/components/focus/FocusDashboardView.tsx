@@ -718,8 +718,9 @@ const FocusContent = () => {
           }, 300);
         }
       }
-      if (e.key === "Escape" && showMissionControl) {
-        setShowMissionControl(false);
+      if (e.key === "Escape") {
+        if (showMissionControl) setShowMissionControl(false);
+        else if (isFocusModeActive) disableFocusMode();
       }
     };
 
@@ -744,7 +745,7 @@ const FocusContent = () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage, showMissionControl]);
+  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage, showMissionControl, isFocusModeActive, disableFocusMode]);
 
   // Dot drag-to-reorder handlers
   const handleDotDragStart = useCallback((i: number) => {
@@ -1482,7 +1483,12 @@ const FocusContent = () => {
             <FolderModal folderId={openFolderId} onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }} />
           )}
 
-          {/* ── iPadOS Window Manager Layer ─────────────────────────── */}
+        </div>
+      </div>
+
+      {/* ── iPadOS Window Manager Layer — separate stacking context above desktop icons ── */}
+      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 150 }}>
+        <div className="pointer-events-auto w-full h-full">
           {windows.filter(w => !w.minimized).map((win) => {
               const winDoc = win.type === "document"
                 ? desktopDocs.find(d => d.id === win.contentId)
