@@ -456,6 +456,36 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
 
         <div className="w-px h-5 mx-1" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.15) }} />
 
+        {/* Minimized window chips — macOS Dock style */}
+        <AnimatePresence initial={false}>
+          {minimizedWindows.map(win => (
+            <motion.button
+              key={win.id}
+              initial={{ opacity: 0, scale: 0.5, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.5, y: 8 }}
+              transition={{ duration: 0.2, type: "spring", stiffness: 380, damping: 28 }}
+              onPointerDown={e => e.stopPropagation()}
+              onClick={() => restoreWindow(win.id)}
+              title={`Restore: ${win.title}`}
+              className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] font-medium transition-all hover:bg-white/10 max-w-[100px]"
+              style={{
+                color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.6),
+                background: hexToRgba(toolbarStyle.bgColor || "#000000", 0.15),
+                border: `1px solid ${hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.15)}`,
+              }}
+            >
+              <FileText size={11} className="shrink-0" style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.5) }} />
+              <span className="truncate hidden sm:inline">{win.title}</span>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", 0.3) }} />
+            </motion.button>
+          ))}
+        </AnimatePresence>
+
+        {minimizedWindows.length > 0 && (
+          <div className="w-px h-5 mx-1" style={{ background: `repeating-linear-gradient(to bottom, ${hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.3)} 0px, ${hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.3)} 3px, transparent 3px, transparent 6px)` }} />
+        )}
+
         {/* Tools trigger */}
         <motion.button
           onPointerDown={e => e.stopPropagation()}
