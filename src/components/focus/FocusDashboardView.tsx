@@ -62,19 +62,27 @@ const BuildModeGrid = () => (
   </div>
 );
 
+type DashboardPage = { id: string; label: string; activeWidgets?: string[] };
+
+// Pagination settings persisted in FocusContext state-adjacent localStorage key
+const PAGINATION_SETTINGS_KEY = "flux-pagination-settings";
+interface PaginationSettings { showLabel: boolean; pillOpacity: number; }
+function loadPaginationSettings(): PaginationSettings {
+  try { const r = localStorage.getItem(PAGINATION_SETTINGS_KEY); if (r) return JSON.parse(r); } catch {}
+  return { showLabel: true, pillOpacity: 82 };
+}
+
 const FocusContent = () => {
   const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
 
   // iOS-style dashboard pages state
-  type DashboardPage = { id: string; label: string; activeWidgets?: string[] };
   const [dashboardPages, setDashboardPages] = useState<DashboardPage[]>(() => {
     try {
       const raw = localStorage.getItem("flux-dashboard-pages");
       if (raw) {
         const parsed = JSON.parse(raw);
-        // Migrate old format (just {id}) to new format
         return parsed.map((p: any) => ({ id: p.id, label: p.label || "Home", activeWidgets: p.activeWidgets }));
       }
     } catch {}
@@ -85,13 +93,75 @@ const FocusContent = () => {
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
   const [editingLabelValue, setEditingLabelValue] = useState("");
   const labelInputRef = useRef<HTMLInputElement>(null);
-  // Touch swipe state
+  // Touch swipe
   const touchStartX = useRef<number | null>(null);
+  // Dot context menu (delete)
+  const [dotMenu, setDotMenu] = useState<{ idx: number; x: number; y: number } | null>(null);
+  const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null);
+  // Drag-to-reorder
+  const dragDotIdx = useRef<number | null>(null);
+  const [draggingDotIdx, setDraggingDotIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  // Build-mode pagination settings
+  const [paginationSettings, setPaginationSettings] = useState<PaginationSettings>(loadPaginationSettings);
+  const [showPillSettings, setShowPillSettings] = useState(false);
+  // Cloud sync debounce
+  const cloudSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Persist pages
+  // Persist pages locally
   useEffect(() => {
     localStorage.setItem("flux-dashboard-pages", JSON.stringify(dashboardPages));
   }, [dashboardPages]);
+
+  // Persist pagination settings
+  useEffect(() => {
+    localStorage.setItem(PAGINATION_SETTINGS_KEY, JSON.stringify(paginationSettings));
+  }, [paginationSettings]);
+
+  // Load pages from cloud on mount
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled || !data?.state) return;
+      const s = data.state as any;
+      if (Array.isArray(s.dashboardPages) && s.dashboardPages.length > 0) {
+        setDashboardPages(s.dashboardPages.map((p: any) => ({
+          id: p.id, label: p.label || "Home", activeWidgets: p.activeWidgets,
+        })));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // Sync pages to cloud (debounced)
+  const syncPagesToCloud = useCallback((pages: DashboardPage[]) => {
+    if (!user) return;
+    if (cloudSyncTimer.current) clearTimeout(cloudSyncTimer.current);
+    cloudSyncTimer.current = setTimeout(async () => {
+      const { data: existing } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const prev = (existing?.state as Record<string, unknown>) || {};
+      await (supabase.from as any)("dashboard_state").upsert(
+        { user_id: user.id, state: { ...prev, dashboardPages: pages }, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
+    }, 1200);
+  }, [user]);
+
+  const setPages = useCallback((updater: (prev: DashboardPage[]) => DashboardPage[]) => {
+    setDashboardPages(prev => {
+      const next = updater(prev);
+      syncPagesToCloud(next);
+      return next;
+    });
+  }, [syncPagesToCloud]);
 
   const goToPage = useCallback((idx: number) => {
     setPageDir(idx > activePageIndex ? 1 : -1);
@@ -100,14 +170,19 @@ const FocusContent = () => {
 
   const addPage = useCallback(() => {
     const newPage: DashboardPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
-    setDashboardPages(prev => {
-      const next = [...prev, newPage];
-      localStorage.setItem("flux-dashboard-pages", JSON.stringify(next));
-      return next;
-    });
+    setPages(prev => [...prev, newPage]);
     setPageDir(1);
     setActivePageIndex(dashboardPages.length);
-  }, [dashboardPages.length]);
+  }, [dashboardPages.length, setPages]);
+
+  const deletePage = useCallback((idx: number) => {
+    if (dashboardPages.length <= 1) { toast.error("Can't delete the only page"); return; }
+    setPages(prev => prev.filter((_, i) => i !== idx));
+    setActivePageIndex(prev => Math.min(prev, dashboardPages.length - 2));
+    setDeleteConfirmIdx(null);
+    setDotMenu(null);
+    toast.success("Page deleted");
+  }, [dashboardPages.length, setPages]);
 
   const startLabelEdit = useCallback((idx: number) => {
     setEditingLabelIdx(idx);
@@ -118,23 +193,22 @@ const FocusContent = () => {
   const commitLabelEdit = useCallback(() => {
     if (editingLabelIdx === null) return;
     const trimmed = editingLabelValue.trim() || dashboardPages[editingLabelIdx]?.label || "Page";
-    setDashboardPages(prev => prev.map((p, i) => i === editingLabelIdx ? { ...p, label: trimmed } : p));
+    setPages(prev => prev.map((p, i) => i === editingLabelIdx ? { ...p, label: trimmed } : p));
     setEditingLabelIdx(null);
-  }, [editingLabelIdx, editingLabelValue, dashboardPages]);
+  }, [editingLabelIdx, editingLabelValue, dashboardPages, setPages]);
 
-  // Per-page active widgets — current page overrides global if set
+  // Per-page active widgets
   const currentPage = dashboardPages[activePageIndex];
   const pageActiveWidgets: string[] = currentPage?.activeWidgets ?? activeWidgets;
 
   const updatePageWidgets = useCallback((widgets: string[]) => {
-    setDashboardPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, activeWidgets: widgets } : p));
-  }, [activePageIndex]);
+    setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, activeWidgets: widgets } : p));
+  }, [activePageIndex, setPages]);
 
-  // Touch swipe handlers
+  // Touch swipe
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
   }, []);
-
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
@@ -143,6 +217,49 @@ const FocusContent = () => {
     if (dx < 0 && activePageIndex < dashboardPages.length - 1) goToPage(activePageIndex + 1);
     if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
   }, [activePageIndex, dashboardPages.length, goToPage]);
+
+  // Dot drag-to-reorder handlers
+  const handleDotDragStart = useCallback((i: number) => {
+    dragDotIdx.current = i;
+    setDraggingDotIdx(i);
+  }, []);
+  const handleDotDragOver = useCallback((i: number, e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverIdx(i);
+  }, []);
+  const handleDotDrop = useCallback((targetIdx: number) => {
+    const fromIdx = dragDotIdx.current;
+    if (fromIdx === null || fromIdx === targetIdx) { setDraggingDotIdx(null); setDragOverIdx(null); return; }
+    setPages(prev => {
+      const next = [...prev];
+      const [removed] = next.splice(fromIdx, 1);
+      next.splice(targetIdx, 0, removed);
+      return next;
+    });
+    // Adjust active index to follow the moved page
+    setActivePageIndex(prev => {
+      if (prev === fromIdx) return targetIdx;
+      if (fromIdx < prev && targetIdx >= prev) return prev - 1;
+      if (fromIdx > prev && targetIdx <= prev) return prev + 1;
+      return prev;
+    });
+    dragDotIdx.current = null;
+    setDraggingDotIdx(null);
+    setDragOverIdx(null);
+    setPageDir(targetIdx > fromIdx ? 1 : -1);
+  }, [setPages]);
+
+  // Long-press for mobile delete
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleDotTouchStart = useCallback((i: number, e: React.TouchEvent) => {
+    longPressTimer.current = setTimeout(() => {
+      const touch = e.touches[0];
+      setDotMenu({ idx: i, x: touch.clientX, y: touch.clientY - 80 });
+    }, 600);
+  }, []);
+  const handleDotTouchEnd = useCallback(() => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  }, []);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
