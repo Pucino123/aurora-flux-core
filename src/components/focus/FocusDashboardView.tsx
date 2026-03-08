@@ -48,7 +48,7 @@ import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChec
 import { toast } from "sonner";
 import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
 import WindowFrame from "@/components/windows/WindowFrame";
-import WidgetToggleBar from "@/components/focus/WidgetToggleBar";
+import WindowDock from "@/components/windows/WindowDock";
 import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
 
@@ -1519,8 +1519,8 @@ const FocusContent = () => {
         </div>
       </div>
 
-      {/* ── Widget Toggle Bar (unified toolbar) ───────────────────────── */}
-      <WidgetToggleBar />
+      {/* ── Window Dock (taskbar) ────────────────────────────────────────── */}
+      <WindowDock />
       <WindowSwitcher />
 
       {/* Canvas right-click context menu */}
@@ -1688,6 +1688,15 @@ const FocusContent = () => {
         document.body
       )}
 
+      <ToolDrawer
+        pageActiveWidgets={pageActiveWidgets}
+        onTogglePageWidget={(id) => {
+          const updated = pageActiveWidgets.includes(id)
+            ? pageActiveWidgets.filter(w => w !== id)
+            : [...pageActiveWidgets, id];
+          updatePageWidgets(updated);
+        }}
+      />
 
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
       {/* IMPORTANT: pillRef wraps ONLY the pill row so getBoundingClientRect() always reflects
