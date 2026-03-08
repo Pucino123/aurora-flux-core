@@ -222,14 +222,41 @@ const TaskManagerWidget = () => {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   {editingId === task.id ? (
-                    <input
-                      ref={editRef}
-                      value={editValue}
-                      onChange={e => setEditValue(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter") saveEdit(task.id); if (e.key === "Escape") setEditingId(null); }}
-                      onBlur={() => saveEdit(task.id)}
-                      className="w-full bg-white/5 border border-emerald-500/50 rounded px-2 py-0.5 outline-none text-white/90 text-[12px]"
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        ref={editRef}
+                        value={editValue}
+                        onChange={e => setEditValue(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") saveEdit(task.id); if (e.key === "Escape") setEditingId(null); }}
+                        onBlur={e => {
+                          // Don't blur-save if the ✨ button was clicked
+                          if ((e.relatedTarget as HTMLElement)?.dataset?.auraBtn) return;
+                          saveEdit(task.id);
+                        }}
+                        className="flex-1 bg-white/5 border border-emerald-500/50 rounded px-2 py-0.5 outline-none text-white/90 text-[12px]"
+                      />
+                      {/* Per-row Aura ✨ breakdown button */}
+                      <motion.button
+                        data-aura-btn="1"
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.85 }}
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => handleRowAuraBreakdown(task.id, editValue || task.title)}
+                        disabled={rowAuraLoading === task.id}
+                        title="Ask Aura to break this task into subtasks"
+                        className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(139,92,246,0.5), rgba(16,185,129,0.5))",
+                          boxShadow: "0 0 8px rgba(139,92,246,0.6)",
+                          border: "0.5px solid rgba(139,92,246,0.4)",
+                        }}
+                      >
+                        {rowAuraLoading === task.id
+                          ? <Loader2 size={9} className="text-violet-300 animate-spin" />
+                          : <Sparkles size={9} className="text-violet-300" />
+                        }
+                      </motion.button>
+                    </div>
                   ) : (
                     <p className={`text-[12px] leading-tight transition-all ${task.done ? "line-through decoration-slate-400/60 text-white/30" : "text-white/80"}`}>
                       {task.title}
