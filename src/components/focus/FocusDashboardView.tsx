@@ -1743,10 +1743,7 @@ const FocusContent = () => {
             exit={{ opacity: 0, y: -16 }}
 
 
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(139,92,246,0.35)",
-              color: "rgba(196,168,255,0.95)",
+
               boxShadow: "0 4px 20px rgba(139,92,246,0.25)",
             }}
           >
