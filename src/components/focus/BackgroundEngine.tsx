@@ -337,11 +337,13 @@ const BackgroundEngine = ({
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => { setMousePos({ x: e.clientX, y: e.clientY }); onMouseMove?.(e); }, [onMouseMove]);
 
-  const isCustom = currentBackground.startsWith("custom-");
-  const isCustomGrad = currentBackground.startsWith("custom-grad-");
+  const isSolid = currentBackground.startsWith("solid:");
+  const solidColor = isSolid ? currentBackground.slice(6) : null;
+  const isCustom = !isSolid && currentBackground.startsWith("custom-");
+  const isCustomGrad = !isSolid && currentBackground.startsWith("custom-grad-");
   const customGrad = isCustomGrad ? customGrads.find(g => g.id === currentBackground) : null;
   const customBg = isCustom && !isCustomGrad ? customBgs.find(b => b.id === currentBackground) : null;
-  const builtinBg = !isCustom ? BACKGROUNDS.find(b => b.id === currentBackground) || BACKGROUNDS[0] : null;
+  const builtinBg = !isCustom && !isSolid ? BACKGROUNDS.find(b => b.id === currentBackground) || BACKGROUNDS[0] : null;
 
   const filteredBgs = selectedCategory === "Custom" ? [] : selectedCategory ? BACKGROUNDS.filter(b => b.category === selectedCategory) : BACKGROUNDS;
 
@@ -391,7 +393,9 @@ const BackgroundEngine = ({
       <div className={`${embedded ? "absolute" : "fixed"} inset-0 z-0 overflow-hidden`} onMouseMove={handleMouseMove}>
         <AnimatePresence mode="wait">
           <motion.div key={currentBackground} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.2, ease: "easeInOut" }} className="absolute inset-0">
-            {builtinBg?.type === "video" && builtinBg.youtubeId ? (
+            {isSolid && solidColor ? (
+              <div className="absolute inset-0" style={{ background: `hsl(${solidColor})` }} />
+            ) : builtinBg?.type === "video" && builtinBg.youtubeId ? (
               <YouTubeBackground youtubeId={builtinBg.youtubeId} posterUrl={builtinBg.src} volume={youtubeVolume} />
             ) : builtinBg?.type === "gradient" && builtinBg.colors ? (
               <GradientBackground colors={builtinBg.colors} />
