@@ -204,6 +204,14 @@ const BillingView = () => {
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
       <SEO title="Billing & Plans" description="Manage your Dashiii subscription, Sparks balance and workspace plan." url="/" keywords="billing, pricing plans, Sparks, subscription, AI credits" />
+      <div className="flex items-center gap-3 mb-5">
+        <button
+          onClick={closeBilling}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+        >
+          <ArrowLeft size={14} /> Back
+        </button>
+      </div>
       <h2 className="text-2xl font-bold text-foreground mb-1">Billing & Plans</h2>
       <p className="text-sm text-muted-foreground mb-6">Manage your subscription and Sparks balance.</p>
 

@@ -193,49 +193,6 @@ const OnboardingFlow = () => {
               </motion.div>
             )}
 
-            {/* ── ACCENT ── */}
-            {phase === "accent" && (
-              <motion.div key="accent" variants={slideVariants} initial="enter" animate="center" exit="exit"
-                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="w-full max-w-sm"
-              >
-                <div
-                  className="rounded-3xl p-8 border border-white/10 shadow-2xl"
-                  style={{ background: "hsl(var(--card)/0.85)", backdropFilter: "blur(40px)" }}
-                >
-                  <p className="text-[10px] tracking-[0.2em] uppercase font-semibold text-muted-foreground/60 mb-1">INTERFACE ACCENT</p>
-                  <h2 className="text-lg font-bold tracking-tight text-foreground mb-2">Select primary colour.</h2>
-                  <p className="text-xs text-muted-foreground mb-7">Applied to active states, buttons, and highlights.</p>
-
-                  <div className="grid grid-cols-2 gap-3 mb-8">
-                    {ACCENTS.map(a => (
-                      <button
-                        key={a.value}
-                        onClick={() => setSelectedAccent(a)}
-                        className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
-                          selectedAccent.value === a.value ? "border-white/20" : "border-white/5 hover:border-white/10"
-                        }`}
-                        style={{ background: selectedAccent.value === a.value ? `${a.value}12` : "hsl(var(--secondary)/0.4)" }}
-                      >
-                        <div className="w-5 h-5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: a.value }} />
-                        <span className="text-[10px] font-mono tracking-wider text-muted-foreground">{a.label}</span>
-                        {selectedAccent.value === a.value && (
-                          <CheckCircle2 size={12} className="ml-auto" style={{ color: a.value }} />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button onClick={() => setPhase("reward")}
-                    className="w-full py-3 rounded-2xl text-sm font-semibold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-                    style={{ background: selectedAccent.value }}
-                  >
-                    Confirm Selection <ChevronRight size={15} />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
             {/* ── REWARD ── */}
             {phase === "reward" && (
               <motion.div key="reward" variants={slideVariants} initial="enter" animate="center" exit="exit"
