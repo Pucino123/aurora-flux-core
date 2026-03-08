@@ -19,6 +19,16 @@ const Canvas = () => {
   if (!folder) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        <SEO title="Dashboard" description="Your AI-powered command center for tasks, projects and productivity." url="/" />
+        Folder not found
+      </div>
+    );
+  }
+
+  const folder = findFolderNode(activeFolder);
+  if (!folder) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
         Folder not found
       </div>
     );

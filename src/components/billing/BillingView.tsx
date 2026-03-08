@@ -203,6 +203,7 @@ const BillingView = () => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+      <SEO title="Billing & Plans" description="Manage your Dashiii subscription, Sparks balance and workspace plan." url="/" keywords="billing, pricing plans, Sparks, subscription, AI credits" />
       <h2 className="text-2xl font-bold text-foreground mb-1">Billing & Plans</h2>
       <p className="text-sm text-muted-foreground mb-6">Manage your subscription and Sparks balance.</p>
 

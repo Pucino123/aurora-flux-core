@@ -266,6 +266,7 @@ const TheCouncil = () => {
 
   return (
     <div className="flex-1 overflow-y-auto h-full">
+      <SEO title="The Council" description="Get multi-perspective AI advisory on your ideas and decisions. Meet your AI Council." url="/" keywords="AI council, advisory board, decision making, AI advisors, brainstorming" />
       {/* Full-page gradient background */}
       <div className="council-hero-gradient relative min-h-screen overflow-hidden">
         {/* Ambient blobs — slowed down */}

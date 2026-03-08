@@ -146,6 +146,7 @@ const AnalyticsView = () => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
+      <SEO title="Analytics" description="Revenue, productivity and workspace insights dashboard. Track your goals and performance." url="/" keywords="analytics, productivity metrics, revenue tracking, workspace insights, dashboard" />
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold font-display flex items-center gap-2">

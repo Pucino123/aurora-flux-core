@@ -126,6 +126,7 @@ const SettingsView = () => {
 
   return (
     <div className="flex-1 overflow-hidden flex">
+      <SEO title="Settings" description="Preferences, profile, appearance and workspace settings for your Dashiii account." url="/" keywords="settings, preferences, profile, theme, workspace configuration" />
       {/* Sidebar nav */}
       <div className="hidden md:flex w-52 shrink-0 flex-col border-r border-border/30 py-6 px-3 gap-0.5">
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Settings</p>
