@@ -1746,12 +1746,6 @@ const FocusContent = () => {
 
               boxShadow: "0 4px 20px rgba(139,92,246,0.25)",
             }}
-          >
-            <Focus size={13} />
-            Exit Focus Mode
-          </motion.button>
-        )}
-      </AnimatePresence>
 
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
       {/* IMPORTANT: pillRef wraps ONLY the pill row so getBoundingClientRect() always reflects
