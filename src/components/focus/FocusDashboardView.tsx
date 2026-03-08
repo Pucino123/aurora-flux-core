@@ -163,6 +163,7 @@ const FocusContent = () => {
           activeWidgets: p.activeWidgets,
           stickyNotes: p.stickyNotes,
           background: p.background,
+          spaceSettings: p.spaceSettings,
         })));
       }
     })();
@@ -195,9 +196,27 @@ const FocusContent = () => {
   }, [syncPagesToCloud]);
 
   const goToPage = useCallback((idx: number) => {
+    // Capture screenshot of current page before leaving
+    if (idx !== activePageIndex) {
+      const pageId = dashboardPages[activePageIndex]?.id;
+      if (pageId) {
+        if (thumbnailTimerRef.current) clearTimeout(thumbnailTimerRef.current);
+        thumbnailTimerRef.current = setTimeout(() => {
+          import("html2canvas").then(({ default: html2canvas }) => {
+            const el = document.querySelector("[data-canvas-root]") as HTMLElement;
+            if (!el) return;
+            html2canvas(el, { scale: 0.15, useCORS: true, allowTaint: true, logging: false, backgroundColor: "#0a0814" })
+              .then(canvas => {
+                setPageThumbnails(prev => ({ ...prev, [pageId]: canvas.toDataURL("image/jpeg", 0.6) }));
+              })
+              .catch(() => {});
+          });
+        }, 200);
+      }
+    }
     setPageDir(idx > activePageIndex ? 1 : -1);
     setActivePageIndex(idx);
-  }, [activePageIndex]);
+  }, [activePageIndex, dashboardPages]);
 
   const addPage = useCallback(() => {
     const newPage: DashboardPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
@@ -205,6 +224,25 @@ const FocusContent = () => {
     setPageDir(1);
     setActivePageIndex(dashboardPages.length);
   }, [dashboardPages.length, setPages]);
+
+  const duplicatePage = useCallback((idx: number) => {
+    const source = dashboardPages[idx];
+    if (!source) return;
+    const newPage: DashboardPage = {
+      id: `page-${Date.now()}`,
+      label: `${source.label} Copy`,
+      activeWidgets: source.activeWidgets ? [...source.activeWidgets] : undefined,
+      stickyNotes: source.stickyNotes ? source.stickyNotes.map(n => ({ ...n, id: `fn-${Date.now()}-${Math.random().toString(36).slice(2,6)}` })) : undefined,
+      background: source.background,
+      spaceSettings: source.spaceSettings ? { ...source.spaceSettings } : undefined,
+    };
+    const insertAt = idx + 1;
+    setPages(prev => { const next = [...prev]; next.splice(insertAt, 0, newPage); return next; });
+    setPageDir(1);
+    setActivePageIndex(insertAt);
+    setDotMenu(null);
+    toast.success("Page duplicated");
+  }, [dashboardPages, setPages]);
 
   const deletePage = useCallback((idx: number) => {
     if (dashboardPages.length <= 1) { toast.error("Can't delete the only page"); return; }
@@ -240,6 +278,12 @@ const FocusContent = () => {
   const pageStickyNotes: StickyNote[] = currentPage?.stickyNotes ?? focusStickyNotes;
   const setPageStickyNotes = useCallback((notes: StickyNote[]) => {
     setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, stickyNotes: notes } : p));
+  }, [activePageIndex, setPages]);
+
+  // Per-page space settings
+  const pageSpaceSettings = currentPage?.spaceSettings;
+  const updatePageSpaceSettings = useCallback((s: SpaceSettings) => {
+    setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, spaceSettings: s } : p));
   }, [activePageIndex, setPages]);
 
   // Touch swipe
