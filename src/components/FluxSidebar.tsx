@@ -74,8 +74,12 @@ const UserSection = () => {
   );
 };
 
+const ADMIN_EMAIL = "kevin.therkildsen@icloud.com";
+
 const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarProps) => {
   const { activeView, activeFolder, setActiveView, setActiveFolder, filterPersona, setFilterPersona } = useFlux();
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const { sparksBalance, openBilling } = useMonetization();
   const { theme, setTheme } = useTheme();
 
