@@ -140,7 +140,7 @@ function SortableBlock({
     opacity: isDragging ? 0.45 : 1,
     zIndex: isDragging ? 50 : "auto" as const,
   };
-  const ts = TYPE_STYLE[block.isAI ? "ai" : block.type];
+  const ts = TYPE_STYLE[block.isAI ? "ai" : block.type] ?? DEFAULT_TYPE_STYLE;
   const dateBadge = showDateBadge ? dateBadgeLabel(block.scheduledDate) : null;
 
   return (
