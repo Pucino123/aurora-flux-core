@@ -89,7 +89,6 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
       await createTask({ ...taskData, title: restored.originalData.title });
       toast.success(`"${restored.title}" restored to Tasks`);
     } else if (restored.type === "document") {
-    } else if (restored.type === "document") {
       // Re-insert document into DB
       if (user) {
         const { error } = await (supabase as any).from("documents").insert(restored.originalData);
