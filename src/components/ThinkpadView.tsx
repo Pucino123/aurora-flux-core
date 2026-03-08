@@ -628,7 +628,7 @@ const IdeapadView = () => {
       {/* Canvas */}
       <div className="flex-1 relative overflow-hidden">
         <ReactFlowProvider key={activeTrack?.id}>
-          <IdeaCanvas track={activeTrack} onSave={handleSave} />
+          <IdeaCanvas track={activeTrack} onSave={handleSave} isLight={pageLight} />
         </ReactFlowProvider>
       </div>
     </div>
