@@ -1,4 +1,4 @@
-import React, { forwardRef } from "react";
+import React, { forwardRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Trash2, RotateCcw, AlertTriangle, FileText, CheckSquare, Users, Clock } from "lucide-react";
@@ -6,7 +6,6 @@ import { useTrash, TrashItem, AutoDeleteDays } from "@/context/TrashContext";
 import { useFlux } from "@/context/FluxContext";
 import { parseISO, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -16,65 +15,112 @@ interface TrashModalProps {
 }
 
 const TYPE_ICONS = {
-  task: <CheckSquare size={14} className="text-emerald-400" />,
-  contact: <Users size={14} className="text-blue-400" />,
+  task:     <CheckSquare size={14} className="text-emerald-400" />,
+  contact:  <Users size={14} className="text-blue-400" />,
   document: <FileText size={14} className="text-amber-400" />,
 };
 
 const TYPE_LABELS = {
-  task: "Task",
-  contact: "Contact",
+  task:     "Task",
+  contact:  "Contact",
   document: "Document",
 };
 
 const AUTO_DELETE_OPTIONS: { label: string; value: AutoDeleteDays }[] = [
-  { label: "3 days", value: 3 },
-  { label: "7 days", value: 7 },
+  { label: "3 days",  value: 3 },
+  { label: "7 days",  value: 7 },
   { label: "30 days", value: 30 },
-  { label: "Never", value: null },
+  { label: "Never",   value: null },
 ];
 
-const TrashRow = forwardRef<HTMLDivElement, { item: TrashItem; onRestore: () => void; onDelete: () => void }>(
-  ({ item, onRestore, onDelete }, ref) => (
+// ─── Single row with its own inline delete confirmation ───────────────────────
+const TrashRow = forwardRef<
+  HTMLDivElement,
+  { item: TrashItem; onRestore: () => void; onDelete: () => void }
+>(({ item, onRestore, onDelete }, ref) => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  return (
     <motion.div
       ref={ref as React.Ref<HTMLDivElement>}
       layout
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 10 }}
+      exit={{ opacity: 0, x: 10, height: 0, marginBottom: 0 }}
       transition={{ duration: 0.18 }}
-      className="flex items-center gap-3 px-4 py-3 rounded-xl group transition-colors hover:bg-foreground/5"
+      className="rounded-xl overflow-hidden"
       style={{ border: "1px solid hsl(var(--border) / 0.15)" }}
     >
-      <div className="shrink-0">{TYPE_ICONS[item.type]}</div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-foreground truncate font-medium">{item.title}</p>
-        <p className="text-[11px] text-muted-foreground">
-          {TYPE_LABELS[item.type]} · {formatDistanceToNow(parseISO(item.deletedAt), { addSuffix: true })}
-        </p>
+      {/* Main row */}
+      <div className="flex items-center gap-3 px-4 py-3 group transition-colors hover:bg-foreground/5">
+        <div className="shrink-0">{TYPE_ICONS[item.type]}</div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-foreground truncate font-medium">{item.title}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {TYPE_LABELS[item.type]} · {formatDistanceToNow(parseISO(item.deletedAt), { addSuffix: true })}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <button
+            onClick={onRestore}
+            title="Restore"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
+          >
+            <RotateCcw size={11} />
+            Restore
+          </button>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            title="Delete permanently"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
+          >
+            <X size={11} />
+            Delete
+          </button>
+        </div>
       </div>
-      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button
-          onClick={onRestore}
-          title="Restore"
-          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
-        >
-          <RotateCcw size={11} />
-          Restore
-        </button>
-        <button
-          onClick={onDelete}
-          title="Delete permanently"
-          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
-        >
-          <X size={11} />
-          Delete
-        </button>
-      </div>
-    </motion.div>
-  )
-);
 
+      {/* Inline confirmation strip */}
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.16 }}
+            className="overflow-hidden"
+            style={{ background: "hsl(0 72% 55% / 0.07)", borderTop: "1px solid hsl(0 72% 55% / 0.15)" }}
+          >
+            <div className="flex items-center gap-3 px-4 py-2.5">
+              <AlertTriangle size={12} className="text-rose-400 shrink-0" />
+              <p className="text-[11px] text-foreground flex-1">
+                Permanently delete <strong>"{item.title}"</strong>? Cannot be undone.
+              </p>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-muted-foreground hover:text-foreground bg-foreground/8 hover:bg-foreground/15 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setConfirmDelete(false); onDelete(); }}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-rose-600 hover:bg-rose-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+});
+
+TrashRow.displayName = "TrashRow";
+
+// ─── Main modal ───────────────────────────────────────────────────────────────
 const TrashModal = ({ open, onClose }: TrashModalProps) => {
   const { trash, restoreItem, permanentlyDelete, emptyTrash, autoDeleteDays, setAutoDeleteDays } = useTrash();
   const { createTask } = useFlux();
@@ -86,23 +132,19 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
     if (!restored) return;
 
     if (restored.type === "task") {
-      // Restore task with all original fields (folder, sort_order, priority, etc.)
       const { id: _id, user_id: _uid, created_at: _ca, updated_at: _ua, ...taskData } = restored.originalData;
       await createTask({ ...taskData, title: restored.originalData.title });
       toast.success(`"${restored.title}" restored to Tasks`);
     } else if (restored.type === "document") {
-      // Re-insert document into DB
       if (user) {
         const { error } = await (supabase as any).from("documents").insert(restored.originalData);
         if (error) {
           toast.error("Could not restore document to cloud");
         } else {
-          // Signal the dashboard to re-show this doc on page 1
           window.dispatchEvent(new CustomEvent("dashboard:restore-doc", { detail: { docId: restored.originalData.id } }));
           toast.success(`"${restored.title}" restored to Documents`);
         }
       } else {
-        // localStorage path
         try {
           const raw = localStorage.getItem("flux_local_documents") || "[]";
           const docs = JSON.parse(raw);
@@ -128,12 +170,11 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
     toast.info("Trash emptied");
   };
 
-  const cancelEmpty = () => setConfirmEmpty(false);
-
   return createPortal(
     <AnimatePresence>
       {open && (
         <>
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -142,6 +183,8 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
             style={{ background: "hsl(var(--background) / 0.6)", backdropFilter: "blur(6px)" }}
             onClick={() => { setConfirmEmpty(false); onClose(); }}
           />
+
+          {/* Panel */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: -12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -190,7 +233,7 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
                 </div>
               </div>
 
-              {/* Empty trash confirmation banner */}
+              {/* Empty-trash confirmation banner */}
               <AnimatePresence>
                 {confirmEmpty && (
                   <motion.div
@@ -207,7 +250,7 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
                       </p>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
-                          onClick={cancelEmpty}
+                          onClick={() => setConfirmEmpty(false)}
                           className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-muted-foreground hover:text-foreground bg-foreground/8 hover:bg-foreground/15 transition-colors"
                         >
                           Cancel
