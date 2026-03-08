@@ -116,6 +116,63 @@ export type Database = {
         }
         Relationships: []
       }
+      company_profiles: {
+        Row: {
+          address: string | null
+          bank_name: string | null
+          city: string | null
+          company_name: string
+          country: string | null
+          created_at: string
+          iban: string | null
+          id: string
+          invoice_footer: string | null
+          logo_url: string | null
+          payment_terms: string | null
+          swift_bic: string | null
+          updated_at: string
+          user_id: string
+          vat_number: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          bank_name?: string | null
+          city?: string | null
+          company_name?: string
+          country?: string | null
+          created_at?: string
+          iban?: string | null
+          id?: string
+          invoice_footer?: string | null
+          logo_url?: string | null
+          payment_terms?: string | null
+          swift_bic?: string | null
+          updated_at?: string
+          user_id: string
+          vat_number?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          bank_name?: string | null
+          city?: string | null
+          company_name?: string
+          country?: string | null
+          created_at?: string
+          iban?: string | null
+          id?: string
+          invoice_footer?: string | null
+          logo_url?: string | null
+          payment_terms?: string | null
+          swift_bic?: string | null
+          updated_at?: string
+          user_id?: string
+          vat_number?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       council_debates: {
         Row: {
           challenger_argument: string | null
