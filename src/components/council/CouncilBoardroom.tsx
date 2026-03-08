@@ -275,16 +275,41 @@ const renderBoldTerms = (text: string, color: string, showTooltip: string | null
 interface FullscreenModalProps {
   persona: Persona;
   response: { analysis: string; question: string; confidence: number };
+  savedIdeaId: string | null;
+  userId: string | null;
   onClose: () => void;
 }
 
-const FullscreenModal: React.FC<FullscreenModalProps> = ({ persona, response, onClose }) => {
+const FullscreenModal: React.FC<FullscreenModalProps> = ({ persona, response, savedIdeaId, userId, onClose }) => {
   const color = SENTIMENT_COLORS[persona.sentiment];
   const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
+  const [chatMessages, setChatMessages] = useState<{ id?: string; role: "user" | "ai"; text: string }[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
+  const [threadsLoaded, setThreadsLoaded] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Load persisted threads on open
+  useEffect(() => {
+    if (!userId || !savedIdeaId || threadsLoaded) return;
+    setThreadsLoaded(true);
+    const db = supabase as any;
+    db.from("council_threads")
+      .select("id, user_message, persona_reply, created_at")
+      .eq("user_id", userId)
+      .eq("persona_key", persona.key)
+      .order("created_at", { ascending: true })
+      .then(({ data }: { data: any[] | null }) => {
+        if (data && data.length > 0) {
+          const msgs: { id: string; role: "user" | "ai"; text: string }[] = [];
+          data.forEach(t => {
+            msgs.push({ id: `u-${t.id}`, role: "user", text: t.user_message });
+            msgs.push({ id: `a-${t.id}`, role: "ai", text: t.persona_reply });
+          });
+          setChatMessages(msgs);
+        }
+      });
+  }, [userId, savedIdeaId, persona.key, threadsLoaded]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -318,7 +343,37 @@ const FullscreenModal: React.FC<FullscreenModalProps> = ({ persona, response, on
       personaKey: persona.key,
       question: msg,
       onDelta: chunk => { streamText += chunk; addMsg(); },
-      onDone: () => setChatLoading(false),
+      onDone: async () => {
+        setChatLoading(false);
+        // Persist to council_threads
+        if (userId) {
+          try {
+            // Find response_id if idea was saved
+            let responseId: string | null = null;
+            if (savedIdeaId) {
+              const db = supabase as any;
+              const { data: respRow } = await db
+                .from("council_responses")
+                .select("id")
+                .eq("idea_id", savedIdeaId)
+                .eq("persona_key", persona.key)
+                .eq("user_id", userId)
+                .maybeSingle();
+              responseId = respRow?.id || null;
+            }
+            const db = supabase as any;
+            await db.from("council_threads").insert({
+              user_id: userId,
+              persona_key: persona.key,
+              user_message: msg,
+              persona_reply: streamText,
+              ...(responseId ? { response_id: responseId } : {}),
+            });
+          } catch {
+            // silent — thread saved in memory even if DB fails
+          }
+        }
+      },
       onError: () => {
         setChatMessages(prev => [...prev, { role: "ai", text: `As ${persona.title}, I believe this deserves deeper analysis.` }]);
         setChatLoading(false);
@@ -786,6 +841,7 @@ const CouncilBoardroom: React.FC = () => {
     elena: [], helen: [], anton: [], margot: [],
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [savedIdeaId, setSavedIdeaId] = useState<string | null>(null);
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
 
@@ -891,6 +947,7 @@ const CouncilBoardroom: React.FC = () => {
           vote_score: responses[p.key]!.confidence,
         }));
       await supabase.from("council_responses").insert(inserts);
+      setSavedIdeaId(ideaData.id);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 3000);
     } catch {
@@ -1072,6 +1129,8 @@ const CouncilBoardroom: React.FC = () => {
           <FullscreenModal
             persona={fullscreenP}
             response={fullscreenR}
+            savedIdeaId={savedIdeaId}
+            userId={user?.id ?? null}
             onClose={() => setFullscreenPersona(null)}
           />
         )}

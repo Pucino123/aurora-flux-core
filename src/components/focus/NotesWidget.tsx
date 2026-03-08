@@ -93,6 +93,136 @@ const getPreview = (note: Note, unlocked: boolean) => {
   return lines.slice(1, 3).join(" ") || "No additional text";
 };
 
+// ── Lock Password Modal ──
+interface LockModalProps {
+  mode: "set" | "confirm";
+  existingPassword?: string;
+  onConfirm: (password: string) => void;
+  onCancel: () => void;
+}
+
+const LockModal: React.FC<LockModalProps> = ({ mode, existingPassword, onConfirm, onCancel }) => {
+  const [pw, setPw] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = () => {
+    if (mode === "set") {
+      if (pw.length < 1) { setError("Password cannot be empty"); return; }
+      if (pw !== confirm) { setError("Passwords don't match"); return; }
+      onConfirm(pw);
+    } else {
+      // confirm unlock
+      if (pw !== (existingPassword || "1234")) { setError("Incorrect password"); return; }
+      onConfirm(pw);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 400, damping: 28 }}
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-xs rounded-2xl border border-white/10 overflow-hidden"
+        style={{ background: "rgba(10,8,20,0.97)", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+          <div className="flex items-center gap-2">
+            <Lock size={13} className="text-amber-400/70" />
+            <p className="text-sm font-bold text-white/90">
+              {mode === "set" ? "Lock Note" : "Unlock Note"}
+            </p>
+          </div>
+          <button onClick={onCancel} className="w-6 h-6 flex items-center justify-center rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-colors">
+            <X size={12} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-3">
+          <div>
+            <label className="text-[10px] text-white/40 uppercase tracking-widest font-medium block mb-1.5">
+              {mode === "set" ? "Set Password" : "Enter Password"}
+            </label>
+            <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors ${error ? "border-red-400/40 bg-red-400/5" : "border-white/10 bg-white/5"}`}>
+              <input
+                type={showPw ? "text" : "password"}
+                value={pw}
+                onChange={e => { setPw(e.target.value); setError(""); }}
+                onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                placeholder={mode === "set" ? "Create password…" : "Enter password…"}
+                className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/20"
+                autoFocus
+              />
+              <button onClick={() => setShowPw(!showPw)} className="text-white/30 hover:text-white/60 transition-colors">
+                {showPw ? <EyeOff size={13} /> : <Eye size={13} />}
+              </button>
+            </div>
+          </div>
+
+          {mode === "set" && (
+            <div>
+              <label className="text-[10px] text-white/40 uppercase tracking-widest font-medium block mb-1.5">
+                Confirm Password
+              </label>
+              <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors ${error ? "border-red-400/40 bg-red-400/5" : "border-white/10 bg-white/5"}`}>
+                <input
+                  type={showPw ? "text" : "password"}
+                  value={confirm}
+                  onChange={e => { setConfirm(e.target.value); setError(""); }}
+                  onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                  placeholder="Confirm password…"
+                  className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/20"
+                />
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[10px] text-red-400"
+            >
+              {error}
+            </motion.p>
+          )}
+        </div>
+
+        <div className="px-5 pb-5 flex gap-2">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl text-[12px] font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors border border-white/8"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex-1 py-2.5 rounded-xl text-[12px] font-bold text-white transition-all"
+            style={{
+              background: mode === "set"
+                ? "linear-gradient(135deg, rgba(251,191,36,0.3), rgba(245,158,11,0.2))"
+                : "linear-gradient(135deg, rgba(52,211,153,0.3), rgba(16,185,129,0.2))",
+              border: mode === "set" ? "1px solid rgba(251,191,36,0.25)" : "1px solid rgba(52,211,153,0.25)",
+              color: mode === "set" ? "#fbbf24" : "#34d399",
+            }}
+          >
+            {mode === "set" ? "Lock Note" : "Unlock"}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 // ── Note Editor ──
 
@@ -103,7 +233,10 @@ const NoteContent: React.FC<{
   onLockToggle: (id: string) => void;
   unlockedIds: Set<string>;
   onUnlock: (id: string) => void;
-}> = ({ notes, selectedId, onUpdate, onLockToggle, unlockedIds, onUnlock }) => {
+  lockModal: { mode: "set" | "confirm"; noteId: string } | null;
+  setLockModal: (v: { mode: "set" | "confirm"; noteId: string } | null) => void;
+  onSaveNote: (note: Note) => void;
+}> = ({ notes, selectedId, onUpdate, onLockToggle, unlockedIds, onUnlock, lockModal, setLockModal, onSaveNote }) => {
   const note = notes.find(n => n.id === selectedId);
   const [pwInput, setPwInput] = useState("");
   const [pwError, setPwError] = useState(false);
@@ -303,6 +436,7 @@ const NotesWidgetContent = () => {
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [lockModal, setLockModal] = useState<{ mode: "set" | "confirm"; noteId: string } | null>(null);
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -404,22 +538,38 @@ const NotesWidgetContent = () => {
   }, [user, saveNote]);
 
   const handleLockToggle = useCallback((id: string) => {
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+    if (note.isLocked) {
+      // Unlock: show confirm modal
+      setLockModal({ mode: "confirm", noteId: id });
+    } else {
+      // Lock: show set-password modal
+      setLockModal({ mode: "set", noteId: id });
+    }
+  }, [notes]);
+
+  const handleLockModalConfirm = useCallback((password: string) => {
+    if (!lockModal) return;
+    const { mode, noteId } = lockModal;
+    setLockModal(null);
+
     setNotes(prev => {
-      const note = prev.find(n => n.id === id);
+      const note = prev.find(n => n.id === noteId);
       if (!note) return prev;
-      if (note.isLocked) {
-        const updated = prev.map(n => n.id === id ? { ...n, isLocked: false, password: undefined, synced: false } : n);
-        if (user) saveNote({ ...note, isLocked: false, password: undefined });
-        setUnlockedIds(set => { const s = new Set(set); s.delete(id); return s; });
+      if (mode === "set") {
+        const updated = prev.map(n => n.id === noteId ? { ...n, isLocked: true, password, synced: false } : n);
+        if (user) saveNote({ ...note, isLocked: true, password });
         return updated;
       } else {
-        const pw = prompt("Set a password for this note (default: 1234)") || "1234";
-        const updated = prev.map(n => n.id === id ? { ...n, isLocked: true, password: pw, synced: false } : n);
-        if (user) saveNote({ ...note, isLocked: true, password: pw });
+        // unlock
+        const updated = prev.map(n => n.id === noteId ? { ...n, isLocked: false, password: undefined, synced: false } : n);
+        if (user) saveNote({ ...note, isLocked: false, password: undefined });
+        setUnlockedIds(set => { const s = new Set(set); s.delete(noteId); return s; });
         return updated;
       }
     });
-  }, [user, saveNote]);
+  }, [lockModal, user, saveNote]);
 
   const addNote = useCallback(async () => {
     if (user) {
@@ -465,103 +615,123 @@ const NotesWidgetContent = () => {
     !search || n.title.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Find the lock modal's note for confirm mode
+  const lockModalNote = lockModal ? notes.find(n => n.id === lockModal.noteId) : null;
+
   return (
-    <div className="flex h-full min-h-0">
-      {/* Left Sidebar */}
-      <div className="w-[160px] shrink-0 flex flex-col border-r border-white/8 bg-white/3">
-        <div className="flex items-center justify-between px-3 pt-3 pb-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-white/60">Notes</span>
-            {user && (
-              syncing
-                ? <Loader2 size={9} className="text-white/30 animate-spin" />
-                : <Cloud size={9} className="text-white/20" />
-            )}
-            {!user && <CloudOff size={9} className="text-white/20" />}
-          </div>
-          <button
-            onClick={addNote}
-            className="w-5 h-5 rounded-md flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <Plus size={12} />
-          </button>
-        </div>
-        <div className="px-2 pb-2">
-          <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 border border-white/8">
-            <Search size={10} className="text-white/30 shrink-0" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="flex-1 bg-transparent text-[10px] text-white/70 outline-none placeholder:text-white/25 min-w-0"
-            />
-            {search && <button onClick={() => setSearch("")}><X size={9} className="text-white/30" /></button>}
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto council-hidden-scrollbar">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 size={16} className="animate-spin text-white/20" />
-            </div>
-          ) : (
-            <>
-              {filtered.map(note => {
-                const isLocked = note.isLocked && !unlockedIds.has(note.id);
-                const isActive = note.id === selectedId;
-                return (
-                  <button
-                    key={note.id}
-                    onClick={() => setSelectedId(note.id)}
-                    className={`w-full text-left px-3 py-2.5 border-b border-white/5 transition-colors group relative ${isActive ? "bg-white/10" : "hover:bg-white/5"}`}
-                  >
-                    <div className="flex items-center gap-1 mb-0.5">
-                      {isLocked && <Lock size={9} className="text-amber-400/60 shrink-0" />}
-                      <p className={`text-[11px] font-semibold truncate leading-tight ${isActive ? "text-white" : "text-white/65"}`}>
-                        {note.title}
-                      </p>
-                    </div>
-                    <p className="text-[9px] text-white/30 truncate">{formatRelativeTime(note.updatedAt)}</p>
-                    <p className="text-[9px] text-white/25 truncate mt-0.5">{getPreview(note, unlockedIds.has(note.id))}</p>
-                    <button
-                      onClick={e => deleteNote(note.id, e)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-colors hidden group-hover:flex"
-                    >
-                      <Trash2 size={9} />
-                    </button>
-                  </button>
-                );
-              })}
-              {filtered.length === 0 && (
-                <p className="text-[10px] text-white/25 text-center py-6">No notes found</p>
+    <>
+      <div className="flex h-full min-h-0">
+        {/* Left Sidebar */}
+        <div className="w-[160px] shrink-0 flex flex-col border-r border-white/8 bg-white/3">
+          <div className="flex items-center justify-between px-3 pt-3 pb-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-white/60">Notes</span>
+              {user && (
+                syncing
+                  ? <Loader2 size={9} className="text-white/30 animate-spin" />
+                  : <Cloud size={9} className="text-white/20" />
               )}
-            </>
-          )}
+              {!user && <CloudOff size={9} className="text-white/20" />}
+            </div>
+            <button
+              onClick={addNote}
+              className="w-5 h-5 rounded-md flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <Plus size={12} />
+            </button>
+          </div>
+          <div className="px-2 pb-2">
+            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 border border-white/8">
+              <Search size={10} className="text-white/30 shrink-0" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="flex-1 bg-transparent text-[10px] text-white/70 outline-none placeholder:text-white/25 min-w-0"
+              />
+              {search && <button onClick={() => setSearch("")}><X size={9} className="text-white/30" /></button>}
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto council-hidden-scrollbar">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 size={16} className="animate-spin text-white/20" />
+              </div>
+            ) : (
+              <>
+                {filtered.map(note => {
+                  const isLocked = note.isLocked && !unlockedIds.has(note.id);
+                  const isActive = note.id === selectedId;
+                  return (
+                    <button
+                      key={note.id}
+                      onClick={() => setSelectedId(note.id)}
+                      className={`w-full text-left px-3 py-2.5 border-b border-white/5 transition-colors group relative ${isActive ? "bg-white/10" : "hover:bg-white/5"}`}
+                    >
+                      <div className="flex items-center gap-1 mb-0.5">
+                        {isLocked && <Lock size={9} className="text-amber-400/60 shrink-0" />}
+                        <p className={`text-[11px] font-semibold truncate leading-tight ${isActive ? "text-white" : "text-white/65"}`}>
+                          {note.title}
+                        </p>
+                      </div>
+                      <p className="text-[9px] text-white/30 truncate">{formatRelativeTime(note.updatedAt)}</p>
+                      <p className="text-[9px] text-white/25 truncate mt-0.5">{getPreview(note, unlockedIds.has(note.id))}</p>
+                      <button
+                        onClick={e => deleteNote(note.id, e)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-colors hidden group-hover:flex"
+                      >
+                        <Trash2 size={9} />
+                      </button>
+                    </button>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <p className="text-[10px] text-white/25 text-center py-6">No notes found</p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Right Editor */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedId}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.15 }}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              <NoteContent
+                notes={notes}
+                selectedId={selectedId}
+                onUpdate={handleUpdate}
+                onLockToggle={handleLockToggle}
+                unlockedIds={unlockedIds}
+                onUnlock={id => setUnlockedIds(prev => new Set([...prev, id]))}
+                lockModal={lockModal}
+                setLockModal={setLockModal}
+                onSaveNote={saveNote}
+              />
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Right Editor */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selectedId}
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -8 }}
-            transition={{ duration: 0.15 }}
-            className="flex-1 flex flex-col min-h-0"
-          >
-            <NoteContent
-              notes={notes}
-              selectedId={selectedId}
-              onUpdate={handleUpdate}
-              onLockToggle={handleLockToggle}
-              unlockedIds={unlockedIds}
-              onUnlock={id => setUnlockedIds(prev => new Set([...prev, id]))}
-            />
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </div>
+      {/* Lock Modal */}
+      <AnimatePresence>
+        {lockModal && (
+          <LockModal
+            mode={lockModal.mode}
+            existingPassword={lockModalNote?.password}
+            onConfirm={handleLockModalConfirm}
+            onCancel={() => setLockModal(null)}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
