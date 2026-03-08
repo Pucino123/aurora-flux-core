@@ -77,7 +77,6 @@ const FeatureMarquee = ({ isDark }: { isDark: boolean }) => (
   </div>
 );
 
-const SLIDES = [
   {
     tag: "🧠 The Council",
     tagColor: "rgba(139,92,246,0.7)",
