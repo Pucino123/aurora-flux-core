@@ -1766,12 +1766,20 @@ const FocusContent = () => {
         <motion.div
           ref={pillRef}
           className="fixed z-[9999] group flex items-center gap-2.5 px-4 py-2 select-none"
-          animate={pillBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
-          transition={pillBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
-          style={pillPos
-            ? { left: pillPos.x, top: pillPos.y, transform: "none", ...pillSharedStyle }
-            : { left: "50%", bottom: "88px", transform: "translateX(-50%)", ...pillSharedStyle }
+          animate={
+            isFocusModeActive
+              ? { opacity: 0, y: 20, pointerEvents: "none" as const }
+              : pillBouncing
+              ? { scale: [1, 1.06, 0.97, 1.02, 1], opacity: 1, y: 0 }
+              : { scale: 1, opacity: 1, y: 0 }
           }
+          transition={pillBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
+          style={{
+            ...(pillPos
+              ? { left: pillPos.x, top: pillPos.y, transform: "none", ...pillSharedStyle }
+              : { left: "50%", bottom: "88px", transform: "translateX(-50%)", ...pillSharedStyle }),
+            pointerEvents: isFocusModeActive ? "none" : undefined,
+          }}
           onPointerDown={handlePillPointerDown}
           onPointerMove={handlePillPointerMove}
           onPointerUp={handlePillPointerUp}
