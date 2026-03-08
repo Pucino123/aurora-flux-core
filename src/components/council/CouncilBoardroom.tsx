@@ -1002,7 +1002,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
   const stopFloatingEmojis = useCallback(() => {
     if (emojiTimerRef.current) { clearInterval(emojiTimerRef.current); emojiTimerRef.current = null; }
-    setFloatingEmojis({ elena: [], helen: [], anton: [], margot: [] });
+    setFloatingEmojis({ strategist: [], operator: [], skeptic: [], advocate: [] });
   }, []);
 
   useEffect(() => {
