@@ -88,7 +88,7 @@ const AuraTab = () => {
                 : "bg-secondary text-foreground rounded-bl-sm border border-border/40"
             }`}>
               {m.role === "assistant"
-                ? <ReactMarkdown className="prose prose-sm prose-invert max-w-none text-xs [&_p]:mb-1 [&_ul]:mt-1 [&_li]:mt-0.5">{m.content}</ReactMarkdown>
+                ? <ReactMarkdown>{m.content}</ReactMarkdown>
                 : m.content
               }
             </div>
