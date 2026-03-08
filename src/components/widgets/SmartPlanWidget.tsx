@@ -534,6 +534,25 @@ const SmartPlanWidget = () => {
     });
   }, [handleAddBlock]);
 
+  // ── Daily Summary ────────────────────────────────────────────────────────
+  const fetchDailySummary = useCallback(async () => {
+    const todayBlks = blocks.filter(b => b.scheduledDate === TODAY);
+    if (todayBlks.length === 0) { setSummary("No blocks scheduled for today yet!"); setSummaryOpen(true); return; }
+    setSummaryLoading(true);
+    setSummaryOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("flux-ai", {
+        body: { type: "daily-summary", blocks: todayBlks },
+      });
+      if (error || !data?.summary) throw new Error("No summary");
+      setSummary(data.summary);
+    } catch {
+      setSummary("Couldn't generate summary right now. Check back later!");
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [blocks]);
+
   // ── Delete block ────────────────────────────────────────────────────────
   const handleDeleteBlock = useCallback(async (blockId: string) => {
     setBlocks(prev => prev.filter(b => b.id !== blockId));
