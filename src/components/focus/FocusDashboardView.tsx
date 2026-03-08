@@ -44,13 +44,14 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X, Focus } from "lucide-react";
 import { toast } from "sonner";
 import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
 import WindowFrame from "@/components/windows/WindowFrame";
 import WindowDock from "@/components/windows/WindowDock";
 import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
+import { useFocusMode } from "@/context/FocusModeContext";
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
