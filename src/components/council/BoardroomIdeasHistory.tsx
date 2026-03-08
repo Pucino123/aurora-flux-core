@@ -636,11 +636,16 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
                               {/* Suggestions dropdown */}
                               <AnimatePresence>
                                 {showTagSuggestions && (() => {
-                                  const suggestions = allTagsWithCount.filter(
+                                  const fromHistory = allTagsWithCount.filter(
                                     t => !idea.tags.includes(t) &&
                                     (tagInput === "" || t.includes(tagInput.toLowerCase()))
-                                  ).slice(0, 6);
-                                  if (suggestions.length === 0) return null;
+                                  );
+                                  const fromAI = extractAITags(idea.content).filter(
+                                    t => !idea.tags.includes(t) && !fromHistory.includes(t) &&
+                                    (tagInput === "" || t.includes(tagInput.toLowerCase()))
+                                  );
+                                  const allSuggestions = [...fromHistory, ...fromAI].slice(0, 8);
+                                  if (allSuggestions.length === 0) return null;
                                   return (
                                     <motion.div
                                       initial={{ opacity: 0, y: -4 }}
@@ -650,22 +655,34 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
                                       className="absolute top-full left-0 right-8 mt-1 rounded-xl overflow-hidden z-50"
                                       style={{ background: "rgba(14,10,30,0.97)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
                                     >
-                                      <p className="px-2.5 pt-2 pb-1 text-[8px] text-white/25 uppercase tracking-widest">Suggested tags</p>
-                                      {suggestions.map(tag => {
+                                      {fromHistory.length > 0 && (
+                                        <p className="px-2.5 pt-2 pb-0.5 text-[8px] text-white/25 uppercase tracking-widest">Your tags</p>
+                                      )}
+                                      {fromHistory.slice(0, 4).map(tag => {
                                         const c = tagColor(tag);
                                         return (
-                                          <button
-                                            key={tag}
-                                            onMouseDown={e => e.preventDefault()}
+                                          <button key={tag} onMouseDown={e => e.preventDefault()}
                                             onClick={() => { handleAddTag(idea.id, tag); setTagInput(""); setShowTagSuggestions(false); }}
-                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] hover:bg-white/5 transition-colors text-left"
-                                          >
-                                            <span
-                                              className="px-1.5 py-0.5 rounded-full text-[8px] font-semibold"
-                                              style={{ background: `${c}18`, color: c, border: `1px solid ${c}28` }}
-                                            >
-                                              {tag}
-                                            </span>
+                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] hover:bg-white/5 transition-colors text-left">
+                                            <span className="px-1.5 py-0.5 rounded-full text-[8px] font-semibold"
+                                              style={{ background: `${c}18`, color: c, border: `1px solid ${c}28` }}>{tag}</span>
+                                          </button>
+                                        );
+                                      })}
+                                      {fromAI.slice(0, 4).length > 0 && (
+                                        <p className="px-2.5 pt-1.5 pb-0.5 text-[8px] uppercase tracking-widest" style={{ color: "rgba(167,139,250,0.5)" }}>
+                                          ✦ AI suggested
+                                        </p>
+                                      )}
+                                      {fromAI.slice(0, 4).map(tag => {
+                                        const c = tagColor(tag);
+                                        return (
+                                          <button key={tag} onMouseDown={e => e.preventDefault()}
+                                            onClick={() => { handleAddTag(idea.id, tag); setTagInput(""); setShowTagSuggestions(false); }}
+                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] hover:bg-white/5 transition-colors text-left">
+                                            <span className="px-1.5 py-0.5 rounded-full text-[8px] font-semibold"
+                                              style={{ background: `${c}18`, color: c, border: `1px solid ${c}28` }}>{tag}</span>
+                                            <span className="text-[7px]" style={{ color: "rgba(167,139,250,0.4)" }}>suggested</span>
                                           </button>
                                         );
                                       })}
@@ -679,13 +696,23 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
 
                         {/* Actions */}
                         <div className="flex items-center justify-between pt-1">
-                          <button
-                            onClick={() => onRestoreIdea(idea)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold transition-all text-purple-300 hover:text-purple-200"
-                            style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.25)" }}
-                          >
-                            <RotateCcw size={9} /> Restore to Boardroom
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => onRestoreIdea(idea)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold transition-all text-purple-300 hover:text-purple-200"
+                              style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.25)" }}
+                            >
+                              <RotateCcw size={9} /> Restore
+                            </button>
+                            <button
+                              onClick={() => onRestoreIdea(idea, true)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold transition-all transition-colors"
+                              style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.2)", color: "rgba(34,211,238,0.7)" }}
+                              title="Replay the full reveal sequence as if consulting live"
+                            >
+                              <Play size={9} /> Replay
+                            </button>
+                          </div>
                           <button
                             onClick={() => handleDelete(idea.id)}
                             className="w-7 h-7 flex items-center justify-center rounded-xl text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-colors"
