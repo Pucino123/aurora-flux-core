@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Sparkles, Zap, GripVertical } from "lucide-react";
+import { Plus, Trash2, Sparkles, Zap, GripVertical, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useFlux } from "@/context/FluxContext";
 import { useTrash } from "@/context/TrashContext";
 import { toast } from "sonner";

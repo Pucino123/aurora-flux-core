@@ -11,8 +11,9 @@ import {
 import {
   ChevronLeft, ChevronRight, Plus, X, Clock, CheckCircle2, CalendarDays, Loader2,
   RefreshCw, CheckCheck, Calendar, Globe, Sparkles, Zap, CheckSquare, CalendarOff,
-  ChevronRight as Collapse,
+  ChevronRight as Collapse, Sun, Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Calendar as MiniCalendar } from "@/components/ui/calendar";
