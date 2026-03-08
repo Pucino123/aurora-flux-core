@@ -85,31 +85,34 @@ const DocumentsView = () => {
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("application/flux-doc", JSON.stringify(doc));
-                  e.dataTransfer.effectAllowed = "copy";
-                }}
-                onClick={() => { openInWorkspace(doc); setActiveView("multitask" as any); }}
-                className="w-full flux-card flex items-center justify-between hover:ring-1 hover:ring-primary/20 transition-all cursor-pointer group"
               >
-                <div className="flex items-center gap-3">
-                  {doc.type === "spreadsheet"
-                    ? <Table size={16} className="text-emerald-500 shrink-0" />
-                    : <FileText size={16} className="text-blue-400 shrink-0" />}
-                  <div className="text-left">
-                    <p className="text-sm font-medium">{doc.title}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {doc.type === "spreadsheet" ? "Spreadsheet" : "Document"} · Updated {new Date(doc.updated_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={e => { e.stopPropagation(); removeDocument(doc.id); }}
-                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                <div
+                  draggable
+                  onDragStart={(e: React.DragEvent) => {
+                    e.dataTransfer.setData("application/flux-doc", JSON.stringify(doc));
+                    e.dataTransfer.effectAllowed = "copy";
+                  }}
+                  onClick={() => { openInWorkspace(doc); setActiveView("multitask" as any); }}
+                  className="flux-card flex items-center justify-between hover:ring-1 hover:ring-primary/20 transition-all cursor-pointer group"
                 >
-                  <Trash2 size={12} />
-                </button>
+                  <div className="flex items-center gap-3">
+                    {doc.type === "spreadsheet"
+                      ? <Table size={16} className="text-emerald-500 shrink-0" />
+                      : <FileText size={16} className="text-blue-400 shrink-0" />}
+                    <div className="text-left">
+                      <p className="text-sm font-medium">{doc.title}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {doc.type === "spreadsheet" ? "Spreadsheet" : "Document"} · Updated {new Date(doc.updated_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); removeDocument(doc.id); }}
+                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>
