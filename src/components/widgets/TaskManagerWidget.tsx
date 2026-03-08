@@ -238,37 +238,42 @@ const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
 
-        {/* Priority dot */}
+        {/* Priority dot — always visible if set */}
         {task.priority && PRIORITY_DOT[task.priority] && (
-          <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${PRIORITY_DOT[task.priority]}`} />
+          <div className={`w-2 h-2 rounded-full shrink-0 mt-1 ${PRIORITY_DOT[task.priority]}`} title={task.priority} />
         )}
 
-        {/* Flag button */}
+        {/* Flag button — always visible if flagged, visible on hover otherwise */}
         {!task.done && editingId !== task.id && (
           <button
             onClick={e => { e.stopPropagation(); onToggleFlag(task.id, isFlagged); }}
-            className={`shrink-0 mt-0.5 transition-all z-10 ${
-              isFlagged ? "text-amber-400 opacity-100" : "text-muted-foreground/20 opacity-0 group-hover/row:opacity-60 hover:!opacity-100"
+            className={`shrink-0 mt-0.5 transition-all duration-150 z-10 ${
+              isFlagged
+                ? "text-amber-400 opacity-100 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)]"
+                : "text-white/30 opacity-0 group-hover/row:opacity-100 hover:!text-amber-400"
             }`}
+            title={isFlagged ? "Unflag task" : "Flag task"}
           >
-            <Flag size={9} fill={isFlagged ? "currentColor" : "none"} />
+            <Flag size={11} fill={isFlagged ? "currentColor" : "none"} strokeWidth={isFlagged ? 0 : 1.5} />
           </button>
         )}
 
-        {/* Edit + quick menu buttons */}
+        {/* Edit + quick menu buttons — visible on hover */}
         {!task.done && editingId !== task.id && (
           <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0 z-10">
             <button
               onClick={e => { e.stopPropagation(); onStartEdit(task.id, task.title); }}
-              className="mt-0.5 text-muted-foreground/30 hover:text-foreground transition-colors"
+              className="mt-0.5 p-0.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              title="Edit task"
             >
-              <Pencil size={9} />
+              <Pencil size={11} />
             </button>
             <button
               onClick={e => { e.stopPropagation(); onSetQuickMenu(quickMenuId === task.id ? null : task.id); }}
-              className="mt-0.5 text-muted-foreground/30 hover:text-foreground transition-colors"
+              className="mt-0.5 p-0.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              title="More options"
             >
-              <MoreHorizontal size={9} />
+              <MoreHorizontal size={11} />
             </button>
           </div>
         )}
