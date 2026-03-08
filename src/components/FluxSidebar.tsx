@@ -101,20 +101,28 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
   return (
     <>
       {!visible && (
-        <button onClick={onToggle} className="fixed top-4 left-4 z-50 p-2 rounded-lg glass-panel-hover">
+        <motion.button
+          onClick={onToggle}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -8 }}
+          transition={{ duration: 0.2 }}
+          className="fixed top-4 left-4 z-50 p-2 rounded-lg glass-panel-hover"
+        >
           <PanelLeft size={18} className="text-muted-foreground" />
-        </button>
+        </motion.button>
       )}
 
-      <AnimatePresence>
-        {visible && (
-          <motion.aside
-            initial={{ x: -260, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -260, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="w-[260px] min-w-[260px] h-screen sidebar-apple flex flex-col py-3 z-30"
-          >
+      <motion.aside
+        animate={{
+          width: visible ? 260 : 0,
+          opacity: visible ? 1 : 0,
+          x: visible ? 0 : -30,
+        }}
+        transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+        style={{ overflow: "hidden", minWidth: 0 }}
+        className="h-screen sidebar-apple flex flex-col py-3 z-30 shrink-0"
+      >
             {/* Header */}
             <div className="flex items-center justify-between px-4 mb-2">
               <h1 className="text-base font-semibold text-foreground">{t("app.name")}</h1>

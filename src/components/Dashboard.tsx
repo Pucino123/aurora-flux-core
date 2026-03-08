@@ -218,9 +218,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       <OnboardingFlow />
       <CreateFolderModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onCreate={handleCreateFolder} />
 
-      {/* Focus Mode exit button — floats at top when active */}
-      <AnimatePresence>
-        {isFocusModeActive && (
+
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
