@@ -148,6 +148,11 @@ export function useDocuments(folderId?: string | null) {
 
   const removeDocument = useCallback(
     async (id: string) => {
+      const doc = documents.find(d => d.id === id);
+      // Pass to trash via callback if provided
+      if (doc && onMoveToTrash) {
+        onMoveToTrash({ id: doc.id, type: "document", title: doc.title, originalData: doc });
+      }
       setDocuments((prev) => prev.filter((d) => d.id !== id));
       if (!user) {
         const allDocs = lsGetDocs();
@@ -160,7 +165,7 @@ export function useDocuments(folderId?: string | null) {
         .eq("id", id)
         .eq("user_id", user.id);
     },
-    [user, setDocuments]
+    [user, setDocuments, documents, onMoveToTrash]
   );
 
   return { documents, loading, createDocument, updateDocument, removeDocument, refetch: fetchDocuments };
