@@ -79,6 +79,33 @@ function computeStreak(dailyLog: Record<string, number>): number {
   return streak;
 }
 
+// Lightweight CSS confetti — no external library needed
+function ConfettiBurst() {
+  const COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#f59e0b", "#f472b6"];
+  const pieces = Array.from({ length: 24 }, (_, i) => ({
+    id: i,
+    color: COLORS[i % COLORS.length],
+    x: (Math.random() - 0.5) * 160,
+    y: -(40 + Math.random() * 80),
+    rotate: Math.random() * 720,
+    size: 4 + Math.random() * 5,
+  }));
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden z-10">
+      {pieces.map(p => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-sm"
+          style={{ width: p.size, height: p.size, background: p.color, top: "50%", left: "50%" }}
+          initial={{ x: 0, y: 0, opacity: 1, rotate: 0, scale: 1 }}
+          animate={{ x: p.x, y: p.y, opacity: 0, rotate: p.rotate, scale: 0.4 }}
+          transition={{ duration: 0.9 + Math.random() * 0.4, ease: "easeOut" }}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 const FocusStatsWidget = () => {
   const { user } = useAuth();
@@ -86,6 +113,8 @@ const FocusStatsWidget = () => {
   const [timerSecs, setTimerSecs] = useState(POMODORO_SECS);
   const [timerRunning, setTimerRunning] = useState(false);
   const [ringAnim, setRingAnim] = useState(false);
+  const [goalReached, setGoalReached] = useState(false);
+  const prevDailyPctRef = useRef(0);
 
   // DB-driven state
   const [dailyLog, setDailyLog] = useState<Record<string, number>>({});
@@ -143,7 +172,7 @@ const FocusStatsWidget = () => {
     return () => window.removeEventListener("focus-stats-updated", handler);
   }, [loadDbSessions]);
 
-  // ── Persist a session to DB ──────────────────────────────────────────────
+  // ── Persist a session to DB + check goal reached ────────────────────────
   const persistSession = useCallback(async (minutes: number) => {
     if (!user) return;
     await supabase.from("focus_sessions").insert({
@@ -151,8 +180,16 @@ const FocusStatsWidget = () => {
       session_date: getToday(),
       minutes,
     });
+    // Optimistically check if crossing 100%
+    const currentMin = (dailyLog[getToday()] ?? 0) + minutes;
+    const newPct = Math.min((currentMin / DAILY_GOAL_MIN) * 100, 100);
+    if (newPct >= 100 && prevDailyPctRef.current < 100) {
+      setGoalReached(true);
+      setTimeout(() => setGoalReached(false), 2800);
+    }
+    prevDailyPctRef.current = newPct;
     loadDbSessions();
-  }, [user, loadDbSessions]);
+  }, [user, loadDbSessions, dailyLog]);
 
   // ── Pomodoro logic ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -223,18 +260,21 @@ const FocusStatsWidget = () => {
           </div>
 
           {/* Circular progress ring */}
-          <div className="shrink-0 flex flex-col items-center">
+          <div className="shrink-0 flex flex-col items-center relative">
             <div className="relative w-24 h-24">
               <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r={RING_R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
                 <motion.circle
                   cx="50" cy="50" r={RING_R} fill="none"
-                  stroke="url(#focusGrad)"
+                  stroke={goalReached ? "url(#focusGradGreen)" : "url(#focusGrad)"}
                   strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={RING_C}
                   initial={{ strokeDashoffset: RING_C }}
-                  animate={{ strokeDashoffset: ringAnim ? RING_C * (1 - dailyPct / 100) : RING_C }}
+                  animate={{
+                    strokeDashoffset: ringAnim ? RING_C * (1 - dailyPct / 100) : RING_C,
+                    filter: goalReached ? "drop-shadow(0 0 8px #34d399)" : "none",
+                  }}
                   transition={{ duration: 1.2, ease: "easeOut" }}
                 />
                 <defs>
@@ -242,15 +282,56 @@ const FocusStatsWidget = () => {
                     <stop offset="0%" stopColor="hsl(250 80% 70%)" />
                     <stop offset="100%" stopColor="hsl(200 90% 65%)" />
                   </linearGradient>
+                  <linearGradient id="focusGradGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#34d399" />
+                    <stop offset="100%" stopColor="#6ee7b7" />
+                  </linearGradient>
                 </defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-[15px] font-bold text-white/90 leading-none">
-                  {Math.floor(todayMin / 60)}h {todayMin % 60}m
-                </p>
+                <AnimatePresence mode="wait">
+                  {goalReached ? (
+                    <motion.p
+                      key="reached"
+                      initial={{ scale: 0.6, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      className="text-[11px] font-bold text-emerald-300 leading-none text-center"
+                    >
+                      🎉 Goal!
+                    </motion.p>
+                  ) : (
+                    <motion.p
+                      key="time"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-[15px] font-bold text-white/90 leading-none"
+                    >
+                      {Math.floor(todayMin / 60)}h {todayMin % 60}m
+                    </motion.p>
+                  )}
+                </AnimatePresence>
                 <p className="text-[8px] text-white/30 mt-0.5">/ 5h goal</p>
               </div>
+              {/* Confetti burst on goal reached */}
+              <AnimatePresence>
+                {goalReached && <ConfettiBurst />}
+              </AnimatePresence>
             </div>
+            {/* Goal reached banner */}
+            <AnimatePresence>
+              {goalReached && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="mt-2 px-3 py-1 rounded-full bg-emerald-400/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-semibold"
+                >
+                  🏆 Daily Goal Reached!
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Stats badges */}
