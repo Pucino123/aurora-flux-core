@@ -54,14 +54,29 @@ const MODES: { key: SystemMode; label: string; icon: any; desc: string }[] = [
   { key: "build", label: "Build", icon: Hammer, desc: "Customize layout" },
 ];
 
-const ToolDrawer = () => {
+interface ToolDrawerProps {
+  /** Per-page active widgets override. When provided, toggle affects this list instead of the global store. */
+  pageActiveWidgets?: string[];
+  onTogglePageWidget?: (id: string) => void;
+}
+
+const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps = {}) => {
   const { activeWidgets, toggleWidget, systemMode, setSystemMode, resetDashboard } = useFocusStore();
   
+  const effectiveWidgets = pageActiveWidgets ?? activeWidgets;
+  const effectiveToggle = (id: string) => {
+    if (onTogglePageWidget) {
+      onTogglePageWidget(id);
+    } else {
+      toggleWidget(id);
+    }
+  };
+
   const [open, setOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
-  const suggestions = useMemo(() => getSuggestedWidgets(activeWidgets as string[]), [activeWidgets]);
+  const suggestions = useMemo(() => getSuggestedWidgets(effectiveWidgets as string[]), [effectiveWidgets]);
   const { unreadCount, markAsRead, setModalOpen } = useTeamChat();
   return (
     <>
@@ -111,7 +126,7 @@ const ToolDrawer = () => {
         >
           <ChevronUp size={14} className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
           <span className="hidden sm:inline">Tools</span>
-          <span className="text-[10px] text-white/25 tabular-nums">{activeWidgets.length}</span>
+          <span className="text-[10px] text-white/25 tabular-nums">{effectiveWidgets.length}</span>
         </motion.button>
       </div>
 
@@ -177,7 +192,7 @@ const ToolDrawer = () => {
                       return (
                         <button
                           key={id}
-                          onClick={() => toggleWidget(id)}
+                          onClick={() => effectiveToggle(id)}
                           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-medium text-white/50 hover:text-white hover:bg-white/10 border border-white/10 transition-all"
                         >
                           <Icon size={14} />
@@ -193,11 +208,11 @@ const ToolDrawer = () => {
                   <span className="text-[10px] text-white/25 font-semibold uppercase tracking-wider mb-1.5 block">{cat.label}</span>
                   <div className="grid grid-cols-5 gap-1.5">
                     {cat.tools.map(({ id, label, icon: Icon }) => {
-                      const active = activeWidgets.includes(id);
+                      const active = effectiveWidgets.includes(id);
                       return (
                         <button
                           key={id}
-                          onClick={() => toggleWidget(id)}
+                          onClick={() => effectiveToggle(id)}
                           className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl text-[10px] font-medium transition-all ${
                             active
                               ? "bg-white/15 text-white shadow-[0_0_10px_rgba(255,255,255,0.05)]"

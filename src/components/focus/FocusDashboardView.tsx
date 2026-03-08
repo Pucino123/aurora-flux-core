@@ -68,15 +68,25 @@ const FocusContent = () => {
   const { user } = useAuth();
 
   // iOS-style dashboard pages state
-  const [dashboardPages, setDashboardPages] = useState<{ id: string }[]>(() => {
+  type DashboardPage = { id: string; label: string; activeWidgets?: string[] };
+  const [dashboardPages, setDashboardPages] = useState<DashboardPage[]>(() => {
     try {
       const raw = localStorage.getItem("flux-dashboard-pages");
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Migrate old format (just {id}) to new format
+        return parsed.map((p: any) => ({ id: p.id, label: p.label || "Home", activeWidgets: p.activeWidgets }));
+      }
     } catch {}
-    return [{ id: "page-1" }];
+    return [{ id: "page-1", label: "Home" }];
   });
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [pageDir, setPageDir] = useState<1 | -1>(1);
+  const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
+  const [editingLabelValue, setEditingLabelValue] = useState("");
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  // Touch swipe state
+  const touchStartX = useRef<number | null>(null);
 
   // Persist pages
   useEffect(() => {
@@ -89,7 +99,7 @@ const FocusContent = () => {
   }, [activePageIndex]);
 
   const addPage = useCallback(() => {
-    const newPage = { id: `page-${Date.now()}` };
+    const newPage: DashboardPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
     setDashboardPages(prev => {
       const next = [...prev, newPage];
       localStorage.setItem("flux-dashboard-pages", JSON.stringify(next));
@@ -98,6 +108,41 @@ const FocusContent = () => {
     setPageDir(1);
     setActivePageIndex(dashboardPages.length);
   }, [dashboardPages.length]);
+
+  const startLabelEdit = useCallback((idx: number) => {
+    setEditingLabelIdx(idx);
+    setEditingLabelValue(dashboardPages[idx]?.label || "");
+    setTimeout(() => labelInputRef.current?.select(), 50);
+  }, [dashboardPages]);
+
+  const commitLabelEdit = useCallback(() => {
+    if (editingLabelIdx === null) return;
+    const trimmed = editingLabelValue.trim() || dashboardPages[editingLabelIdx]?.label || "Page";
+    setDashboardPages(prev => prev.map((p, i) => i === editingLabelIdx ? { ...p, label: trimmed } : p));
+    setEditingLabelIdx(null);
+  }, [editingLabelIdx, editingLabelValue, dashboardPages]);
+
+  // Per-page active widgets — current page overrides global if set
+  const currentPage = dashboardPages[activePageIndex];
+  const pageActiveWidgets: string[] = currentPage?.activeWidgets ?? activeWidgets;
+
+  const updatePageWidgets = useCallback((widgets: string[]) => {
+    setDashboardPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, activeWidgets: widgets } : p));
+  }, [activePageIndex]);
+
+  // Touch swipe handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) < 50) return;
+    if (dx < 0 && activePageIndex < dashboardPages.length - 1) goToPage(activePageIndex + 1);
+    if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
+  }, [activePageIndex, dashboardPages.length, goToPage]);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
@@ -537,6 +582,8 @@ const FocusContent = () => {
       onMouseDown={handleCanvasMouseDown}
       onDragOver={handleCanvasDragOver}
       onDrop={handleCanvasDrop}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <BackgroundEngine embedded />
       {/* Vignette always visible */}
@@ -566,19 +613,19 @@ const FocusContent = () => {
             >
               <div className="pointer-events-auto w-full h-full">
             <AnimatePresence>
-              {activeWidgets.includes("clock") && !clockEditorOpen && <ClockWidget key="clock" onOpenEditor={() => setClockEditorOpen(true)} />}
-              {activeWidgets.includes("timer") && <FocusTimer key="timer" />}
-              {activeWidgets.includes("music") && <MusicWidget key="music" />}
-              {activeWidgets.includes("planner") && <TodaysPlanWidget key="planner" />}
-              {activeWidgets.includes("notes") && <NotesWidget key="notes" />}
-              {activeWidgets.includes("crm") && <FocusCRMWidget key="crm" />}
-              {activeWidgets.includes("stats") && <FocusStatsWidget key="stats" />}
-              {activeWidgets.includes("scratchpad") && <ScratchpadWidget key="scratchpad" />}
-              {activeWidgets.includes("quote") && <QuoteOfDay key="quote" />}
-              {activeWidgets.includes("breathing") && <BreathingWidget key="breathing" />}
-              {activeWidgets.includes("council") && <FocusCouncilWidget key="council" />}
-              {activeWidgets.includes("aura") && <AuraWidget key="aura" />}
-              {activeWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
+              {pageActiveWidgets.includes("clock") && !clockEditorOpen && <ClockWidget key="clock" onOpenEditor={() => setClockEditorOpen(true)} />}
+              {pageActiveWidgets.includes("timer") && <FocusTimer key="timer" />}
+              {pageActiveWidgets.includes("music") && <MusicWidget key="music" />}
+              {pageActiveWidgets.includes("planner") && <TodaysPlanWidget key="planner" />}
+              {pageActiveWidgets.includes("notes") && <NotesWidget key="notes" />}
+              {pageActiveWidgets.includes("crm") && <FocusCRMWidget key="crm" />}
+              {pageActiveWidgets.includes("stats") && <FocusStatsWidget key="stats" />}
+              {pageActiveWidgets.includes("scratchpad") && <ScratchpadWidget key="scratchpad" />}
+              {pageActiveWidgets.includes("quote") && <QuoteOfDay key="quote" />}
+              {pageActiveWidgets.includes("breathing") && <BreathingWidget key="breathing" />}
+              {pageActiveWidgets.includes("council") && <FocusCouncilWidget key="council" />}
+              {pageActiveWidgets.includes("aura") && <AuraWidget key="aura" />}
+              {pageActiveWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
               {/* Aura-spawned image widgets */}
               {auraImages.map(img => (
                 <AuraImageWidget
@@ -589,14 +636,13 @@ const FocusContent = () => {
                   onRemove={(id) => setAuraImages(prev => prev.filter(i => i.id !== id))}
                 />
               ))}
-              {activeWidgets.includes("budget-preview") && <FocusBudgetWidget key="budget-preview" />}
-              {activeWidgets.includes("savings-ring") && <FocusSavingsWidget key="savings-ring" />}
-              {activeWidgets.includes("weekly-workout") && <FocusWorkoutWidget key="weekly-workout" />}
-              {activeWidgets.includes("project-status") && <FocusProjectStatusWidget key="project-status" />}
-              {activeWidgets.includes("top-tasks") && <FocusTopTasksWidget key="top-tasks" />}
-              {activeWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
-              {activeWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
-              {/* Chat widget removed for clean desktop */}
+              {pageActiveWidgets.includes("budget-preview") && <FocusBudgetWidget key="budget-preview" />}
+              {pageActiveWidgets.includes("savings-ring") && <FocusSavingsWidget key="savings-ring" />}
+              {pageActiveWidgets.includes("weekly-workout") && <FocusWorkoutWidget key="weekly-workout" />}
+              {pageActiveWidgets.includes("project-status") && <FocusProjectStatusWidget key="project-status" />}
+              {pageActiveWidgets.includes("top-tasks") && <FocusTopTasksWidget key="top-tasks" />}
+              {pageActiveWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
+              {pageActiveWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
             </AnimatePresence>
               </div>
             </motion.div>
@@ -842,48 +888,93 @@ const FocusContent = () => {
         document.body
       )}
 
-      <ToolDrawer />
-
-      {/* ── iOS-style Dashboard Pagination Pill ── */}
-      <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-4 py-2 rounded-full"
-        style={{
-          background: "rgba(15,12,25,0.80)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255,255,255,0.18)",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+      <ToolDrawer
+        pageActiveWidgets={pageActiveWidgets}
+        onTogglePageWidget={(id) => {
+          const updated = pageActiveWidgets.includes(id)
+            ? pageActiveWidgets.filter(w => w !== id)
+            : [...pageActiveWidgets, id];
+          updatePageWidgets(updated);
         }}
+      />
+
+      {/* ── iOS-style Dashboard Pagination ── positioned just above ToolDrawer (~60px from bottom) */}
+      <div className="fixed left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-1.5"
+        style={{ bottom: "68px" }}
       >
-        {dashboardPages.map((page, i) => (
-          <button
-            key={page.id}
-            onClick={() => goToPage(i)}
-            className="transition-all duration-300"
-            style={{
-              width: i === activePageIndex ? 24 : 8,
-              height: 8,
-              borderRadius: 9999,
-              background: i === activePageIndex
-                ? "rgba(255,255,255,1)"
-                : "rgba(255,255,255,0.35)",
-              boxShadow: i === activePageIndex ? "0 0 10px rgba(255,255,255,0.7)" : "none",
-              flexShrink: 0,
-            }}
-          />
-        ))}
-        {/* Divider */}
-        <div className="w-px h-4 bg-white/20 mx-0.5" />
-        {/* Plus button */}
-        <button
-          onClick={addPage}
-          className="flex items-center justify-center transition-colors duration-150"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
-          title="Add page"
+        {/* Page labels row — show only active page label (or inline edit) */}
+        <div className="flex items-center gap-3 h-5">
+          {dashboardPages.map((page, i) => {
+            if (i !== activePageIndex) return null;
+            if (editingLabelIdx === i) {
+              return (
+                <input
+                  key={page.id}
+                  ref={labelInputRef}
+                  value={editingLabelValue}
+                  onChange={e => setEditingLabelValue(e.target.value)}
+                  onBlur={commitLabelEdit}
+                  onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
+                  className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 text-white w-24"
+                  maxLength={20}
+                  autoFocus
+                />
+              );
+            }
+            return (
+              <span
+                key={page.id}
+                className="text-[11px] font-medium text-white/70 cursor-default select-none"
+                onDoubleClick={() => startLabelEdit(i)}
+                title="Double-click to rename"
+              >
+                {page.label || "Home"}
+              </span>
+            );
+          })}
+        </div>
+
+        {/* Pill — dots + plus */}
+        <div
+          className="flex items-center gap-2.5 px-4 py-2 rounded-full"
+          style={{
+            background: "rgba(15,12,25,0.82)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
+          }}
         >
-          <Plus size={14} strokeWidth={2.5} />
-        </button>
+          {dashboardPages.map((page, i) => (
+            <button
+              key={page.id}
+              onClick={() => goToPage(i)}
+              onDoubleClick={() => startLabelEdit(i)}
+              className="transition-all duration-300 flex-shrink-0"
+              title={page.label || `Page ${i + 1}`}
+              style={{
+                width: i === activePageIndex ? 24 : 8,
+                height: 8,
+                borderRadius: 9999,
+                background: i === activePageIndex ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.35)",
+                boxShadow: i === activePageIndex ? "0 0 10px rgba(255,255,255,0.7)" : "none",
+              }}
+            />
+          ))}
+          {/* Divider */}
+          <div className="w-px h-4 bg-white/20" />
+          {/* Plus */}
+          <button
+            onClick={addPage}
+            className="flex items-center justify-center transition-colors duration-150"
+            style={{ color: "rgba(255,255,255,0.5)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.5)")}
+            title="Add page"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+          </button>
+        </div>
       </div>
     </div>
     </StyleEditorProvider>
