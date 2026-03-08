@@ -33,6 +33,8 @@ import RoutineBuilderWidget from "./RoutineBuilderWidget";
 import ClockEditor from "./ClockEditor";
 import WidgetStyleEditor from "./WidgetStyleEditor";
 import CreateFolderModal from "@/components/CreateFolderModal";
+import TemplateChooserModal from "./TemplateChooserModal";
+import ExpandedFolderOverlay from "./ExpandedFolderOverlay";
 import {
   FocusBudgetWidget,
   FocusSavingsWidget,
@@ -44,7 +46,7 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X, Focus } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X, Focus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
 import WindowFrame from "@/components/windows/WindowFrame";
