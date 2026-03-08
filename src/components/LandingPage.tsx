@@ -621,12 +621,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         </motion.div>
       </section>
 
-      {/* Feature Slideshow */}
-      <section className="relative z-10 px-4 md:px-8 pb-24 md:pb-32">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
-          <FeatureSlideshow isDark={isDark} />
-        </motion.div>
-      </section>
 
       {/* Final CTA */}
       <section className="relative z-10 px-4 md:px-6 pb-24">
