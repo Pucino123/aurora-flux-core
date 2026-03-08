@@ -663,6 +663,9 @@ const FocusStatsWidget = () => {
 
             {/* 4-week history sparkline */}
             <WeeklyHistorySparkline dailyLog={dailyLog} />
+
+            {/* 3-month heatmap */}
+            <StreakHeatmap dailyLog={dailyLog} />
           </div>
 
           <button
