@@ -31,7 +31,7 @@ async function handleClassify(messages: any[], context: any, apiKey: string) {
       messages: [
         {
           role: "system",
-          content: `You are an Intelligent Dashboard Architect for a productivity app called Flux.
+          content: `You are an Intelligent Dashboard Architect for a productivity app called Dashiii.
 
 You are NOT a chatbot. You are a structured system that thinks before acting.
 
