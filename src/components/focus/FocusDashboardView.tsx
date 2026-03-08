@@ -838,6 +838,27 @@ const FocusContent = () => {
   const { moveToTrash } = useTrash();
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null, moveToTrash);
   const { openWindow, closeWindow, windows, updateWindowPosition, focusedId } = useWindowManager();
+
+  // Listen for document restore from trash — add its ID back to page 1 visibleDocIds
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const docId = (e as CustomEvent<{ docId: string }>).detail?.docId;
+      if (!docId) return;
+      setPages(prev => {
+        const updated = prev.map((p, i) => {
+          if (i !== 0) return p; // restore to first page (Home)
+          const visible = p.visibleDocIds ?? [];
+          if (visible.includes(docId)) return p;
+          return { ...p, visibleDocIds: [...visible, docId] };
+        });
+        localStorage.setItem("flux-dashboard-pages", JSON.stringify(updated));
+        return updated;
+      });
+      setTimeout(() => refetchDesktopDocs(), 600);
+    };
+    window.addEventListener("dashboard:restore-doc", handler);
+    return () => window.removeEventListener("dashboard:restore-doc", handler);
+  }, [refetchDesktopDocs]);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);

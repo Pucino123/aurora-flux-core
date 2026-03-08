@@ -95,6 +95,8 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
         if (error) {
           toast.error("Could not restore document to cloud");
         } else {
+          // Signal the dashboard to re-show this doc on page 1
+          window.dispatchEvent(new CustomEvent("dashboard:restore-doc", { detail: { docId: restored.originalData.id } }));
           toast.success(`"${restored.title}" restored to Documents`);
         }
       } else {
@@ -104,6 +106,7 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
           const docs = JSON.parse(raw);
           localStorage.setItem("flux_local_documents", JSON.stringify([restored.originalData, ...docs]));
         } catch {}
+        window.dispatchEvent(new CustomEvent("dashboard:restore-doc", { detail: { docId: restored.originalData.id } }));
         toast.success(`"${restored.title}" restored to Documents`);
       }
     } else {
