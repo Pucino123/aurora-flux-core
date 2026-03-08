@@ -143,15 +143,10 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
           <CommunityAdminView />
         ) : (effectiveView as string) === "billing" ? (
           <BillingView />
+        ) : (effectiveView as string) === "crm" ? (
+          <CRMPage />
         ) : (
           <Canvas />
-        )}
-
-        {/* Docked input */}
-        {!VIEWS_WITHOUT_INPUT.includes(effectiveView) && (
-          <div className="sticky bottom-0 px-3 pb-16 pt-2 md:px-4 md:pb-6 bg-gradient-to-t from-background/80 to-transparent">
-            <InputBar onSubmit={(text) => setLastSubmitted(text)} docked />
-          </div>
         )}
       </div>
 
