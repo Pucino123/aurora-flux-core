@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Timer, Music, CalendarClock, StickyNote, RotateCcw, Clock,
   BarChart3, FileText, Plus, MessageSquareQuote, Eye, EyeOff,
