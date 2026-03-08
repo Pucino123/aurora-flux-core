@@ -642,7 +642,7 @@ const AITaskManager = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
+    <div className={`flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6 ${pageLight ? "page-light" : ""}`}>
       <SEO title="Tasks" description="AI-powered task and project management with Kanban boards, priorities and smart scheduling." url="/" keywords="task manager, kanban board, project management, to-do list, productivity" />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -653,6 +653,13 @@ const AITaskManager = () => {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setPageLight(p => !p)}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground border border-border/30"
+            title={pageLight ? "Dark mode" : "Light mode"}
+          >
+            {pageLight ? <Moon size={14} /> : <Sun size={14} />}
+          </button>
           <div className="relative">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <input

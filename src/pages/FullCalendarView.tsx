@@ -140,7 +140,7 @@ const FullCalendarView = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+    <div className={`flex-1 overflow-y-auto px-4 md:px-8 py-6 ${pageLight ? "page-light" : ""}`}>
       <SEO title="Calendar" description="Smart scheduling and time management with drag-and-drop calendar and Google Calendar sync." url="/" keywords="calendar, scheduling, time blocking, productivity, Google Calendar sync" />
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
@@ -176,6 +176,14 @@ const FullCalendarView = () => {
           </button>
           <button onClick={() => { viewMode === "month" ? setCurrentDate(addMonths(currentDate, 1)) : setSelectedDate(addDays(selectedDate, 7)); }} className="p-2 rounded-lg hover:bg-secondary transition-colors">
             <ChevronRight size={16} className="text-muted-foreground" />
+          </button>
+          {/* Light/dark toggle */}
+          <button
+            onClick={() => setPageLight(p => !p)}
+            className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+            title={pageLight ? "Dark mode" : "Light mode"}
+          >
+            {pageLight ? <Moon size={15} /> : <Sun size={15} />}
           </button>
         </div>
       </div>
