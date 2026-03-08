@@ -307,10 +307,10 @@ const TheCouncil = () => {
                 <div className="mt-6 rounded-2xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,0.02)" }}>
                   <BoardroomIdeasHistory
                     userId={user.id}
-                    onRestoreIdea={(idea) => {
+                    onRestoreIdea={(idea, replay) => {
                       const restore = (window as any).__boardroomRestore;
                       if (typeof restore === "function") {
-                        restore(idea);
+                        restore(idea, replay);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }
                     }}

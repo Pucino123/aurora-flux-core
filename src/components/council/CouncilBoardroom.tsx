@@ -901,8 +901,12 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const [sharedByName, setSharedByName] = useState<string | null>(null);
   // Council Digest modal (shown after saving)
   const [showDigest, setShowDigest] = useState(false);
+  // Notion API export
+  const [isSendingNotion, setIsSendingNotion] = useState(false);
   // Onboarding tour for first-time users
   const [showTour, setShowTour] = useState(false);
+  // Replay mode indicator
+  const [isReplaying, setIsReplaying] = useState(false);
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
@@ -1016,34 +1020,59 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   }, [startFloatingEmojis, stopFloatingEmojis]);
 
   // Restore a previously saved boardroom session
-  const handleRestore = useCallback((savedIdea: RestorableBoardroomIdea) => {
+  const handleRestore = useCallback((savedIdea: RestorableBoardroomIdea, replay = false) => {
     setIdea(savedIdea.content);
     setSavedIdeaId(savedIdea.id);
-    const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
-    const newResponses: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+
+    // Build the saved responses map (used for both instant restore + replay)
+    const savedResponses: Record<string, BoardroomPersonaResponse | null> = {
+      elena: null, helen: null, anton: null, margot: null,
+    };
     savedIdea.responses.forEach(r => {
-      if (r.persona_key in newStates) {
-        newStates[r.persona_key] = "revealed";
-        // Merge with MOCK_RESPONSES for question field (not stored in DB)
+      if (r.persona_key in savedResponses) {
         const mock = MOCK_RESPONSES[r.persona_key];
-        newResponses[r.persona_key] = {
+        savedResponses[r.persona_key] = {
           analysis: r.analysis || mock?.analysis || "",
           question: mock?.question || "",
           confidence: r.vote_score ?? mock?.confidence ?? 50,
         };
       }
     });
-    setCardStates(newStates);
-    setResponses(newResponses);
-    setRevealedCount(savedIdea.responses.filter(r => r.persona_key in newStates).length);
-    revealedCountRef.current = savedIdea.responses.filter(r => r.persona_key in newStates).length;
-    setSaveState("saved");
-    setTimeout(() => setSaveState("idle"), 3000);
-    // Reset session id so new chats go to a fresh session
-    sessionIdRef.current = resetSessionId();
-    // Scroll to top of boardroom
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+
+    if (replay) {
+      // Reset to idle first, then animate the reveal sequence
+      setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
+      setResponses({ elena: null, helen: null, anton: null, margot: null });
+      setRevealedCount(0);
+      revealedCountRef.current = 0;
+      setExpandedCard(null);
+      setSaveState("idle");
+      setIsReplaying(true);
+      sessionIdRef.current = resetSessionId();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Delay slightly so idle state renders first
+      setTimeout(async () => {
+        await revealPersonaSequence(savedResponses);
+        setIsReplaying(false);
+        setSaveState("saved");
+        setTimeout(() => setSaveState("idle"), 3000);
+      }, 300);
+    } else {
+      // Instant restore
+      const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
+      savedIdea.responses.forEach(r => {
+        if (r.persona_key in newStates) newStates[r.persona_key] = "revealed";
+      });
+      setCardStates(newStates);
+      setResponses(savedResponses);
+      setRevealedCount(savedIdea.responses.filter(r => r.persona_key in newStates).length);
+      revealedCountRef.current = savedIdea.responses.filter(r => r.persona_key in newStates).length;
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 3000);
+      sessionIdRef.current = resetSessionId();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [revealPersonaSequence]);
 
   // Expose restore to parent via onRestoreIdea prop
   useEffect(() => {
@@ -1071,6 +1100,46 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     setPersonalitySliders(DEFAULT_ALL_SLIDERS);
     toast("New session started — advisor personalities reset to defaults.", { duration: 2500 });
   }, []);
+
+  // ── Notion Export ──
+  const handleSendToNotion = useCallback(async () => {
+    if (!allRevealed || isSendingNotion) return;
+    setIsSendingNotion(true);
+    try {
+      const consensus = getConsensusLabel();
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/notion-export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_KEY}` },
+        body: JSON.stringify({
+          idea: idea || "Your Idea",
+          avgConsensus: avgRing,
+          consensusLabel: consensus.label,
+          date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+          personas: PERSONAS.filter(p => responses[p.key]).map(p => ({
+            key: p.key, name: p.name, title: p.title,
+            analysis: responses[p.key]!.analysis,
+            question: responses[p.key]!.question,
+            confidence: responses[p.key]!.confidence,
+          })),
+          actionPlan,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || data.error) throw new Error(data.error || "Failed");
+      toast.success("Sent to Notion!", { description: "Page created in your Notion workspace." });
+      if (data.url) window.open(data.url, "_blank");
+    } catch (e: any) {
+      const msg = e?.message || "";
+      if (msg.includes("NOTION_API_KEY")) {
+        toast.error("Notion not configured", { description: "Add your NOTION_API_KEY in project secrets to enable this feature." });
+      } else if (msg.includes("No accessible")) {
+        toast.error("No pages found", { description: "Share at least one Notion page with your integration." });
+      } else {
+        toast.error("Notion export failed", { description: msg });
+      }
+    }
+    setIsSendingNotion(false);
+  }, [allRevealed, isSendingNotion, idea, avgRing, responses, actionPlan]);
 
   // ── PDF Export — styled summary card using jsPDF ──
   const [isExportingPDF, setIsExportingPDF] = useState(false);
@@ -1737,7 +1806,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                 >
                   {digestText}
                 </pre>
-                <div className="flex gap-2">
+                 <div className="flex gap-2">
                   <button
                     onClick={() => { navigator.clipboard.writeText(digestText); toast.success("Digest copied to clipboard!"); }}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-purple-200 transition-colors"
@@ -1746,12 +1815,22 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                     <Copy size={11} /> Copy Digest
                   </button>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(notionText); toast.success("Notion-formatted digest copied!"); }}
-                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors"
-                    style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.55)" }}
-                    title="Formatted for Notion with headers, bullets and callout blocks"
+                    onClick={handleSendToNotion}
+                    disabled={isSendingNotion}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors disabled:opacity-60"
+                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.65)" }}
+                    title="Send to Notion as a formatted page (requires Notion API key in settings)"
                   >
-                    <FileText size={11} /> Notion
+                    {isSendingNotion ? <Loader2 size={11} className="animate-spin" /> : <FileText size={11} />}
+                    {isSendingNotion ? "Sending…" : "Send to Notion"}
+                  </button>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(notionText); toast.success("Notion markdown copied!"); }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs transition-colors"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}
+                    title="Copy Notion-formatted markdown"
+                  >
+                    <Copy size={10} />
                   </button>
                   <button
                     onClick={() => { handleExportPDF(); setShowDigest(false); }}
