@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Flame, TrendingUp, BarChart3, Play, Pause, Square } from "lucide-react";
+import { Flame, TrendingUp, BarChart3, Play, Pause, Square, Target, Pencil, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DraggableWidget from "./DraggableWidget";
 import FocusReportModal from "./FocusReportModal";
@@ -123,6 +123,13 @@ const FocusStatsWidget = () => {
   const [prevStreak, setPrevStreak] = useState(0);
   const [streakBump, setStreakBump] = useState(false);
 
+  // Weekly goal state (persisted in localStorage)
+  const [weeklyGoalHrs, setWeeklyGoalHrs] = useState<number>(() => {
+    try { return Number(localStorage.getItem("flux-weekly-goal-hrs") ?? 20); } catch { return 20; }
+  });
+  const [editingWeeklyGoal, setEditingWeeklyGoal] = useState(false);
+  const [weeklyGoalInput, setWeeklyGoalInput] = useState("");
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Load all sessions from DB ────────────────────────────────────────────
@@ -236,6 +243,23 @@ const FocusStatsWidget = () => {
     isToday: date === today,
   }));
   const maxWeek = Math.max(...weekData.map(d => d.minutes), 1);
+
+  // Weekly goal derived
+  const weeklyGoalMin  = weeklyGoalHrs * 60;
+  const weeklyTotalMin = weekData.reduce((s, d) => s + d.minutes, 0);
+  const weeklyPct      = weeklyGoalMin > 0 ? Math.min((weeklyTotalMin / weeklyGoalMin) * 100, 100) : 0;
+  const weeklyHrs      = Math.floor(weeklyTotalMin / 60);
+  const weeklyRem      = weeklyTotalMin % 60;
+  const weeklyGoalMet  = weeklyPct >= 100;
+
+  const saveWeeklyGoal = () => {
+    const v = parseFloat(weeklyGoalInput);
+    if (!isNaN(v) && v > 0) {
+      setWeeklyGoalHrs(v);
+      localStorage.setItem("flux-weekly-goal-hrs", String(v));
+    }
+    setEditingWeeklyGoal(false);
+  };
 
   const mins = Math.floor(timerSecs / 60);
   const secs = timerSecs % 60;
@@ -419,20 +443,89 @@ const FocusStatsWidget = () => {
             </div>
           </div>
 
-          {/* Weekly bars — real data */}
-          <div className="flex-1 flex flex-col justify-end">
-            <p className="text-[8px] text-white/20 uppercase tracking-wider mb-1">This Week</p>
-            <div className="flex items-end justify-between gap-1 h-12">
+          {/* Weekly goal section */}
+          <div className="flex-1 flex flex-col justify-end gap-1.5">
+            {/* Weekly goal header + ring */}
+            <div className="flex items-center gap-2">
+              {/* Mini ring */}
+              <div className="relative w-10 h-10 shrink-0">
+                <svg className="w-10 h-10 -rotate-90" viewBox="0 0 40 40">
+                  <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3.5" />
+                  <motion.circle
+                    cx="20" cy="20" r="16" fill="none"
+                    stroke={weeklyGoalMet ? "#34d399" : "hsl(270 70% 65%)"}
+                    strokeWidth="3.5" strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 16}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 16 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 16 * (1 - weeklyPct / 100) }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className={`text-[8px] font-bold ${weeklyGoalMet ? "text-emerald-300" : "text-white/60"}`}>
+                    {Math.round(weeklyPct)}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Labels */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <span className="text-[8px] text-white/20 uppercase tracking-wider">This Week</span>
+                  {weeklyGoalMet && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="text-[8px] text-emerald-300"
+                    >
+                      🎯
+                    </motion.span>
+                  )}
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-[13px] font-bold text-white/80 leading-none">
+                    {weeklyHrs}h {weeklyRem}m
+                  </span>
+                  {editingWeeklyGoal ? (
+                    <div className="flex items-center gap-1 ml-1">
+                      <input
+                        autoFocus
+                        type="number"
+                        value={weeklyGoalInput}
+                        onChange={e => setWeeklyGoalInput(e.target.value)}
+                        onBlur={saveWeeklyGoal}
+                        onKeyDown={e => { if (e.key === "Enter") saveWeeklyGoal(); if (e.key === "Escape") setEditingWeeklyGoal(false); }}
+                        className="w-10 bg-white/10 border border-violet-400/40 rounded px-1 text-[9px] text-white/80 outline-none text-center"
+                        placeholder={String(weeklyGoalHrs)}
+                      />
+                      <span className="text-[8px] text-white/30">h goal</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setWeeklyGoalInput(String(weeklyGoalHrs)); setEditingWeeklyGoal(true); }}
+                      className="flex items-center gap-0.5 text-[8px] text-white/25 hover:text-violet-300 transition-colors ml-1"
+                      title="Edit weekly goal"
+                    >
+                      / {weeklyGoalHrs}h goal <Pencil size={7} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bar chart */}
+            <p className="text-[7px] text-white/15 uppercase tracking-wider">Daily breakdown</p>
+            <div className="flex items-end justify-between gap-1 h-10">
               {weekData.map((d, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <motion.div
                     className={`w-full rounded-t-sm ${d.isToday ? "bg-violet-400" : d.minutes > 0 ? "bg-white/30" : "bg-white/8"}`}
                     title={`${d.minutes} min`}
                     initial={{ height: 0 }}
-                    animate={{ height: `${Math.max((d.minutes / maxWeek) * 44, d.minutes > 0 ? 4 : 2)}px` }}
+                    animate={{ height: `${Math.max((d.minutes / maxWeek) * 36, d.minutes > 0 ? 4 : 2)}px` }}
                     transition={{ duration: 0.6, delay: i * 0.05, ease: "easeOut" }}
                   />
-                  <span className={`text-[8px] ${d.isToday ? "text-violet-300" : "text-white/20"}`}>{d.label}</span>
+                  <span className={`text-[7px] ${d.isToday ? "text-violet-300" : "text-white/20"}`}>{d.label}</span>
                 </div>
               ))}
             </div>
