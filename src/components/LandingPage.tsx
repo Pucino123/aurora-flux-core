@@ -377,23 +377,23 @@ const FeatureSlideshow = ({ isDark }: { isDark: boolean }) => {
           </div>
         </div>
 
-        {/* Prev / Next arrows */}
+        {/* Prev / Next arrows — skjult på mobil, auto-advance klarer det */}
         <button
           onClick={() => go(idx - 1, -1)}
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
+          className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
         >
           <ChevronLeft size={16} />
         </button>
         <button
           onClick={() => go(idx + 1, 1)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
+          className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
         >
           <ChevronRight size={16} />
         </button>
       </div>
 
-      {/* Slide tag labels — horizontal scroll on mobile */}
-      <div className="flex items-center gap-2 mt-6 overflow-x-auto no-scrollbar px-2 pb-1 justify-start md:justify-center">
+      {/* Slide tag labels — ingen scrollbar, wrap på mobil */}
+      <div className="flex items-center gap-2 mt-6 flex-wrap justify-center px-2">
         {SLIDES.map((s, i) => (
           <button
             key={i}
