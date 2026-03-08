@@ -31,7 +31,7 @@ const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref
   const [phase, setPhase] = useState<"welcome" | "tour" | "reward" | "done">("welcome");
   const [step, setStep] = useState(0);
   const [sparkCount, setSparkCount] = useState(0);
-  const [done, setDone] = useState(() => !!localStorage.getItem("flux_onboarding_done_v1"));
+  const [done, setDone] = useState(() => !!localStorage.getItem("dashiii_onboarding_done_v1"));
   const counterRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
