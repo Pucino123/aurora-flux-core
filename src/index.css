@@ -267,10 +267,10 @@
 
   /* Council glass card — dark OS glassmorphism */
   .council-glass-card {
-    background: hsl(240 20% 8% / 0.7);
+    background: hsl(240 20% 8% / 0.75);
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
-    border: 1px solid hsl(255 30% 50% / 0.12);
+    border: 1px solid hsl(255 30% 50% / 0.14);
     border-radius: 24px;
     box-shadow:
       0 12px 48px -12px hsl(0 0% 0% / 0.5),
@@ -281,7 +281,7 @@
   }
 
   .council-glass-card:hover {
-    border-color: hsl(255 40% 55% / 0.2);
+    border-color: hsl(255 40% 55% / 0.22);
     box-shadow:
       0 16px 60px -12px hsl(0 0% 0% / 0.6),
       0 4px 16px -4px hsl(265 60% 40% / 0.12),
@@ -317,15 +317,6 @@
       hsl(260 70% 57%) 100%
     );
     box-shadow: 0 6px 28px hsl(260 70% 55% / 0.5);
-  }
-
-  /* Hidden scrollbar for council panels */
-  .council-hidden-scrollbar {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .council-hidden-scrollbar::-webkit-scrollbar {
-    display: none;
   }
 
   .flux-card {
