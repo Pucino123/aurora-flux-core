@@ -315,7 +315,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
         ) : null}
 
         {/* Icon */}
-        <div className="relative z-10" style={{ opacity: isDragging ? 0.5 : 1 }}>
+        <div className="relative z-10" style={{ opacity: isDragging ? 0.5 : 1, marginBottom: titleGap }}>
           {customIconUrl ? (
             <img src={customIconUrl} alt="" className="rounded-lg object-cover" style={{ width: iconSize, height: iconSize, filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" }} />
           ) : (
@@ -323,20 +323,25 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
           )}
         </div>
 
-        {/* Title */}
-        <div className="relative z-10">
+        {/* Title — click to inline-rename (macOS style) */}
+        <div className="relative z-10 w-full">
           {renaming ? (
             <input
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onBlur={commitRename}
-              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenaming(false); }}
-              className="w-full text-center text-[11px] bg-transparent border-b border-primary/40 outline-none text-foreground"
+              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { setRenaming(false); } }}
+              className="w-full text-center bg-transparent outline-none text-foreground ring-1 ring-primary/50 rounded px-1 transition-all"
+              style={{ fontSize: `${titleSize}px` }}
               autoFocus
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <span className="font-medium text-foreground/90 text-center leading-tight truncate w-full block" style={{ fontSize: `${titleSize}px` }}>
+            <span
+              className="font-medium text-foreground/90 text-center leading-tight truncate w-full block hover:text-foreground transition-colors"
+              style={{ fontSize: `${titleSize}px` }}
+              onClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setRenameValue(folder.title); setRenaming(true); } }}
+            >
               {folder.title}
             </span>
           )}
