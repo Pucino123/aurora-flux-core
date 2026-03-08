@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Search, GripVertical, ChevronDown, ChevronRight, Phone, Mail,
-  StickyNote, X, Loader2, Building2, DollarSign, User,
+  StickyNote, X, Loader2, Building2, DollarSign, User, Trash2,
 } from "lucide-react";
 import {
   DndContext,
@@ -18,6 +18,7 @@ import {
 import DraggableWidget from "./DraggableWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import { z } from "zod";
 
 type Stage = "leads" | "contacted" | "proposal" | "closed";
@@ -209,31 +210,103 @@ const NewDealModal: React.FC<NewDealModalProps> = ({ onSave, onClose }) => {
   );
 };
 
+// ── Delete Confirm Modal ──
+interface DeleteConfirmProps {
+  deal: Deal;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const DeleteConfirmModal: React.FC<DeleteConfirmProps> = ({ deal, onConfirm, onCancel }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-[350] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+    onClick={onCancel}
+  >
+    <motion.div
+      initial={{ scale: 0.9, opacity: 0, y: 10 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.9, opacity: 0 }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      onClick={e => e.stopPropagation()}
+      className="w-full max-w-xs rounded-2xl border border-white/10 p-5"
+      style={{ background: "rgba(10,8,20,0.97)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}
+    >
+      <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-3">
+        <Trash2 size={16} className="text-red-400" />
+      </div>
+      <p className="text-sm font-bold text-white/90 mb-1">Delete Deal?</p>
+      <p className="text-[11px] text-white/40 mb-4">
+        <span className="text-white/70 font-medium">{deal.name}</span> from {deal.company} will be permanently removed.
+      </p>
+      <div className="flex gap-2">
+        <button onClick={onCancel} className="flex-1 py-2 rounded-xl text-[12px] font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors border border-white/8">
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          className="flex-1 py-2 rounded-xl text-[12px] font-bold text-white transition-all bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300"
+        >
+          Delete
+        </button>
+      </div>
+    </motion.div>
+  </motion.div>
+);
+
 // ── Draggable Deal Card ──
 
 interface DealCardCoreProps {
   deal: Deal;
   onStageChange: (id: string, stage: Stage) => void;
+  onDelete?: (deal: Deal) => void;
   isDragging?: boolean;
   overlay?: boolean;
 }
 
-const DealCardCore: React.FC<DealCardCoreProps> = ({ deal, onStageChange, isDragging, overlay }) => {
+const DealCardCore: React.FC<DealCardCoreProps> = ({ deal, onStageChange, onDelete, isDragging, overlay }) => {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [longPressActive, setLongPressActive] = useState(false);
+
+  const handlePointerDown = () => {
+    if (overlay) return;
+    const timer = setTimeout(() => {
+      setLongPressActive(true);
+    }, 500);
+    setLongPressTimer(timer);
+  };
+
+  const handlePointerUp = () => {
+    if (longPressTimer) clearTimeout(longPressTimer);
+    setLongPressTimer(null);
+  };
+
+  const handlePointerLeave = () => {
+    if (longPressTimer) clearTimeout(longPressTimer);
+    setLongPressTimer(null);
+  };
 
   return (
     <div className="relative">
       <motion.div
         layout={!overlay}
         initial={overlay ? undefined : { opacity: 0, y: 6 }}
-        animate={{ opacity: isDragging ? 0.4 : 1, y: 0, scale: overlay ? 1.04 : 1 }}
+        animate={{ opacity: isDragging ? 0.4 : 1, y: 0, scale: overlay ? 1.04 : longPressActive ? 0.97 : 1 }}
         className={`flex items-center gap-2 px-2 py-2 rounded-xl border transition-colors group cursor-grab active:cursor-grabbing ${
           overlay
             ? "bg-white/20 border-white/25 shadow-xl"
+            : longPressActive
+            ? "bg-red-500/10 border-red-500/25"
             : "bg-white/5 border-white/8 hover:bg-white/8"
         }`}
-        onClick={overlay ? undefined : () => setPopoverOpen(!popoverOpen)}
+        onClick={overlay ? undefined : () => { if (!longPressActive) setPopoverOpen(!popoverOpen); }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
         onMouseEnter={() => setShowActions(true)}
         onMouseLeave={() => { setShowActions(false); }}
       >
@@ -251,9 +324,26 @@ const DealCardCore: React.FC<DealCardCoreProps> = ({ deal, onStageChange, isDrag
         <span className="text-[10px] font-bold shrink-0" style={{ color: STAGE_CONFIG[deal.stage].textColor }}>
           {formatValue(deal.value)}
         </span>
-        {/* Quick actions on hover */}
+
+        {/* Long-press delete button */}
         <AnimatePresence>
-          {showActions && !overlay && (
+          {longPressActive && !overlay && (
+            <motion.button
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 22 }}
+              onClick={e => { e.stopPropagation(); setLongPressActive(false); onDelete?.(deal); }}
+              className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-colors"
+            >
+              <Trash2 size={10} />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* Quick actions on hover (not during long-press) */}
+        <AnimatePresence>
+          {showActions && !overlay && !longPressActive && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -266,14 +356,26 @@ const DealCardCore: React.FC<DealCardCoreProps> = ({ deal, onStageChange, isDrag
                   <Icon size={9} />
                 </button>
               ))}
+              <button
+                title="Delete"
+                onClick={e => { e.stopPropagation(); onDelete?.(deal); }}
+                className="w-5 h-5 flex items-center justify-center text-white/40 hover:text-red-400 transition-colors"
+              >
+                <Trash2 size={9} />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
 
+      {/* Close long-press mode on outside click */}
+      {longPressActive && (
+        <div className="fixed inset-0 z-[1]" onClick={() => setLongPressActive(false)} />
+      )}
+
       {/* Stage change popover */}
       <AnimatePresence>
-        {popoverOpen && !overlay && (
+        {popoverOpen && !overlay && !longPressActive && (
           <motion.div
             initial={{ opacity: 0, y: -4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -306,7 +408,7 @@ const DealCardCore: React.FC<DealCardCoreProps> = ({ deal, onStageChange, isDrag
 
 // ── DnD wrappers ──
 
-const DraggableDeal: React.FC<{ deal: Deal; onStageChange: (id: string, stage: Stage) => void; isDragging: boolean }> = ({ deal, onStageChange, isDragging }) => {
+const DraggableDeal: React.FC<{ deal: Deal; onStageChange: (id: string, stage: Stage) => void; onDelete: (deal: Deal) => void; isDragging: boolean }> = ({ deal, onStageChange, onDelete, isDragging }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: deal.id });
   return (
     <div
@@ -315,7 +417,7 @@ const DraggableDeal: React.FC<{ deal: Deal; onStageChange: (id: string, stage: S
       {...listeners}
       style={transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50, position: "relative" } : undefined}
     >
-      <DealCardCore deal={deal} onStageChange={onStageChange} isDragging={isDragging} />
+      <DealCardCore deal={deal} onStageChange={onStageChange} onDelete={onDelete} isDragging={isDragging} />
     </div>
   );
 };
@@ -328,8 +430,9 @@ const DroppableStage: React.FC<{
   isOver: boolean;
   onToggle: () => void;
   onStageChange: (id: string, stage: Stage) => void;
+  onDelete: (deal: Deal) => void;
   activeDealId: string | null;
-}> = ({ stage, isOpen, stageDeals, total, isOver, onToggle, onStageChange, activeDealId }) => {
+}> = ({ stage, isOpen, stageDeals, total, isOver, onToggle, onStageChange, onDelete, activeDealId }) => {
   const { setNodeRef } = useDroppable({ id: stage });
   const cfg = STAGE_CONFIG[stage];
 
@@ -374,6 +477,7 @@ const DroppableStage: React.FC<{
                     key={deal.id}
                     deal={deal}
                     onStageChange={onStageChange}
+                    onDelete={onDelete}
                     isDragging={deal.id === activeDealId}
                   />
                 ))
@@ -405,6 +509,7 @@ const CRMWidgetContent = () => {
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<Stage | null>(null);
   const [showNewDeal, setShowNewDeal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<Deal | null>(null);
   const seededRef = useRef(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -534,6 +639,50 @@ const CRMWidgetContent = () => {
     setExpanded(prev => new Set([...prev, dealData.stage]));
   }, [user]);
 
+  const handleDeleteRequest = useCallback((deal: Deal) => {
+    setDeleteConfirm(deal);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteConfirm) return;
+    const deal = deleteConfirm;
+    setDeleteConfirm(null);
+
+    // Optimistic removal
+    setDeals(prev => prev.filter(d => d.id !== deal.id));
+
+    // DB removal
+    if (user && !deal.id.startsWith("local-")) {
+      const { error } = await supabase.from("crm_deals").delete().eq("id", deal.id).eq("user_id", user.id);
+      if (error) {
+        // Rollback on error
+        setDeals(prev => [...prev, deal]);
+        toast.error("Failed to delete deal");
+        return;
+      }
+    }
+
+    toast(`"${deal.name}" deleted`, {
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          if (user) {
+            const { data } = await supabase
+              .from("crm_deals")
+              .insert({ name: deal.name, company: deal.company, value: deal.value, stage: deal.stage, user_id: user.id, sort_order: 0 })
+              .select("id, name, company, value, stage")
+              .single();
+            if (data) {
+              setDeals(prev => [...prev, { id: data.id, name: data.name, company: data.company, value: Number(data.value), stage: data.stage as Stage }]);
+            }
+          } else {
+            setDeals(prev => [...prev, deal]);
+          }
+        },
+      },
+    });
+  }, [deleteConfirm, user]);
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDealId(event.active.id as string);
   };
@@ -604,6 +753,7 @@ const CRMWidgetContent = () => {
                   isOver={overStage === stage}
                   onToggle={() => toggleStage(stage)}
                   onStageChange={handleStageChange}
+                  onDelete={handleDeleteRequest}
                   activeDealId={activeDealId}
                 />
               ))}
@@ -623,6 +773,17 @@ const CRMWidgetContent = () => {
       <AnimatePresence>
         {showNewDeal && (
           <NewDealModal onSave={handleNewDeal} onClose={() => setShowNewDeal(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirm Modal */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <DeleteConfirmModal
+            deal={deleteConfirm}
+            onConfirm={handleDeleteConfirm}
+            onCancel={() => setDeleteConfirm(null)}
+          />
         )}
       </AnimatePresence>
     </>
