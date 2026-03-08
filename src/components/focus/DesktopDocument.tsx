@@ -300,7 +300,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                     </button>
                   </div>
                 )}
-                <button onClick={() => { setShowMoveFolder(!showMoveFolder); setShowCalendar(false); }} className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${showMoveFolder ? "text-primary bg-primary/5" : "text-foreground"}`}>
+                <button onClick={() => { setShowMoveFolder(!showMoveFolder); setShowCalendar(false); setShowMoveToPageMenu(false); }} className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${showMoveFolder ? "text-primary bg-primary/5" : "text-foreground"}`}>
                   <FolderInput size={13} className="text-muted-foreground" /> Move to Folder
                 </button>
                 {showMoveFolder && (
@@ -314,6 +314,33 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                         <FolderInput size={11} className="text-muted-foreground" /> {f.title}
                       </button>
                     ))}
+                  </div>
+                )}
+                {/* Move to page… */}
+                {allPages && allPages.length > 1 && (
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowMoveToPageMenu(!showMoveToPageMenu); setShowMoveFolder(false); setShowCalendar(false); }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${showMoveToPageMenu ? "text-primary bg-primary/5" : "text-foreground"}`}
+                    >
+                      <BookCopy size={13} className="text-muted-foreground" /> Move to page…
+                    </button>
+                    {showMoveToPageMenu && (
+                      <div className="px-2 pb-2 pt-1 max-h-[150px] overflow-y-auto space-y-0.5">
+                        {allPages
+                          .filter(p => p.index !== currentPageIndex)
+                          .map(p => (
+                            <button
+                              key={p.id}
+                              onClick={() => { onMoveToPage?.(doc.id, p.index); setContextMenu(null); }}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] text-foreground hover:bg-secondary/60 rounded-md transition-colors"
+                            >
+                              <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">{p.index + 1}</span>
+                              {p.label}
+                            </button>
+                          ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="h-px bg-border mx-2 my-1" />
