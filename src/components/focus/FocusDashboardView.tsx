@@ -110,13 +110,22 @@ const FocusContent = () => {
   // Dot context menu (delete)
   const [dotMenu, setDotMenu] = useState<{ idx: number; x: number; y: number } | null>(null);
   const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null);
-  // Drag-to-reorder
+  // Drag-to-reorder dots
   const dragDotIdx = useRef<number | null>(null);
   const [draggingDotIdx, setDraggingDotIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  // Dot hover preview
+  const [hoverDotIdx, setHoverDotIdx] = useState<number | null>(null);
   // Build-mode pagination settings
   const [paginationSettings, setPaginationSettings] = useState<PaginationSettings>(loadPaginationSettings);
   const [showPillSettings, setShowPillSettings] = useState(false);
+  // Pill drag-to-reposition
+  const pillRef = useRef<HTMLDivElement>(null);
+  const pillDragOrigin = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
+  const [pillPos, setPillPos] = useState<{ x: number; y: number } | null>(() => {
+    try { const s = loadPaginationSettings(); return s.pillPosition ?? null; } catch { return null; }
+  });
+  const [isDraggingPill, setIsDraggingPill] = useState(false);
   // Cloud sync debounce
   const cloudSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -125,10 +134,10 @@ const FocusContent = () => {
     localStorage.setItem("flux-dashboard-pages", JSON.stringify(dashboardPages));
   }, [dashboardPages]);
 
-  // Persist pagination settings
+  // Persist pagination settings (including pill position)
   useEffect(() => {
-    localStorage.setItem(PAGINATION_SETTINGS_KEY, JSON.stringify(paginationSettings));
-  }, [paginationSettings]);
+    localStorage.setItem(PAGINATION_SETTINGS_KEY, JSON.stringify({ ...paginationSettings, pillPosition: pillPos }));
+  }, [paginationSettings, pillPos]);
 
   // Load pages from cloud on mount
   useEffect(() => {
@@ -143,7 +152,10 @@ const FocusContent = () => {
       const s = data.state as any;
       if (Array.isArray(s.dashboardPages) && s.dashboardPages.length > 0) {
         setDashboardPages(s.dashboardPages.map((p: any) => ({
-          id: p.id, label: p.label || "Home", activeWidgets: p.activeWidgets,
+          id: p.id, label: p.label || "Home",
+          activeWidgets: p.activeWidgets,
+          stickyNotes: p.stickyNotes,
+          background: p.background,
         })));
       }
     })();
@@ -217,6 +229,12 @@ const FocusContent = () => {
     setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, activeWidgets: widgets } : p));
   }, [activePageIndex, setPages]);
 
+  // Per-page sticky notes
+  const pageStickyNotes: StickyNote[] = currentPage?.stickyNotes ?? focusStickyNotes;
+  const setPageStickyNotes = useCallback((notes: StickyNote[]) => {
+    setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, stickyNotes: notes } : p));
+  }, [activePageIndex, setPages]);
+
   // Touch swipe
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -248,7 +266,6 @@ const FocusContent = () => {
       next.splice(targetIdx, 0, removed);
       return next;
     });
-    // Adjust active index to follow the moved page
     setActivePageIndex(prev => {
       if (prev === fromIdx) return targetIdx;
       if (fromIdx < prev && targetIdx >= prev) return prev - 1;
@@ -271,6 +288,35 @@ const FocusContent = () => {
   }, []);
   const handleDotTouchEnd = useCallback(() => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  }, []);
+
+  // Pill drag-to-reposition (pointer events so it works on touch too)
+  const handlePillPointerDown = useCallback((e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button, input')) return; // don't drag on interactive children
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const rect = pillRef.current?.getBoundingClientRect();
+    const currentX = pillPos?.x ?? (window.innerWidth / 2 - (rect?.width ?? 200) / 2);
+    const currentY = pillPos?.y ?? (window.innerHeight - 88 - (rect?.height ?? 44));
+    pillDragOrigin.current = { mx: e.clientX, my: e.clientY, px: currentX, py: currentY };
+    setIsDraggingPill(true);
+  }, [pillPos]);
+
+  const handlePillPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!pillDragOrigin.current) return;
+    const dx = e.clientX - pillDragOrigin.current.mx;
+    const dy = e.clientY - pillDragOrigin.current.my;
+    const rect = pillRef.current?.getBoundingClientRect();
+    const w = rect?.width ?? 200;
+    const h = rect?.height ?? 44;
+    const nx = Math.max(0, Math.min(window.innerWidth - w, pillDragOrigin.current.px + dx));
+    const ny = Math.max(0, Math.min(window.innerHeight - h, pillDragOrigin.current.py + dy));
+    setPillPos({ x: nx, y: ny });
+  }, []);
+
+  const handlePillPointerUp = useCallback(() => {
+    pillDragOrigin.current = null;
+    setIsDraggingPill(false);
   }, []);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
