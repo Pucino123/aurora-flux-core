@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, Trash2, Pencil, X, Check, Building2, DollarSign, User, ChevronDown } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, X, Check, Building2, DollarSign, User, Receipt } from "lucide-react";
 import { useCRM, CRMDeal, Stage } from "@/context/CRMContext";
 import { toast } from "sonner";
+import InvoiceModal from "@/components/crm/InvoiceModal";
 
 const STAGE_CONFIG: Record<Stage, { label: string; dot: string; text: string; bg: string }> = {
   leads:     { label: "New Lead",      dot: "#3b82f6", text: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30" },
@@ -28,7 +29,7 @@ const DealForm: React.FC<DealFormProps> = ({ initial, onSave, onClose }) => {
 
   const handleSave = () => {
     if (!name.trim() || !company.trim()) { toast.error("Name and company are required"); return; }
-    onSave({ name: name.trim(), company: company.trim(), value: parseInt(value.replace(/\D/g, "") || "0"), stage });
+    onSave({ name: name.trim(), company: company.trim(), value: parseInt(value.replace(/\D/g, "") || "0"), stage, invoices: [] });
     onClose();
   };
 
@@ -87,6 +88,7 @@ const CRMPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editDeal, setEditDeal] = useState<CRMDeal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [invoiceContact, setInvoiceContact] = useState<CRMDeal | null>(null);
 
   const filtered = deals.filter(d => {
     const matchSearch = d.name.toLowerCase().includes(search.toLowerCase()) || d.company.toLowerCase().includes(search.toLowerCase());
@@ -180,6 +182,10 @@ const CRMPage: React.FC = () => {
                     <td className="px-4 py-3 text-sm font-bold text-foreground">{fmt(deal.value)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setInvoiceContact(deal)} title="Create Invoice"
+                          className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-400 transition-colors">
+                          <Receipt size={13} />
+                        </button>
                         <button onClick={() => setEditDeal(deal)} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
                           <Pencil size={13} />
                         </button>
@@ -224,6 +230,12 @@ const CRMPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <InvoiceModal
+        open={!!invoiceContact}
+        contact={invoiceContact}
+        onClose={() => setInvoiceContact(null)}
+      />
     </div>
   );
 };

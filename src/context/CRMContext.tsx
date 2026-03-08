@@ -5,23 +5,39 @@ import { toast } from "sonner";
 
 export type Stage = "leads" | "contacted" | "proposal" | "closed";
 
-export interface CRMDeal {
+export interface CRMInvoice {
+  id: string;
+  amount: number;
+  date: string;
+  status: "Paid" | "Pending" | "Sent";
+  description?: string;
+}
+
+export interface CRMContact {
   id: string;
   name: string;
   company: string;
+  email?: string;
+  phone?: string;
+  invoices: CRMInvoice[];
+}
+
+export interface CRMDeal extends CRMContact {
   value: number;
   stage: Stage;
   user_id?: string;
   sort_order?: number;
+  companyName?: string;
 }
 
 interface CRMContextValue {
   deals: CRMDeal[];
   loading: boolean;
-  addDeal: (deal: Omit<CRMDeal, "id">) => Promise<void>;
+  addDeal: (deal: Omit<CRMDeal, "id" | "invoices">) => Promise<void>;
   updateDeal: (id: string, data: Partial<CRMDeal>) => Promise<void>;
   removeDeal: (id: string) => Promise<void>;
   refreshDeals: () => Promise<void>;
+  addInvoice: (contactId: string, invoice: CRMInvoice) => void;
 }
 
 const CRMContext = createContext<CRMContextValue | null>(null);
@@ -29,13 +45,13 @@ const CRMContext = createContext<CRMContextValue | null>(null);
 const LS_KEY = "dashiii_crm_deals";
 
 const INITIAL_DEALS: CRMDeal[] = [
-  { id: "d1", name: "Alex Turner", company: "Apex Dynamics", value: 12500, stage: "leads" },
-  { id: "d2", name: "Sofia Martins", company: "NovaBuild Ltd.", value: 8200, stage: "leads" },
-  { id: "d3", name: "Jared Kim", company: "CloudStack Inc.", value: 21000, stage: "contacted" },
-  { id: "d4", name: "Priya Shah", company: "Meridian Group", value: 5500, stage: "contacted" },
-  { id: "d5", name: "Lucas Weber", company: "TechForge GmbH", value: 33000, stage: "proposal" },
-  { id: "d6", name: "Amara Osei", company: "Greenline Co.", value: 9800, stage: "proposal" },
-  { id: "d7", name: "Nina Volkova", company: "Stellar Systems", value: 47500, stage: "closed" },
+  { id: "d1", name: "Alex Turner",   company: "Apex Dynamics",   email: "alex@apexdynamics.com",  phone: "+1 555-0101", value: 12500, stage: "leads",     invoices: [] },
+  { id: "d2", name: "Sofia Martins", company: "NovaBuild Ltd.",  email: "sofia@novabuild.io",     phone: "+1 555-0102", value: 8200,  stage: "leads",     invoices: [{ id: "INV-10001", amount: 1200, date: "2026-01-15", status: "Paid" }] },
+  { id: "d3", name: "Jared Kim",     company: "CloudStack Inc.", email: "jared@cloudstack.io",    phone: "+1 555-0103", value: 21000, stage: "contacted",  invoices: [{ id: "INV-10002", amount: 5500, date: "2026-02-01", status: "Pending" }] },
+  { id: "d4", name: "Priya Shah",    company: "Meridian Group",  email: "priya@meridiangrp.com",  phone: "+1 555-0104", value: 5500,  stage: "contacted",  invoices: [] },
+  { id: "d5", name: "Lucas Weber",   company: "TechForge GmbH",  email: "lucas@techforge.de",     phone: "+49 555-0105",value: 33000, stage: "proposal",   invoices: [{ id: "INV-10003", amount: 8000, date: "2026-02-20", status: "Sent" }] },
+  { id: "d6", name: "Amara Osei",    company: "Greenline Co.",   email: "amara@greenline.co",     phone: "+44 555-0106",value: 9800,  stage: "proposal",   invoices: [] },
+  { id: "d7", name: "Nina Volkova",  company: "Stellar Systems", email: "nina@stellarsys.com",    phone: "+7 555-0107", value: 47500, stage: "closed",     invoices: [{ id: "INV-10004", amount: 22000, date: "2026-03-01", status: "Paid" }, { id: "INV-10005", amount: 12000, date: "2026-03-05", status: "Pending" }] },
 ];
 
 export function CRMProvider({ children }: { children: ReactNode }) {
@@ -45,7 +61,6 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   const refreshDeals = useCallback(async () => {
     if (!user) {
-      // Use localStorage for anonymous mode
       try {
         const raw = localStorage.getItem(LS_KEY);
         setDeals(raw ? JSON.parse(raw) : INITIAL_DEALS);
@@ -65,10 +80,13 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         id: d.id,
         name: d.name,
         company: d.company,
+        email: d.email || undefined,
+        phone: d.phone || undefined,
         value: d.value,
         stage: d.stage as Stage,
         user_id: d.user_id,
         sort_order: d.sort_order,
+        invoices: [],
       }));
       setDeals(mapped.length > 0 ? mapped : INITIAL_DEALS);
     }
@@ -81,9 +99,9 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     if (!user) localStorage.setItem(LS_KEY, JSON.stringify(next));
   };
 
-  const addDeal = useCallback(async (deal: Omit<CRMDeal, "id">) => {
+  const addDeal = useCallback(async (deal: Omit<CRMDeal, "id" | "invoices">) => {
     const localId = crypto.randomUUID();
-    const optimistic: CRMDeal = { ...deal, id: localId };
+    const optimistic: CRMDeal = { ...deal, id: localId, invoices: [] };
     setDeals(prev => {
       const next = [...prev, optimistic];
       persist(next);
@@ -110,7 +128,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       return next;
     });
     if (!user) return;
-    await supabase.from("crm_deals").update(data as any).eq("id", id).eq("user_id", user.id);
+    const { email: _e, phone: _p, invoices: _i, ...dbData } = data;
+    await supabase.from("crm_deals").update(dbData as any).eq("id", id).eq("user_id", user.id);
   }, [user]);
 
   const removeDeal = useCallback(async (id: string) => {
@@ -124,8 +143,19 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     if (error) { toast.error("Failed to delete deal"); refreshDeals(); }
   }, [user, refreshDeals]);
 
+  const addInvoice = useCallback((contactId: string, invoice: CRMInvoice) => {
+    setDeals(prev => {
+      const next = prev.map(d => d.id === contactId
+        ? { ...d, invoices: [...(d.invoices || []), invoice] }
+        : d
+      );
+      persist(next);
+      return next;
+    });
+  }, []);
+
   return (
-    <CRMContext.Provider value={{ deals, loading, addDeal, updateDeal, removeDeal, refreshDeals }}>
+    <CRMContext.Provider value={{ deals, loading, addDeal, updateDeal, removeDeal, refreshDeals, addInvoice }}>
       {children}
     </CRMContext.Provider>
   );

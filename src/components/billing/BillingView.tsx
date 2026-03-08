@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Users, LayoutGrid, Zap, X, ArrowRight, ChevronRight, Check } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
+import SparksCheckoutModal from "./SparksCheckoutModal";
 
 /* ─── Upgrade Modal ─── */
 export function UpgradeModal() {
@@ -67,67 +68,10 @@ export function UpgradeModal() {
   );
 }
 
-/* ─── Out Of Sparks Modal ─── */
+/* ─── Out Of Sparks Modal — uses premium SparksCheckoutModal ─── */
 export function OutOfSparksModal() {
-  const { showOutOfSparks, closeOutOfSparks, addSparks } = useMonetization();
-
-  if (!showOutOfSparks) return null;
-
-  const PACKS = [
-    { sparks: 50,  price: "$4.99",  label: "Starter",    highlight: false },
-    { sparks: 120, price: "$10.00", label: "Best Value",  highlight: true  },
-    { sparks: 300, price: "$24.99", label: "Power User",  highlight: false },
-  ];
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        key="oos-modal"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9000] flex items-center justify-center p-4"
-        style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(12px)" }}
-      >
-        <motion.div
-          initial={{ scale: 0.92, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.92, y: 20 }}
-          className="relative w-full max-w-md rounded-3xl p-8 shadow-2xl"
-          style={{ background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))" }}
-        >
-          <button onClick={closeOutOfSparks} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-secondary/60 text-muted-foreground">
-            <X size={16} />
-          </button>
-          <div className="text-3xl mb-3">✨</div>
-          <h2 className="text-xl font-bold mb-2 text-foreground">Your Sparks are depleted</h2>
-          <p className="text-sm text-muted-foreground mb-6">Top up to continue using AI features.</p>
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {PACKS.map((pack) => (
-              <button
-                key={pack.sparks}
-              onClick={() => { addSparks(pack.sparks); closeOutOfSparks(); }}
-                className={`relative flex flex-col items-center gap-1 p-4 rounded-2xl border transition-all hover:scale-[1.02] ${
-                  pack.highlight
-                    ? "border-primary bg-primary/10 ring-2 ring-primary/30"
-                    : "border-border hover:border-primary/40"
-                }`}
-              >
-                {pack.highlight && (
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground whitespace-nowrap">
-                    Best Value
-                  </span>
-                )}
-                <span className="text-lg font-bold text-foreground">{pack.sparks} ✨</span>
-                <span className="text-xs text-muted-foreground">{pack.price}</span>
-                <span className="text-[10px] text-muted-foreground">{pack.label}</span>
-              </button>
-            ))}
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
+  const { showOutOfSparks, closeOutOfSparks } = useMonetization();
+  return <SparksCheckoutModal open={showOutOfSparks} onClose={closeOutOfSparks} />;
 }
 
 /* ─── Checkout Overlay (simulated) ─── */
