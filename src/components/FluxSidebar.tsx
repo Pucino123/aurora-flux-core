@@ -1,4 +1,4 @@
-import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Network, Grid, CreditCard, Zap, ShieldCheck, Briefcase, Settings, Inbox } from "lucide-react";
+import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Network, Grid, CreditCard, Zap, ShieldCheck, Briefcase, Settings } from "lucide-react";
 import BaymaxFace from "./council/BaymaxFace";
 import { useRef, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
