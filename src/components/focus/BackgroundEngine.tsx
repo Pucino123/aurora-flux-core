@@ -266,6 +266,92 @@ const CustomUploadSection = ({ customBgs, onUpload, onAddYoutube, onDelete, onSe
   );
 };
 
+// ── Spaces button style ─────────────────────────────────────────────
+const SPACES_POS_KEY = "flux-spaces-pos";
+const SPACES_STYLE_KEY = "flux-spaces-style";
+
+interface SpacesStyle {
+  bgOpacity: number;
+  blurAmount: number;
+  borderOpacity: number;
+  borderRadius: number;
+  borderWidth: number;
+  borderColor: string;
+  textOpacity: number;
+}
+const DEFAULT_SPACES_STYLE: SpacesStyle = {
+  bgOpacity: 10, blurAmount: 16, borderOpacity: 20,
+  borderRadius: 50, borderWidth: 1, borderColor: "#ffffff", textOpacity: 80,
+};
+
+function loadSpacesPos(): { x: number; y: number } | null {
+  try { const r = localStorage.getItem(SPACES_POS_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function saveSpacesPos(p: { x: number; y: number }) { localStorage.setItem(SPACES_POS_KEY, JSON.stringify(p)); }
+function loadSpacesStyle(): SpacesStyle {
+  try { const r = localStorage.getItem(SPACES_STYLE_KEY); return r ? { ...DEFAULT_SPACES_STYLE, ...JSON.parse(r) } : DEFAULT_SPACES_STYLE; } catch { return DEFAULT_SPACES_STYLE; }
+}
+function saveSpacesStyle(s: SpacesStyle) { localStorage.setItem(SPACES_STYLE_KEY, JSON.stringify(s)); }
+
+const SWATCH_COLORS_SPACES = ["#ffffff", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc"];
+
+const SpacesStylePanel = ({ style, onUpdate, onReset, onClose }: {
+  style: SpacesStyle; onUpdate: (p: Partial<SpacesStyle>) => void; onReset: () => void; onClose: () => void;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.92, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 8 }}
+    transition={{ type: "spring", stiffness: 420, damping: 30 }}
+    className="absolute bottom-[calc(100%+10px)] left-0 w-64 rounded-2xl p-4 shadow-2xl z-[10200]"
+    style={{ background: "rgba(18,18,20,0.94)", backdropFilter: "blur(48px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    onPointerDown={e => e.stopPropagation()}
+  >
+    <div className="flex items-center justify-between mb-3">
+      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-widest">Button Style</span>
+      <div className="flex gap-1.5">
+        <button onClick={onReset} className="text-[9px] text-white/30 hover:text-white/60 px-1.5 py-0.5 rounded hover:bg-white/5">Reset</button>
+        <button onClick={onClose} className="text-white/30 hover:text-white/60"><X size={12} /></button>
+      </div>
+    </div>
+    <div className="space-y-3">
+      {[
+        { label: "Background", key: "bgOpacity" as const, min: 0, max: 80, unit: "%" },
+        { label: "Blur", key: "blurAmount" as const, min: 0, max: 40, unit: "px" },
+        { label: "Text Opacity", key: "textOpacity" as const, min: 10, max: 100, unit: "%" },
+        { label: "Border Opacity", key: "borderOpacity" as const, min: 0, max: 100, unit: "%" },
+      ].map(({ label, key, min, max, unit }) => (
+        <div key={key} className="space-y-1">
+          <div className="flex justify-between"><span className="text-[9px] text-white/40 uppercase tracking-wider">{label}</span><span className="text-[9px] text-white/30 tabular-nums">{style[key]}{unit}</span></div>
+          <Slider value={[style[key]]} onValueChange={([v]) => onUpdate({ [key]: v })} min={min} max={max} step={1}
+            className="[&_[data-radix-slider-track]]:h-[4px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-white/50 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-3.5 [&_[data-radix-slider-thumb]]:h-3.5" />
+        </div>
+      ))}
+      <div className="space-y-1">
+        <span className="text-[9px] text-white/40 uppercase tracking-wider block">Shape</span>
+        <div className="flex gap-1">
+          {[{ l: "Soft", v: 8 }, { l: "Round", v: 24 }, { l: "Pill", v: 50 }].map(p => (
+            <button key={p.l} onClick={() => onUpdate({ borderRadius: p.v })}
+              className={`flex-1 py-1 rounded-lg text-[9px] font-medium transition-all ${style.borderRadius === p.v ? "bg-white/15 text-white" : "text-white/35 border border-white/8 hover:bg-white/8"}`}>{p.l}</button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1">
+        <span className="text-[9px] text-white/40 uppercase tracking-wider block">Border Color</span>
+        <div className="flex gap-1.5 flex-wrap">
+          {SWATCH_COLORS_SPACES.map(c => (
+            <button key={c} onClick={() => onUpdate({ borderColor: c, borderWidth: Math.max(1, style.borderWidth) })}
+              className="w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform"
+              style={{ backgroundColor: c, borderColor: style.borderColor === c ? "rgba(255,255,255,0.9)" : "transparent" }} />
+          ))}
+          <label className="w-5 h-5 rounded-full cursor-pointer border border-white/20 overflow-hidden hover:scale-110 transition-transform"
+            style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+            <input type="color" value={style.borderColor} onChange={e => onUpdate({ borderColor: e.target.value })} className="opacity-0 w-full h-full" />
+          </label>
+        </div>
+      </div>
+    </div>
+  </motion.div>
+);
+
 // ── Main Component ───────────────────────────────────────────────────
 const BackgroundEngine = ({
   embedded = false,
@@ -282,8 +368,7 @@ const BackgroundEngine = ({
   pageSpaceSettings?: SpaceSettings;
   onPageSpaceSettingsChange?: (s: SpaceSettings) => void;
 }) => {
-  const { currentBackground: globalBackground, setCurrentBackground: setGlobalBackground, isZenMode } = useFocusStore();
-  // Use per-page background if provided, otherwise fall back to global
+  const { currentBackground: globalBackground, setCurrentBackground: setGlobalBackground, isZenMode, systemMode } = useFocusStore();
   const currentBackground = pageBackground ?? globalBackground;
   const setCurrentBackground = (id: string) => {
     if (onPageBackgroundChange) onPageBackgroundChange(id);
@@ -291,12 +376,78 @@ const BackgroundEngine = ({
   };
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [spacesStyleOpen, setSpacesStyleOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [customBgs, setCustomBgs] = useState<CustomBg[]>(loadCustomBgs);
   const [customGrads, setCustomGrads] = useState<CustomGrad[]>(loadCustomGrads);
   const [showGradCreator, setShowGradCreator] = useState(false);
   const [user, setUser] = useState<any>(null);
+
+  // ── Spaces drag ─────────────────────────────────────────────────
+  const [spacesPos, setSpacesPos] = useState<{ x: number; y: number } | null>(loadSpacesPos);
+  const [spacesDragging, setSpacesDragging] = useState(false);
+  const [spacesBouncing, setSpacesBouncing] = useState(false);
+  const spacesRef = useRef<HTMLDivElement>(null);
+  const spacesIsDragging = useRef(false);
+  const spacesDidDrag = useRef(false);
+  const spacesOffset = useRef({ x: 0, y: 0 });
+
+  const isBuild = systemMode === "build";
+
+  const handleSpacesPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!isBuild) return;
+    e.preventDefault(); e.stopPropagation();
+    spacesIsDragging.current = true; spacesDidDrag.current = false; setSpacesDragging(true);
+    const rect = spacesRef.current?.getBoundingClientRect();
+    if (rect) spacesOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    else if (spacesPos) spacesOffset.current = { x: e.clientX - spacesPos.x, y: e.clientY - spacesPos.y };
+    else spacesOffset.current = { x: e.clientX - 268, y: e.clientY - (window.innerHeight - 56) };
+  }, [isBuild, spacesPos]);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!spacesIsDragging.current) return;
+      spacesDidDrag.current = true;
+      const nx = e.clientX - spacesOffset.current.x;
+      const ny = e.clientY - spacesOffset.current.y;
+      const w = spacesRef.current?.offsetWidth ?? 120;
+      const h = spacesRef.current?.offsetHeight ?? 40;
+      setSpacesPos({ x: Math.max(0, Math.min(nx, window.innerWidth - w)), y: Math.max(0, Math.min(ny, window.innerHeight - h)) });
+    };
+    const onUp = () => {
+      if (!spacesIsDragging.current) return;
+      spacesIsDragging.current = false; setSpacesDragging(false);
+      if (spacesDidDrag.current && spacesPos) {
+        saveSpacesPos(spacesPos); setSpacesBouncing(true); setTimeout(() => setSpacesBouncing(false), 500);
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
+  }, [spacesPos]);
+
+  // ── Spaces style ────────────────────────────────────────────────
+  const [spacesStyle, setSpacesStyleState] = useState<SpacesStyle>(loadSpacesStyle);
+  const updateSpacesStyle = useCallback((patch: Partial<SpacesStyle>) => {
+    setSpacesStyleState(prev => { const next = { ...prev, ...patch }; saveSpacesStyle(next); return next; });
+  }, []);
+  const resetSpacesStyle = useCallback(() => { setSpacesStyleState(DEFAULT_SPACES_STYLE); saveSpacesStyle(DEFAULT_SPACES_STYLE); }, []);
+
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  };
+  const spacesBg = hexToRgba("#000000", spacesStyle.bgOpacity / 100);
+  const spacesBorder = spacesStyle.borderWidth > 0
+    ? `${spacesStyle.borderWidth}px solid ${hexToRgba(spacesStyle.borderColor, spacesStyle.borderOpacity / 100)}`
+    : "1px solid rgba(255,255,255,0.15)";
+  const spacesTextColor = `rgba(255,255,255,${spacesStyle.textOpacity / 100})`;
+  const spacesPosStyle: React.CSSProperties = spacesPos
+    ? { left: spacesPos.x, top: spacesPos.y, bottom: "auto" }
+    : { left: 268, bottom: 24, top: "auto" };
 
   // Per-page space settings — if pageSpaceSettings is provided use it, else fall back to localStorage globals
   const [localDimming, setLocalDimming] = useState(() => { try { return parseFloat(localStorage.getItem("flux-bg-dimming") || "0.15"); } catch { return 0.15; } });
