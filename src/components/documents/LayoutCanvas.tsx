@@ -5,7 +5,7 @@
  * Supports isCanvasMode to lock/unlock dragging for "Design" vs "Text" mode.
  */
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle, Copy, Paintbrush } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
