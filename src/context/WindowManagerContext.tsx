@@ -304,7 +304,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
       openWindow, closeWindow, setWindowLayout,
       updateWindowPosition, updateWindowSize, bringToFront,
       minimizeWindow, restoreWindow, closeSwitcher,
-      duplicateWindow, groupWindows, ungroupWindow,
+      duplicateWindow, groupWindows, ungroupWindow, updateWindowTitle,
     }}>
       {children}
     </WindowManagerContext.Provider>
