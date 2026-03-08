@@ -441,7 +441,9 @@ const FullscreenModal: React.FC<FullscreenModalProps> = ({ persona, response, sa
                   labelStyle={{ color: "rgba(255,255,255,0.5)" }}
                   itemStyle={{ color }}
                 />
-                <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} opacity={0.8} />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]} opacity={0.8}>
+                  {chartData.map((_, idx) => <Cell key={idx} fill={color} />)}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
