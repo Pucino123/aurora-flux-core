@@ -356,8 +356,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                     </motion.div>
                   )}
 
-                  {/* ── INTEGRATIONS ── */}
-                  {tab === "integrations" && (
+                   {/* ── INTEGRATIONS ── */}
+                   {tab === "integrations" && (
                     <motion.div key="integrations" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
                       <h2 className="text-base font-bold text-foreground mb-1">Integrations</h2>
                       <p className="text-xs text-muted-foreground mb-5">Connect your external calendars to see everything in one place.</p>
