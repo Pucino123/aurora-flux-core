@@ -197,6 +197,9 @@ const EntityNode: React.FC<EntityNodeProps> = ({
 }) => {
   const { type, position, size, style, content, zIndex } = entity;
   const resizeStart = useRef<{ mx: number; my: number; w: number; h: number } | null>(null);
+  // Track whether the pointer moved (drag) vs just clicked
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+  const didDrag = useRef(false);
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -223,9 +226,9 @@ const EntityNode: React.FC<EntityNodeProps> = ({
     border:        style.strokeWidth > 0 ? `${style.strokeWidth}px solid ${style.stroke}` : "none",
     borderRadius:  type === "circle" ? "50%" : `${style.borderRadius}px`,
     opacity:       style.opacity,
-    outline:       isSelected ? "2px solid rgba(139,92,246,0.8)" : "none",
-    outlineOffset: 2,
-    boxShadow:     isSelected ? "0 0 0 4px rgba(139,92,246,0.15)" : undefined,
+    outline:       isSelected ? "2.5px solid rgba(99,102,241,0.9)" : "none",
+    outlineOffset: 3,
+    boxShadow:     isSelected ? "0 0 0 5px rgba(99,102,241,0.18), 0 8px 24px rgba(0,0,0,0.3)" : undefined,
     overflow:      "hidden",
     display:       "flex",
     alignItems:    "center",
@@ -240,6 +243,8 @@ const EntityNode: React.FC<EntityNodeProps> = ({
       dragConstraints={canvasRef}
       initial={{ x: position.x, y: position.y }}
       animate={{ x: position.x, y: position.y }}
+      onDragStart={() => { didDrag.current = false; }}
+      onDrag={() => { didDrag.current = true; }}
       onDragEnd={(_, info) => {
         const canvas = canvasRef.current?.getBoundingClientRect();
         if (!canvas) return;
@@ -247,9 +252,20 @@ const EntityNode: React.FC<EntityNodeProps> = ({
         const ny = clamp(position.y + info.offset.y, 0, canvas.height - size.h);
         onDragEnd(entity.id, nx, ny);
       }}
-      onClick={e => { e.stopPropagation(); onSelect(entity.id); }}
+      onPointerDown={e => {
+        e.stopPropagation();
+        pointerDownPos.current = { x: e.clientX, y: e.clientY };
+        didDrag.current = false;
+      }}
+      onPointerUp={e => {
+        e.stopPropagation();
+        if (!didDrag.current) {
+          onSelect(entity.id);
+        }
+        pointerDownPos.current = null;
+      }}
       className="absolute cursor-move touch-none"
-      style={{ zIndex, position: "absolute", left: position.x, top: position.y }}
+      style={{ zIndex, position: "absolute", left: position.x, top: position.y, willChange: "transform" }}
     >
       <div style={shapeStyle}>
         {type === "textBox" && (
