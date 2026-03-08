@@ -159,7 +159,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
-        className="flex items-start gap-2 py-2 px-2.5 rounded-xl border border-white/[0.07] bg-[hsl(var(--card)/0.55)] backdrop-blur-sm group/row relative select-none touch-pan-y"
+        className="flex items-start gap-2 py-2 px-2.5 rounded-xl border border-white/[0.1] bg-[hsl(var(--card)/0.65)] backdrop-blur-sm group/row relative select-none touch-pan-y hover:border-white/[0.18] hover:bg-[hsl(var(--card)/0.8)] transition-all duration-150"
         onClick={e => e.stopPropagation()}
       >
         {/* Checkbox */}
