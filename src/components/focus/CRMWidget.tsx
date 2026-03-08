@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, GripVertical, ChevronDown, ChevronRight, Phone, Mail, StickyNote, X } from "lucide-react";
+import { Plus, Search, GripVertical, ChevronDown, ChevronRight, Phone, Mail, StickyNote, X, Loader2 } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -13,6 +13,8 @@ import {
   useDraggable,
 } from "@dnd-kit/core";
 import DraggableWidget from "./DraggableWidget";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 type Stage = "leads" | "contacted" | "proposal" | "closed";
 
@@ -33,14 +35,14 @@ const STAGE_CONFIG: Record<Stage, { label: string; color: string; dot: string; t
 
 const STAGE_ORDER: Stage[] = ["leads", "contacted", "proposal", "closed"];
 
-const INITIAL_DEALS: Deal[] = [
-  { id: "d1", name: "Alex Turner",    company: "Apex Dynamics",    value: 12500, stage: "leads" },
-  { id: "d2", name: "Sofia Martins",  company: "NovaBuild Ltd.",   value: 8200,  stage: "leads" },
-  { id: "d3", name: "Jared Kim",      company: "CloudStack Inc.",  value: 21000, stage: "contacted" },
-  { id: "d4", name: "Priya Shah",     company: "Meridian Group",   value: 5500,  stage: "contacted" },
-  { id: "d5", name: "Lucas Weber",    company: "TechForge GmbH",   value: 33000, stage: "proposal" },
-  { id: "d6", name: "Amara Osei",     company: "Greenline Co.",    value: 9800,  stage: "proposal" },
-  { id: "d7", name: "Nina Volkova",   company: "Stellar Systems",  value: 47500, stage: "closed" },
+const INITIAL_DEALS: Omit<Deal, "id">[] = [
+  { name: "Alex Turner",    company: "Apex Dynamics",    value: 12500, stage: "leads" },
+  { name: "Sofia Martins",  company: "NovaBuild Ltd.",   value: 8200,  stage: "leads" },
+  { name: "Jared Kim",      company: "CloudStack Inc.",  value: 21000, stage: "contacted" },
+  { name: "Priya Shah",     company: "Meridian Group",   value: 5500,  stage: "contacted" },
+  { name: "Lucas Weber",    company: "TechForge GmbH",   value: 33000, stage: "proposal" },
+  { name: "Amara Osei",     company: "Greenline Co.",    value: 9800,  stage: "proposal" },
+  { name: "Nina Volkova",   company: "Stellar Systems",  value: 47500, stage: "closed" },
 ];
 
 const getInitials = (name: string) =>
@@ -237,15 +239,62 @@ const DroppableStage: React.FC<{
 // ── Main CRM content ──
 
 const CRMWidgetContent = () => {
-  const [deals, setDeals] = useState<Deal[]>(INITIAL_DEALS);
+  const { user } = useAuth();
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<Stage>>(new Set(["leads", "contacted", "proposal", "closed"]));
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<Stage | null>(null);
+  const seededRef = useRef(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
+
+  // ── Load from DB ──
+  useEffect(() => {
+    if (!user) {
+      // Guest: use local initial deals with temp IDs
+      setDeals(INITIAL_DEALS.map((d, i) => ({ ...d, id: `local-${i}` })));
+      return;
+    }
+    setLoading(true);
+    supabase
+      .from("crm_deals" as any)
+      .select("id, name, company, value, stage")
+      .eq("user_id", user.id)
+      .order("sort_order", { ascending: true })
+      .then(async ({ data, error }) => {
+        setLoading(false);
+        if (error || !data || (data as any[]).length === 0) {
+          if (!seededRef.current) {
+            seededRef.current = true;
+            // Seed initial deals for new user
+            const inserts = INITIAL_DEALS.map((d, i) => ({
+              ...d,
+              user_id: user.id,
+              sort_order: i,
+            }));
+            const { data: inserted } = await supabase
+              .from("crm_deals" as any)
+              .insert(inserts)
+              .select("id, name, company, value, stage");
+            if (inserted) {
+              setDeals((inserted as any[]).map(r => ({
+                id: r.id, name: r.name, company: r.company,
+                value: Number(r.value), stage: r.stage as Stage,
+              })));
+            }
+          }
+          return;
+        }
+        setDeals((data as any[]).map(r => ({
+          id: r.id, name: r.name, company: r.company,
+          value: Number(r.value), stage: r.stage as Stage,
+        })));
+      });
+  }, [user]);
 
   const filtered = useMemo(() =>
     search ? deals.filter(d =>
@@ -271,16 +320,32 @@ const CRMWidgetContent = () => {
     });
   };
 
-  const handleStageChange = (id: string, stage: Stage) => {
+  const handleStageChange = useCallback(async (id: string, stage: Stage) => {
     setDeals(prev => prev.map(d => d.id === id ? { ...d, stage } : d));
-  };
+    if (user && !id.startsWith("local-")) {
+      await supabase.from("crm_deals" as any).update({ stage }).eq("id", id).eq("user_id", user.id);
+    }
+  }, [user]);
 
-  const addDeal = () => {
+  const addDeal = async () => {
     const name = prompt("Contact name:") || "New Contact";
     const company = prompt("Company:") || "Unknown Co.";
     const valueStr = prompt("Deal value ($):") || "5000";
     const value = parseInt(valueStr.replace(/\D/g, "")) || 5000;
-    setDeals(prev => [{ id: `d-${Date.now()}`, name, company, value, stage: "leads" }, ...prev]);
+
+    if (user) {
+      const { data, error } = await supabase
+        .from("crm_deals" as any)
+        .insert({ name, company, value, stage: "leads", user_id: user.id, sort_order: 0 })
+        .select("id, name, company, value, stage")
+        .single();
+      if (!error && data) {
+        const r = data as any;
+        setDeals(prev => [{ id: r.id, name: r.name, company: r.company, value: Number(r.value), stage: r.stage as Stage }, ...prev]);
+        return;
+      }
+    }
+    setDeals(prev => [{ id: `local-${Date.now()}`, name, company, value, stage: "leads" }, ...prev]);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -304,8 +369,7 @@ const CRMWidgetContent = () => {
     if (!STAGE_ORDER.includes(targetStage)) return;
     const deal = deals.find(d => d.id === active.id);
     if (!deal || deal.stage === targetStage) return;
-    setDeals(prev => prev.map(d => d.id === active.id ? { ...d, stage: targetStage } : d));
-    // Auto-expand the target stage
+    handleStageChange(active.id as string, targetStage);
     setExpanded(prev => new Set([...prev, targetStage]));
   };
 
@@ -335,21 +399,27 @@ const CRMWidgetContent = () => {
         </div>
 
         {/* Pipeline Stages */}
-        <div className="flex-1 overflow-y-auto council-hidden-scrollbar px-3 pb-3 space-y-2">
-          {STAGE_ORDER.map(stage => (
-            <DroppableStage
-              key={stage}
-              stage={stage}
-              isOpen={expanded.has(stage)}
-              stageDeals={filtered.filter(d => d.stage === stage)}
-              total={stageTotals[stage]}
-              isOver={overStage === stage}
-              onToggle={() => toggleStage(stage)}
-              onStageChange={handleStageChange}
-              activeDealId={activeDealId}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 size={18} className="animate-spin text-white/20" />
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto council-hidden-scrollbar px-3 pb-3 space-y-2">
+            {STAGE_ORDER.map(stage => (
+              <DroppableStage
+                key={stage}
+                stage={stage}
+                isOpen={expanded.has(stage)}
+                stageDeals={filtered.filter(d => d.stage === stage)}
+                total={stageTotals[stage]}
+                isOver={overStage === stage}
+                onToggle={() => toggleStage(stage)}
+                onStageChange={handleStageChange}
+                activeDealId={activeDealId}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Drag overlay */}

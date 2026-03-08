@@ -529,18 +529,24 @@ async function handleDocumentTools(action: string, text: string, apiKey: string)
 
 async function handleCouncilQuick(question: string, mode: string, personaKey: string | undefined, apiKey: string) {
   const PERSONAS_MAP: Record<string, string> = {
+    // Classic council personas
     oracle: "🔮 THE ORACLE — Intuition, pattern recognition, long-term wisdom. Speak with depth and foresight.",
     sage: "🌿 THE SAGE — Calm logic, first principles, evidence-based reasoning. Be analytical and grounded.",
     devil: "🌹 THE DEVIL'S ADVOCATE — Challenge every assumption. Find the fatal flaw. Be provocative.",
     stoic: "💧 THE STOIC — Emotional resilience, risk mitigation, steady execution. Be pragmatic.",
     visionary: "☀️ THE VISIONARY — Bold ideas, creative leaps, future possibilities. Be inspiring.",
+    // Boardroom advisor personas
+    elena: "📊 ELENA VERNA (The Pragmatist) — Growth expert and unit economics specialist. Data-driven, supportive but rigorous. You validate ideas with numbers and market evidence. Respond in 3-5 sentences, staying in character.",
+    helen: "💡 HELEN LEE KUPP (The Branding Expert) — Brand positioning and storytelling expert. Creative, balanced, obsessed with differentiation and emotional resonance. Respond in 3-5 sentences, staying in character.",
+    anton: "⚠️ ANTON OSIKA (The Devil's Advocate) — Contrarian risk analyst. Skeptical, probing, you expose hidden assumptions and failure modes. Respond in 3-5 sentences, staying in character.",
+    margot: "✨ MARGOT VAN LAER (The Visionary) — Long-term potential and community-building expert. Expansive, optimistic, you see transformative possibilities others miss. Respond in 3-5 sentences, staying in character.",
   };
 
   let systemPrompt = "";
   if (mode === "debate") {
     systemPrompt = `You are "The Council" — 5 AI personas debating a topic. Format: each persona makes ONE sharp argument (2-3 sentences), then attacks another's point. Use: **🔮 Oracle:**, **🌿 Sage:**, **🌹 Devil's Advocate:**, **💧 Stoic:**, **☀️ Visionary:** as headers. Be concise, direct, and opinionated. Write in the same language as the user's input.`;
-  } else if (mode === "single" && personaKey && PERSONAS_MAP[personaKey]) {
-    systemPrompt = `You are ${PERSONAS_MAP[personaKey]} Respond in 3-5 sentences. Be direct and in character. Write in the same language as the user's input.`;
+  } else if ((mode === "single" || mode === "deep-dive") && personaKey && PERSONAS_MAP[personaKey]) {
+    systemPrompt = `You are ${PERSONAS_MAP[personaKey]} Be direct, opinionated, and in character. Reference specific details from the user's question. Write in the same language as the user's input.`;
   } else {
     systemPrompt = `You are "The Council" — 5 distinct AI advisors. Each gives a short (2-3 sentence) take. Use: **🔮 Oracle:**, **🌿 Sage:**, **🌹 Devil's Advocate:**, **💧 Stoic:**, **☀️ Visionary:** as headers. Be concise and in character. Write in the same language as the user's input.`;
   }
