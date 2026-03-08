@@ -13,6 +13,7 @@ import { WorkspaceProvider } from "./context/WorkspaceContext";
 import { CRMProvider } from "./context/CRMContext";
 import { FocusModeProvider } from "./context/FocusModeContext";
 import { TrashProvider } from "./context/TrashContext";
+import { AvatarProvider } from "./context/AvatarContext";
 import Index from "./pages/Index";
 import Focus from "./pages/Focus";
 import Auth from "./pages/Auth";
