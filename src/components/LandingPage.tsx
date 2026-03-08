@@ -676,9 +676,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
 };
 
 export default LandingPage;
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]">
-          {/* Large: The Council */}
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0 }}
             className="col-span-2 row-span-2 rounded-3xl p-7 flex flex-col justify-between overflow-hidden relative"
             style={{ background: isDark ? "rgba(20,20,30,0.65)" : "rgba(255,255,255,0.15)", backdropFilter: "blur(24px)", border: isDark ? "1.5px solid rgba(255,255,255,0.10)" : "1.5px solid rgba(255,255,255,0.25)" }}>
             <div className="flex gap-3 mb-4">
