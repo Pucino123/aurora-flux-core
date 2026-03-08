@@ -1,4 +1,4 @@
-import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Network, Grid, CreditCard, Zap, ShieldCheck, Briefcase, Settings, Inbox } from "lucide-react";
+import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Network, Grid, CreditCard, Zap, ShieldCheck, Briefcase, Settings } from "lucide-react";
 import BaymaxFace from "./council/BaymaxFace";
 import { useRef, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -69,18 +69,12 @@ const UserSection = () => {
 const ADMIN_EMAIL = "kevin.therkildsen@icloud.com";
 
 const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarProps) => {
-  const { activeView, activeFolder, setActiveView, setActiveFolder, filterPersona, setFilterPersona, inboxTasks } = useFlux();
+  const { activeView, activeFolder, setActiveView, setActiveFolder, filterPersona, setFilterPersona } = useFlux();
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
   const { sparksBalance, openBilling, closeBilling } = useMonetization();
   const { theme, setTheme } = useTheme();
   const { isFocusModeActive } = useFocusMode();
-
-  // Unified inbox badge: unread mock emails (2) + unread team messages + undone today tasks
-  const today = new Date().toISOString().slice(0, 10);
-  const todayPending = inboxTasks.filter((t) => !t.done && (t.scheduled_date === today || !t.scheduled_date)).length;
-  const MOCK_UNREAD_EMAILS = 2; // static mock count
-  const unreadInboxCount = MOCK_UNREAD_EMAILS + todayPending;
 
   // Every nav click must close any open billing/overlay, then switch view
   const nav = (view: typeof activeView | string) => {
@@ -158,26 +152,6 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
           >
             <Home size={18} className="shrink-0" />
             <span>{t("sidebar.home")}</span>
-          </button>
-
-          {/* Inbox with unified badge */}
-          <button
-            onClick={() => nav("inbox")}
-            className={`sidebar-item w-full ${activeView === ("inbox" as any) ? "sidebar-item-active" : ""}`}
-          >
-            <Inbox size={18} className="shrink-0" />
-            <span className="flex-1 text-left">Indbakke</span>
-            {unreadInboxCount > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", boxShadow: "0 0 8px hsl(var(--primary)/0.6)" }}
-              >
-                {unreadInboxCount > 99 ? "99+" : unreadInboxCount}
-              </motion.span>
-            )}
           </button>
 
           <button

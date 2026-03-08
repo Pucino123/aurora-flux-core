@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, User, Link, Zap, Palette, LogOut, CheckCheck, Loader2,
   Globe, Sun, Moon, Monitor, Camera, Check, ChevronRight, Sparkles, CreditCard,
+  Building2, Upload,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
@@ -14,7 +15,7 @@ import { toast } from "sonner";
 import SparksCheckoutModal from "@/components/billing/SparksCheckoutModal";
 import { useAvatar } from "@/context/AvatarContext";
 
-type Tab = "account" | "integrations" | "sparks" | "appearance";
+type Tab = "account" | "company" | "integrations" | "sparks" | "appearance";
 
 interface SettingsModalProps {
   open: boolean;
@@ -108,6 +109,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
   const [savingName, setSavingName] = useState(false);
   const [sparksCheckoutOpen, setSparksCheckoutOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
+
+  // Company profile state
+  const [company, setCompany] = useState({
+    company_name: "", logo_url: "", address: "", city: "", zip_code: "",
+    country: "", vat_number: "", iban: "", swift_bic: "", bank_name: "",
+    payment_terms: "Net 30", invoice_footer: "",
+  });
+  const [savingCompany, setSavingCompany] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const name = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
   const email = user?.email || "";
@@ -117,7 +128,48 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
     supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) setDisplayName((data as any).display_name || name);
     });
+    // Load company profile
+    (supabase as any).from("company_profiles").select("*").eq("user_id", user.id).maybeSingle().then(({ data }: any) => {
+      if (data) setCompany({
+        company_name: data.company_name || "",
+        logo_url: data.logo_url || "",
+        address: data.address || "",
+        city: data.city || "",
+        zip_code: data.zip_code || "",
+        country: data.country || "",
+        vat_number: data.vat_number || "",
+        iban: data.iban || "",
+        swift_bic: data.swift_bic || "",
+        bank_name: data.bank_name || "",
+        payment_terms: data.payment_terms || "Net 30",
+        invoice_footer: data.invoice_footer || "",
+      });
+    });
   }, [user, open]);
+
+  const handleSaveCompany = async () => {
+    if (!user) return;
+    setSavingCompany(true);
+    const payload = { ...company, user_id: user.id };
+    const { error } = await (supabase as any).from("company_profiles").upsert(payload, { onConflict: "user_id" });
+    if (error) toast.error("Failed to save company profile");
+    else toast.success("Company profile saved!");
+    setSavingCompany(false);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingLogo(true);
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/logo.${ext}`;
+    const { error } = await supabase.storage.from("company-logos").upload(path, file, { upsert: true });
+    if (error) { toast.error("Logo upload failed"); setUploadingLogo(false); return; }
+    const { data } = supabase.storage.from("company-logos").getPublicUrl(path);
+    setCompany(prev => ({ ...prev, logo_url: data.publicUrl }));
+    setUploadingLogo(false);
+    toast.success("Logo uploaded!");
+  };
 
   // Persist integrations to localStorage whenever they change
   useEffect(() => {
@@ -162,6 +214,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
 
   const TAB_ITEMS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "account", label: "Account", icon: <User size={15} /> },
+    { id: "company", label: "Company Profile", icon: <Building2 size={15} /> },
     { id: "integrations", label: "Integrations", icon: <Link size={15} /> },
     { id: "sparks", label: "Sparks & Billing", icon: <Zap size={15} /> },
     { id: "appearance", label: "Appearance", icon: <Palette size={15} /> },
@@ -300,6 +353,81 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                           Save Changes
                         </button>
                       </div>
+                    </motion.div>
+                  )}
+
+                  {/* ── COMPANY PROFILE ── */}
+                  {tab === "company" && (
+                    <motion.div key="company" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
+                      <h2 className="text-base font-bold text-foreground mb-1">Company Profile</h2>
+                      <p className="text-xs text-muted-foreground mb-5">Used on invoices and billing documents.</p>
+                      <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+
+                      {/* Logo */}
+                      <div className="flex items-center gap-4 mb-5">
+                        <div
+                          className="w-16 h-16 rounded-2xl border-2 border-dashed border-border/40 flex items-center justify-center cursor-pointer hover:border-primary/40 transition-colors overflow-hidden group"
+                          onClick={() => logoRef.current?.click()}
+                        >
+                          {company.logo_url ? (
+                            <img src={company.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                          ) : (
+                            <div className="flex flex-col items-center gap-1 text-muted-foreground group-hover:text-primary transition-colors">
+                              {uploadingLogo ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                              <span className="text-[9px]">Logo</span>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-foreground">Company Logo</p>
+                          <p className="text-[11px] text-muted-foreground">Click to upload (PNG, JPG)</p>
+                          {company.logo_url && (
+                            <button onClick={() => setCompany(p => ({ ...p, logo_url: "" }))} className="text-[10px] text-destructive/70 hover:text-destructive mt-0.5">Remove</button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 max-w-lg">
+                        {[
+                          { key: "company_name", label: "Company Name", full: true },
+                          { key: "vat_number", label: "VAT / CVR Number" },
+                          { key: "address", label: "Street Address", full: true },
+                          { key: "zip_code", label: "ZIP Code" },
+                          { key: "city", label: "City" },
+                          { key: "country", label: "Country" },
+                          { key: "bank_name", label: "Bank Name" },
+                          { key: "iban", label: "IBAN" },
+                          { key: "swift_bic", label: "SWIFT / BIC" },
+                          { key: "payment_terms", label: "Payment Terms" },
+                        ].map(({ key, label, full }) => (
+                          <div key={key} className={`space-y-1.5 ${full ? "col-span-2" : ""}`}>
+                            <label className="text-xs text-muted-foreground font-medium">{label}</label>
+                            <input
+                              value={(company as any)[key]}
+                              onChange={e => setCompany(p => ({ ...p, [key]: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-xl text-sm bg-secondary/50 border border-border/30 text-foreground outline-none focus:border-primary/40 transition-colors"
+                            />
+                          </div>
+                        ))}
+                        <div className="col-span-2 space-y-1.5">
+                          <label className="text-xs text-muted-foreground font-medium">Invoice Footer Note</label>
+                          <textarea
+                            value={company.invoice_footer}
+                            onChange={e => setCompany(p => ({ ...p, invoice_footer: e.target.value }))}
+                            rows={2}
+                            className="w-full px-3 py-2 rounded-xl text-sm bg-secondary/50 border border-border/30 text-foreground outline-none focus:border-primary/40 transition-colors resize-none"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleSaveCompany}
+                        disabled={savingCompany}
+                        className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        {savingCompany ? <Loader2 size={12} className="animate-spin" /> : null}
+                        Save Company Profile
+                      </button>
                     </motion.div>
                   )}
 

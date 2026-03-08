@@ -23,6 +23,7 @@ import { UpgradeModal, OutOfSparksModal } from "./billing/BillingView";
 import CRMPage from "../pages/CRMPage";
 import CommHub from "./CommHub";
 import ControlCenter from "./ControlCenter";
+import InboxView from "./InboxView";
 import { useFlux } from "@/context/FluxContext";
 import { useMonetization } from "@/context/MonetizationContext";
 import { useFocusMode } from "@/context/FocusModeContext";
@@ -177,6 +178,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             {(effectiveView as string) === "community"       && <CommunityBoardView />}
             {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
             {(effectiveView as string) === "crm"             && <CRMPage />}
+            {(effectiveView as string) === "inbox"           && <InboxView />}
             {effectiveView === "billing"                     && <BillingView />}
             {!VIEWS_WITHOUT_SCHEDULER.includes(effectiveView as string) && <Scheduler />}
           </motion.div>

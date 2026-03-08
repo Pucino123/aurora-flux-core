@@ -1,12 +1,14 @@
 /**
  * InvoiceModal — two-column invoice generator with payment details
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Send, Loader2, Building2, CreditCard, ToggleLeft, ToggleRight, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCRM, CRMContact } from "@/context/CRMContext";
 import { pushNotification } from "@/components/NotificationBell";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 // ── Payment profile helpers ───────────────────────────────────────────────────
 const PROFILE_KEY = "crm_payment_profile";
@@ -105,6 +107,7 @@ const newItem = (): LineItem => ({
 
 const InvoiceModal = ({ open, contact, onClose }: Props) => {
   const { addInvoice } = useCRM();
+  const { user } = useAuth();
   const [items, setItems] = useState<LineItem[]>([newItem()]);
   const [invoiceNo, setInvoiceNo] = useState(() => `INV-${Date.now().toString().slice(-5)}`);
   const [dueDate, setDueDate] = useState(() => {
@@ -115,6 +118,27 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
   const [includeBankDetails, setIncludeBankDetails] = useState(true);
   const [profile, setProfile] = useState<PaymentProfile>(loadProfile);
   const [showBankSettings, setShowBankSettings] = useState(false);
+
+  // Load from DB when modal opens
+  useEffect(() => {
+    if (!open || !user) return;
+    (supabase as any).from("company_profiles").select("*").eq("user_id", user.id).maybeSingle().then(({ data }: any) => {
+      if (data) {
+        const dbProfile: PaymentProfile = {
+          companyName: data.company_name || DEFAULT_PROFILE.companyName,
+          bankName: data.bank_name || DEFAULT_PROFILE.bankName,
+          regNumber: DEFAULT_PROFILE.regNumber,
+          accountNumber: DEFAULT_PROFILE.accountNumber,
+          iban: data.iban || DEFAULT_PROFILE.iban,
+          swift: data.swift_bic || DEFAULT_PROFILE.swift,
+          paymentTerms: data.payment_terms?.replace(/\D/g, "") || DEFAULT_PROFILE.paymentTerms,
+          email: user.email || DEFAULT_PROFILE.email,
+        };
+        setProfile(dbProfile);
+        saveProfile(dbProfile);
+      }
+    });
+  }, [open, user]);
 
   const total = items.reduce((s, it) => s + it.qty * it.price, 0);
   const tax = total * 0.2;
