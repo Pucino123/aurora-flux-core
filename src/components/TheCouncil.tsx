@@ -26,6 +26,7 @@ import PersonalityControls from "./council/PersonalityControls";
 import VoteTooltip from "./council/VoteTooltip";
 import ProactiveIntelligence from "./council/ProactiveIntelligence";
 import CouncilBoardroom from "./council/CouncilBoardroom";
+import BoardroomIdeasHistory from "./council/BoardroomIdeasHistory";
 
 // ── Types ──
 
