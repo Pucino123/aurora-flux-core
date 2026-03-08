@@ -317,6 +317,9 @@ const GridDashboard = () => {
     setRenamingWidget(null);
   };
 
+  const handleSetRenamingWidget = useCallback((id: string | null) => setRenamingWidget(id), []);
+  const handleSetRenameValue = useCallback((v: string) => setRenameValue(v), []);
+
   const addStickyNote = () => {
     const color = STICKY_COLORS[stickyNotes.length % STICKY_COLORS.length].key;
     updateConfig({ stickyNotes: [...stickyNotes, { id: `sn-${Date.now()}`, text: "", color }] });
