@@ -44,7 +44,7 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const BuildModeGrid = () => (
@@ -66,6 +66,38 @@ const FocusContent = () => {
   const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
+
+  // iOS-style dashboard pages state
+  const [dashboardPages, setDashboardPages] = useState<{ id: string }[]>(() => {
+    try {
+      const raw = localStorage.getItem("flux-dashboard-pages");
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [{ id: "page-1" }];
+  });
+  const [activePageIndex, setActivePageIndex] = useState(0);
+  const [pageDir, setPageDir] = useState<1 | -1>(1);
+
+  // Persist pages
+  useEffect(() => {
+    localStorage.setItem("flux-dashboard-pages", JSON.stringify(dashboardPages));
+  }, [dashboardPages]);
+
+  const goToPage = useCallback((idx: number) => {
+    setPageDir(idx > activePageIndex ? 1 : -1);
+    setActivePageIndex(idx);
+  }, [activePageIndex]);
+
+  const addPage = useCallback(() => {
+    const newPage = { id: `page-${Date.now()}` };
+    setDashboardPages(prev => {
+      const next = [...prev, newPage];
+      localStorage.setItem("flux-dashboard-pages", JSON.stringify(next));
+      return next;
+    });
+    setPageDir(1);
+    setActivePageIndex(dashboardPages.length);
+  }, [dashboardPages.length]);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
@@ -522,38 +554,52 @@ const FocusContent = () => {
 
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 20 }}>
         <div className="pointer-events-auto w-full h-full">
-          <AnimatePresence>
-            {activeWidgets.includes("clock") && !clockEditorOpen && <ClockWidget key="clock" onOpenEditor={() => setClockEditorOpen(true)} />}
-            {activeWidgets.includes("timer") && <FocusTimer key="timer" />}
-            {activeWidgets.includes("music") && <MusicWidget key="music" />}
-            {activeWidgets.includes("planner") && <TodaysPlanWidget key="planner" />}
-            {activeWidgets.includes("notes") && <NotesWidget key="notes" />}
-            {activeWidgets.includes("crm") && <FocusCRMWidget key="crm" />}
-            {activeWidgets.includes("stats") && <FocusStatsWidget key="stats" />}
-            {activeWidgets.includes("scratchpad") && <ScratchpadWidget key="scratchpad" />}
-            {activeWidgets.includes("quote") && <QuoteOfDay key="quote" />}
-            {activeWidgets.includes("breathing") && <BreathingWidget key="breathing" />}
-            {activeWidgets.includes("council") && <FocusCouncilWidget key="council" />}
-            {activeWidgets.includes("aura") && <AuraWidget key="aura" />}
-            {activeWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
-            {/* Aura-spawned image widgets */}
-            {auraImages.map(img => (
-              <AuraImageWidget
-                key={img.id}
-                id={img.id}
-                url={img.url}
-                prompt={img.prompt}
-                onRemove={(id) => setAuraImages(prev => prev.filter(i => i.id !== id))}
-              />
-            ))}
-            {activeWidgets.includes("budget-preview") && <FocusBudgetWidget key="budget-preview" />}
-            {activeWidgets.includes("savings-ring") && <FocusSavingsWidget key="savings-ring" />}
-            {activeWidgets.includes("weekly-workout") && <FocusWorkoutWidget key="weekly-workout" />}
-            {activeWidgets.includes("project-status") && <FocusProjectStatusWidget key="project-status" />}
-            {activeWidgets.includes("top-tasks") && <FocusTopTasksWidget key="top-tasks" />}
-            {activeWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
-            {activeWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
-            {/* Chat widget removed for clean desktop */}
+          <AnimatePresence mode="wait" custom={pageDir}>
+            <motion.div
+              key={activePageIndex}
+              custom={pageDir}
+              initial={{ x: pageDir * 60, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: pageDir * -60, opacity: 0 }}
+              transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="absolute inset-0 pointer-events-none"
+            >
+              <div className="pointer-events-auto w-full h-full">
+            <AnimatePresence>
+              {activeWidgets.includes("clock") && !clockEditorOpen && <ClockWidget key="clock" onOpenEditor={() => setClockEditorOpen(true)} />}
+              {activeWidgets.includes("timer") && <FocusTimer key="timer" />}
+              {activeWidgets.includes("music") && <MusicWidget key="music" />}
+              {activeWidgets.includes("planner") && <TodaysPlanWidget key="planner" />}
+              {activeWidgets.includes("notes") && <NotesWidget key="notes" />}
+              {activeWidgets.includes("crm") && <FocusCRMWidget key="crm" />}
+              {activeWidgets.includes("stats") && <FocusStatsWidget key="stats" />}
+              {activeWidgets.includes("scratchpad") && <ScratchpadWidget key="scratchpad" />}
+              {activeWidgets.includes("quote") && <QuoteOfDay key="quote" />}
+              {activeWidgets.includes("breathing") && <BreathingWidget key="breathing" />}
+              {activeWidgets.includes("council") && <FocusCouncilWidget key="council" />}
+              {activeWidgets.includes("aura") && <AuraWidget key="aura" />}
+              {activeWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
+              {/* Aura-spawned image widgets */}
+              {auraImages.map(img => (
+                <AuraImageWidget
+                  key={img.id}
+                  id={img.id}
+                  url={img.url}
+                  prompt={img.prompt}
+                  onRemove={(id) => setAuraImages(prev => prev.filter(i => i.id !== id))}
+                />
+              ))}
+              {activeWidgets.includes("budget-preview") && <FocusBudgetWidget key="budget-preview" />}
+              {activeWidgets.includes("savings-ring") && <FocusSavingsWidget key="savings-ring" />}
+              {activeWidgets.includes("weekly-workout") && <FocusWorkoutWidget key="weekly-workout" />}
+              {activeWidgets.includes("project-status") && <FocusProjectStatusWidget key="project-status" />}
+              {activeWidgets.includes("top-tasks") && <FocusTopTasksWidget key="top-tasks" />}
+              {activeWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
+              {activeWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
+              {/* Chat widget removed for clean desktop */}
+            </AnimatePresence>
+              </div>
+            </motion.div>
           </AnimatePresence>
 
           {/* Desktop Folders */}
@@ -797,6 +843,48 @@ const FocusContent = () => {
       )}
 
       <ToolDrawer />
+
+      {/* ── iOS-style Dashboard Pagination Pill ── */}
+      <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-4 py-2 rounded-full"
+        style={{
+          background: "rgba(15,12,25,0.80)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: "1px solid rgba(255,255,255,0.18)",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+        }}
+      >
+        {dashboardPages.map((page, i) => (
+          <button
+            key={page.id}
+            onClick={() => goToPage(i)}
+            className="transition-all duration-300"
+            style={{
+              width: i === activePageIndex ? 24 : 8,
+              height: 8,
+              borderRadius: 9999,
+              background: i === activePageIndex
+                ? "rgba(255,255,255,1)"
+                : "rgba(255,255,255,0.35)",
+              boxShadow: i === activePageIndex ? "0 0 10px rgba(255,255,255,0.7)" : "none",
+              flexShrink: 0,
+            }}
+          />
+        ))}
+        {/* Divider */}
+        <div className="w-px h-4 bg-white/20 mx-0.5" />
+        {/* Plus button */}
+        <button
+          onClick={addPage}
+          className="flex items-center justify-center transition-colors duration-150"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+          title="Add page"
+        >
+          <Plus size={14} strokeWidth={2.5} />
+        </button>
+      </div>
     </div>
     </StyleEditorProvider>
   );
