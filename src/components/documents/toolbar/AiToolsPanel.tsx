@@ -96,7 +96,7 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
         <ToolbarButton
           key={a.key}
           icon={loading === a.key ? <Loader2 size={13} className="animate-spin" /> : a.icon}
-          label={a.label}
+          label={`${a.label} (−${a.spark} ✨)`}
           onClick={() => handleAiAction(a.key)}
           disabled={loading !== null}
           lightMode={lm}
