@@ -562,6 +562,24 @@ export function FluxProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  // ── Schedule Task (Drag-to-schedule) ──
+  const scheduleTask = useCallback(async (taskId: string, startTime: string, date?: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const targetDate = date || new Date().toISOString().split("T")[0];
+    // Create a schedule block linked to this task
+    await createBlock({
+      title: task.title,
+      time: startTime,
+      duration: "60m",
+      type: "task",
+      scheduled_date: targetDate,
+      task_id: taskId,
+    } as any);
+    // Update task with scheduled_date
+    await updateTask(taskId, { scheduled_date: targetDate });
+  }, [tasks, createBlock, updateTask]);
+
   const getDescendantFolderIds = useCallback((id: string): string[] => {
     const node = findFolderNode(id);
     if (!node) return [];
