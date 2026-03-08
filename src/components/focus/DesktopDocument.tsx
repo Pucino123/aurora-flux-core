@@ -179,10 +179,26 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const lucideIcon = storedIconName && !storedIconName.startsWith("http") ? FOLDER_ICONS.find(i => i.name === storedIconName) : null;
   const iconSize = 40;
 
+  // Fly-off: animate item flying off-screen in the target page direction
+  const triggerFlyOff = useCallback((targetPageIndex: number, cb: () => void) => {
+    const dir = (targetPageIndex > (currentPageIndex ?? 0) ? 1 : -1) as 1 | -1;
+    setFlyingOff({ dir });
+    setTimeout(() => { cb(); setFlyingOff(null); }, 420);
+  }, [currentPageIndex]);
+
   return (
     <>
-      <div
+      <motion.div
         className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group transition-shadow duration-200 ${!isMarqueeSelected && selected ? "ring-2 ring-primary/60" : ""}`}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={flyingOff
+          ? { x: flyingOff.dir * (window.innerWidth * 0.6), opacity: 0, scale: 0.7, rotate: flyingOff.dir * 12 }
+          : { x: 0, opacity: 1, scale: 1, rotate: 0 }
+        }
+        transition={flyingOff
+          ? { duration: 0.38, ease: [0.4, 0, 1, 1] }
+          : { duration: 0.2 }
+        }
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,
           zIndex: isDraggingActive ? 10000 : isMarqueeSelected ? 9000 : (selected ? 55 : 45),
@@ -199,6 +215,12 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
         onDoubleClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setSelected(false); onOpen(doc); } }}
         onContextMenu={handleContextMenu}
       >
+        {/* Pin badge */}
+        {isPinned && (
+          <div className="absolute -top-1 -right-1 z-20 w-4 h-4 rounded-full bg-primary flex items-center justify-center shadow-md" title="Pinned to all pages">
+            <Pin size={8} className="text-primary-foreground" />
+          </div>
+        )}
         {docOpacity > 0.06 && (
           <div className="absolute inset-0 rounded-2xl" style={{
             background: (() => {
