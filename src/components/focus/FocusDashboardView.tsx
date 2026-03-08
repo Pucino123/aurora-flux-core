@@ -1519,6 +1519,8 @@ const FocusContent = () => {
               folderId={openFolderId}
               onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }}
               onOpenDocument={(doc) => {
+                // Store doc in folderOpenedDocs so window renderer can find it
+                setFolderOpenedDocs(prev => ({ ...prev, [doc.id]: doc }));
                 openWindow({
                   type: "document",
                   contentId: doc.id,
