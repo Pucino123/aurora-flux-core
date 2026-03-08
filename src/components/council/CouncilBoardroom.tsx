@@ -950,12 +950,12 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       .on("broadcast", { event: "boardroom-consult" }, ({ payload }) => {
         // Another team member consulted the board — show their results live
         if (payload?.userId !== user.id && payload?.responses) {
-          const restored: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+          const restored: Record<string, BoardroomPersonaResponse | null> = { strategist: null, operator: null, skeptic: null, advocate: null };
           (payload.responses as { key: string; analysis: string; question: string; confidence: number }[]).forEach(r => {
             if (r.key) restored[r.key] = { analysis: r.analysis, question: r.question, confidence: r.confidence };
           });
           setResponses(restored);
-          setCardStates({ elena: "revealed", helen: "revealed", anton: "revealed", margot: "revealed" });
+          setCardStates({ strategist: "revealed", operator: "revealed", skeptic: "revealed", advocate: "revealed" });
           setRevealedCount(4);
           revealedCountRef.current = 4;
           if (payload.idea) setIdea(payload.idea);
