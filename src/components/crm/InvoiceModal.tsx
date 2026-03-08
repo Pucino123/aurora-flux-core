@@ -1,12 +1,24 @@
 /**
- * InvoiceModal — two-column invoice generator with live preview
+ * InvoiceModal — two-column invoice generator with payment details
  */
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2, Send, Loader2, Building2, User, Hash } from "lucide-react";
+import { X, Plus, Trash2, Send, Loader2, Building2, CreditCard, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "sonner";
 import { useCRM, CRMContact } from "@/context/CRMContext";
 import { pushNotification } from "@/components/NotificationBell";
+
+// ── Global payment profile (mock — editable in Settings later) ───────────────
+const PAYMENT_PROFILE = {
+  companyName: "Dashiii Workspace ApS",
+  bankName: "Nordea Bank",
+  regNumber: "2200",
+  accountNumber: "1234567890",
+  iban: "DK12 2200 1234 5678 90",
+  swift: "NDEADKKK",
+  paymentTerms: "30",
+  email: "billing@dashiii.io",
+};
 
 interface LineItem {
   id: string;
@@ -37,6 +49,7 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
     return d.toISOString().split("T")[0];
   });
   const [sending, setSending] = useState(false);
+  const [includeBankDetails, setIncludeBankDetails] = useState(true);
 
   const total = items.reduce((s, it) => s + it.qty * it.price, 0);
   const tax = total * 0.2;
@@ -61,7 +74,7 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
       status: "Sent",
       description: items.map(i => i.description).join(", ").slice(0, 80),
     });
-    toast.success(`Invoice sent to ${contact.email || contact.name}`);
+    toast.success(`✨ Invoice sent to ${contact.name} with${includeBankDetails ? "" : "out"} payment instructions`);
     pushNotification({
       type: "general",
       title: "Invoice Sent",
@@ -95,8 +108,8 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-border/20 shrink-0">
                 <div>
-                  <h2 className="text-base font-bold text-foreground">Create Invoice</h2>
-                  <p className="text-xs text-muted-foreground">Billing {contact.name}</p>
+                  <h2 className="text-base font-bold text-foreground">Send Invoice to {contact.name}</h2>
+                  <p className="text-xs text-muted-foreground">Billing {contact.company || contact.email}</p>
                 </div>
                 <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-secondary text-muted-foreground">
                   <X size={16} />
@@ -127,6 +140,22 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                     <p className="text-sm font-semibold text-foreground">{contact.name}</p>
                     <p className="text-xs text-muted-foreground">{contact.email || "No email"}</p>
                     <p className="text-xs text-muted-foreground">{contact.company || ""}</p>
+                  </div>
+
+                  {/* Bank details toggle */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl border border-border/20 bg-secondary/20">
+                    <div className="flex items-center gap-2.5">
+                      <CreditCard size={14} className="text-primary" />
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">Include Bank Details</p>
+                        <p className="text-[10px] text-muted-foreground">Attach payment instructions to invoice</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setIncludeBankDetails(v => !v)} className="transition-colors">
+                      {includeBankDetails
+                        ? <ToggleRight size={22} className="text-primary" />
+                        : <ToggleLeft size={22} className="text-muted-foreground" />}
+                    </button>
                   </div>
 
                   {/* Line items */}
@@ -176,13 +205,12 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                   <button onClick={handleSend} disabled={sending}
                     className="w-full py-3 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg"
                     style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--aurora-violet)))" }}>
-                    {sending ? <><Loader2 size={15} className="animate-spin" /> Sending…</> : <><Send size={15} /> Send Invoice to {contact.email || contact.name}</>}
+                    {sending ? <><Loader2 size={15} className="animate-spin" /> Sending…</> : <><Send size={15} /> Generate & Send Invoice</>}
                   </button>
                 </div>
 
                 {/* RIGHT: Live preview */}
                 <div className="w-[400px] overflow-y-auto bg-white p-8 shrink-0 hidden lg:block">
-                  {/* Invoice paper */}
                   <div className="text-gray-900 text-sm">
                     {/* Branding */}
                     <div className="flex items-center justify-between mb-8">
@@ -191,8 +219,8 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                           <Building2 size={14} className="text-white" />
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900 text-base leading-none">Dashiii</p>
-                          <p className="text-[10px] text-gray-400">Workspace Invoice</p>
+                          <p className="font-bold text-gray-900 text-base leading-none">{PAYMENT_PROFILE.companyName}</p>
+                          <p className="text-[10px] text-gray-400">{PAYMENT_PROFILE.email}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -205,8 +233,8 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                     <div className="grid grid-cols-2 gap-4 mb-6 text-[11px]">
                       <div>
                         <p className="text-gray-400 uppercase tracking-wide font-semibold mb-1">From</p>
-                        <p className="font-semibold text-gray-900">Your Company</p>
-                        <p className="text-gray-500">billing@yourco.com</p>
+                        <p className="font-semibold text-gray-900">{PAYMENT_PROFILE.companyName}</p>
+                        <p className="text-gray-500">{PAYMENT_PROFILE.email}</p>
                       </div>
                       <div>
                         <p className="text-gray-400 uppercase tracking-wide font-semibold mb-1">Billed To</p>
@@ -240,8 +268,26 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                       </div>
                     </div>
 
-                    <div className="mt-8 pt-4 border-t border-gray-100 text-[10px] text-gray-400 text-center">
-                      Thank you for your business. Payment due within 30 days.
+                    {/* Payment Details Block */}
+                    {includeBankDetails && (
+                      <div className="mt-6 p-4 rounded-lg border border-gray-200 bg-gray-50">
+                        <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Payment Details</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
+                          <span className="text-gray-400">Bank</span>
+                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.bankName}</span>
+                          <span className="text-gray-400">Reg / Account</span>
+                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.regNumber} – {PAYMENT_PROFILE.accountNumber}</span>
+                          <span className="text-gray-400">IBAN</span>
+                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.iban}</span>
+                          <span className="text-gray-400">SWIFT</span>
+                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.swift}</span>
+                        </div>
+                        <p className="text-[9px] text-gray-400 italic mt-2">Please pay within {PAYMENT_PROFILE.paymentTerms} days of invoice date.</p>
+                      </div>
+                    )}
+
+                    <div className="mt-6 pt-4 border-t border-gray-100 text-[10px] text-gray-400 text-center">
+                      Thank you for your business.
                     </div>
                   </div>
                 </div>
