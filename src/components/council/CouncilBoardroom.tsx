@@ -1032,7 +1032,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
     // Build the saved responses map (used for both instant restore + replay)
     const savedResponses: Record<string, BoardroomPersonaResponse | null> = {
-      elena: null, helen: null, anton: null, margot: null,
+      strategist: null, operator: null, skeptic: null, advocate: null,
     };
     savedIdea.responses.forEach(r => {
       if (r.persona_key in savedResponses) {
