@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, Trash2, Pencil, X, Check, Building2, DollarSign, User, ChevronDown } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, X, Check, Building2, DollarSign, User, Receipt } from "lucide-react";
 import { useCRM, CRMDeal, Stage } from "@/context/CRMContext";
 import { toast } from "sonner";
+import InvoiceModal from "@/components/crm/InvoiceModal";
 
 const STAGE_CONFIG: Record<Stage, { label: string; dot: string; text: string; bg: string }> = {
   leads:     { label: "New Lead",      dot: "#3b82f6", text: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30" },
