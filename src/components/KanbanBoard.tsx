@@ -150,11 +150,11 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
 
           {/* Dark/Light toggle */}
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => setPageLight(p => !p)}
             className="p-1.5 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
-            title={theme === "dark" ? "Light mode" : "Dark mode"}
+            title={pageLight ? "Dark mode" : "Light mode"}
           >
-            {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+            {pageLight ? <Moon size={13} /> : <Sun size={13} />}
           </button>
 
           {/* AI Prioritize button */}
