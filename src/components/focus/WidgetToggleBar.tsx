@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Timer, Music, CalendarClock, StickyNote, RotateCcw, Clock,
   BarChart3, FileText, Plus, MessageSquareQuote, Eye, EyeOff,
@@ -28,6 +28,22 @@ const OVERFLOW_WIDGETS = [
   { id: "council",    label: "Council", icon: Users },
   { id: "aura",       label: "Aura",    icon: Sparkles },
 ];
+
+const WINDOW_TYPE_ICONS: Record<string, typeof FileText> = {
+  document: FileText,
+  widget: Sparkles,
+};
+
+function timeAgo(dateStr?: string): string {
+  if (!dateStr) return "just now";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 const WidgetToggleBar = () => {
   const { activeWidgets, toggleWidget, resetDashboard, widgetMinimalMode, setWidgetMinimalMode } = useFocusStore();
@@ -120,14 +136,44 @@ const WidgetToggleBar = () => {
                 const isMinimized = win.minimized;
                 const isFocused   = win.id === focusedId && !isMinimized;
                 const isHovered   = hoveredWin === win.id;
+                const WinIcon = WINDOW_TYPE_ICONS[win.type] || FileText;
                 return (
-                  <motion.div key={win.id} layoutId={`window-${win.id}`} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.15, layout: { duration: 0.3, ease: "easeInOut" } }}
+                  <motion.div key={win.id} layoutId={`window-${win.id}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: isHovered ? 1.1 : 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.15, scale: { duration: 0.12 }, layout: { duration: 0.3, ease: "easeInOut" } }}
                     className="relative shrink-0"
                     onMouseEnter={() => setHoveredWin(win.id)}
                     onMouseLeave={() => setHoveredWin(null)}>
+
+                    {/* ── Frosted tooltip preview ── */}
+                    <AnimatePresence>
+                      {isHovered && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 6, scale: 0.9 }}
+                          transition={{ duration: 0.12 }}
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-[20px] border border-white/15 shadow-2xl min-w-[140px] max-w-[200px] pointer-events-none z-50"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <WinIcon size={12} className="text-white/60 shrink-0" />
+                            <span className="text-[11px] font-semibold text-white truncate">{win.title}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[9px] uppercase tracking-wider text-white/30 font-medium">{win.type}</span>
+                            <span className="text-[9px] text-white/25">{timeAgo()}</span>
+                          </div>
+                          {isMinimized && (
+                            <span className="text-[9px] text-white/40 mt-0.5 block">Click to restore</span>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     <button
                       onClick={() => isMinimized ? restoreWindow(win.id) : bringToFront(win.id)}
-                      title={win.title}
                       className={`flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-full text-xs font-medium transition-all max-w-[120px] ${
                         isMinimized
                           ? "bg-white/5 text-white/35 border border-white/10"
@@ -135,7 +181,7 @@ const WidgetToggleBar = () => {
                             ? "bg-white/20 text-white border border-white/25 shadow-[0_0_12px_hsl(var(--aurora-violet)/0.35)]"
                             : "bg-white/10 text-white/70 border border-white/15 hover:bg-white/15 hover:text-white"
                       }`}>
-                      <FileText size={13} className="shrink-0" />
+                      <WinIcon size={13} className="shrink-0" />
                       <span className="truncate hidden sm:inline">{win.title}</span>
                       {isMinimized && <span className="w-1.5 h-1.5 rounded-full bg-white/30 ml-0.5 shrink-0" />}
                     </button>
