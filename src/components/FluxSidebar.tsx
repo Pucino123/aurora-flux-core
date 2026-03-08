@@ -205,7 +205,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                           <div className="rounded-lg px-2.5 py-1.5 text-center shadow-xl"
                             style={{ background: "rgba(12,10,20,0.88)", backdropFilter: "blur(16px)", border: `1px solid ${p.color}40` }}>
                             <div className="text-[11px] font-semibold text-white leading-tight">{t(p.name)}</div>
-                            <div className="text-[9px] mt-0.5" style={{ color: p.color }}>{p.subtitle || p.role}</div>
+                            <div className="text-[9px] mt-0.5" style={{ color: p.color }}>{p.subtitle}</div>
                           </div>
                           {/* Arrow */}
                           <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(12,10,20,0.88)", border: `0 0 1px 1px ${p.color}40` }} />
