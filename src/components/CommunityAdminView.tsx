@@ -345,8 +345,26 @@ const CommunityAdminView = () => {
                     <tr key={slot.id} className="transition-colors hover:bg-white/[0.03]" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shrink-0" style={{ background: "rgba(99,102,241,0.2)" }}>
-                            {slot.thumbnailUrl ? <img src={slot.thumbnailUrl} className="w-full h-full object-cover" alt="" /> : <span className="text-[11px] font-bold text-indigo-400">{slot.projectName?.[0] ?? "?"}</span>}
+                          <div className="relative group/thumb w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shrink-0 cursor-pointer" style={{ background: "rgba(99,102,241,0.2)" }}
+                            onClick={() => triggerThumbnailUpload(slot.id)}
+                            title="Click to change thumbnail">
+                            {uploadingId === slot.id ? (
+                              <Loader2 size={12} className="animate-spin text-white/50" />
+                            ) : slot.thumbnailUrl ? (
+                              <>
+                                <img src={slot.thumbnailUrl} className="w-full h-full object-cover" alt="" />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ImagePlus size={10} className="text-white" />
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[11px] font-bold text-indigo-400 group-hover/thumb:opacity-0 transition-opacity">{slot.projectName?.[0] ?? "?"}</span>
+                                <div className="absolute inset-0 bg-indigo-500/30 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ImagePlus size={10} className="text-white" />
+                                </div>
+                              </>
+                            )}
                           </div>
                           <span className="text-white/80 font-medium text-xs">{slot.projectName || "—"}</span>
                         </div>
