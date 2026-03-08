@@ -54,7 +54,13 @@ const TYPE_STYLE: Record<BlockType, { bg: string; dot: string; text: string }> =
 const TODAY = new Date().toISOString().slice(0, 10);
 
 // ── Sortable row ───────────────────────────────────────────────────────────
-function SortableBlock({ block, idx }: { block: ScheduleBlock; idx: number }) {
+function SortableBlock({
+  block, idx, onDelete,
+}: {
+  block: ScheduleBlock;
+  idx: number;
+  onDelete: (id: string) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: block.id });
 
@@ -67,6 +73,7 @@ function SortableBlock({ block, idx }: { block: ScheduleBlock; idx: number }) {
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
       transition={{ delay: idx * 0.03 }}
       className={`flex items-center gap-2 p-2 rounded-xl border ${ts.bg} group`}
     >
@@ -87,6 +94,13 @@ function SortableBlock({ block, idx }: { block: ScheduleBlock; idx: number }) {
           <Sparkles size={7} /> AI
         </span>
       )}
+      <button
+        onClick={() => onDelete(block.id)}
+        className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded-md flex items-center justify-center text-white/20 hover:text-rose-400 hover:bg-rose-400/15 transition-all ml-0.5 shrink-0"
+        aria-label="Delete block"
+      >
+        <X size={10} />
+      </button>
     </motion.div>
   );
 }
