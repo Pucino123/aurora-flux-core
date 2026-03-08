@@ -34,26 +34,26 @@ interface Persona {
 
 const PERSONAS: Persona[] = [
   {
-    key: "elena", name: "Elena Verna", title: "The Pragmatist", initials: "EV",
+    key: "strategist", name: "The Strategist", title: "The Pragmatist", initials: "ST",
     ringPct: 85, glow: "rgba(52,211,153,0.25)", glowBorder: "rgba(52,211,153,0.4)",
     sentiment: "positive", icon: TrendingUp, delay: 0,
     stat: "📊 Market data: Eco-retail growing 15% YoY",
   },
   {
-    key: "helen", name: "Helen Lee Kupp", title: "The Branding Expert", initials: "HK",
+    key: "operator", name: "The Operator", title: "The Branding Expert", initials: "OP",
     ringPct: 60, glow: "rgba(251,191,36,0.2)", glowBorder: "rgba(251,191,36,0.35)",
     sentiment: "neutral", icon: Lightbulb, delay: 400,
     stat: "💡 Brand recognition drives 30% repeat customers",
   },
   {
-    key: "anton", name: "Anton Osika", title: "The Devil's Advocate", initials: "AO",
+    key: "skeptic", name: "The Skeptic", title: "The Devil's Advocate", initials: "SK",
     ringPct: 30, glow: "rgba(248,113,113,0.25)", glowBorder: "rgba(248,113,113,0.4)",
     sentiment: "negative", icon: AlertTriangle, delay: 800,
     stat: "⚠️ 60% of cafes close in first 3 years",
   },
   {
-    key: "margot", name: "Margot van Laer", title: "The Visionary", initials: "ML",
-    ringPct: 95, glow: "rgba(34,211,238,0.2)", glowBorder: "rgba(34,211,238,0.4)",
+    key: "advocate", name: "The Advocate", title: "The Analyst", initials: "AV",
+    ringPct: 70, glow: "rgba(34,211,238,0.2)", glowBorder: "rgba(34,211,238,0.4)",
     sentiment: "visionary", icon: Star, delay: 1200,
     stat: "✨ Community-led brands see 4x higher LTV",
   },
