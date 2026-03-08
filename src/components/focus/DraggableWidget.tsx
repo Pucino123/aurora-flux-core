@@ -160,10 +160,26 @@ const DraggableWidget = ({
   posRef.current = pos;
 
   const onPointerDownDrag = useCallback((e: React.PointerEvent) => {
+    // Don't initiate drag if the event target is inside a text-editable element
+    const target = e.target as HTMLElement;
+    const isTextEditable =
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable ||
+      !!target.closest("[contenteditable='true']") ||
+      !!target.closest("input, textarea, select");
+    if (isTextEditable) return;
+
+    // Don't start a drag if the user is currently selecting text inside the widget
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) return;
+
     e.stopPropagation();
-    dragging.current = true;
-    setIsDragging(true);
+    dragCancelled.current = false;
+    dragging.current = true; // tentative — confirmed after threshold
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
     offset.current = { x: e.clientX - posRef.current.x, y: e.clientY - posRef.current.y };
+    // Don't set isDragging yet — wait for threshold
   }, []);
 
   const { onPointerDownResize } = useResizable({
