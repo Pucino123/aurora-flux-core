@@ -430,16 +430,14 @@ const BackgroundEngine = ({
 
       <div className={`${embedded ? "absolute" : "fixed"} inset-0 z-10 pointer-events-none transition-all duration-1000 ${isZenMode ? "bg-black/40" : "bg-transparent"}`} />
 
-      {/* Spaces menu click-away backdrop */}
-      {menuOpen && (
-        <div className={`${embedded ? "absolute" : "fixed"} inset-0 z-[109]`} onClick={() => setMenuOpen(false)} />
-      )}
-
-      {/* Spaces menu */}
-      <div className={`${embedded ? "absolute" : "fixed"} bottom-6 left-6 z-[110]`}>
-        <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 text-white/80 text-sm font-medium hover:bg-white/15 transition-all shadow-lg">
-          <Image size={16} /><span>Spaces</span><ChevronDown size={14} className={`transition-transform ${menuOpen ? "rotate-180" : ""}`} />
-        </button>
+      {/* Spaces menu — portalled to body when embedded to escape transform stacking context */}
+      {embedded ? createPortal(
+        <>
+          {menuOpen && <div className="fixed inset-0 z-[10109]" onClick={() => setMenuOpen(false)} />}
+          <div className="fixed bottom-6 left-6 z-[10110]">
+            <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 text-white/80 text-sm font-medium hover:bg-white/15 transition-all shadow-lg">
+              <Image size={16} /><span>Spaces</span><ChevronDown size={14} className={`transition-transform ${menuOpen ? "rotate-180" : ""}`} />
+            </button>
 
         <AnimatePresence>
           {menuOpen && (
