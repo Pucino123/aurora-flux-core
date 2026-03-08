@@ -529,9 +529,12 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
     const cx = canvas ? (canvas.width  / 2 - 60) : 160;
     const cy = canvas ? (canvas.height / 2 - 40) : 200;
     const defaults: Partial<Record<CanvasEntity["type"], Partial<CanvasEntity>>> = {
-      rect:    { size: { w: 160, h: 80  }, style: { fill: "#6366f1", stroke: "#4f46e5", strokeWidth: 0, borderRadius: 8, opacity: 1 } },
-      circle:  { size: { w: 100, h: 100 }, style: { fill: "#22c55e", stroke: "#16a34a", strokeWidth: 0, borderRadius: 50, opacity: 1 } },
-      textBox: { size: { w: 180, h: 60  }, style: { fill: "transparent", stroke: "#ffffff", strokeWidth: 1, borderRadius: 4, opacity: 1 } },
+      rect:     { size: { w: 160, h: 80  }, style: { fill: "#6366f1", stroke: "#4f46e5", strokeWidth: 0, borderRadius: 8,  opacity: 1 } },
+      circle:   { size: { w: 100, h: 100 }, style: { fill: "#22c55e", stroke: "#16a34a", strokeWidth: 0, borderRadius: 50, opacity: 1 } },
+      textBox:  { size: { w: 180, h: 60  }, style: { fill: "transparent", stroke: "#ffffff", strokeWidth: 1, borderRadius: 4, opacity: 1 } },
+      triangle: { size: { w: 100, h: 100 }, style: { fill: "#f97316", stroke: "#ea580c", strokeWidth: 0, borderRadius: 0, opacity: 1 } },
+      line:     { size: { w: 160, h: 8   }, style: { fill: "#ffffff",  stroke: "#ffffff", strokeWidth: 2, borderRadius: 4, opacity: 1 } },
+      star:     { size: { w: 80,  h: 80  }, style: { fill: "#eab308",  stroke: "#ca8a04", strokeWidth: 0, borderRadius: 0, opacity: 1 } },
     };
     const entity: CanvasEntity = {
       id, type,
