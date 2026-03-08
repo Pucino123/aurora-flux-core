@@ -1495,36 +1495,24 @@ const FocusContent = () => {
               };
 
               return (
-                <motion.div
-                  key={win.id}
-                  layoutId={`window-${win.id}`}
-                  exit={{
-                    scale: 0.15,
-                    opacity: 0,
-                    y: "72vh",
-                    transition: { duration: 0.35, ease: [0.32, 0, 0.67, 0] },
-                  }}
-                  style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-                >
-                  <WindowFrame key={win.id} window={win} focused={focusedId === win.id}>
-                    {win.type === "document" && winDoc ? (
-                      <DocumentView
-                        document={winDoc}
-                        onBack={() => closeWindow(win.id)}
-                        onUpdate={(id, upd) => updateDesktopDoc(id, upd)}
-                        onDelete={(id) => { removeDesktopDoc(id); closeWindow(win.id); }}
-                      />
-                    ) : win.type === "widget" && WIDGET_MAP[win.contentId] ? (
-                      <div className="w-full h-full overflow-auto relative">
-                        {WIDGET_MAP[win.contentId]}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                        Content not found
-                      </div>
-                    )}
-                  </WindowFrame>
-                </motion.div>
+                <WindowFrame key={win.id} window={win} focused={focusedId === win.id}>
+                  {win.type === "document" && winDoc ? (
+                    <DocumentView
+                      document={winDoc}
+                      onBack={() => closeWindow(win.id)}
+                      onUpdate={(id, upd) => updateDesktopDoc(id, upd)}
+                      onDelete={(id) => { removeDesktopDoc(id); closeWindow(win.id); }}
+                    />
+                  ) : win.type === "widget" && WIDGET_MAP[win.contentId] ? (
+                    <div className="w-full h-full overflow-auto relative">
+                      {WIDGET_MAP[win.contentId]}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                      Content not found
+                    </div>
+                  )}
+                </WindowFrame>
               );
             })}
           </AnimatePresence>
