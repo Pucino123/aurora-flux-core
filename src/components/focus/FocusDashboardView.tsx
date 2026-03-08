@@ -1255,7 +1255,7 @@ const FocusContent = () => {
     <div
       ref={canvasRef}
       data-canvas-root
-      className="relative w-full h-[100dvh] overflow-hidden bg-black"
+      className="relative w-full h-[100dvh] overflow-hidden bg-black select-none"
       onContextMenu={handleContextMenu}
       onMouseDown={handleCanvasMouseDown}
       onDragOver={handleCanvasDragOver}
