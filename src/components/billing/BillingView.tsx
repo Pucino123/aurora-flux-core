@@ -347,22 +347,52 @@ const BillingView = () => {
 
           {/* Packs */}
           <div>
-            <h3 className="text-base font-semibold text-foreground mb-4">Top-Up Packs</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <h3 className="text-base font-semibold text-foreground mb-1">Top-Up Packs</h3>
+            <p className="text-xs text-muted-foreground mb-4">Volume discounts included — more Sparks for less per unit.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               {SPARK_PACKS.map((pack) => (
                 <button
                   key={pack.sparks}
-                  onClick={() => { setPendingSparks(pack.sparks); setCheckoutType("sparks"); setCheckout({ name: `${pack.sparks} Sparks`, price: pack.price }); }}
-                  className={`relative p-5 rounded-3xl border text-left transition-all hover:scale-[1.01] ${
+                  onClick={() => { setPendingSparks(pack.sparks + (pack.bonus || 0)); setCheckoutType("sparks"); setCheckout({ name: `${pack.sparks}${pack.bonus ? ` + ${pack.bonus} Bonus` : ""} Sparks`, price: pack.price }); }}
+                  className={`relative pt-6 pb-5 px-5 rounded-3xl border text-left transition-all hover:scale-[1.01] ${
                     pack.highlight ? "border-primary/50 ring-2 ring-primary/20 bg-primary/5" : "border-border bg-card hover:border-primary/40"
                   }`}
                 >
-                  {pack.highlight && <span className="absolute -top-2 left-4 text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">Best Value</span>}
-                  <div className="text-2xl font-black text-foreground mb-1">{pack.sparks} ✨</div>
+                  {pack.highlight && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2.5 py-0.5 rounded-full bg-primary text-primary-foreground whitespace-nowrap">
+                      ⭐ Best Value
+                    </span>
+                  )}
+                  <div className="flex items-baseline gap-1.5 mb-1">
+                    <span className="text-2xl font-black text-foreground">{pack.sparks} ✨</span>
+                    {pack.bonus > 0 && (
+                      <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                        +{pack.bonus} bonus
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xl font-bold text-primary mb-0.5">{pack.price}</div>
-                  <div className="text-xs text-muted-foreground">{pack.label}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{pack.label}</span>
+                    <span className="text-[10px] text-muted-foreground/60 bg-secondary/50 px-1.5 py-0.5 rounded">{pack.rate}</span>
+                  </div>
                 </button>
               ))}
+            </div>
+
+            {/* What You Get cheat sheet */}
+            <div className="p-5 rounded-2xl bg-secondary/30 border border-border/40">
+              <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-1.5">
+                ✨ What does a Spark get you?
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {SPARK_ACTIONS.map((a) => (
+                  <div key={a.cost} className="flex items-center gap-3 text-sm">
+                    <span className="font-bold text-primary shrink-0 w-14 text-right">{a.cost} ✨</span>
+                    <span className="text-muted-foreground">{a.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
