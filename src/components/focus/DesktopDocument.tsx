@@ -243,7 +243,11 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
           }} />
         )}
 
-        <div className="relative z-10 transition-transform group-hover:scale-110" style={{ marginBottom: titleGap }}>
+        <div
+          className="relative z-10 transition-transform group-hover:scale-110"
+          style={{ marginBottom: titleGap }}
+          onDoubleClick={(e) => { e.stopPropagation(); if (!renaming) { setSelected(false); onOpen(doc); } }}
+        >
           {storedIconName && storedIconName.startsWith("http") ? (
             <img src={storedIconName} alt="" className="rounded-lg object-cover" style={{ width: iconSize, height: iconSize, filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" }} />
           ) : lucideIcon ? (
@@ -268,8 +272,8 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                 if (e.key === "Escape") setRenaming(false);
               }}
               onFocus={(e) => e.target.select()}
-              className="w-full text-center bg-transparent outline-none text-foreground ring-1 ring-primary/50 rounded px-1 transition-all"
-              style={{ fontSize: `${titleSize}px` }}
+              className="w-full text-center bg-transparent outline-none ring-1 ring-primary/50 rounded px-1 transition-all"
+              style={{ fontSize: `${titleSize}px`, color: "rgba(255,255,255,0.95)" }}
               autoFocus
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
@@ -277,8 +281,8 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
             />
           ) : (
             <span
-              className="font-medium text-foreground/80 text-center leading-tight truncate max-w-[80px] block group-hover:text-foreground transition-colors"
-              style={{ fontSize: `${titleSize}px` }}
+              className="font-medium text-center leading-tight truncate max-w-[80px] block transition-colors"
+              style={{ fontSize: `${titleSize}px`, color: "rgba(255,255,255,0.80)" }}
               onDoubleClick={(e) => { e.stopPropagation(); setRenameValue(doc.title); setRenaming(true); }}
             >
               {doc.title}

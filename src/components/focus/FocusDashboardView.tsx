@@ -1690,6 +1690,8 @@ const FocusContent = () => {
                 }}
               />
             ))}
+            {/* Separator between dots and + */}
+            <div className="w-px h-3 rounded-full mx-1" style={{ background: "rgba(255,255,255,0.18)" }} />
             {/* Plus */}
             <button
               onClick={addPage}
