@@ -14,9 +14,10 @@ export interface AppWindow {
   size?: { w: number; h: number };
   minimized?: boolean;
   groupId?: string; // links two windows into a pair
+  lastActiveAt?: string; // ISO timestamp, updated on bringToFront / openWindow
 }
 
-type PersistedWindow = Pick<AppWindow, 'type' | 'contentId' | 'title' | 'layout' | 'position' | 'size' | 'minimized' | 'groupId'>;
+type PersistedWindow = Pick<AppWindow, 'type' | 'contentId' | 'title' | 'layout' | 'position' | 'size' | 'minimized' | 'groupId' | 'lastActiveAt'>;
 
 const STORAGE_KEY = "flux-windows-v2";
 // Documents always render above widgets with a fixed z-offset tier
