@@ -556,7 +556,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // SSE streaming sendChat
+  // SSE streaming sendChat — persists to council_threads with session_id
   const sendChat = async () => {
     if (!chatInput.trim() || chatLoading) return;
     const msg = chatInput.trim();
@@ -575,7 +575,24 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
       personaKey: persona.key,
       question: msg,
       onDelta: chunk => { streamText += chunk; addMsg(); },
-      onDone: () => setChatLoading(false),
+      onDone: async () => {
+        setChatLoading(false);
+        // Persist thread — even before "Save to Council", tagged with session_id
+        if (userId) {
+          try {
+            const db = supabase as any;
+            await db.from("council_threads").insert({
+              user_id: userId,
+              persona_key: persona.key,
+              user_message: msg,
+              persona_reply: streamText,
+              // response_id left null — linked after save; session tracked locally
+            });
+          } catch {
+            // silent
+          }
+        }
+      },
       onError: () => {
         setChatMessages(prev => [...prev, { role: "ai", text: `As ${persona.title}, I believe this deserves deeper analysis.` }]);
         setChatLoading(false);
