@@ -1690,8 +1690,6 @@ const FocusContent = () => {
                 }}
               />
             ))}
-            {/* Divider */}
-            <div className="w-px h-4 bg-white/20" />
             {/* Plus */}
             <button
               onClick={addPage}
