@@ -28,7 +28,7 @@ const DealForm: React.FC<DealFormProps> = ({ initial, onSave, onClose }) => {
 
   const handleSave = () => {
     if (!name.trim() || !company.trim()) { toast.error("Name and company are required"); return; }
-    onSave({ name: name.trim(), company: company.trim(), value: parseInt(value.replace(/\D/g, "") || "0"), stage });
+    onSave({ name: name.trim(), company: company.trim(), value: parseInt(value.replace(/\D/g, "") || "0"), stage, invoices: [] });
     onClose();
   };
 

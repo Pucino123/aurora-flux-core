@@ -119,7 +119,7 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-2">Billed To</p>
                     <p className="text-sm font-semibold text-foreground">{contact.name}</p>
                     <p className="text-xs text-muted-foreground">{contact.email || "No email"}</p>
-                    <p className="text-xs text-muted-foreground">{contact.company || contact.companyName || ""}</p>
+                    <p className="text-xs text-muted-foreground">{contact.company || ""}</p>
                   </div>
 
                   {/* Line items */}
