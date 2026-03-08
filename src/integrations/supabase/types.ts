@@ -336,6 +336,42 @@ export type Database = {
           },
         ]
       }
+      crm_deals: {
+        Row: {
+          company: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number | null
+          stage: string
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          company?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number | null
+          stage?: string
+          updated_at?: string
+          user_id: string
+          value?: number
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number | null
+          stage?: string
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
       dashboard_state: {
         Row: {
           id: string
