@@ -109,6 +109,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
   const [savingName, setSavingName] = useState(false);
   const [sparksCheckoutOpen, setSparksCheckoutOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
+
+  // Company profile state
+  const [company, setCompany] = useState({
+    company_name: "", logo_url: "", address: "", city: "", zip_code: "",
+    country: "", vat_number: "", iban: "", swift_bic: "", bank_name: "",
+    payment_terms: "Net 30", invoice_footer: "",
+  });
+  const [savingCompany, setSavingCompany] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const name = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
   const email = user?.email || "";
@@ -118,7 +128,48 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
     supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) setDisplayName((data as any).display_name || name);
     });
+    // Load company profile
+    (supabase as any).from("company_profiles").select("*").eq("user_id", user.id).maybeSingle().then(({ data }: any) => {
+      if (data) setCompany({
+        company_name: data.company_name || "",
+        logo_url: data.logo_url || "",
+        address: data.address || "",
+        city: data.city || "",
+        zip_code: data.zip_code || "",
+        country: data.country || "",
+        vat_number: data.vat_number || "",
+        iban: data.iban || "",
+        swift_bic: data.swift_bic || "",
+        bank_name: data.bank_name || "",
+        payment_terms: data.payment_terms || "Net 30",
+        invoice_footer: data.invoice_footer || "",
+      });
+    });
   }, [user, open]);
+
+  const handleSaveCompany = async () => {
+    if (!user) return;
+    setSavingCompany(true);
+    const payload = { ...company, user_id: user.id };
+    const { error } = await (supabase as any).from("company_profiles").upsert(payload, { onConflict: "user_id" });
+    if (error) toast.error("Failed to save company profile");
+    else toast.success("Company profile saved!");
+    setSavingCompany(false);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingLogo(true);
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/logo.${ext}`;
+    const { error } = await supabase.storage.from("company-logos").upload(path, file, { upsert: true });
+    if (error) { toast.error("Logo upload failed"); setUploadingLogo(false); return; }
+    const { data } = supabase.storage.from("company-logos").getPublicUrl(path);
+    setCompany(prev => ({ ...prev, logo_url: data.publicUrl }));
+    setUploadingLogo(false);
+    toast.success("Logo uploaded!");
+  };
 
   // Persist integrations to localStorage whenever they change
   useEffect(() => {
