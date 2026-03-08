@@ -170,7 +170,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
 
       {/* ── Navbar ── */}
       <nav className="relative z-20 flex items-center justify-between px-5 md:px-16 py-4 md:py-5">
-        <span className="text-xl md:text-2xl font-bold text-white drop-shadow-lg tracking-tight" style={{ fontFamily: "Georgia, serif" }}>Flux</span>
+        <span className="text-xl md:text-2xl font-bold text-white drop-shadow-lg tracking-tight" style={{ fontFamily: "Georgia, serif" }}>Dashiii</span>
         <div className="flex items-center gap-2 md:gap-3">
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
