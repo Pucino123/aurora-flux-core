@@ -1558,7 +1558,7 @@ const FocusContent = () => {
         <div className="pointer-events-none w-full h-full">
           {windows.filter(w => !w.minimized).map((win) => {
               const winDoc = win.type === "document"
-                ? desktopDocs.find(d => d.id === win.contentId)
+                ? (desktopDocs.find(d => d.id === win.contentId) ?? folderOpenedDocs[win.contentId])
                 : null;
 
               // Widget content map
