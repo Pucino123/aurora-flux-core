@@ -11,6 +11,7 @@ export interface AppWindow {
   layout: WindowLayout;
   zIndex: number;
   position: { x: number; y: number };
+  size?: { w: number; h: number };
 }
 
 interface WindowManagerContextType {
@@ -19,6 +20,7 @@ interface WindowManagerContextType {
   closeWindow: (id: string) => void;
   setWindowLayout: (id: string, layout: WindowLayout) => void;
   updateWindowPosition: (id: string, x: number, y: number) => void;
+  updateWindowSize: (id: string, w: number, h: number) => void;
   bringToFront: (id: string) => void;
 }
 
@@ -55,6 +57,10 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     setWindows(prev => prev.map(w => w.id === id ? { ...w, position: { x, y } } : w));
   }, []);
 
+  const updateWindowSize = useCallback((id: string, w: number, h: number) => {
+    setWindows(prev => prev.map(win => win.id === id ? { ...win, size: { w, h } } : win));
+  }, []);
+
   const bringToFront = useCallback((id: string) => {
     setWindows(prev => {
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), 0);
@@ -63,7 +69,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
   }, []);
 
   return (
-    <WindowManagerContext.Provider value={{ windows, openWindow, closeWindow, setWindowLayout, updateWindowPosition, bringToFront }}>
+    <WindowManagerContext.Provider value={{ windows, openWindow, closeWindow, setWindowLayout, updateWindowPosition, updateWindowSize, bringToFront }}>
       {children}
     </WindowManagerContext.Provider>
   );

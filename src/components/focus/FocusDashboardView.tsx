@@ -1468,6 +1468,30 @@ const FocusContent = () => {
               const winDoc = win.type === "document"
                 ? desktopDocs.find(d => d.id === win.contentId)
                 : null;
+
+              // Widget content map
+              const WIDGET_MAP: Record<string, React.ReactNode> = {
+                clock: <ClockWidget onOpenEditor={() => setClockEditorOpen(true)} />,
+                timer: <FocusTimer />,
+                music: <MusicWidget />,
+                planner: <TodaysPlanWidget />,
+                notes: <NotesWidget />,
+                crm: <CRMWidget />,
+                stats: <FocusStatsWidget />,
+                scratchpad: <ScratchpadWidget />,
+                quote: <QuoteOfDay />,
+                breathing: <BreathingWidget />,
+                council: <FocusCouncilWidget />,
+                aura: <AuraWidget />,
+                "budget-preview": <FocusBudgetWidget />,
+                "savings-ring": <FocusSavingsWidget />,
+                "weekly-workout": <FocusWorkoutWidget />,
+                "project-status": <FocusProjectStatusWidget />,
+                "top-tasks": <FocusTopTasksWidget />,
+                "smart-plan": <FocusSmartPlanWidget />,
+                gamification: <FocusGamificationWidget />,
+              };
+
               return (
                 <WindowFrame key={win.id} window={win}>
                   {win.type === "document" && winDoc ? (
@@ -1477,6 +1501,10 @@ const FocusContent = () => {
                       onUpdate={(id, upd) => updateDesktopDoc(id, upd)}
                       onDelete={(id) => { removeDesktopDoc(id); closeWindow(win.id); }}
                     />
+                  ) : win.type === "widget" && WIDGET_MAP[win.contentId] ? (
+                    <div className="w-full h-full overflow-auto relative">
+                      {WIDGET_MAP[win.contentId]}
+                    </div>
                   ) : (
                     <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                       Content not found
@@ -2082,7 +2110,7 @@ const FocusContent = () => {
                 {dashboardPages.map((page, i) => {
                   const isActive = i === activePageIndex;
                   const thumb = pageThumbnails[page.id];
-                  const widgets = page.activeWidgets ?? activeWidgets;
+                  const widgets = page.activeWidgets ?? [];
                   const WC: Record<string, string> = { clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa", notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c", quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc" };
                   const WL: Record<string, string> = { clock: "🕐", timer: "⏱", music: "🎵", planner: "📋", notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️", quote: "💬", breathing: "🫁", council: "🤝", aura: "✨" };
                   return (
