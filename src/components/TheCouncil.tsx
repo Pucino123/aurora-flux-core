@@ -818,8 +818,8 @@ const TheCouncil = () => {
                       )}
                     </div>
 
-                    {/* ═══ RIGHT COLUMN: Council Opinions — always expanded ═══ */}
-                    <div className="space-y-3">
+                    {/* ═══ RIGHT COLUMN: Council Opinions ═══ */}
+                    <div className="space-y-3 overflow-y-auto council-hidden-scrollbar pb-4">
                       {responses.length > 0 && (
                         <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider px-1">Rådets vurderinger</h3>
                       )}
