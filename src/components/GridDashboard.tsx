@@ -253,6 +253,11 @@ const GridDashboard = () => {
   const [renamingWidget, setRenamingWidget] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
+  // Cross-page drag state
+  const [draggingWidgetId, setDraggingWidgetId] = useState<string | null>(null);
+  const [draggingFromPageId, setDraggingFromPageId] = useState<string | null>(null);
+  const [hoverDotIdx, setHoverDotIdx] = useState<number | null>(null);
+
   const { goals, tasks, updateTask, updateGoal, findFolderNode } = useFlux();
 
   // Pages state (persisted via config.pages, falling back to default)
