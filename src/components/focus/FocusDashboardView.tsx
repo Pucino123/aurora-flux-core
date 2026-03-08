@@ -69,7 +69,12 @@ type DashboardPage = {
   activeWidgets?: string[];
   stickyNotes?: StickyNote[];
   background?: string; // override global bg
+  spaceSettings?: SpaceSettings; // per-page brightness/blur/vignette/volume
 };
+
+// Screenshot cache for dot hover thumbnails
+const PAGE_THUMBNAILS: Record<string, string> = {};
+let thumbnailCaptureScheduled = false;
 
 // Pagination settings persisted per-session
 const PAGINATION_SETTINGS_KEY = "flux-pagination-settings";
