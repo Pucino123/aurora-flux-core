@@ -431,17 +431,46 @@ const SmartPlanWidget = () => {
     );
   }, [user]);
 
+  /**
+   * Universal drag-end handler for both Today and Scheduled views.
+   * If the dragged block lands on a block from a different date group,
+   * we also update scheduled_date so it moves into that date's group.
+   */
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setBlocks(prev => {
       const oldIdx = prev.findIndex(b => b.id === active.id);
       const newIdx = prev.findIndex(b => b.id === over.id);
-      const reordered = arrayMove(prev, oldIdx, newIdx).map((b, i) => ({ ...b, sort_order: i }));
-      persistOrder(reordered);
+      if (oldIdx === -1 || newIdx === -1) return prev;
+
+      const draggedBlock = prev[oldIdx];
+      const targetBlock  = prev[newIdx];
+
+      // If crossing date groups, adopt the target's date
+      const newDate = targetBlock.scheduledDate;
+      const dateChanged = draggedBlock.scheduledDate !== newDate;
+
+      const updated = prev.map((b, i) =>
+        i === oldIdx ? { ...b, scheduledDate: newDate } : b
+      );
+      const reordered = arrayMove(updated, oldIdx, newIdx).map((b, i) => ({ ...b, sort_order: i }));
+
+      // Persist: sort_order for all + scheduled_date if changed
+      if (user) {
+        if (dateChanged) {
+          supabase.from("schedule_blocks")
+            .update({ scheduled_date: newDate })
+            .eq("id", draggedBlock.id)
+            .eq("user_id", user.id)
+            .then(() => persistOrder(reordered));
+        } else {
+          persistOrder(reordered);
+        }
+      }
       return reordered;
     });
-  }, [persistOrder]);
+  }, [user, persistOrder]);
 
   // ── Add block ───────────────────────────────────────────────────────────
   const handleAddBlock = useCallback(async (block: Omit<ScheduleBlock, "id" | "sort_order">) => {

@@ -53,6 +53,19 @@ function deadlineBadge(deadline: string | null | undefined): { label: string; ur
   return { label: `${days} days left`, urgent: days <= 7 };
 }
 
+/** Monthly deposit needed to reach target by deadline */
+function savingsForecast(current: number, target: number, deadline: string | null | undefined): string | null {
+  if (!deadline) return null;
+  const remaining = target - current;
+  if (remaining <= 0) return null;
+  const daysLeft = differenceInDays(parseISO(deadline), new Date());
+  if (daysLeft <= 0) return null;
+  const monthsLeft = daysLeft / 30.44;
+  if (monthsLeft < 0.1) return null;
+  const perMonth = remaining / monthsLeft;
+  return fmt(Math.ceil(perMonth));
+}
+
 /** Sort goals by deadline: soonest first, no-deadline last */
 function sortByDeadline(goals: SavingsGoal[]): SavingsGoal[] {
   return [...goals].sort((a, b) => {
