@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Sparkles, Loader2, ChevronDown, FileText, Check } from "lucide-react";
 import { useFlux } from "@/context/FluxContext";
+import { useMonetization } from "@/context/MonetizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -22,12 +23,29 @@ const AskAura = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { tasks, goals, workouts, folders, pendingDocumentId, updateTask } = useFlux();
+  const { consumeSparks, sparksBalance } = useMonetization();
 
   // ── Cmd+Shift+A global toggle ──
   useEffect(() => {
     const handler = () => setOpen(prev => !prev);
     window.addEventListener("toggle-aura", handler);
     return () => window.removeEventListener("toggle-aura", handler);
+  }, []);
+
+  // ── Listen for summon-with-doc ──
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      setOpen(true);
+      const { content, title, prompt } = e.detail || {};
+      if (content) {
+        const systemMsg = prompt
+          ? `Document "${title}" is open. User asks: ${prompt}`
+          : `Document "${title}" is open for context. How can I help?`;
+        setMessages([{ role: "assistant", content: systemMsg }]);
+      }
+    };
+    window.addEventListener("aura:summon-with-doc" as any, handler);
+    return () => window.removeEventListener("aura:summon-with-doc" as any, handler);
   }, []);
 
   useEffect(() => {
@@ -38,7 +56,6 @@ const AskAura = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Build workspace context summary
   const workspaceContext = useCallback(() => {
     const pendingTasks = tasks.filter(t => !t.done).slice(0, 10);
     const recentWorkouts = workouts.slice(0, 5);
@@ -56,8 +73,13 @@ const AskAura = () => {
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
+
+    // Deduct 1 Spark
+    if (!consumeSparks(1, "Aura AI message")) {
+      return; // Out of sparks modal shown by consumeSparks
+    }
+
     setInput("");
-    // Reset textarea height
     if (inputRef.current) inputRef.current.style.height = "auto";
 
     const userMsg: Message = { role: "user", content: text };
@@ -87,7 +109,6 @@ const AskAura = () => {
         throw new Error(err.error || `HTTP ${resp.status}`);
       }
 
-      // SSE streaming
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let textBuf = "";
@@ -139,15 +160,13 @@ const AskAura = () => {
     } finally {
       setLoading(false);
     }
-  }, [input, messages, loading, workspaceContext]);
+  }, [input, messages, loading, workspaceContext, consumeSparks]);
 
-  // ── Insert assistant reply into open document ──
   const handleInsertIntoDocument = useCallback(async (msgIdx: number, content: string) => {
     if (!pendingDocumentId) {
       toast.error("No document is currently open.");
       return;
     }
-    // Read existing doc content, append Aura reply as new paragraph
     const { data: doc } = await supabase
       .from("documents")
       .select("content, title")
@@ -210,7 +229,6 @@ const AskAura = () => {
       <AnimatePresence>
         {open && (
           <>
-            {/* Backdrop (mobile) */}
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[9979] md:hidden"
@@ -251,6 +269,9 @@ const AskAura = () => {
                       {hasOpenDoc ? "Document open — replies can be inserted ↓" : "Your AI workspace assistant · ⌘⇧A"}
                     </p>
                   </div>
+                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 shrink-0">
+                    <span>{sparksBalance} ✨</span>
+                  </div>
                   <button
                     onClick={() => setOpen(false)}
                     className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
@@ -267,7 +288,6 @@ const AskAura = () => {
                   </button>
                 </div>
 
-                {/* Document badge */}
                 {hasOpenDoc && (
                   <div className="px-4 py-1.5 border-b border-border/10 flex items-center gap-2"
                     style={{ background: "hsl(var(--aurora-blue)/0.06)" }}>
@@ -324,7 +344,6 @@ const AskAura = () => {
                         ) : msg.content}
                       </div>
 
-                      {/* Insert into document button — only on assistant messages when doc is open */}
                       {msg.role === "assistant" && msg.content && hasOpenDoc && (
                         <motion.button
                           initial={{ opacity: 0, y: 4 }}
@@ -381,6 +400,7 @@ const AskAura = () => {
                       disabled={!input.trim() || loading}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all shrink-0 disabled:opacity-40 text-white text-[11px] font-semibold"
                       style={{ background: "linear-gradient(135deg, hsl(var(--aurora-violet)), hsl(var(--aurora-blue)))" }}
+                      title="Send (−1 ✨)"
                     >
                       <Send size={11} className="text-white" />
                       <span>−1 ✨</span>

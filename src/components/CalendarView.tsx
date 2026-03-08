@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useFlux } from "@/context/FluxContext";
 import { useCRM } from "@/context/CRMContext";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday,
   addMonths, subMonths, startOfWeek, endOfWeek, getISOWeek, addWeeks, subWeeks,
-  eachHourOfInterval, startOfDay, endOfDay, isSameMonth, parseISO,
+  isSameMonth, parseISO,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, X, Clock, CheckCircle2, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Clock, CheckCircle2, CalendarDays, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 type CalView = "month" | "week" | "agenda";
@@ -21,9 +21,10 @@ interface CalEvent {
   startTime?: string;
   endTime?: string;
   type: "task" | "block" | "custom";
-  color?: string; // tailwind bg token
+  color?: string;
   done?: boolean;
   priority?: string;
+  dbId?: string;
 }
 
 const EVENT_COLORS = [
@@ -76,7 +77,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ defaultDate, onClose, onS
         onClick={e => e.stopPropagation()}
         className="w-full md:max-w-md bg-card border border-border rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl"
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border/50">
           <h3 className="text-sm font-bold text-foreground">Add Event</h3>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors text-muted-foreground">
@@ -85,7 +85,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ defaultDate, onClose, onS
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto max-h-[80vh]">
-          {/* Title */}
           <div>
             <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Event Title</label>
             <input
@@ -98,7 +97,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ defaultDate, onClose, onS
             />
           </div>
 
-          {/* Date & Time */}
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-3 md:col-span-1">
               <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Date</label>
@@ -129,7 +127,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ defaultDate, onClose, onS
             </div>
           </div>
 
-          {/* Color / Type */}
           <div>
             <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Event Type</label>
             <div className="flex gap-2 flex-wrap">
@@ -151,7 +148,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ defaultDate, onClose, onS
             </div>
           </div>
 
-          {/* CRM Contact linker */}
           {crmContacts.length > 0 && (
             <div>
               <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Link CRM Contact (optional)</label>
@@ -168,7 +164,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ defaultDate, onClose, onS
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex gap-2 pt-1">
             <button
               onClick={handleSave}
@@ -227,7 +222,6 @@ const MonthView: React.FC<{
 
   return (
     <div className="grid grid-cols-8 gap-px bg-border rounded-2xl overflow-hidden">
-      {/* Header */}
       <div className="bg-card text-[10px] font-semibold text-muted-foreground text-center py-2">Wk</div>
       {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (
         <div key={d} className="bg-card text-[10px] font-semibold text-muted-foreground text-center py-2">{d}</div>
@@ -282,7 +276,7 @@ const WeekView: React.FC<{
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
-  const hours = Array.from({ length: 16 }, (_, i) => i + 7); // 07:00 – 22:00
+  const hours = Array.from({ length: 16 }, (_, i) => i + 7);
 
   const dayEventMap = useMemo(() => {
     const map = new Map<string, CalEvent[]>();
@@ -296,7 +290,6 @@ const WeekView: React.FC<{
 
   return (
     <div className="overflow-auto rounded-2xl border border-border">
-      {/* Day headers */}
       <div className="grid grid-cols-8 bg-secondary/30 border-b border-border">
         <div className="p-2 text-[10px] text-muted-foreground/40 text-center">UTC</div>
         {days.map(d => (
@@ -311,7 +304,6 @@ const WeekView: React.FC<{
         ))}
       </div>
 
-      {/* Hour rows */}
       <div className="grid grid-cols-8">
         {hours.map(h => (
           <React.Fragment key={h}>
@@ -421,16 +413,63 @@ const CalendarView = () => {
   const [view, setView] = useState<CalView>("month");
   const [showAddModal, setShowAddModal] = useState(false);
   const [addDefaultDate, setAddDefaultDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [customEvents, setCustomEvents] = useState<CalEvent[]>(() => {
-    try { return JSON.parse(localStorage.getItem("dashiii_cal_events") || "[]"); } catch { return []; }
-  });
+  const [customEvents, setCustomEvents] = useState<CalEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
 
-  const saveCustomEvents = (evts: CalEvent[]) => {
-    setCustomEvents(evts);
-    localStorage.setItem("dashiii_cal_events", JSON.stringify(evts));
-  };
+  // ── Load from DB on mount ──
+  useEffect(() => {
+    if (!user) return;
+    setLoadingEvents(true);
+    (supabase as any)
+      .from("calendar_events")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("date", { ascending: true })
+      .then(({ data }: { data: any[] | null }) => {
+        if (data) {
+          const mapped: CalEvent[] = data.map((row: any) => ({
+            id: `custom-${row.id}`,
+            dbId: row.id,
+            title: row.title,
+            date: row.date,
+            startTime: row.start_time || undefined,
+            endTime: row.end_time || undefined,
+            type: "custom",
+            color: row.color || "bg-violet-500",
+          }));
+          setCustomEvents(mapped);
+        }
+        setLoadingEvents(false);
+      });
+  }, [user]);
 
-  // Build unified event list from tasks, schedule blocks, and custom events
+  // ── Persist new event to DB ──
+  const saveCustomEvent = useCallback(async (newEvt: CalEvent) => {
+    if (!user) {
+      setCustomEvents(prev => [...prev, newEvt]);
+      return;
+    }
+    const { data, error } = await (supabase as any)
+      .from("calendar_events")
+      .insert({
+        user_id: user.id,
+        title: newEvt.title,
+        date: newEvt.date,
+        start_time: newEvt.startTime || null,
+        end_time: newEvt.endTime || null,
+        color: newEvt.color || "bg-violet-500",
+        type: "custom",
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setCustomEvents(prev => [...prev, { ...newEvt, id: `custom-${data.id}`, dbId: data.id }]);
+    } else {
+      setCustomEvents(prev => [...prev, newEvt]);
+    }
+  }, [user]);
+
   const allEvents: CalEvent[] = useMemo(() => {
     const out: CalEvent[] = [];
     tasks.forEach(t => {
@@ -451,7 +490,7 @@ const CalendarView = () => {
     setShowAddModal(true);
   };
 
-  const handleAddEvent = (e: { title: string; date: string; startTime: string; endTime: string; color: string; crmContact: string }) => {
+  const handleAddEvent = async (e: { title: string; date: string; startTime: string; endTime: string; color: string; crmContact: string }) => {
     const crm = e.crmContact ? deals.find(d => d.id === e.crmContact) : null;
     const newEvt: CalEvent = {
       id: `custom-${Date.now()}`,
@@ -462,7 +501,7 @@ const CalendarView = () => {
       type: "custom",
       color: e.color,
     };
-    saveCustomEvents([...customEvents, newEvt]);
+    await saveCustomEvent(newEvt);
     toast.success("Event added!");
   };
 
@@ -492,7 +531,6 @@ const CalendarView = () => {
           <p className="text-sm text-muted-foreground">Your schedule at a glance</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* View toggle */}
           <div className="flex rounded-xl bg-secondary p-0.5 text-xs">
             {(["month", "week", "agenda"] as CalView[]).map(v => (
               <button
@@ -514,7 +552,6 @@ const CalendarView = () => {
         </div>
       </div>
 
-      {/* Navigation */}
       {view !== "agenda" && (
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary transition-colors" title={prevLabel}>
@@ -532,6 +569,12 @@ const CalendarView = () => {
           <button onClick={() => navigate(1)} className="p-2 rounded-xl hover:bg-secondary transition-colors" title={nextLabel}>
             <ChevronRight size={18} className="text-muted-foreground" />
           </button>
+        </div>
+      )}
+
+      {loadingEvents && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+          <Loader2 size={12} className="animate-spin" /> Loading events…
         </div>
       )}
 
