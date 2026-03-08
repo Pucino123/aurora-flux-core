@@ -1351,8 +1351,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     revealedCountRef.current = 0;
     setExpandedCard(null);
     setFullscreenPersona(null);
-    setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
-    setResponses({ elena: null, helen: null, anton: null, margot: null });
+    setCardStates({ strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" });
+    setResponses({ strategist: null, operator: null, skeptic: null, advocate: null });
     setSavedIdeaId(null);
     setSaveState("idle");
     // Fresh session for new consult
