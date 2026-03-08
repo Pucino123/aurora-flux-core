@@ -444,12 +444,19 @@ const AddToolbar: React.FC<AddToolbarProps> = ({ onAdd }) => (
 
 // ── Main Canvas ───────────────────────────────────────────────────────────────
 
-const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMode = false }) => {
+const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMode = false, isCanvasMode: externalCanvasMode, onCanvasModeChange }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entityId: string } | null>(null);
+  const [internalCanvasMode, setInternalCanvasMode] = useState(true);
 
-  const selected = entities.find(e => e.id === selectedId) ?? null;
+  // If parent controls the mode, use that; otherwise use internal state
+  const isDraggable = externalCanvasMode !== undefined ? externalCanvasMode : internalCanvasMode;
+  const setDraggable = (v: boolean) => {
+    if (onCanvasModeChange) onCanvasModeChange(v);
+    else setInternalCanvasMode(v);
+    if (!v) setSelectedId(null);
+  };
 
   const update = useCallback((id: string, patch: Partial<CanvasEntity>) => {
     onChange(entities.map(e => e.id === id ? { ...e, ...patch } : e));
