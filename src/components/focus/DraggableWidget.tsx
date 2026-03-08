@@ -251,14 +251,15 @@ const DraggableWidget = ({
   const widgetContent = (
     <motion.div
       data-widget-id={id}
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.92, y: 8 }}
       animate={{
         opacity: isEditingOther ? 0.15 : 1,
         scale: isEditingOther ? 0.98 : 1,
+        y: isEditingOther ? 0 : 0,
         filter: isEditingOther ? "blur(4px)" : "none",
       }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.25 }}
+      exit={{ opacity: 0, scale: 0.92, y: 8 }}
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
       className={`${isBeingEdited ? "fixed" : "absolute"} ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
       style={{
         left: pos.x,

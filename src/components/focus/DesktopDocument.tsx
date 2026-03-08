@@ -192,14 +192,14 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
     <>
       <motion.div
         className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group transition-shadow duration-200 ${!isMarqueeSelected && selected ? "ring-2 ring-[rgba(0,122,255,0.6)]" : ""}`}
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.88, y: 10 }}
         animate={flyingOff
           ? { x: flyingOff.dir * (window.innerWidth * 0.6), opacity: 0, scale: 0.7, rotate: flyingOff.dir * 12 }
-          : { x: 0, opacity: 1, scale: 1, rotate: 0 }
+          : { x: 0, opacity: 1, scale: 1, rotate: 0, y: 0 }
         }
         transition={flyingOff
           ? { duration: 0.38, ease: [0.4, 0, 1, 1] }
-          : { duration: 0.2 }
+          : { type: "spring", stiffness: 260, damping: 20 }
         }
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,
