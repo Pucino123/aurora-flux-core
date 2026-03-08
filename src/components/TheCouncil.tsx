@@ -274,10 +274,11 @@ const TheCouncil = () => {
 
         {/* Tab switcher */}
         <div className="relative z-20 flex items-center justify-center pt-4 pb-2">
-          <div className="flex items-center gap-1 p-1 rounded-full bg-black/10 backdrop-blur-sm border border-black/8">
+        <div className="flex items-center gap-1 p-1 rounded-full bg-black/10 backdrop-blur-sm border border-black/8">
             {[
               { key: "council" as const, label: "Council", icon: "🔮" },
               { key: "boardroom" as const, label: "Boardroom", icon: "🪄" },
+              { key: "analytics" as const, label: "Analytics", icon: "📊" },
             ].map(tab => (
               <button
                 key={tab.key}
