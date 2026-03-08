@@ -58,17 +58,19 @@ const StyleToolbar: React.FC<StyleToolbarProps> = ({ entity, onUpdate, onDelete,
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 6, scale: 0.96 }}
       transition={{ duration: 0.14 }}
-      className="absolute z-[9999] rounded-xl flex flex-col gap-2 p-2.5 shadow-2xl"
+      // Fixed position so it's always visible regardless of entity location on canvas
+      className="fixed z-[9999] rounded-xl flex flex-col gap-2 p-2.5 shadow-2xl"
       style={{
-        top: entity.position.y - 80,
-        left: entity.position.x,
-        minWidth: 220,
-        background: "rgba(12,8,30,0.95)",
-        border: "1px solid rgba(255,255,255,0.12)",
+        top: 80,
+        right: 16,
+        minWidth: 240,
+        background: "rgba(12,8,30,0.97)",
+        border: "1px solid rgba(255,255,255,0.14)",
         backdropFilter: "blur(24px)",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.06)",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.8), 0 0 0 0.5px rgba(255,255,255,0.06)",
       }}
       onMouseDown={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
     >
       {/* Tab row */}
       <div className="flex items-center gap-1">
