@@ -26,7 +26,7 @@ const TOUR_STEPS = [
 
 const SPARKS_REWARD = 50;
 
-const OnboardingFlow = () => {
+const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref) {
   const { addSparks } = useMonetization();
   const [phase, setPhase] = useState<"welcome" | "tour" | "reward" | "done">("welcome");
   const [step, setStep] = useState(0);
