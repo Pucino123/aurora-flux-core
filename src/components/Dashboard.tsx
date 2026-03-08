@@ -133,7 +133,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       {/* Center stage */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-[64px] md:pb-0 overflow-hidden">
 
-        {/* Control Center trigger button — top right */}
+        {/* Control Center trigger button — only on focus dashboard */}
+        {effectiveView === "focus" && (
         <div className="absolute top-3 right-3 z-[200] flex items-center gap-2">
           <motion.button
             onClick={() => setControlCenterOpen(p => !p)}
@@ -149,6 +150,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             <SlidersHorizontal size={14} />
           </motion.button>
         </div>
+        )}
 
         {/* View switcher */}
         <AnimatePresence mode="wait">
