@@ -1786,6 +1786,7 @@ const FocusContent = () => {
               boxShadow: "0 12px 40px rgba(0,0,0,0.7)",
               transition: "min-width 0.18s ease",
             }}
+          >
             <div className="px-3 py-1.5 text-[10px] font-semibold text-white/35 uppercase tracking-wider">
               {dashboardPages[dotMenu.idx]?.label || `Page ${dotMenu.idx + 1}`}
             </div>
