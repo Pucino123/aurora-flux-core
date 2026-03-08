@@ -816,19 +816,45 @@ const ExportModal: React.FC<{ avgRing: number; idea: string; responses: Record<s
 
 type CardState = "idle" | "typing" | "revealed";
 
-interface PersonaResponse {
+export interface BoardroomPersonaResponse {
   analysis: string;
   question: string;
   confidence: number;
 }
 
-const CouncilBoardroom: React.FC = () => {
+// Session-id stored in localStorage so pre-save threads survive page reloads
+const getOrCreateSessionId = (): string => {
+  let sid = localStorage.getItem("boardroom_session_id");
+  if (!sid) {
+    sid = crypto.randomUUID();
+    localStorage.setItem("boardroom_session_id", sid);
+  }
+  return sid;
+};
+
+const resetSessionId = (): string => {
+  const sid = crypto.randomUUID();
+  localStorage.setItem("boardroom_session_id", sid);
+  return sid;
+};
+
+export interface RestorableBoardroomIdea {
+  id: string;
+  content: string;
+  responses: { persona_key: string; vote_score: number | null; analysis: string | null }[];
+}
+
+interface CouncilBoardroomProps {
+  onRestoreIdea?: (idea: RestorableBoardroomIdea) => void;
+}
+
+const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) => {
   const { user } = useAuth();
   const [idea, setIdea] = useState("");
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({
     elena: "idle", helen: "idle", anton: "idle", margot: "idle",
   });
-  const [responses, setResponses] = useState<Record<string, PersonaResponse | null>>({
+  const [responses, setResponses] = useState<Record<string, BoardroomPersonaResponse | null>>({
     elena: null, helen: null, anton: null, margot: null,
   });
   const [actionPlan, setActionPlan] = useState<string[]>(DEFAULT_ACTION_PLAN);
@@ -842,6 +868,7 @@ const CouncilBoardroom: React.FC = () => {
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [savedIdeaId, setSavedIdeaId] = useState<string | null>(null);
+  const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
 
