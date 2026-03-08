@@ -1,13 +1,4 @@
-import React, { useState, useRef } from "react";
-import { createPortal } from "react-dom";
-import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import {
-  X, FileText, Clock, Timer, Music, CalendarClock, StickyNote,
-  BarChart3, Wind, Users2, DollarSign, PieChart, Dumbbell,
-  ListTodo, Briefcase, Sparkles, Award, Brain, Orbit,
-  MessageSquareQuote, LucideIcon,
-  Home, CalendarDays, CheckSquare, Trash2,
-} from "lucide-react";
+// Unified dock is now part of WidgetToggleBar — this shim keeps imports intact.
 import { useWindowManager, AppWindow } from "@/context/WindowManagerContext";
 import { useFlux } from "@/context/FluxContext";
 import { useTrash } from "@/context/TrashContext";
