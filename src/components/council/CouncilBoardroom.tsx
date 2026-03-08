@@ -1207,7 +1207,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
       // ── 4 Advisor Cards
       const personaColors: Record<string, [number, number, number]> = {
-        elena: [52, 211, 153], helen: [251, 191, 36], anton: [248, 113, 113], margot: [34, 211, 238],
+        strategist: [167, 139, 250], operator: [52, 211, 153], skeptic: [248, 113, 113], advocate: [34, 211, 238], growth: [251, 191, 36],
       };
       const cardW = (W - 24) / 2;
       const cards = PERSONAS.map(p => ({ p, r: responses[p.key] }));
