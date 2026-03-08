@@ -162,7 +162,7 @@ const FitnessTracker = ({ folderId }: FitnessTrackerProps) => {
           {/* Capturable heatmap area */}
           <div ref={heatmapRef} className="p-3 rounded-xl bg-card">
             <div className="flex items-center gap-2 mb-2">
-              <Flame size={14} className="text-orange-400" />
+              <Flame size={14} className="text-primary" />
               <span className="text-xs font-semibold text-foreground">{folder?.title || "Fitness"} — {stats.streak} day streak 🔥</span>
             </div>
             <StreakHeatmap workouts={workouts} />
