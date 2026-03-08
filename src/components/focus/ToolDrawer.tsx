@@ -208,11 +208,11 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
                   <span className="text-[10px] text-white/25 font-semibold uppercase tracking-wider mb-1.5 block">{cat.label}</span>
                   <div className="grid grid-cols-5 gap-1.5">
                     {cat.tools.map(({ id, label, icon: Icon }) => {
-                      const active = activeWidgets.includes(id);
+                      const active = effectiveWidgets.includes(id);
                       return (
                         <button
                           key={id}
-                          onClick={() => toggleWidget(id)}
+                          onClick={() => effectiveToggle(id)}
                           className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl text-[10px] font-medium transition-all ${
                             active
                               ? "bg-white/15 text-white shadow-[0_0_10px_rgba(255,255,255,0.05)]"
