@@ -980,9 +980,9 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   }, []);
 
   const getConsensusLabel = () => {
-    if (avgRing >= 70) return { label: "Strong Consensus — Proceed", color: "#34d399" };
-    if (avgRing >= 40) return { label: "Mixed Opinions — Proceed with Caution", color: "#fbbf24" };
-    return { label: "Divided — Further Analysis Required", color: "#f87171" };
+    if (avgRing >= 70) return { label: "Strong Buy-In", sublabel: "Board is aligned — proceed with confidence", color: "#34d399", emoji: "✅" };
+    if (avgRing >= 40) return { label: "Mixed Opinions", sublabel: "Proceed with caution, validate key risks first", color: "#fbbf24", emoji: "⚠️" };
+    return { label: "High Skepticism", sublabel: "Significant concerns raised — revisit the fundamentals", color: "#f87171", emoji: "🚨" };
   };
 
   const startFloatingEmojis = useCallback((typingKey: string) => {
