@@ -34,51 +34,51 @@ interface Persona {
 
 const PERSONAS: Persona[] = [
   {
-    key: "elena", name: "Elena Verna", title: "The Pragmatist", initials: "EV",
+    key: "strategist", name: "The Strategist", title: "The Pragmatist", initials: "ST",
     ringPct: 85, glow: "rgba(52,211,153,0.25)", glowBorder: "rgba(52,211,153,0.4)",
     sentiment: "positive", icon: TrendingUp, delay: 0,
     stat: "📊 Market data: Eco-retail growing 15% YoY",
   },
   {
-    key: "helen", name: "Helen Lee Kupp", title: "The Branding Expert", initials: "HK",
+    key: "operator", name: "The Operator", title: "The Branding Expert", initials: "OP",
     ringPct: 60, glow: "rgba(251,191,36,0.2)", glowBorder: "rgba(251,191,36,0.35)",
     sentiment: "neutral", icon: Lightbulb, delay: 400,
     stat: "💡 Brand recognition drives 30% repeat customers",
   },
   {
-    key: "anton", name: "Anton Osika", title: "The Devil's Advocate", initials: "AO",
+    key: "skeptic", name: "The Skeptic", title: "The Devil's Advocate", initials: "SK",
     ringPct: 30, glow: "rgba(248,113,113,0.25)", glowBorder: "rgba(248,113,113,0.4)",
     sentiment: "negative", icon: AlertTriangle, delay: 800,
     stat: "⚠️ 60% of cafes close in first 3 years",
   },
   {
-    key: "margot", name: "Margot van Laer", title: "The Visionary", initials: "ML",
-    ringPct: 95, glow: "rgba(34,211,238,0.2)", glowBorder: "rgba(34,211,238,0.4)",
+    key: "advocate", name: "The Advocate", title: "The Analyst", initials: "AV",
+    ringPct: 70, glow: "rgba(34,211,238,0.2)", glowBorder: "rgba(34,211,238,0.4)",
     sentiment: "visionary", icon: Star, delay: 1200,
     stat: "✨ Community-led brands see 4x higher LTV",
   },
 ];
 
 const MOCK_RESPONSES: Record<string, { analysis: string; question: string; confidence: number }> = {
-  elena: {
+  strategist: {
     analysis: "The logistics check out — foot traffic analysis shows strong potential in urban eco-districts. Your supply chain for fair-trade sourcing is viable at scale. However, I'd recommend piloting with a pop-up before committing to a lease. Focus on unit economics first: your target of 200 cups/day at $6 average means $1,200/day revenue, which is achievable.",
     question: "**Have you modeled your break-even point at different occupancy rates?**",
     confidence: 85,
   },
-  helen: {
-    analysis: "I have to build on Elena's optimism here — the positioning opportunity is real. 'Eco-friendly coffee' is becoming mainstream, which is both an opportunity and a threat. You need a differentiated brand story beyond just the eco angle. Think about rituals, community, and the emotional journey. I'd advise against the term 'eco-friendly' — it's overused. Instead, lead with radical transparency.",
+  operator: {
+    analysis: "The positioning opportunity is real. 'Eco-friendly coffee' is becoming mainstream, which is both an opportunity and a threat. You need a differentiated brand story beyond just the eco angle. Think about rituals, community, and the emotional journey. I'd advise against the term 'eco-friendly' — it's overused. Instead, lead with radical transparency.",
     question: "**What is the one sentence that will make a customer choose you over a $6 Starbucks oat latte?**",
     confidence: 60,
   },
-  anton: {
-    analysis: "Let me be the one to say what no one wants to hear. You've calculated the monthly loan, but you've completely left out insurance, staff churn, and depreciation on equipment. That's a massive hidden cost structure. Also, the eco-premium market is increasingly competitive. What's your moat? I disagree with Elena's rosy unit economics — those numbers assume near-full occupancy.",
+  skeptic: {
+    analysis: "Let me be the one to say what no one wants to hear. You've calculated the monthly loan, but you've completely left out insurance, staff churn, and depreciation on equipment. That's a massive hidden cost structure. Also, the eco-premium market is increasingly competitive. What's your moat? The rosy unit economics assume near-full occupancy — that's unrealistic.",
     question: "**Have you calculated your 12-month burn rate assuming 40% below projected revenue?**",
     confidence: 30,
   },
-  margot: {
-    analysis: "This idea has genuine transformative potential — and I love that. Building on Helen's branding insight: an eco-coffee shop is not just a business, it's a community node. If you design it right, this becomes a gathering point for sustainable entrepreneurs, creators, and advocates. The long-term brand equity here is enormous, far beyond what Anton's skepticism accounts for.",
+  advocate: {
+    analysis: "This idea has genuine transformative potential — and I love that. An eco-coffee shop is not just a business, it's a community node. If you design it right, this becomes a gathering point for sustainable entrepreneurs, creators, and advocates. The long-term brand equity here is enormous.",
     question: "**What if this wasn't just a café, but the headquarters of a local sustainability movement?**",
-    confidence: 95,
+    confidence: 70,
   },
 };
 
@@ -102,7 +102,7 @@ const SENTIMENT_COLORS = {
   visionary: "#22d3ee",
 };
 
-const PERSONA_NAMES = ["Elena", "Helen", "Anton", "Margot"];
+const PERSONA_NAMES = ["Strategist", "Operator", "Skeptic", "Advocate"];
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -881,12 +881,13 @@ interface CouncilBoardroomProps {
 
 const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) => {
   const { user } = useAuth();
+  const { consumeSparks } = useMonetization();
   const [idea, setIdea] = useState("");
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({
-    elena: "idle", helen: "idle", anton: "idle", margot: "idle",
+    strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle",
   });
   const [responses, setResponses] = useState<Record<string, BoardroomPersonaResponse | null>>({
-    elena: null, helen: null, anton: null, margot: null,
+    strategist: null, operator: null, skeptic: null, advocate: null,
   });
   const [actionPlan, setActionPlan] = useState<string[]>(DEFAULT_ACTION_PLAN);
   const [isConsulting, setIsConsulting] = useState(false);
@@ -895,7 +896,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const [showExport, setShowExport] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
   const [floatingEmojis, setFloatingEmojis] = useState<Record<string, string[]>>({
-    elena: [], helen: [], anton: [], margot: [],
+    strategist: [], operator: [], skeptic: [], advocate: [],
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [savedIdeaId, setSavedIdeaId] = useState<string | null>(null);
@@ -950,12 +951,12 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       .on("broadcast", { event: "boardroom-consult" }, ({ payload }) => {
         // Another team member consulted the board — show their results live
         if (payload?.userId !== user.id && payload?.responses) {
-          const restored: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+          const restored: Record<string, BoardroomPersonaResponse | null> = { strategist: null, operator: null, skeptic: null, advocate: null };
           (payload.responses as { key: string; analysis: string; question: string; confidence: number }[]).forEach(r => {
             if (r.key) restored[r.key] = { analysis: r.analysis, question: r.question, confidence: r.confidence };
           });
           setResponses(restored);
-          setCardStates({ elena: "revealed", helen: "revealed", anton: "revealed", margot: "revealed" });
+          setCardStates({ strategist: "revealed", operator: "revealed", skeptic: "revealed", advocate: "revealed" });
           setRevealedCount(4);
           revealedCountRef.current = 4;
           if (payload.idea) setIdea(payload.idea);
@@ -1002,7 +1003,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
   const stopFloatingEmojis = useCallback(() => {
     if (emojiTimerRef.current) { clearInterval(emojiTimerRef.current); emojiTimerRef.current = null; }
-    setFloatingEmojis({ elena: [], helen: [], anton: [], margot: [] });
+    setFloatingEmojis({ strategist: [], operator: [], skeptic: [], advocate: [] });
   }, []);
 
   useEffect(() => {
@@ -1031,7 +1032,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
     // Build the saved responses map (used for both instant restore + replay)
     const savedResponses: Record<string, BoardroomPersonaResponse | null> = {
-      elena: null, helen: null, anton: null, margot: null,
+      strategist: null, operator: null, skeptic: null, advocate: null,
     };
     savedIdea.responses.forEach(r => {
       if (r.persona_key in savedResponses) {
@@ -1046,8 +1047,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
     if (replay) {
       // Reset to idle first, then animate the reveal sequence
-      setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
-      setResponses({ elena: null, helen: null, anton: null, margot: null });
+      setCardStates({ strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" });
+      setResponses({ strategist: null, operator: null, skeptic: null, advocate: null });
       setRevealedCount(0);
       revealedCountRef.current = 0;
       setExpandedCard(null);
@@ -1064,7 +1065,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       }, 300);
     } else {
       // Instant restore
-      const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
+      const newStates: Record<string, CardState> = { strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" };
       savedIdea.responses.forEach(r => {
         if (r.persona_key in newStates) newStates[r.persona_key] = "revealed";
       });
@@ -1089,8 +1090,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   // ── New Session: reset everything including personality sliders ──
   const handleNewSession = useCallback(() => {
     setIdea("");
-    setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
-    setResponses({ elena: null, helen: null, anton: null, margot: null });
+    setCardStates({ strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" });
+    setResponses({ strategist: null, operator: null, skeptic: null, advocate: null });
     setActionPlan(DEFAULT_ACTION_PLAN);
     setRevealedCount(0);
     revealedCountRef.current = 0;
@@ -1099,7 +1100,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     setSavedIdeaId(null);
     setSaveState("idle");
     setIsSharedView(false);
-    setFloatingEmojis({ elena: [], helen: [], anton: [], margot: [] });
+    setFloatingEmojis({ strategist: [], operator: [], skeptic: [], advocate: [] });
     sessionIdRef.current = resetSessionId();
     // Reset personality sliders to per-advisor defaults
     setPersonalitySliders(DEFAULT_ALL_SLIDERS);
@@ -1206,7 +1207,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
       // ── 4 Advisor Cards
       const personaColors: Record<string, [number, number, number]> = {
-        elena: [52, 211, 153], helen: [251, 191, 36], anton: [248, 113, 113], margot: [34, 211, 238],
+        strategist: [167, 139, 250], operator: [52, 211, 153], skeptic: [248, 113, 113], advocate: [34, 211, 238], growth: [251, 191, 36],
       };
       const cardW = (W - 24) / 2;
       const cards = PERSONAS.map(p => ({ p, r: responses[p.key] }));
@@ -1322,8 +1323,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       if (payload?.responses && payload?.idea) {
         setIdea(payload.idea);
         if (payload.actionPlan) setActionPlan(payload.actionPlan);
-        const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
-        const newResponses: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+        const newStates: Record<string, CardState> = { strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" };
+        const newResponses: Record<string, BoardroomPersonaResponse | null> = { strategist: null, operator: null, skeptic: null, advocate: null };
         (payload.responses as { key: string; analysis: string; question: string; confidence: number }[]).forEach(r => {
           if (r.key in newStates) {
             newStates[r.key] = "revealed";
@@ -1346,13 +1347,14 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
   const handleConsult = async () => {
     if (isConsulting) return;
+    if (!consumeSparks(5, "Boardroom AI consult")) return;
     setIsConsulting(true);
     setRevealedCount(0);
     revealedCountRef.current = 0;
     setExpandedCard(null);
     setFullscreenPersona(null);
-    setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
-    setResponses({ elena: null, helen: null, anton: null, margot: null });
+    setCardStates({ strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" });
+    setResponses({ strategist: null, operator: null, skeptic: null, advocate: null });
     setSavedIdeaId(null);
     setSaveState("idle");
     // Fresh session for new consult
@@ -1363,7 +1365,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       realtimeChannelRef.current.track({ displayName, isConsulting: true }).catch(() => {});
     }
 
-    let aiPersonas: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+    let aiPersonas: Record<string, BoardroomPersonaResponse | null> = { strategist: null, operator: null, skeptic: null, advocate: null };
     let finalActionPlan: string[] = DEFAULT_ACTION_PLAN;
     try {
       const { data, error } = await supabase.functions.invoke("flux-ai", {

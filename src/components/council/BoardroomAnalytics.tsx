@@ -8,10 +8,11 @@ import { TrendingUp, BarChart2, Clock, Sparkles, TrendingDown, RotateCcw, Star }
 import { supabase } from "@/integrations/supabase/client";
 
 const PERSONA_CONFIG: Record<string, { name: string; color: string }> = {
-  elena:  { name: "Elena",  color: "#34d399" },
-  helen:  { name: "Helen",  color: "#fbbf24" },
-  anton:  { name: "Anton",  color: "#f87171" },
-  margot: { name: "Margot", color: "#22d3ee" },
+  strategist: { name: "Strategist", color: "#a78bfa" },
+  operator:   { name: "Operator",   color: "#34d399" },
+  skeptic:    { name: "Skeptic",    color: "#f87171" },
+  advocate:   { name: "Advocate",   color: "#22d3ee" },
+  growth:     { name: "Growth",     color: "#fbbf24" },
 };
 
 interface Props {
@@ -48,7 +49,7 @@ const BoardroomAnalytics: React.FC<Props> = ({ userId, onRestoreIdea }) => {
       .from("council_responses")
       .select("idea_id, persona_key, vote_score")
       .in("idea_id", ids)
-      .in("persona_key", ["elena","helen","anton","margot"]);
+      .in("persona_key", ["strategist","operator","skeptic","advocate","growth"]);
 
     const byIdea: Record<string, { persona_key: string; vote_score: number | null }[]> = {};
     (respData || []).forEach(r => {
@@ -79,10 +80,11 @@ const BoardroomAnalytics: React.FC<Props> = ({ userId, onRestoreIdea }) => {
   const timelineData = sessions.slice(-12).map((s, i) => ({
     label: `#${i + 1}`,
     consensus: s.consensus_score ?? 0,
-    elena: s.responses.find(r => r.persona_key === "elena")?.vote_score ?? 0,
-    helen: s.responses.find(r => r.persona_key === "helen")?.vote_score ?? 0,
-    anton: s.responses.find(r => r.persona_key === "anton")?.vote_score ?? 0,
-    margot: s.responses.find(r => r.persona_key === "margot")?.vote_score ?? 0,
+    strategist: s.responses.find(r => r.persona_key === "strategist")?.vote_score ?? 0,
+    operator: s.responses.find(r => r.persona_key === "operator")?.vote_score ?? 0,
+    skeptic: s.responses.find(r => r.persona_key === "skeptic")?.vote_score ?? 0,
+    advocate: s.responses.find(r => r.persona_key === "advocate")?.vote_score ?? 0,
+    growth: s.responses.find(r => r.persona_key === "growth")?.vote_score ?? 0,
   }));
 
   // ── Most common themes from idea content
