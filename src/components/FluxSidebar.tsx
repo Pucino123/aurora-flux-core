@@ -189,20 +189,23 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
             <span className="flex-1 text-left">{t("council.nav")}</span>
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               {PERSONAS.map((p) => {
-                const initials = t(p.name).slice(0, 2).toUpperCase();
+                const expressions: Record<string, "smile" | "straight" | "frown" | "calm" | "wide"> = {
+                  strategist: "smile",
+                  operator: "straight",
+                  skeptic: "frown",
+                  advocate: "straight",
+                  growth: "wide",
+                };
                 const isActive = filterPersona === p.key;
                 return (
                   <div key={p.key} className="relative group/avatar">
                     <button
                       onClick={(e) => { e.stopPropagation(); nav("council"); setFilterPersona(isActive ? null : p.key); }}
-                      className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-200 ${isActive ? "scale-115" : "opacity-50 hover:opacity-90 hover:scale-105"}`}
-                      style={{
-                        backgroundColor: p.color,
-                        color: "#fff",
-                        boxShadow: isActive ? `0 0 0 2.5px ${p.color}80, 0 0 8px ${p.color}60` : "none",
-                      }}
+                      className={`flex items-center justify-center transition-all duration-200 group-hover/avatar:scale-110 ${isActive ? "scale-110" : "opacity-60 hover:opacity-100 hover:scale-105"}`}
+                      style={{ boxShadow: isActive ? `0 0 0 1.5px ${p.color}60` : "none", borderRadius: "50%", padding: "1px" }}
+                      title={t(p.name)}
                     >
-                      {initials}
+                      <BaymaxFace color={p.color} size={20} expression={expressions[p.key] || "straight"} />
                     </button>
                     {/* Tooltip */}
                     <div className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150 whitespace-nowrap">
@@ -211,8 +214,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                         <div className="text-[11px] font-semibold text-white leading-tight">{t(p.name)}</div>
                         <div className="text-[9px] mt-0.5" style={{ color: p.color }}>{p.subtitle}</div>
                       </div>
-                      {/* Arrow */}
-                      <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(12,10,20,0.88)", border: `0 0 1px 1px ${p.color}40` }} />
+                      <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(12,10,20,0.88)" }} />
                     </div>
                   </div>
                 );
