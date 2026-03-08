@@ -405,6 +405,8 @@ const GridDashboard = () => {
               setRenameValue={setRenameValue}
               commitRename={commitRename}
               config={config}
+              onWidgetDragStart={(wId, pId) => { setDraggingWidgetId(wId || null); setDraggingFromPageId(pId || null); }}
+              draggingWidgetId={draggingWidgetId}
             />
           </motion.div>
         </AnimatePresence>
