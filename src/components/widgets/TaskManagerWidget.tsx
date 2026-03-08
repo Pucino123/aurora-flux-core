@@ -74,44 +74,38 @@ const TaskManagerWidget = () => {
     setEditingId(null);
   };
 
-  // ── Aura AI: break a task into subtasks ────────────────────────────────
+  // ── Aura AI: shared breakdown helper ─────────────────────────────────────
+  const invokeAuraBreakdown = useCallback(async (title: string): Promise<string[]> => {
+    const response = await supabase.functions.invoke("flux-ai", {
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: `Break this task into 3-5 concrete, actionable subtasks. Reply ONLY with a JSON array of strings, each being one subtask. No explanation, no markdown, just the JSON array. Task: "${title}"`,
+          },
+        ],
+        action: "chat",
+        context: { currentPage: "stream" },
+      },
+    });
+    const raw = response.data?.content || response.data?.message || "";
+    const match = raw.match(/\[[\s\S]*?\]/);
+    if (match) return JSON.parse(match[0]) as string[];
+    return [];
+  }, []);
+
+  // ── New task input breakdown ──────────────────────────────────────────────
   const handleAuraBreakdown = useCallback(async () => {
     const title = newTitle.trim();
     if (!title || auraLoading) return;
     setAuraLoading(true);
-
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await supabase.functions.invoke("flux-ai", {
-        body: {
-          messages: [
-            {
-              role: "user",
-              content: `Break this task into 3-5 concrete, actionable subtasks. Reply ONLY with a JSON array of strings, each being one subtask. No explanation, no markdown, just the JSON array. Task: "${title}"`,
-            },
-          ],
-          action: "chat",
-          context: { currentPage: "stream" },
-        },
-      });
-
-      let subtasks: string[] = [];
-
-      // Try to parse response
-      const raw = response.data?.content || response.data?.message || "";
-      const match = raw.match(/\[[\s\S]*?\]/);
-      if (match) {
-        subtasks = JSON.parse(match[0]);
-      }
-
+      const subtasks = await invokeAuraBreakdown(title);
       if (subtasks.length > 0) {
-        // Create parent task first
         createTask({ title, type: "task", scheduled_date: today });
-        // Create subtasks
         for (const sub of subtasks) {
-          if (typeof sub === "string" && sub.trim()) {
+          if (typeof sub === "string" && sub.trim())
             createTask({ title: `↳ ${sub.trim()}`, type: "task", scheduled_date: today });
-          }
         }
         setNewTitle("");
       }
@@ -121,7 +115,27 @@ const TaskManagerWidget = () => {
       setAuraLoading(false);
       inputRef.current?.focus();
     }
-  }, [newTitle, auraLoading, createTask, today]);
+  }, [newTitle, auraLoading, createTask, today, invokeAuraBreakdown]);
+
+  // ── Existing task row breakdown ───────────────────────────────────────────
+  const handleRowAuraBreakdown = useCallback(async (taskId: string, taskTitle: string) => {
+    if (rowAuraLoading) return;
+    setRowAuraLoading(taskId);
+    try {
+      const subtasks = await invokeAuraBreakdown(taskTitle);
+      if (subtasks.length > 0) {
+        for (const sub of subtasks) {
+          if (typeof sub === "string" && sub.trim())
+            createTask({ title: `↳ ${sub.trim()}`, type: "task", scheduled_date: today });
+        }
+        setEditingId(null);
+      }
+    } catch (err) {
+      console.error("Row Aura breakdown failed:", err);
+    } finally {
+      setRowAuraLoading(null);
+    }
+  }, [rowAuraLoading, invokeAuraBreakdown, createTask, today]);
 
   const cfg = SMART_LISTS.find(l => l.key === activeList)!;
 
