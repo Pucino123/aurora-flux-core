@@ -395,29 +395,43 @@ const CommunityBoardView = () => {
 
                 {/* Approved — CSS micro-layout */}
                 {slot.status === "approved" && (
-                  <a href={slot.websiteUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                    {slot.thumbnailUrl ? (
-                      <div className="relative w-full h-full overflow-hidden">
-                        <img src={slot.thumbnailUrl} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={slot.projectName} />
-                        <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/60 transition-all duration-300 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 backdrop-blur-[2px]">
-                          <span className="text-xs font-bold text-white text-center">{slot.projectName}</span>
-                          <span className="text-[9px] text-white/80 flex items-center gap-0.5">Visit <ExternalLink size={8} /></span>
+                  <div className="relative w-full h-full">
+                    <a href={slot.websiteUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                      {slot.thumbnailUrl ? (
+                        <div className="relative w-full h-full overflow-hidden">
+                          <img src={slot.thumbnailUrl} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={slot.projectName} />
+                          <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/60 transition-all duration-300 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 backdrop-blur-[2px]">
+                            <span className="text-xs font-bold text-white text-center">{slot.projectName}</span>
+                            <span className="text-[9px] text-white/80 flex items-center gap-0.5">Visit <ExternalLink size={8} /></span>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="relative w-full h-full flex flex-col overflow-hidden">
-                        {/* Browser chrome with CSS micro-layout */}
-                        <div className="flex flex-col h-full overflow-hidden group-hover:scale-[1.03] transition-transform duration-500 origin-center">
-                          <BrowserChrome layoutType={lt} />
+                      ) : (
+                        <div className="relative w-full h-full flex flex-col overflow-hidden">
+                          <div className="flex flex-col h-full overflow-hidden group-hover:scale-[1.03] transition-transform duration-500 origin-center">
+                            <BrowserChrome layoutType={lt} />
+                          </div>
+                          <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/70 transition-all duration-300 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 rounded-2xl">
+                            <span className="text-xs font-bold text-white text-center px-2">{slot.projectName}</span>
+                            <span className="text-[9px] text-white/80 flex items-center gap-0.5">Visit Project <ExternalLink size={8} /></span>
+                          </div>
                         </div>
-                        {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/70 transition-all duration-300 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 rounded-2xl">
-                          <span className="text-xs font-bold text-white text-center px-2">{slot.projectName}</span>
-                          <span className="text-[9px] text-white/80 flex items-center gap-0.5">Visit Project <ExternalLink size={8} /></span>
-                        </div>
-                      </div>
+                      )}
+                    </a>
+                    {/* Admin upload button */}
+                    {isAdmin && (
+                      <label
+                        className="absolute top-1.5 right-1.5 z-20 cursor-pointer p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all opacity-0 group-hover:opacity-100"
+                        title="Replace thumbnail"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {adminUploading && adminUploadSlot === slot.slotIndex
+                          ? <Loader2 size={11} className="animate-spin" />
+                          : <Plus size={11} />}
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) { setAdminUploadSlot(slot.slotIndex); handleAdminThumbnailUpload(f, slot.slotIndex); } }} />
+                      </label>
                     )}
-                  </a>
+                  </div>
                 )}
               </motion.div>
             );
