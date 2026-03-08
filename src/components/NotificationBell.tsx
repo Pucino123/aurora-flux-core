@@ -42,7 +42,7 @@ export function pushNotification(notif: Omit<AppNotification, "id" | "timestamp"
   };
   const updated = [newNotif, ...notifs];
   saveNotifications(updated);
-  window.dispatchEvent(new Event("flux-notifications-updated"));
+  window.dispatchEvent(new Event("dashiii-notifications-updated"));
   return newNotif;
 }
 
