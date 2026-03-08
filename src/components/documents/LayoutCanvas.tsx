@@ -5,7 +5,7 @@
  * Supports isCanvasMode to lock/unlock dragging for "Design" vs "Text" mode.
  */
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle, Copy, Paintbrush } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -309,7 +309,12 @@ const EntityNode: React.FC<EntityNodeProps> = ({
 }) => {
   const { type, position, size, style, content, zIndex } = entity;
   const resizeStart = useRef<{ mx: number; my: number; w: number; h: number } | null>(null);
-  const didDrag = useRef(false);
+  const dragStart = useRef<{ mx: number; my: number; ox: number; oy: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [livePos, setLivePos] = useState(position);
+
+  // Sync livePos when entity position changes externally
+  useEffect(() => { setLivePos(position); }, [position.x, position.y]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -325,6 +330,42 @@ const EntityNode: React.FC<EntityNodeProps> = ({
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!isDraggable) return;
+    // Only main button (left click)
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    onSelect(entity.id);
+
+    dragStart.current = { mx: e.clientX, my: e.clientY, ox: livePos.x, oy: livePos.y };
+    setDragging(true);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragStart.current || !isDraggable) return;
+    e.stopPropagation();
+    const canvas = canvasRef.current;
+    const maxX = canvas ? canvas.offsetWidth  - size.w : 9999;
+    const maxY = canvas ? canvas.offsetHeight - size.h : 9999;
+    const nx = clamp(dragStart.current.ox + e.clientX - dragStart.current.mx, 0, maxX);
+    const ny = clamp(dragStart.current.oy + e.clientY - dragStart.current.my, 0, maxY);
+    setLivePos({ x: nx, y: ny });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!dragStart.current || !isDraggable) return;
+    e.stopPropagation();
+    const canvas = canvasRef.current;
+    const maxX = canvas ? canvas.offsetWidth  - size.w : 9999;
+    const maxY = canvas ? canvas.offsetHeight - size.h : 9999;
+    const nx = clamp(dragStart.current.ox + e.clientX - dragStart.current.mx, 0, maxX);
+    const ny = clamp(dragStart.current.oy + e.clientY - dragStart.current.my, 0, maxY);
+    dragStart.current = null;
+    setDragging(false);
+    onDragEnd(entity.id, nx, ny);
   };
 
   const shapeStyle: React.CSSProperties = {
@@ -347,7 +388,7 @@ const EntityNode: React.FC<EntityNodeProps> = ({
     // Text mode — fully static, no drag, no selection chrome
     return (
       <div
-        style={{ zIndex, position: "absolute", left: position.x, top: position.y, ...shapeStyle }}
+        style={{ zIndex, position: "absolute", left: livePos.x, top: livePos.y, ...shapeStyle }}
       >
         {type === "textBox" && (
           <div
@@ -365,28 +406,24 @@ const EntityNode: React.FC<EntityNodeProps> = ({
   }
 
   return (
-    <motion.div
-      drag
-      dragMomentum={false}
-      dragElastic={0}
-      dragListener={true}
-      dragConstraints={canvasRef}
-      onDragStart={() => { didDrag.current = false; }}
-      onDrag={() => { didDrag.current = true; }}
-      onDragEnd={(e, info) => {
-        e.stopPropagation();
-        onDragEnd(entity.id,
-          clamp(position.x + info.offset.x, 0, (canvasRef.current?.offsetWidth ?? 9999) - size.w),
-          clamp(position.y + info.offset.y, 0, (canvasRef.current?.offsetHeight ?? 9999) - size.h)
-        );
-      }}
-      onPointerDown={e => { e.stopPropagation(); didDrag.current = false; }}
-      onPointerUp={e => { e.stopPropagation(); if (!didDrag.current) onSelect(entity.id); }}
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, entity.id); }}
-      className="absolute touch-none"
-      style={{ zIndex, position: "absolute", left: position.x, top: position.y, willChange: "transform", cursor: "grab" }}
-      whileHover={{ filter: "brightness(1.06)" }}
-      whileDrag={{ cursor: "grabbing", scale: 1.02, zIndex: 9999 }}
+      className="absolute touch-none select-none"
+      style={{
+        zIndex: dragging ? 9999 : zIndex,
+        position: "absolute",
+        left: livePos.x,
+        top: livePos.y,
+        cursor: dragging ? "grabbing" : "grab",
+        transform: dragging ? "scale(1.02)" : "scale(1)",
+        transition: dragging ? "none" : "transform 0.15s ease",
+        willChange: "transform",
+        filter: isSelected && !dragging ? "brightness(1.06)" : undefined,
+      }}
     >
       <div style={shapeStyle}>
         {type === "textBox" && (
@@ -394,7 +431,7 @@ const EntityNode: React.FC<EntityNodeProps> = ({
             contentEditable
             suppressContentEditableWarning
             onInput={e => onContentChange(entity.id, (e.target as HTMLDivElement).innerText)}
-            onMouseDown={e => e.stopPropagation()}
+            onPointerDown={e => e.stopPropagation()}
             className="w-full h-full p-2 outline-none text-sm leading-snug cursor-text"
             style={{ color: style.stroke || "#ffffff", fontSize: 13 }}
           >
@@ -405,12 +442,12 @@ const EntityNode: React.FC<EntityNodeProps> = ({
       {/* Resize handle */}
       {isSelected && (
         <div
-          onMouseDown={handleResizeMouseDown}
+          onPointerDown={e => { e.stopPropagation(); handleResizeMouseDown(e as unknown as React.MouseEvent); }}
           className="absolute bottom-[-4px] right-[-4px] w-3 h-3 rounded-full cursor-se-resize z-10"
           style={{ background: "rgba(139,92,246,0.9)", border: "2px solid #fff", boxShadow: "0 2px 6px rgba(0,0,0,0.4)" }}
         />
       )}
-    </motion.div>
+    </div>
   );
 };
 

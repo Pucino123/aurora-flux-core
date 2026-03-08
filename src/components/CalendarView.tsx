@@ -181,7 +181,7 @@ const DroppableSlot: React.FC<{
     <div
       ref={setNodeRef}
       onClick={onSlotClick}
-      className={`relative border-t border-white/5 transition-colors cursor-pointer group ${todaySlot ? "bg-primary/[0.02]" : ""} ${isOver ? "bg-primary/10" : "hover:bg-secondary/15"} ${className || ""}`}
+      className={`relative border-t border-border/20 transition-colors cursor-pointer group ${todaySlot ? "bg-primary/[0.02]" : ""} ${isOver ? "bg-primary/10" : "hover:bg-secondary/15"} ${className || ""}`}
       style={style}
     >
       {isOver && (
@@ -538,7 +538,7 @@ const WeekView: React.FC<{
           <div className="grid grid-cols-8" style={{ background: "hsl(var(--card) / 0.5)" }}>
             {hours.map(h => (
               <React.Fragment key={h}>
-                <div className="text-[9px] text-muted-foreground/40 text-right font-mono pr-2 pt-1.5 border-t border-white/5" style={{ height: HOUR_H }}>
+                <div className="text-[9px] text-muted-foreground/40 text-right font-mono pr-2 pt-1.5 border-t border-border/20" style={{ height: HOUR_H }}>
                   {h.toString().padStart(2, "0")}:00
                 </div>
                 {days.map(d => {

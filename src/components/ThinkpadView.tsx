@@ -52,6 +52,7 @@ interface IdeaNodeData {
   label: string;
   iconKey: string;
   iconColor: string;
+  isLight?: boolean;
   [key: string]: unknown;
 }
 
@@ -59,6 +60,7 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
   const { setNodes, deleteElements } = useReactFlow();
   const iconEntry = ICONS.find((i) => i.key === data.iconKey) || ICONS[0];
   const IconComp = iconEntry.icon;
+  const isLight = !!data.isLight;
 
   const updateLabel = (val: string) => {
     setNodes((nds) =>
@@ -75,18 +77,18 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
     <div
       className="group relative transition-all duration-200"
       style={{
-        background: "rgba(15, 18, 30, 0.85)",
+        background: isLight ? "rgba(255,255,255,0.96)" : "rgba(15, 18, 30, 0.85)",
         backdropFilter: "blur(20px)",
         border: selected
           ? `1.5px solid ${data.iconColor}80`
-          : "1px solid rgba(255,255,255,0.08)",
+          : isLight ? "1px solid rgba(0,0,0,0.10)" : "1px solid rgba(255,255,255,0.08)",
         borderRadius: "16px",
         padding: "16px",
         minWidth: "180px",
         maxWidth: "260px",
         boxShadow: selected
-          ? `0 0 20px ${data.iconColor}30, 0 8px 32px rgba(0,0,0,0.4)`
-          : "0 8px 32px rgba(0,0,0,0.3)",
+          ? `0 0 20px ${data.iconColor}30, 0 8px 32px ${isLight ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.4)"}`
+          : isLight ? "0 4px 16px rgba(0,0,0,0.08)" : "0 8px 32px rgba(0,0,0,0.3)",
       }}
     >
       {/* Delete button — appears on hover */}
@@ -116,8 +118,10 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
         value={String(data.label)}
         onChange={(e) => updateLabel(e.target.value)}
         placeholder="Idea title…"
-        className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-white/20"
-        style={{ color: "rgba(255,255,255,0.9)" }}
+        className="w-full bg-transparent text-sm font-medium outline-none"
+        style={{
+          color: isLight ? "rgba(20,24,40,0.9)" : "rgba(255,255,255,0.9)",
+        }}
         onPointerDown={(e) => e.stopPropagation()}
       />
     </div>
@@ -174,9 +178,11 @@ const IconPicker = ({ onPick, onClose }: { onPick: (key: string, color: string) 
 const IdeaCanvas = ({
   track,
   onSave,
+  isLight,
 }: {
   track: IdeaTrack;
   onSave: (nodes: Node[], edges: Edge[]) => void;
+  isLight: boolean;
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(track.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(track.edges);
@@ -191,6 +197,9 @@ const IdeaCanvas = ({
     setNodes(track.nodes);
     setEdges(track.edges);
   }, [track.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Propagate isLight into all node data so IdeaNode can style itself
+  const nodesWithLight = nodes.map(n => ({ ...n, data: { ...n.data, isLight } }));
 
   const onConnect = useCallback(
     (params: Connection) =>
@@ -244,7 +253,7 @@ const IdeaCanvas = ({
   return (
     <div className="flex-1 relative h-full w-full">
       <ReactFlow
-        nodes={nodes.map(n => ({
+        nodes={nodesWithLight.map(n => ({
           ...n,
           style: markedNodes.has(n.id)
             ? { ...((n.style as object) || {}), outline: "2px solid #3b82f6", outlineOffset: "3px" }
@@ -274,12 +283,12 @@ const IdeaCanvas = ({
             onMouseDown={(e) => e.stopPropagation()}
           />
         )}
-        <Background color="rgba(255,255,255,0.06)" gap={28} size={1} />
+        <Background color={isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)"} gap={28} size={1} />
         {/* Hide default Controls — we use our own toolbar */}
         <MiniMap
-          style={{ background: "rgba(15,18,30,0.95)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: "14px", cursor: "pointer" }}
+          style={{ background: isLight ? "rgba(240,242,250,0.95)" : "rgba(15,18,30,0.95)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: "14px", cursor: "pointer" }}
           nodeColor={(n) => markedNodes.has(n.id) ? "#3b82f6" : (ICONS.find((i) => i.key === (n.data as IdeaNodeData).iconKey)?.color ?? "#6366f1")}
-          maskColor="rgba(0,0,0,0.5)"
+          maskColor={isLight ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"}
           pannable
           zoomable
         />
@@ -589,8 +598,8 @@ const IdeapadView = () => {
   };
 
   return (
-    <div className={`flex flex-col flex-1 h-full min-h-screen ${pageLight ? "page-light" : ""}`}
-      style={{ background: pageLight ? undefined : "#06080f" }}>
+    <div className="flex flex-col flex-1 h-full min-h-screen"
+      style={{ background: pageLight ? "#f3f4f8" : "#06080f" }}>
       <SEO title="Ideapad" description="Multi-track infinite canvas for idea mapping." />
 
       {/* Tab bar with theme toggle */}
@@ -619,7 +628,7 @@ const IdeapadView = () => {
       {/* Canvas */}
       <div className="flex-1 relative overflow-hidden">
         <ReactFlowProvider key={activeTrack?.id}>
-          <IdeaCanvas track={activeTrack} onSave={handleSave} />
+          <IdeaCanvas track={activeTrack} onSave={handleSave} isLight={pageLight} />
         </ReactFlowProvider>
       </div>
     </div>
