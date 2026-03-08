@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ResponsiveGridLayout, useContainerWidth } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { motion, AnimatePresence } from "framer-motion";
@@ -506,71 +507,82 @@ const GridDashboard = () => {
         <RecentActivityFeed />
       </div>
 
-      {/* ─── Pagination Dots (sticky bottom bar) ─── */}
-      <div className="shrink-0 flex items-center justify-center gap-2 py-3 border-t border-border/20" data-tour="pagination-dots"
-        style={{ background: "hsl(var(--background)/0.7)", backdropFilter: "blur(12px)" }}>
+      {/* ─── Pagination Dots — rendered via portal so they're never clipped ─── */}
+      {createPortal(
         <div
-          className="flex items-center gap-2 px-4 py-2 rounded-full shadow-lg"
-          style={{
-            background: "hsl(var(--card)/0.85)",
-            border: "1.5px solid hsl(var(--border)/0.5)",
-            backdropFilter: "blur(16px)",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08)"
-          }}
+          data-tour="pagination-dots"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2"
         >
-          {pages.map((p, idx) => (
-            <button
-              key={idx}
-              onClick={() => goToPage(idx, idx > currentPage ? 1 : -1)}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-                setHoverDotIdx(idx);
-                if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
-                hoverDotTimer.current = setTimeout(() => goToPage(idx, idx > currentPage ? 1 : -1), 500);
-              }}
-              onDragLeave={() => {
-                setHoverDotIdx(null);
-                if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                setHoverDotIdx(null);
-                if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
-                const wId = e.dataTransfer.getData("application/flux-widget");
-                const fromPId = e.dataTransfer.getData("application/flux-from-page");
-                if (!wId || !fromPId || fromPId === p.id) return;
-                const next = pages.map((pg) => {
-                  if (pg.id === fromPId) return { ...pg, widgets: pg.widgets.filter(w => w !== wId) };
-                  if (pg.id === p.id) return { ...pg, widgets: [...pg.widgets.filter(w => w !== wId), wId] };
-                  return pg;
-                });
-                updatePages(next);
-                goToPage(idx, idx > currentPage ? 1 : -1);
-                toast.success(`Moved widget to ${p.name}`);
-                setDraggingWidgetId(null);
-                setDraggingFromPageId(null);
-              }}
-              aria-label={`Go to page ${idx + 1}: ${p.name}`}
-              title={p.name}
-              className={`transition-all duration-300 rounded-full ${
-                idx === currentPage
-                  ? "w-6 h-2.5 bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.7)]"
-                  : hoverDotIdx === idx && draggingWidgetId
-                    ? "w-4 h-3 bg-primary/60 scale-125"
-                    : "w-2.5 h-2.5 bg-foreground/25 hover:bg-foreground/50"
-              }`}
-            />
-          ))}
-        </div>
-        <button
-          onClick={addPage}
-          aria-label="Add new page"
-          className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
+          <div
+            className="flex items-center gap-2 px-4 py-2 rounded-full"
+            style={{
+              background: "hsl(var(--card)/0.92)",
+              border: "1.5px solid hsl(var(--border)/0.6)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08)"
+            }}
+          >
+            {pages.map((p, idx) => (
+              <button
+                key={idx}
+                onClick={() => goToPage(idx, idx > currentPage ? 1 : -1)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  setHoverDotIdx(idx);
+                  if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
+                  hoverDotTimer.current = setTimeout(() => goToPage(idx, idx > currentPage ? 1 : -1), 500);
+                }}
+                onDragLeave={() => {
+                  setHoverDotIdx(null);
+                  if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setHoverDotIdx(null);
+                  if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
+                  const wId = e.dataTransfer.getData("application/flux-widget");
+                  const fromPId = e.dataTransfer.getData("application/flux-from-page");
+                  if (!wId || !fromPId || fromPId === p.id) return;
+                  const next = pages.map((pg) => {
+                    if (pg.id === fromPId) return { ...pg, widgets: pg.widgets.filter(w => w !== wId) };
+                    if (pg.id === p.id) return { ...pg, widgets: [...pg.widgets.filter(w => w !== wId), wId] };
+                    return pg;
+                  });
+                  updatePages(next);
+                  goToPage(idx, idx > currentPage ? 1 : -1);
+                  toast.success(`Moved widget to ${p.name}`);
+                  setDraggingWidgetId(null);
+                  setDraggingFromPageId(null);
+                }}
+                aria-label={`Go to page ${idx + 1}: ${p.name}`}
+                title={p.name}
+                className={`transition-all duration-300 rounded-full ${
+                  idx === currentPage
+                    ? "w-6 h-2.5 bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.7)]"
+                    : hoverDotIdx === idx && draggingWidgetId
+                      ? "w-4 h-3 bg-primary/60 scale-125"
+                      : "w-2.5 h-2.5 bg-foreground/25 hover:bg-foreground/50"
+                }`}
+              />
+            ))}
+          </div>
+          <button
+            onClick={addPage}
+            aria-label="Add new page"
+            className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+            style={{
+              background: "hsl(var(--card)/0.92)",
+              border: "1.5px solid hsl(var(--border)/0.6)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            <Plus size={14} />
+          </button>
+        </div>,
+        document.body
+      )}
 
       {/* ─── Drag hint bar ─── */}
       <AnimatePresence>

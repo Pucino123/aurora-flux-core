@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { pushNotification } from "@/components/NotificationBell";
 
 // ── Types ──
 export interface DbFolder {
@@ -413,6 +414,13 @@ export function FluxProvider({ children }: { children: ReactNode }) {
     } as any).select().single();
     if (error) { console.error(error); setTasks((prev) => prev.filter((t) => t.id !== localId)); return null; }
     setTasks((prev) => prev.map((t) => t.id === localId ? (row as unknown as DbTask) : t));
+    // Push notification
+    pushNotification({
+      type: "general",
+      title: "Task Created",
+      body: `"${data.title}" added to your tasks`,
+      icon: "✅",
+    });
     return row as unknown as DbTask;
   }, [user, tasks.length]);
 

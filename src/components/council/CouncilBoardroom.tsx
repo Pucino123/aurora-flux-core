@@ -1490,7 +1490,16 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 *Powered by Dashiii Boardroom · [aurora-flux-core.lovable.app](https://aurora-flux-core.lovable.app)*`;
 
   return (
-    <div ref={boardroomRef} className="flex flex-col h-full min-h-0 gap-4">
+    <div ref={boardroomRef} className="relative flex flex-col h-full min-h-0 gap-4 overflow-hidden">
+      {/* Ambient orbs — Council atmosphere */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden -z-0">
+        <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full opacity-[0.07]"
+          style={{ background: "radial-gradient(circle, #34d399, transparent 70%)" }} />
+        <div className="absolute -bottom-40 -right-24 w-96 h-96 rounded-full opacity-[0.06]"
+          style={{ background: "radial-gradient(circle, #8b5cf6, transparent 70%)" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full opacity-[0.04]"
+          style={{ background: "radial-gradient(circle, #22d3ee, transparent 70%)" }} />
+      </div>
       {/* Onboarding tour */}
       <AnimatePresence>
         {showTour && (

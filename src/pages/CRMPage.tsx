@@ -27,10 +27,12 @@ const DealForm: React.FC<DealFormProps> = ({ initial, onSave, onClose }) => {
   const [company, setCompany] = useState(initial?.company || "");
   const [value, setValue] = useState(String(initial?.value || "5000"));
   const [stage, setStage] = useState<Stage>(initial?.stage || "leads");
+  const [email, setEmail] = useState(initial?.email || "");
+  const [phone, setPhone] = useState(initial?.phone || "");
 
   const handleSave = () => {
     if (!name.trim() || !company.trim()) { toast.error("Name and company are required"); return; }
-    onSave({ name: name.trim(), company: company.trim(), value: parseInt(value.replace(/\D/g, "") || "0"), stage, invoices: [] });
+    onSave({ name: name.trim(), company: company.trim(), value: parseInt(value.replace(/\D/g, "") || "0"), stage, invoices: [], email: email.trim() || undefined, phone: phone.trim() || undefined });
     onClose();
   };
 
@@ -51,6 +53,8 @@ const DealForm: React.FC<DealFormProps> = ({ initial, onSave, onClose }) => {
             { label: "Contact Name", icon: User, val: name, set: setName, ph: "Alex Turner" },
             { label: "Company", icon: Building2, val: company, set: setCompany, ph: "Acme Corp." },
             { label: "Deal Value ($)", icon: DollarSign, val: value, set: setValue, ph: "5000" },
+            { label: "Email", icon: User, val: email, set: setEmail, ph: "alex@acme.com" },
+            { label: "Phone", icon: User, val: phone, set: setPhone, ph: "+1 555-0100" },
           ].map(({ label, icon: Icon, val, set, ph }) => (
             <div key={label} className="space-y-1.5">
               <label className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium flex items-center gap-1"><Icon size={9} />{label}</label>

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Trash2, Send, Loader2, Building2, User, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { useCRM, CRMContact } from "@/context/CRMContext";
+import { pushNotification } from "@/components/NotificationBell";
 
 interface LineItem {
   id: string;
@@ -61,6 +62,12 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
       description: items.map(i => i.description).join(", ").slice(0, 80),
     });
     toast.success(`Invoice sent to ${contact.email || contact.name}`);
+    pushNotification({
+      type: "general",
+      title: "Invoice Sent",
+      body: `${invoiceNo} for $${grandTotal.toFixed(2)} sent to ${contact.name}`,
+      icon: "📄",
+    });
     setSending(false);
     onClose();
   };

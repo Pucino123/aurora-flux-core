@@ -34,6 +34,19 @@ const SparksCheckoutModal = ({ open, onClose }: Props) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const counterRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && open && payState !== "processing") {
+        onClose();
+        setPayState("idle");
+        setDisplayCount(0);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, payState, onClose]);
+
   // Count-up animation when success
   useEffect(() => {
     if (payState !== "success") return;
