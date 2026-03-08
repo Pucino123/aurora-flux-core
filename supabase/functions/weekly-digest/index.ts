@@ -99,7 +99,7 @@ function buildEmailHtml(opts: {
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Weekly Flux Digest</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Weekly Dashiii Digest</title></head>
 <body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
     <tr>
@@ -110,7 +110,7 @@ function buildEmailHtml(opts: {
           <tr>
             <td style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a78bfa 100%);padding:40px 40px 32px;text-align:center;">
               <div style="font-size:28px;margin-bottom:8px;">✨</div>
-              <h1 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 4px;">Your Weekly Flux Digest</h1>
+              <h1 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 4px;">Your Weekly Dashiii Digest</h1>
               <p style="font-size:13px;color:rgba(255,255,255,0.8);margin:0;">${weekLabel}</p>
             </td>
           </tr>
