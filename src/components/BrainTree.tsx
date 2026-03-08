@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { t } from "@/lib/i18n";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { FOLDER_ICONS } from "./CreateFolderModal";
 
 const FOLDER_COLORS = [
@@ -179,15 +180,21 @@ const FolderNodeComponent = ({
             {folderDocs.map((doc) => (
               <button
                 key={doc.id}
+                draggable
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  e.dataTransfer.setData("application/flux-doc", JSON.stringify(doc));
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
                 onClick={() => onDocClick?.(doc.id)}
                 className="sidebar-item w-full group text-muted-foreground hover:text-foreground"
                 style={{ paddingLeft: `${8 + (depth + 1) * 16}px` }}
               >
                 <span className="w-4" />
                 {doc.type === "spreadsheet" ? (
-                  <Table size={14} className="shrink-0 text-emerald-500" />
+                  <Table size={14} className="shrink-0" style={{ color: "hsl(142 71% 45%)" }} />
                 ) : (
-                  <FileText size={14} className="shrink-0 text-blue-400" />
+                  <FileText size={14} className="shrink-0" style={{ color: "hsl(217 91% 65%)" }} />
                 )}
                 <span className="truncate flex-1 text-left text-[12px]">{doc.title}</span>
               </button>
@@ -205,6 +212,7 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
     removeFolder, updateFolder, moveFolder, getAllFoldersFlat, setPendingDocumentId,
   } = useFlux();
   const { user } = useAuth();
+  const { openInWorkspace } = useWorkspace();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [iconSearch, setIconSearch] = useState("");
@@ -369,7 +377,20 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
             onDrop={handleDrop}
             dragOverId={dragOverId}
             allDocs={allDocs}
-            onDocClick={(docId) => {
+            onDocClick={async (docId) => {
+              // Fetch the full doc and open it directly in workspace
+              if (user) {
+                const { data } = await (supabase as any).from("documents").select("*").eq("id", docId).maybeSingle();
+                if (data) { openInWorkspace(data); setActiveView("multitask" as any); return; }
+              } else {
+                try {
+                  const raw = localStorage.getItem("flux_local_documents");
+                  const docs = raw ? JSON.parse(raw) : [];
+                  const found = docs.find((d: any) => d.id === docId);
+                  if (found) { openInWorkspace(found); setActiveView("multitask" as any); return; }
+                } catch {}
+              }
+              // Fallback
               setPendingDocumentId(docId);
               setActiveView("documents");
             }}

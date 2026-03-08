@@ -1,33 +1,35 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
-import { FileText, Table, Folder, X, Layers, GripVertical } from "lucide-react";
+import { FileText, Table, X, Layers, GripVertical, Columns2 } from "lucide-react";
 import SEO from "@/components/SEO";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { useDocuments } from "@/hooks/useDocuments";
+import DocumentView from "./documents/DocumentView";
+import type { DbDocument } from "@/hooks/useDocuments";
 
-interface PanelItem {
-  id: string;
-  title: string;
-  type: "text" | "spreadsheet" | "folder";
-  content?: string;
-}
-
-const FILE_TYPE_ICONS: Record<string, any> = {
-  text: FileText,
-  spreadsheet: Table,
-  folder: Folder,
-};
-
-const GlassWindow = ({ item, onClose, side }: { item: PanelItem; onClose: () => void; side: "left" | "right" }) => {
-  const Icon = FILE_TYPE_ICONS[item.type] || FileText;
+/* ─── Window chrome wrapper ─── */
+const GlassWindow = ({
+  doc, onClose, onUpdate, onDelete,
+}: {
+  doc: DbDocument;
+  onClose: () => void;
+  onUpdate: (id: string, updates: Partial<DbDocument>) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const Icon = doc.type === "spreadsheet" ? Table : FileText;
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Window header */}
+      {/* macOS-style window header */}
       <div
-        className="flex items-center gap-2.5 px-4 py-2.5 border-b shrink-0"
-        style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card)/0.6)", backdropFilter: "blur(8px)" }}
+        className="flex items-center gap-2.5 px-4 py-2 border-b shrink-0 select-none"
+        style={{
+          borderColor: "hsl(var(--border))",
+          background: "hsl(var(--card)/0.7)",
+          backdropFilter: "blur(10px)",
+        }}
       >
-        {/* macOS close dot */}
         <button
           onClick={onClose}
           className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-400 transition-colors shrink-0 flex items-center justify-center group"
@@ -36,55 +38,36 @@ const GlassWindow = ({ item, onClose, side }: { item: PanelItem; onClose: () => 
         >
           <X size={7} className="opacity-0 group-hover:opacity-100 text-red-900" />
         </button>
-        <Icon size={13} className="text-muted-foreground shrink-0" />
-        <span className="text-sm font-medium text-foreground flex-1 truncate">{item.title}</span>
-        <span className="text-[10px] text-muted-foreground capitalize">{item.type}</span>
+        <Icon size={12} className="text-muted-foreground shrink-0" />
+        <span className="text-xs font-medium text-foreground flex-1 truncate">{doc.title}</span>
+        <span
+          className="text-[10px] px-1.5 py-0.5 rounded-md font-medium capitalize"
+          style={{ background: "hsl(var(--secondary)/0.6)", color: "hsl(var(--muted-foreground))" }}
+        >
+          {doc.type === "spreadsheet" ? "Sheet" : "Doc"}
+        </span>
       </div>
 
-      {/* Content area */}
-      <div className="flex-1 overflow-y-auto p-5 min-h-0">
-        {item.type === "spreadsheet" ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr>{["A", "B", "C", "D"].map((col) => (
-                  <th key={col} className="border border-border/40 px-3 py-1.5 text-center font-semibold text-muted-foreground bg-secondary/20">{col}</th>
-                ))}</tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: 8 }).map((_, r) => (
-                  <tr key={r}>
-                    <td className="border border-border/40 px-2 py-1.5 text-center text-muted-foreground bg-secondary/10">{r + 1}</td>
-                    {["B", "C", "D"].map((col) => (
-                      <td key={col} className="border border-border/40 px-2 py-1.5 text-center text-foreground/60">—</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : item.type === "folder" ? (
-          <div className="space-y-1">
-            {["README.md", "notes.txt", "data.csv", "budget.xlsx"].map((f) => (
-              <div key={f} className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-secondary/40 transition-colors cursor-default">
-                <FileText size={13} className="text-muted-foreground" />
-                <span className="text-sm text-foreground">{f}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="prose prose-sm max-w-none">
-            <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
-              {item.content || `# ${item.title}\n\nStart writing your document here…\n\nThis panel supports side-by-side viewing with another document.`}
-            </p>
-          </div>
-        )}
+      {/* Real DocumentView — fills remaining height */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <DocumentView
+          document={doc}
+          onBack={onClose}
+          onUpdate={onUpdate}
+          onDelete={(id) => { onDelete(id); onClose(); }}
+        />
       </div>
     </div>
   );
 };
 
-const EmptyDropZone = ({ label, onDrop }: { label: string; onDrop: (item: PanelItem) => void }) => {
+/* ─── Drop zone for second panel ─── */
+const EmptyDropZone = ({
+  label, onDropDoc,
+}: {
+  label: string;
+  onDropDoc: (doc: DbDocument) => void;
+}) => {
   const [over, setOver] = useState(false);
 
   return (
@@ -95,142 +78,170 @@ const EmptyDropZone = ({ label, onDrop }: { label: string; onDrop: (item: PanelI
         e.preventDefault();
         setOver(false);
         try {
-          const data = JSON.parse(e.dataTransfer.getData("application/flux-item"));
-          onDrop(data);
+          const data = JSON.parse(e.dataTransfer.getData("application/flux-doc"));
+          onDropDoc(data);
         } catch {}
       }}
-      className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl m-3 transition-all duration-200 ${
-        over ? "border-primary/60 bg-primary/5 scale-[1.01]" : "border-border/40"
+      className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl m-3 transition-all duration-200 cursor-pointer ${
+        over
+          ? "border-primary/70 bg-primary/5 scale-[1.01]"
+          : "border-border/40 hover:border-border/70"
       }`}
     >
-      <Layers size={18} className="text-muted-foreground mb-2" />
+      <Columns2 size={20} className="text-muted-foreground mb-2" />
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground/60 mt-1">or drag a document here</p>
     </div>
   );
 };
 
+/* ─── Main MultitaskingView ─── */
 const MultitaskingView = () => {
-  const [panels, setPanels] = useState<[PanelItem | null, PanelItem | null]>([null, null]);
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
-
-  useEffect(() => {
-    const handleDrag = () => setIsDraggingOver(true);
-    const handleDragEnd = () => setIsDraggingOver(false);
-    window.addEventListener("flux-drag-start", handleDrag);
-    window.addEventListener("flux-drag-end", handleDragEnd);
-    return () => {
-      window.removeEventListener("flux-drag-start", handleDrag);
-      window.removeEventListener("flux-drag-end", handleDragEnd);
-    };
-  }, []);
-
-  const openPanel = useCallback((item: PanelItem, side?: "left" | "right") => {
-    setPanels((prev) => {
-      const next: [PanelItem | null, PanelItem | null] = [...prev] as any;
-      if (side === "left") { next[0] = item; return next; }
-      if (side === "right") { next[1] = item; return next; }
-      // Auto-assign to first empty slot
-      if (!next[0]) { next[0] = item; return next; }
-      if (!next[1]) { next[1] = item; return next; }
-      next[0] = item; // replace left if both occupied
-      return next;
-    });
-  }, []);
-
-  const closePanel = useCallback((idx: 0 | 1) => {
-    setPanels((prev) => {
-      const next: [PanelItem | null, PanelItem | null] = [...prev] as any;
-      next[idx] = null;
-      return next;
-    });
-  }, []);
+  const { panels, closePanel, replacePanel, openInWorkspace } = useWorkspace();
+  const { updateDocument, removeDocument } = useDocuments();
 
   const [left, right] = panels;
   const bothOpen = !!left && !!right;
   const anyOpen = !!left || !!right;
 
+  const handleDropOnEmpty = useCallback((doc: DbDocument) => {
+    openInWorkspace(doc);
+  }, [openInWorkspace]);
+
   return (
     <div
-      className="flex-1 flex flex-col min-h-screen min-w-0 relative"
-      onDragOver={(e) => { e.preventDefault(); }}
+      className="flex-1 flex flex-col min-h-0 min-w-0 relative"
+      onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
         try {
-          const data = JSON.parse(e.dataTransfer.getData("application/flux-item"));
-          openPanel(data);
+          const data = JSON.parse(e.dataTransfer.getData("application/flux-doc"));
+          openInWorkspace(data);
         } catch {}
       }}
     >
-      <SEO title="Workspace" description="Split-View multitasking workspace — open documents and folders side-by-side." />
-      <div className="px-6 py-4 border-b border-border/30">
-        <h2 className="text-base font-semibold text-foreground">Workspace</h2>
-        <p className="text-xs text-muted-foreground">Drag files from the sidebar to open them here</p>
+      <SEO title="Workspace" description="Split-View — open documents and spreadsheets side by side." />
+
+      {/* Header */}
+      <div
+        className="px-6 py-3 border-b shrink-0 flex items-center gap-3"
+        style={{ borderColor: "hsl(var(--border)/0.3)" }}
+      >
+        <Layers size={16} className="text-muted-foreground" />
+        <div>
+          <h2 className="text-sm font-semibold text-foreground leading-none">Workspace</h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {bothOpen
+              ? "Two documents open — drag the divider to resize"
+              : anyOpen
+              ? "Drag a second document here to open it side by side"
+              : "Click a document in the sidebar to open it here"}
+          </p>
+        </div>
+        {anyOpen && (
+          <span
+            className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium"
+            style={{ background: "hsl(var(--primary)/0.12)", color: "hsl(var(--primary))" }}
+          >
+            {bothOpen ? "Split View" : "Single View"}
+          </span>
+        )}
       </div>
 
       {!anyOpen ? (
         /* Empty state */
         <div
           className="flex-1 flex flex-col items-center justify-center gap-4"
-          onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
-          onDragLeave={() => setIsDraggingOver(false)}
+          onDragOver={(e) => { e.preventDefault(); }}
           onDrop={(e) => {
             e.preventDefault();
-            setIsDraggingOver(false);
             try {
-              const data = JSON.parse(e.dataTransfer.getData("application/flux-item"));
-              openPanel(data);
+              const data = JSON.parse(e.dataTransfer.getData("application/flux-doc"));
+              openInWorkspace(data);
             } catch {}
           }}
         >
           <motion.div
-            animate={isDraggingOver ? { scale: 1.04, borderColor: "hsl(var(--primary))" } : {}}
-            className="flex flex-col items-center gap-3 p-10 rounded-3xl border-2 border-dashed border-border/40 max-w-xs text-center transition-all"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center gap-3 p-10 rounded-3xl border-2 border-dashed max-w-sm text-center"
+            style={{ borderColor: "hsl(var(--border)/0.5)" }}
           >
-            <Layers size={32} className="text-muted-foreground/40" />
-            <p className="font-medium text-muted-foreground">Select or drag a document from the sidebar to open your workspace.</p>
+            <Layers size={36} className="text-muted-foreground/30" />
+            <div>
+              <p className="font-semibold text-foreground mb-1">Open a document to get started</p>
+              <p className="text-sm text-muted-foreground">
+                Click any document or spreadsheet in the sidebar — it will open here.
+                Open a second one to snap into Split View automatically.
+              </p>
+            </div>
           </motion.div>
-          {/* Demo buttons */}
-          <div className="flex gap-2 mt-2">
-            {[
-              { title: "Q3 Financials", type: "spreadsheet" as const },
-              { title: "Project Notes", type: "text" as const },
-              { title: "Assets Folder", type: "folder" as const },
-            ].map((demo) => (
-              <button
-                key={demo.title}
-                onClick={() => openPanel({ id: demo.title, ...demo })}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-              >
-                {(() => { const Icon = FILE_TYPE_ICONS[demo.type]; return <Icon size={12} />; })()}
-                {demo.title}
-              </button>
-            ))}
-          </div>
         </div>
       ) : bothOpen ? (
         /* Two panels with resizable handle */
         <PanelGroup direction="horizontal" className="flex-1 min-h-0">
-          <Panel defaultSize={50} minSize={25} className="min-h-0 overflow-hidden rounded-tl-2xl">
-            <div className="h-full bg-card/40 backdrop-blur-xl border-r border-border/30">
-              <GlassWindow item={left!} onClose={() => closePanel(0)} side="left" />
+          <Panel defaultSize={50} minSize={20} className="min-h-0 overflow-hidden">
+            <div
+              className="h-full overflow-hidden"
+              style={{
+                background: "hsl(var(--card)/0.35)",
+                backdropFilter: "blur(12px)",
+              }}
+            >
+              <GlassWindow
+                doc={left!.doc}
+                onClose={() => closePanel(0)}
+                onUpdate={updateDocument}
+                onDelete={removeDocument}
+              />
             </div>
           </Panel>
-          <PanelResizeHandle className="w-1.5 bg-border/20 hover:bg-primary/40 transition-colors cursor-col-resize flex items-center justify-center group">
-            <GripVertical size={14} className="text-muted-foreground/40 group-hover:text-primary transition-colors" />
+
+          <PanelResizeHandle className="w-1.5 relative group flex items-center justify-center cursor-col-resize"
+            style={{ background: "hsl(var(--border)/0.3)" }}>
+            <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/20 transition-colors rounded" />
+            <GripVertical size={14} className="text-muted-foreground/40 group-hover:text-primary transition-colors relative z-10" />
           </PanelResizeHandle>
-          <Panel defaultSize={50} minSize={25} className="min-h-0 overflow-hidden rounded-tr-2xl">
-            <div className="h-full bg-card/40 backdrop-blur-xl">
-              <GlassWindow item={right!} onClose={() => closePanel(1)} side="right" />
+
+          <Panel defaultSize={50} minSize={20} className="min-h-0 overflow-hidden">
+            <div
+              className="h-full overflow-hidden"
+              style={{
+                background: "hsl(var(--card)/0.35)",
+                backdropFilter: "blur(12px)",
+              }}
+            >
+              <GlassWindow
+                doc={right!.doc}
+                onClose={() => closePanel(1)}
+                onUpdate={updateDocument}
+                onDelete={removeDocument}
+              />
             </div>
           </Panel>
         </PanelGroup>
       ) : (
-        /* Single panel + drop zone */
+        /* Single panel + drop zone on right */
         <div className="flex-1 flex min-h-0">
-          <div className="flex-1 bg-card/40 backdrop-blur-xl rounded-2xl m-3 overflow-hidden">
-            <GlassWindow item={(left || right)!} onClose={() => closePanel(left ? 0 : 1)} side="left" />
+          <div
+            className="flex-1 m-2 rounded-2xl overflow-hidden"
+            style={{
+              background: "hsl(var(--card)/0.35)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid hsl(var(--border)/0.3)",
+            }}
+          >
+            <GlassWindow
+              doc={(left || right)!.doc}
+              onClose={() => closePanel(left ? 0 : 1)}
+              onUpdate={updateDocument}
+              onDelete={removeDocument}
+            />
           </div>
-          <EmptyDropZone label="Drop here to open on Right" onDrop={(item) => openPanel(item, "right")} />
+          <EmptyDropZone
+            label="Drop here to open side by side"
+            onDropDoc={handleDropOnEmpty}
+          />
         </div>
       )}
     </div>
