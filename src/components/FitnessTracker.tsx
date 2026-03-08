@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useFlux, DbWorkout } from "@/context/FluxContext";
-import { Dumbbell, Flame, Zap, TrendingUp, Pencil, Trash2, Check, X } from "lucide-react";
-import { motion } from "framer-motion";
+import { Dumbbell, Flame, Zap, TrendingUp, Pencil, Trash2, Check, X, Share2, Download, Copy } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import StreakHeatmap from "./StreakHeatmap";
 import WorkoutModal from "./WorkoutModal";
 import { toast } from "sonner";
