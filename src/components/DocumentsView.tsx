@@ -120,9 +120,8 @@ const DocumentsView = () => {
         <TemplateChooserModal
           onClose={() => setShowTemplateChooser(false)}
           onCreateDocument={async (title, type, content) => {
-            const doc = await createDocument(title, type);
+            const doc = await createDocument(title, type, undefined, content);
             if (doc) {
-              if (content) updateDocument(doc.id, { content });
               openInWorkspace(doc);
               setActiveView("multitask" as any);
             }

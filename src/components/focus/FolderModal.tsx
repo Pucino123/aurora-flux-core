@@ -152,7 +152,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   };
   const handleCreateFromTemplate = async (title: string, type: "text" | "spreadsheet", content?: any) => {
     if (!createDocument) return;
-    const doc = await createDocument(title, type, currentFolderId);
+    const doc = await createDocument(title, type, currentFolderId, content);
     if (doc && content) {
       updateDocument(doc.id, { content });
     }
