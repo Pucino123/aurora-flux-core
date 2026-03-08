@@ -69,18 +69,12 @@ const UserSection = () => {
 const ADMIN_EMAIL = "kevin.therkildsen@icloud.com";
 
 const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarProps) => {
-  const { activeView, activeFolder, setActiveView, setActiveFolder, filterPersona, setFilterPersona, inboxTasks } = useFlux();
+  const { activeView, activeFolder, setActiveView, setActiveFolder, filterPersona, setFilterPersona } = useFlux();
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
   const { sparksBalance, openBilling, closeBilling } = useMonetization();
   const { theme, setTheme } = useTheme();
   const { isFocusModeActive } = useFocusMode();
-
-  // Unified inbox badge: unread mock emails (2) + unread team messages + undone today tasks
-  const today = new Date().toISOString().slice(0, 10);
-  const todayPending = inboxTasks.filter((t) => !t.done && (t.scheduled_date === today || !t.scheduled_date)).length;
-  const MOCK_UNREAD_EMAILS = 2; // static mock count
-  const unreadInboxCount = MOCK_UNREAD_EMAILS + todayPending;
 
   // Every nav click must close any open billing/overlay, then switch view
   const nav = (view: typeof activeView | string) => {
