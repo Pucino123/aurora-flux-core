@@ -143,11 +143,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             title="Control Center"
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.94 }}
-        className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all duration-200 ${
-              controlCenterOpen
-                ? "bg-foreground/10 border-foreground/30 text-foreground"
-                : "bg-foreground/5 backdrop-blur-md border-foreground/15 text-foreground/60 hover:text-foreground hover:border-foreground/30"
-            } dark:bg-background/40 dark:border-border/30 dark:text-muted-foreground dark:hover:text-foreground`}
+            className="w-8 h-8 rounded-xl flex items-center justify-center border transition-all duration-200 bg-black/20 backdrop-blur-md border-white/15 text-white/60 hover:text-white hover:border-white/30"
           >
             <SlidersHorizontal size={14} />
           </motion.button>
