@@ -394,7 +394,7 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
       ` }} />
       <DialogContent
         data-collab-modal
-        className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden !left-1/2 !top-1/2 !translate-x-[-50%] !translate-y-[-50%]"
         onOpenAutoFocus={e => e.preventDefault()}
         onPointerDownOutside={e => {
           // Prevent dialog from closing when clicking the context menu portal
