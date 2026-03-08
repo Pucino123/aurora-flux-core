@@ -487,8 +487,8 @@ const CommunityBoardView = () => {
                   </div>
                 )}
 
-                {/* Other pending (hidden to non-admins, show as available) */}
-                {isOtherPending && !adminMode && (
+                {/* Other pending — always show as available (admins manage via Community Admin view) */}
+                {isOtherPending && (
                   <button
                     onClick={() => handleClaim(slot.slotIndex)}
                     className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -497,25 +497,6 @@ const CommunityBoardView = () => {
                     <span className="text-[10px] font-medium">Claim this space</span>
                     <span className="text-[9px] text-muted-foreground/70">$10 / month</span>
                   </button>
-                )}
-
-                {/* Admin sees pending as pending */}
-                {isOtherPending && adminMode && (
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    {slot.thumbnailUrl && (
-                      <img
-                        src={slot.thumbnailUrl}
-                        className="absolute inset-0 w-full h-full object-cover blur-md opacity-40"
-                        alt=""
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-1 p-2">
-                      <Clock size={16} className="text-amber-500" />
-                      <span className="text-[9px] font-semibold text-center text-foreground">
-                        ⏳ {slot.projectName}
-                      </span>
-                    </div>
-                  </div>
                 )}
 
                 {/* Approved */}
