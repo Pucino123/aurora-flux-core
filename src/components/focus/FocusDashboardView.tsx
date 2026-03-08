@@ -94,8 +94,7 @@ function loadPaginationSettings(): PaginationSettings {
 }
 
 const FocusContent = () => {
-  const { activeWidgets, systemMode, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();
-  // Per-page folder/doc position updaters (scoped via page state, not global context)
+  const { activeWidgets, systemMode, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
 
