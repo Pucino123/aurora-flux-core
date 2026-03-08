@@ -46,6 +46,9 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X } from "lucide-react";
 import { toast } from "sonner";
+import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
+import WindowFrame from "@/components/windows/WindowFrame";
+import DocumentView from "@/components/documents/DocumentView";
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
@@ -558,7 +561,7 @@ const FocusContent = () => {
 
   // Per-page active widgets
   const currentPage = dashboardPages[activePageIndex];
-  const pageActiveWidgets: string[] = currentPage?.activeWidgets ?? activeWidgets;
+  const pageActiveWidgets: string[] = currentPage?.activeWidgets ?? [];
 
   const updatePageWidgets = useCallback((widgets: string[]) => {
     setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, activeWidgets: widgets } : p));
@@ -818,9 +821,9 @@ const FocusContent = () => {
     setTimeout(() => setPillBouncing(false), 500);
   }, []);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
+  const { openWindow, closeWindow, windows, updateWindowPosition } = useWindowManager();
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
-  const [openDesktopDoc, setOpenDesktopDoc] = useState<any>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showDocPicker, setShowDocPicker] = useState(false);
@@ -1399,7 +1402,16 @@ const FocusContent = () => {
                 <DesktopDocument
                   key={doc.id}
                   doc={doc}
-                  onOpen={(d) => setOpenDesktopDoc(d)}
+                  onOpen={(d) => {
+                    // Open document in a WindowFrame instead of the modal overlay
+                    openWindow({
+                      type: "document",
+                      contentId: d.id,
+                      title: d.title,
+                      layout: "floating",
+                      position: { x: Math.max(60, (window.innerWidth / 2) - 410 + Math.random() * 80), y: Math.max(40, (window.innerHeight / 2) - 310 + Math.random() * 60) },
+                    });
+                  }}
                   onDelete={(id) => { removeDesktopDoc(id); }}
                   onRefetch={refetchDesktopDocs}
                   dragState={docDragState}
@@ -1449,20 +1461,31 @@ const FocusContent = () => {
           {openFolderId && (
             <FolderModal folderId={openFolderId} onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }} />
           )}
-          {openDesktopDoc && (
-            <DesktopDocumentViewer
-              document={openDesktopDoc}
-              onClose={() => { setOpenDesktopDoc(null); refetchDesktopDocs(); }}
-              onUpdate={(id, updates) => {
-                updateDesktopDoc(id, updates);
-                setOpenDesktopDoc(prev => prev ? { ...prev, ...updates } : null);
-              }}
-              onDelete={(id) => {
-                removeDesktopDoc(id);
-                setOpenDesktopDoc(null);
-              }}
-            />
-          )}
+
+          {/* ── iPadOS Window Manager Layer ─────────────────────────── */}
+          <AnimatePresence>
+            {windows.map((win) => {
+              const winDoc = win.type === "document"
+                ? desktopDocs.find(d => d.id === win.contentId)
+                : null;
+              return (
+                <WindowFrame key={win.id} window={win}>
+                  {win.type === "document" && winDoc ? (
+                    <DocumentView
+                      document={winDoc}
+                      onBack={() => closeWindow(win.id)}
+                      onUpdate={(id, upd) => updateDesktopDoc(id, upd)}
+                      onDelete={(id) => { removeDesktopDoc(id); closeWindow(win.id); }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                      Content not found
+                    </div>
+                  )}
+                </WindowFrame>
+              );
+            })}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -2126,7 +2149,9 @@ const FocusContent = () => {
 
 const FocusDashboardView = () => (
   <FocusProvider>
-    <FocusContent />
+    <WindowManagerProvider>
+      <FocusContent />
+    </WindowManagerProvider>
   </FocusProvider>
 );
 
