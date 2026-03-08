@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, GripHorizontal, Minus, Plus, Settings2 } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
+import { useWidgetClose } from "@/context/WidgetCloseContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { useResizable, ResizeDirection } from "@/hooks/useResizable";
@@ -109,6 +110,12 @@ const DraggableWidget = ({
   id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle, headerActions, overflowVisible = false,
 }: DraggableWidgetProps) => {
   const { widgetPositions, updateWidgetPosition, toggleWidget, getWidgetOpacity, setWidgetOpacity, widgetMinimalMode, systemMode } = useFocusStore();
+  const contextClose = useWidgetClose();
+  // Use context close (per-page) if available, otherwise fall back to global toggleWidget
+  const closeWidget = () => {
+    if (contextClose) contextClose(id);
+    else toggleWidget(id);
+  };
   const openStyleEditor = useStyleEditorCallback();
   const styleEditorTarget = useStyleEditorTarget();
   const isBeingEdited = !!styleEditorTarget && styleEditorTarget === id;
@@ -417,7 +424,7 @@ const DraggableWidget = ({
                       <button
                         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
                         onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                        onClick={(e) => { e.stopPropagation(); toggleWidget(id); }}
+                        onClick={(e) => { e.stopPropagation(); closeWidget(); }}
                         className="p-1 rounded-lg transition-colors bg-white/10 hover:bg-red-500/30"
                         style={{ color: iconColor }}
                         title="Remove widget"
@@ -454,7 +461,9 @@ const DraggableWidget = ({
                         </svg>
                       </button>
                       <button
-                        onClick={() => toggleWidget(id)}
+                        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                        onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                        onClick={(e) => { e.stopPropagation(); closeWidget(); }}
                         className="p-1 rounded-lg transition-colors"
                         style={{ color: iconColor }}
                       >
