@@ -582,6 +582,8 @@ const FocusContent = () => {
       onMouseDown={handleCanvasMouseDown}
       onDragOver={handleCanvasDragOver}
       onDrop={handleCanvasDrop}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <BackgroundEngine embedded />
       {/* Vignette always visible */}
