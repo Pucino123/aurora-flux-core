@@ -1064,7 +1064,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       }, 300);
     } else {
       // Instant restore
-      const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
+      const newStates: Record<string, CardState> = { strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" };
       savedIdea.responses.forEach(r => {
         if (r.persona_key in newStates) newStates[r.persona_key] = "revealed";
       });
