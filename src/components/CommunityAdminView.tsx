@@ -63,6 +63,9 @@ const CommunityAdminView = () => {
   const [tab, setTab] = useState<"pending" | "approved" | "all">("pending");
   const [adminTab, setAdminTab] = useState<AdminTab>("overview");
   const [reports, setReports] = useState<{ id: number; project: string; reason: string; user: string }[]>([]);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetId = useRef<string | null>(null);
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   const fetchSlots = useCallback(async () => {
