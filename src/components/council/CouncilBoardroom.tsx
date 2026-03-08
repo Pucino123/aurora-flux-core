@@ -947,6 +947,7 @@ const CouncilBoardroom: React.FC = () => {
           vote_score: responses[p.key]!.confidence,
         }));
       await supabase.from("council_responses").insert(inserts);
+      setSavedIdeaId(ideaData.id);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 3000);
     } catch {
