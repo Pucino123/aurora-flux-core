@@ -72,6 +72,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   const [selected, setSelected] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [showMoveToPageMenu, setShowMoveToPageMenu] = useState(false);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [calendarTime, setCalendarTime] = useState("09:00");
   const [showAllIcons, setShowAllIcons] = useState(false);

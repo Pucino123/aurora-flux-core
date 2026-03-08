@@ -81,6 +81,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const [calDate, setCalDate] = useState<Date | undefined>(new Date());
   const [calTime, setCalTime] = useState("09:00");
   const [showMoveFolder, setShowMoveFolder] = useState(false);
+  const [showMoveToPageMenu, setShowMoveToPageMenu] = useState(false);
 
   const rootFolders = useMemo(() => folders.filter(f => !f.parent_id), [folders]);
 
