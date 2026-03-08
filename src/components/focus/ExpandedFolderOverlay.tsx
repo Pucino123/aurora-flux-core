@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -26,6 +26,9 @@ function isOutsideRect(rect: DOMRect, x: number, y: number, margin = 40): boolea
   return x < rect.left - margin || x > rect.right + margin || y < rect.top - margin || y > rect.bottom + margin;
 }
 
+const MODAL_W = 620;
+const MODAL_MIN_H = 420;
+
 const ExpandedFolderOverlay = ({
   folderId,
   onClose,
@@ -43,6 +46,36 @@ const ExpandedFolderOverlay = ({
   const [draggingOutId, setDraggingOutId] = useState<string | null>(null);
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
 
+  // Modal drag state — starts centered using CSS translate, then switches to absolute px on drag
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const dragRef = useRef<{ startMx: number; startMy: number; startPx: number; startPy: number } | null>(null);
+
+  // Compute initial center on first render
+  const getCenter = () => ({
+    x: window.innerWidth / 2 - MODAL_W / 2,
+    y: window.innerHeight / 2 - MODAL_MIN_H / 2,
+  });
+
+  const handleHeaderPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("button")) return; // don't drag on buttons
+    e.preventDefault();
+    const current = pos ?? getCenter();
+    dragRef.current = { startMx: e.clientX, startMy: e.clientY, startPx: current.x, startPy: current.y };
+    setPos(current); // lock from CSS centering to pixel position immediately
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleHeaderPointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    const nx = dragRef.current.startPx + e.clientX - dragRef.current.startMx;
+    const ny = dragRef.current.startPy + e.clientY - dragRef.current.startMy;
+    setPos({ x: nx, y: ny });
+  };
+
+  const handleHeaderPointerUp = () => {
+    dragRef.current = null;
+  };
+
   const folder = findFolderNode(folderId);
   const { documents, loading, createDocument, updateDocument, refetch } = useDocuments(folderId, moveToTrash);
 
@@ -59,7 +92,6 @@ const ExpandedFolderOverlay = ({
       if (!rect) return;
       if (isOutsideRect(rect, info.point.x, info.point.y)) {
         setDraggingOutId(doc.id);
-        // Move doc out of folder
         if (user) {
           (supabase as any)
             .from("documents")
@@ -109,6 +141,28 @@ const ExpandedFolderOverlay = ({
   const IconComp = customIcon ? customIcon.icon : Folder;
   const iconColor = folder.color || "hsl(var(--muted-foreground))";
 
+  // Position style: if dragged, use pixel coordinates; otherwise center via CSS transform
+  const modalStyle: React.CSSProperties = pos
+    ? {
+        position: "fixed",
+        top: pos.y,
+        left: pos.x,
+        width: MODAL_W,
+        minHeight: MODAL_MIN_H,
+        maxHeight: "80vh",
+        zIndex: 8001,
+      }
+    : {
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: MODAL_W,
+        minHeight: MODAL_MIN_H,
+        maxHeight: "80vh",
+        zIndex: 8001,
+      };
+
   const portal = createPortal(
     <AnimatePresence>
       {/* Backdrop */}
@@ -123,23 +177,18 @@ const ExpandedFolderOverlay = ({
         onClick={onClose}
       />
 
-      {/* Expanded folder window — layoutId connects to the DesktopFolder icon */}
+      {/* Expanded folder window */}
       <motion.div
         key={`expanded-folder-${folderId}`}
         layoutId={`folder-expand-${folderId}`}
-        initial={{ opacity: 0, scale: 0.85 }}
+        initial={{ opacity: 0, scale: 0.88 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.85 }}
-        transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
-        className="fixed z-[8001] flex flex-col"
+        exit={{ opacity: 0, scale: 0.88 }}
+        transition={{ type: "spring", bounce: 0.18, duration: 0.45 }}
+        className="flex flex-col"
         style={{
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 620,
-          minHeight: 420,
-          maxHeight: "80vh",
-          background: "rgba(14, 11, 32, 0.88)",
+          ...modalStyle,
+          background: "rgba(14, 11, 32, 0.92)",
           backdropFilter: "blur(48px)",
           WebkitBackdropFilter: "blur(48px)",
           border: "1px solid rgba(255,255,255,0.12)",
@@ -149,21 +198,28 @@ const ExpandedFolderOverlay = ({
         onClick={e => e.stopPropagation()}
         ref={containerRef}
       >
-        {/* Header */}
-        <div className="flex items-center gap-3 px-6 pt-5 pb-4">
+        {/* Header — drag handle */}
+        <div
+          className="flex items-center gap-3 px-6 pt-5 pb-4 select-none"
+          style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
+          onPointerDown={handleHeaderPointerDown}
+          onPointerMove={handleHeaderPointerMove}
+          onPointerUp={handleHeaderPointerUp}
+          onPointerCancel={handleHeaderPointerUp}
+        >
           {/* macOS close button */}
           <button
             onClick={onClose}
-            className="group flex items-center justify-center mr-1"
-            style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.25)", boxShadow: "0 0.5px 2px rgba(0,0,0,0.3)", flexShrink: 0 }}
+            className="group flex items-center justify-center mr-1 shrink-0"
+            style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.25)", boxShadow: "0 0.5px 2px rgba(0,0,0,0.3)" }}
           >
             <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "rgba(80,0,0,0.75)" }} />
           </button>
 
           {/* Folder icon */}
           <div
-            className="flex items-center justify-center rounded-xl"
-            style={{ width: 40, height: 40, background: `${iconColor}18`, flexShrink: 0 }}
+            className="flex items-center justify-center rounded-xl shrink-0"
+            style={{ width: 40, height: 40, background: `${iconColor}18` }}
           >
             <IconComp size={20} style={{ color: iconColor }} strokeWidth={1.5} />
           </div>
@@ -178,6 +234,7 @@ const ExpandedFolderOverlay = ({
                 if (e.key === "Enter") commitRename();
                 if (e.key === "Escape") setRenaming(false);
               }}
+              onPointerDown={e => e.stopPropagation()}
               className="flex-1 text-[22px] font-semibold bg-transparent border-b-2 outline-none"
               style={{ color: "rgba(255,255,255,0.92)", borderColor: "rgba(99,102,241,0.6)" }}
               autoFocus
@@ -186,7 +243,7 @@ const ExpandedFolderOverlay = ({
             <h2
               className="flex-1 text-[22px] font-semibold cursor-pointer select-none truncate transition-colors"
               style={{ color: "rgba(255,255,255,0.92)" }}
-              onClick={() => { setRenameValue(folder.title); setRenaming(true); }}
+              onClick={e => { e.stopPropagation(); setRenameValue(folder.title); setRenaming(true); }}
               title="Click to rename"
             >
               {folder.title}
@@ -194,7 +251,7 @@ const ExpandedFolderOverlay = ({
           )}
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" onPointerDown={e => e.stopPropagation()}>
             <button
               onClick={() => { setRenameValue(folder.title); setRenaming(true); }}
               className="p-2 rounded-lg transition-colors"
