@@ -279,6 +279,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
   const { activeWidgets, toggleWidget, systemMode, setSystemMode, resetDashboard } = useFocusStore();
   const { openWindow, windows, restoreWindow, closeWindow, bringToFront } = useWindowManager();
   const { trash } = useTrash();
+  const { isFocusModeActive } = useFocusMode();
   const minimizedWindows = windows.filter(w => w.minimized);
 
   const effectiveWidgets = pageActiveWidgets ?? activeWidgets;
@@ -291,7 +292,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
   const [styleOpen, setStyleOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
-  const [missionControlOpen, setMissionControlOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
   const suggestions = useMemo(() => getSuggestedWidgets(effectiveWidgets as string[]), [effectiveWidgets]);
