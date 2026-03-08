@@ -777,7 +777,11 @@ const FocusContent = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <BackgroundEngine embedded />
+      <BackgroundEngine
+        embedded
+        pageBackground={currentPage?.background}
+        onPageBackgroundChange={(id) => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: id } : p))}
+      />
       {/* Vignette always visible */}
       <div
         className="absolute inset-0 z-[15] pointer-events-none"
@@ -1175,35 +1179,7 @@ const FocusContent = () => {
                     className="w-20 accent-white"
                   />
                 </label>
-                {/* Per-page background override */}
-                <div>
-                  <p className="text-[10px] text-white/40 mb-1.5">Page background</p>
-                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-                    {["cozy-fireplace","cozy-library","nature-rain","nature-ocean","urban-tokyo","nature-forest","urban-cafe","scenic-beach","scenic-sakura","cine-clouds","aurora-northern","aurora-sunset","aurora-ocean","aurora-cosmic","aurora-mint"].map(bgId => (
-                      <button
-                        key={bgId}
-                        onClick={() => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: p.background === bgId ? undefined : bgId } : p))}
-                        className="text-[9px] px-2 py-1 rounded-lg transition-all"
-                        style={{
-                          background: currentPage?.background === bgId ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.06)",
-                          border: currentPage?.background === bgId ? "1px solid rgba(255,255,255,0.4)" : "1px solid rgba(255,255,255,0.1)",
-                          color: "rgba(255,255,255,0.7)",
-                        }}
-                      >
-                        {bgId.replace("aurora-","").replace("-"," ")}
-                      </button>
-                    ))}
-                    {currentPage?.background && (
-                      <button
-                        onClick={() => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: undefined } : p))}
-                        className="text-[9px] px-2 py-1 rounded-lg"
-                        style={{ background: "rgba(255,80,80,0.15)", border: "1px solid rgba(255,80,80,0.3)", color: "rgba(255,120,120,0.9)" }}
-                      >
-                        ✕ Reset
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <p className="text-[9px] text-white/30 text-center">Change page background via the Spaces menu ↙</p>
                 <button
                   onClick={() => setShowPillSettings(false)}
                   className="text-[10px] text-white/30 hover:text-white/60 text-center"
@@ -1248,7 +1224,7 @@ const FocusContent = () => {
 
           {/* Pill: dots + reorder + hover preview + plus */}
           <div
-            className="flex items-center gap-2.5 px-4 py-2 rounded-full select-none relative"
+            className="group flex items-center gap-2.5 px-4 py-2 rounded-full select-none relative"
             style={{
               background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
               backdropFilter: "blur(24px)",
@@ -1257,7 +1233,27 @@ const FocusContent = () => {
               boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
             }}
           >
-            {/* Dot hover preview */}
+            {/* ← → keyboard hint — visible on hover when no dot is hovered */}
+            <AnimatePresence>
+              {hoverDotIdx === null && dashboardPages.length > 1 && (
+                <motion.div
+                  key="key-hint"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 0, y: 0 }}
+                  whileHover={{ opacity: 1 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                >
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: "rgba(10,8,20,0.85)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
+                    <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">←</span>
+                    <span className="text-[9px] text-white/30">navigate</span>
+                    <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">→</span>
+                  </div>
+                  <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.85)", borderRight: "1px solid rgba(255,255,255,0.1)", borderBottom: "1px solid rgba(255,255,255,0.1)" }} />
+                </motion.div>
+              )}
+            </AnimatePresence>
             <AnimatePresence>
               {hoverDotIdx !== null && hoverDotIdx !== activePageIndex && (
                 <motion.div

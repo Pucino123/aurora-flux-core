@@ -251,8 +251,24 @@ const CustomUploadSection = ({ customBgs, onUpload, onAddYoutube, onDelete, onSe
 };
 
 // ── Main Component ───────────────────────────────────────────────────
-const BackgroundEngine = ({ embedded = false, onMouseMove }: { embedded?: boolean; onMouseMove?: (e: React.MouseEvent) => void }) => {
-  const { currentBackground, setCurrentBackground, isZenMode } = useFocusStore();
+const BackgroundEngine = ({
+  embedded = false,
+  onMouseMove,
+  pageBackground,
+  onPageBackgroundChange,
+}: {
+  embedded?: boolean;
+  onMouseMove?: (e: React.MouseEvent) => void;
+  pageBackground?: string;
+  onPageBackgroundChange?: (id: string) => void;
+}) => {
+  const { currentBackground: globalBackground, setCurrentBackground: setGlobalBackground, isZenMode } = useFocusStore();
+  // Use per-page background if provided, otherwise fall back to global
+  const currentBackground = pageBackground ?? globalBackground;
+  const setCurrentBackground = (id: string) => {
+    if (onPageBackgroundChange) onPageBackgroundChange(id);
+    else setGlobalBackground(id);
+  };
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
