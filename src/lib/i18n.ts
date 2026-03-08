@@ -19,8 +19,8 @@ const da: Record<string, string> = {
   "app.plan": "Gratis Plan",
 
   // Auth
-  "auth.join": "Opret en Flux-konto.",
-  "auth.welcome": "Velkommen tilbage til Flux.",
+  "auth.join": "Opret en Dashiii-konto.",
+  "auth.welcome": "Velkommen tilbage til Dashiii.",
   "auth.create_desc": "Opret din konto for at komme i gang",
   "auth.signin_desc": "Log ind for at fortsætte hvor du slap",
   "auth.display_name": "Visningsnavn",
