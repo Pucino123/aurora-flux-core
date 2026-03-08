@@ -169,7 +169,6 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             {effectiveView === "settings"                    && <SettingsView />}
             {effectiveView === "council"                     && <TheCouncil />}
             {effectiveView === "canvas"                      && <Canvas />}
-            {effectiveView === "stream"                      && <GridDashboard />}
             {(effectiveView as string) === "multitask"       && <MultitaskingView />}
             {(effectiveView as string) === "community"       && <CommunityBoardView />}
             {(effectiveView as string) === "community-admin" && <CommunityAdminView />}

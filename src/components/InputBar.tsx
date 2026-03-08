@@ -194,7 +194,7 @@ const InputBar = ({ onSubmit, docked = false, onPlanSubmit }: InputBarProps) => 
       let targetFolder = findSemanticFolder(folder_type, title || "");
 
       if (!targetFolder) {
-        if (category === "note" && activeView === "stream" && !activeFolder) {
+        if (category === "note" && activeView === "focus" && !activeFolder) {
           const allFolders = getAllFoldersFlat();
           const notesFolder = allFolders.find((f) => /^(noter|notes)$/i.test(f.title));
           if (notesFolder) {
