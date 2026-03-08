@@ -248,6 +248,23 @@ const FocusContent = () => {
     if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
   }, [activePageIndex, dashboardPages.length, goToPage]);
 
+  // Arrow key navigation — only fires when no input/textarea is focused
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || (document.activeElement as HTMLElement)?.isContentEditable) return;
+      if (e.key === "ArrowRight" && activePageIndex < dashboardPages.length - 1) {
+        e.preventDefault();
+        goToPage(activePageIndex + 1);
+      } else if (e.key === "ArrowLeft" && activePageIndex > 0) {
+        e.preventDefault();
+        goToPage(activePageIndex - 1);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activePageIndex, dashboardPages.length, goToPage]);
+
   // Dot drag-to-reorder handlers
   const handleDotDragStart = useCallback((i: number) => {
     dragDotIdx.current = i;
