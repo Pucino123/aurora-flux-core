@@ -126,7 +126,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
         >
           <ChevronUp size={14} className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
           <span className="hidden sm:inline">Tools</span>
-          <span className="text-[10px] text-white/25 tabular-nums">{activeWidgets.length}</span>
+          <span className="text-[10px] text-white/25 tabular-nums">{effectiveWidgets.length}</span>
         </motion.button>
       </div>
 
