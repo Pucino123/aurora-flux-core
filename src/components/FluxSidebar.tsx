@@ -248,14 +248,14 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
             </div>
           </button>
 
-          {/* Thinkpad (Infinite Canvas) */}
+          {/* Ideapad (Infinite Canvas) */}
           <button
             onClick={() => nav("thinkpad")}
             className={`sidebar-item w-full ${activeView === ("thinkpad" as any) ? "sidebar-item-active" : ""}`}
             data-tour="thinkpad-nav"
           >
             <Network size={18} className="shrink-0" />
-            <span>Thinkpad</span>
+            <span>Ideapad</span>
           </button>
 
           {/* Community Board */}
