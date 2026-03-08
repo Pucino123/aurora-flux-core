@@ -362,6 +362,10 @@ const SmartPlanWidget = () => {
   const [showAdd, setShowAdd]       = useState(false);
   /** false = Today only, true = All upcoming (grouped by date) */
   const [showAll, setShowAll]       = useState(false);
+  /** Daily summary AI popover */
+  const [summaryOpen, setSummaryOpen]     = useState(false);
+  const [summary, setSummary]             = useState<string>("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   const today = format(new Date(), "EEEE, MMM d");
 
