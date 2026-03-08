@@ -17,7 +17,7 @@ export interface AppNotification {
 }
 
 // ── Storage helpers ─────────────────────────────────────────────────────────
-const NOTIF_KEY = "flux-notifications-v2";
+const NOTIF_KEY = "dashiii-notifications-v2";
 
 export function loadNotifications(): AppNotification[] {
   try {
