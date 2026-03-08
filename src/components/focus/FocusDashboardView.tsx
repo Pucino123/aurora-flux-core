@@ -527,7 +527,8 @@ const FocusContent = () => {
             {activeWidgets.includes("timer") && <FocusTimer key="timer" />}
             {activeWidgets.includes("music") && <MusicWidget key="music" />}
             {activeWidgets.includes("planner") && <TodaysPlanWidget key="planner" />}
-            {activeWidgets.includes("notes") && <FocusStickyNotes key="notes" />}
+            {activeWidgets.includes("notes") && <NotesWidget key="notes" />}
+            {activeWidgets.includes("crm") && <FocusCRMWidget key="crm" />}
             {activeWidgets.includes("stats") && <FocusStatsWidget key="stats" />}
             {activeWidgets.includes("scratchpad") && <ScratchpadWidget key="scratchpad" />}
             {activeWidgets.includes("quote") && <QuoteOfDay key="quote" />}
