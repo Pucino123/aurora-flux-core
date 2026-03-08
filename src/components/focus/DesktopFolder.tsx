@@ -12,6 +12,7 @@ import { toast } from "sonner";
 interface DesktopFolderProps {
   folder: FolderNode;
   onOpenModal?: (folderId: string) => void;
+  layoutId?: string;
   dragState?: { id: string; x: number; y: number } | null;
   docDragState?: { id: string; x: number; y: number } | null;
   onDragStateChange?: (state: { id: string; x: number; y: number } | null) => void;
@@ -40,7 +41,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage, isPinned, onTogglePin }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage, isPinned, onTogglePin }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
@@ -265,6 +266,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
       <motion.div
         ref={folderRef}
         data-folder-id={folder.id}
+        layoutId={layoutId}
         initial={{ opacity: 0, scale: 0.88, y: 10 }}
         animate={flyingOff
           ? { x: flyingOff.dir * (window.innerWidth * 0.6), opacity: 0, scale: 0.7, rotate: flyingOff.dir * 12 }

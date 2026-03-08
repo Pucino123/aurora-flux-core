@@ -33,6 +33,8 @@ import RoutineBuilderWidget from "./RoutineBuilderWidget";
 import ClockEditor from "./ClockEditor";
 import WidgetStyleEditor from "./WidgetStyleEditor";
 import CreateFolderModal from "@/components/CreateFolderModal";
+import TemplateChooserModal from "./TemplateChooserModal";
+import ExpandedFolderOverlay from "./ExpandedFolderOverlay";
 import {
   FocusBudgetWidget,
   FocusSavingsWidget,
@@ -44,7 +46,7 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X, Focus } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X, Focus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
 import WindowFrame from "@/components/windows/WindowFrame";
@@ -861,6 +863,7 @@ const FocusContent = () => {
   }, [refetchDesktopDocs]);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
+  const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showDocPicker, setShowDocPicker] = useState(false);
@@ -1415,10 +1418,11 @@ const FocusContent = () => {
                 .map((folder) => {
                   const isPinned = dashboardPages.some(p => p.pinnedFolderIds?.includes(folder.id));
                   return (
-                <DesktopFolder
+                  <DesktopFolder
                   key={folder.id}
                   folder={folder}
                   onOpenModal={setOpenFolderId}
+                  layoutId={`folder-expand-${folder.id}`}
                   dragState={dragState}
                   docDragState={docDragState}
                   onDragStateChange={handleDragStateChange}
@@ -1510,8 +1514,38 @@ const FocusContent = () => {
             document.body
           )}
           {openFolderId && (
-            <FolderModal folderId={openFolderId} onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }} />
+            <ExpandedFolderOverlay
+              folderId={openFolderId}
+              onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }}
+              onOpenDocument={(doc) => {
+                openWindow({
+                  type: "document",
+                  contentId: doc.id,
+                  title: doc.title,
+                  layout: "floating",
+                  position: { x: Math.max(60, (window.innerWidth / 2) - 410 + Math.random() * 80), y: Math.max(40, (window.innerHeight / 2) - 310 + Math.random() * 60) },
+                });
+              }}
+              onMoveDocToDesktop={(docId, clientX, clientY) => {
+                const canvasPos = toCanvasCoords(clientX, clientY);
+                updatePageDocPosition(docId, canvasPos);
+                setPages(prev => prev.map((p, i) => i === activePageIndex
+                  ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []).filter(id => id !== docId), docId] }
+                  : p
+                ));
+                setTimeout(() => refetchDesktopDocs(), 400);
+              }}
+              onMoveFolderToDesktop={(fid, clientX, clientY) => {
+                const canvasPos = toCanvasCoords(clientX, clientY);
+                updatePageFolderPosition(fid, canvasPos);
+                setPages(prev => prev.map((p, i) => i === activePageIndex
+                  ? { ...p, visibleFolderIds: [...(p.visibleFolderIds ?? []).filter(id => id !== fid), fid] }
+                  : p
+                ));
+              }}
+            />
           )}
+
 
         </div>
       </div>
@@ -1612,6 +1646,12 @@ const FocusContent = () => {
                 >
                   <Table size={13} className="text-accent-foreground" /> Spreadsheet
                 </button>
+                <button
+                  onClick={() => { setContextMenu(null); setShowDocPicker(false); setShowTemplateChooser(true); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors"
+                >
+                  <Sparkles size={13} className="text-primary" /> From Template…
+                </button>
               </div>
             )}
             <button
@@ -1687,6 +1727,41 @@ const FocusContent = () => {
           }}
         />
       )}
+
+      {/* Template Chooser Modal */}
+      {showTemplateChooser && (
+        <TemplateChooserModal
+          onCreateDocument={async (title, type, content) => {
+            const pos = contextMenuPosRef.current;
+            const doc = await createDocument(title, type, null);
+            if (doc) {
+              if (pos) updatePageDocPosition(doc.id, pos);
+              if (content) {
+                // Trigger a document update via supabase/localStorage after creation
+                const updates = { content };
+                if (user) {
+                  (supabase as any).from("documents").update(updates).eq("id", doc.id).then(() => refetchDesktopDocs());
+                }
+              }
+              setPages(prev => prev.map((p, i) => i === activePageIndex
+                ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
+                : p
+              ));
+              openWindow({
+                type: "document",
+                contentId: doc.id,
+                title: doc.title,
+                layout: "floating",
+                position: { x: Math.max(60, (window.innerWidth / 2) - 410 + Math.random() * 80), y: Math.max(40, (window.innerHeight / 2) - 310 + Math.random() * 60) },
+              });
+            }
+            contextMenuPosRef.current = null;
+            toast.success(`${title} created`);
+          }}
+          onClose={() => setShowTemplateChooser(false)}
+        />
+      )}
+
 
       {/* Clock editor */}
       {clockEditorOpen && (
