@@ -74,9 +74,9 @@ export function OutOfSparksModal() {
   if (!showOutOfSparks) return null;
 
   const PACKS = [
-    { sparks: 50, price: "$4.99", label: "Starter" },
-    { sparks: 200, price: "$12.99", label: "Best Value", highlight: true },
-    { sparks: 500, price: "$24.99", label: "Power User" },
+    { sparks: 50,  price: "$4.99",  label: "Starter",    highlight: false },
+    { sparks: 120, price: "$10.00", label: "Best Value",  highlight: true  },
+    { sparks: 300, price: "$24.99", label: "Power User",  highlight: false },
   ];
 
   return (
