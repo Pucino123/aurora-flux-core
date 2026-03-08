@@ -1,6 +1,5 @@
 import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
-import BillingModal from "./billing/BillingModal";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
@@ -49,6 +48,8 @@ const UserSection = () => {
     setUploading(false);
   };
 
+  const { userPlan, openBilling } = useMonetization();
+
   return (
     <div className="px-3 pt-3 border-t border-border/20">
       <div className="flex items-center gap-3 py-1">
@@ -64,7 +65,12 @@ const UserSection = () => {
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-medium text-foreground truncate">{name}</p>
-          <p className="text-[11px] text-muted-foreground leading-tight">{t("app.plan")}</p>
+          <button
+            onClick={openBilling}
+            className="text-[11px] text-muted-foreground leading-tight hover:text-primary transition-colors cursor-pointer"
+          >
+            {userPlan} Plan
+          </button>
         </div>
         <button onClick={() => signOut()} className="p-1.5 rounded-lg hover:bg-foreground/[0.04] transition-colors duration-150 text-muted-foreground hover:text-foreground" title={t("auth.signout")}>
           <LogOut size={14} />
