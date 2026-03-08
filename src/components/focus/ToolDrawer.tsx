@@ -496,6 +496,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           {minimizedWindows.map(win => {
             const WinIcon = win.type === "document" ? FileText : AppWindow;
             const iconColor = win.type === "document" ? hexToRgba("#7dd3fc", 0.85) : hexToRgba("#a78bfa", 0.85);
+            const isNew = bounceChipId === win.id;
             const lastActive = win.lastActiveAt ? (() => {
               const diff = Date.now() - new Date(win.lastActiveAt).getTime();
               const mins = Math.floor(diff / 60000);
@@ -509,9 +510,15 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
               <motion.div
                 key={win.id}
                 initial={{ opacity: 0, scale: 0.5, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
+                animate={isNew
+                  ? { opacity: 1, scale: [0.5, 1.18, 0.92, 1.06, 1], y: [8, -8, 2, -4, 0] }
+                  : { opacity: 1, scale: 1, y: 0 }
+                }
                 exit={{ opacity: 0, scale: 0.5, y: 8 }}
-                transition={{ duration: 0.2, type: "spring", stiffness: 380, damping: 28 }}
+                transition={isNew
+                  ? { duration: 0.55, ease: "easeOut" }
+                  : { duration: 0.22, type: "spring", stiffness: 380, damping: 28 }
+                }
                 className="relative shrink-0 group"
                 onPointerDown={e => e.stopPropagation()}
               >
@@ -527,7 +534,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
                     <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.3)" }}>{lastActive}</span>
                   </div>
                   <span className="text-[9px] block mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>Click to restore</span>
-                  {/* Arrow */}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent" style={{ borderTopColor: "rgba(255,255,255,0.1)" }} />
                 </div>
 
