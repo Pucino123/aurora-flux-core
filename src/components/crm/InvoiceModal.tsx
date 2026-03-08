@@ -141,6 +141,13 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
           swift: data.swift_bic || DEFAULT_PROFILE.swift,
           paymentTerms: data.payment_terms?.replace(/\D/g, "") || DEFAULT_PROFILE.paymentTerms,
           email: user.email || DEFAULT_PROFILE.email,
+          routingNumber: DEFAULT_PROFILE.routingNumber,
+          sortCode: DEFAULT_PROFILE.sortCode,
+          bsb: DEFAULT_PROFILE.bsb,
+          extraField1Label: DEFAULT_PROFILE.extraField1Label,
+          extraField1Value: DEFAULT_PROFILE.extraField1Value,
+          extraField2Label: DEFAULT_PROFILE.extraField2Label,
+          extraField2Value: DEFAULT_PROFILE.extraField2Value,
         };
         setProfile(dbProfile);
         saveProfile(dbProfile);
