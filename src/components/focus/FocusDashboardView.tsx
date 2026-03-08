@@ -1116,12 +1116,18 @@ const FocusContent = () => {
               />
             </AnimatePresence>
 
-              {/* Desktop Folders — strictly scoped to this page. Legacy pages (undefined list) show all. */}
+              {/* Desktop Folders — show if on this page OR globally pinned */}
               {folderTree
-                .filter(folder => currentPage?.visibleFolderIds === undefined
-                  ? true
-                  : currentPage.visibleFolderIds.includes(folder.id))
-                .map((folder) => (
+                .filter(folder => {
+                  const pinned = dashboardPages.some(p => p.pinnedFolderIds?.includes(folder.id));
+                  if (pinned) return true;
+                  return currentPage?.visibleFolderIds === undefined
+                    ? true
+                    : currentPage.visibleFolderIds.includes(folder.id);
+                })
+                .map((folder) => {
+                  const isPinned = dashboardPages.some(p => p.pinnedFolderIds?.includes(folder.id));
+                  return (
                 <DesktopFolder
                   key={folder.id}
                   folder={folder}
@@ -1139,15 +1145,24 @@ const FocusContent = () => {
                   allPages={dashboardPages.map((p, i) => ({ id: p.id, label: p.label, index: i }))}
                   currentPageIndex={activePageIndex}
                   onMoveToPage={(id, idx) => handleMoveToPage(id, 'folder', idx)}
+                  isPinned={isPinned}
+                  onTogglePin={(id) => handleTogglePin(id, 'folder')}
                 />
-              ))}
+                  );
+                })}
 
-              {/* Desktop Documents — strictly scoped to this page. Legacy pages (undefined list) show all. */}
+              {/* Desktop Documents — show if on this page OR globally pinned */}
               {desktopDocs
-                .filter(doc => currentPage?.visibleDocIds === undefined
-                  ? true
-                  : currentPage.visibleDocIds.includes(doc.id))
-                .map((doc) => (
+                .filter(doc => {
+                  const pinned = dashboardPages.some(p => p.pinnedDocIds?.includes(doc.id));
+                  if (pinned) return true;
+                  return currentPage?.visibleDocIds === undefined
+                    ? true
+                    : currentPage.visibleDocIds.includes(doc.id);
+                })
+                .map((doc) => {
+                  const isPinned = dashboardPages.some(p => p.pinnedDocIds?.includes(doc.id));
+                  return (
                 <DesktopDocument
                   key={doc.id}
                   doc={doc}
@@ -1165,8 +1180,11 @@ const FocusContent = () => {
                   allPages={dashboardPages.map((p, i) => ({ id: p.id, label: p.label, index: i }))}
                   currentPageIndex={activePageIndex}
                   onMoveToPage={(id, idx) => handleMoveToPage(id, 'doc', idx)}
+                  isPinned={isPinned}
+                  onTogglePin={(id) => handleTogglePin(id, 'doc')}
                 />
-              ))}
+                  );
+                })}
               </div>
             </motion.div>
           </AnimatePresence>
