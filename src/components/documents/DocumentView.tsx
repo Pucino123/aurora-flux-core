@@ -667,9 +667,12 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
             updateCell(cell.r, cell.c, val);
           }
         }}
-        lightMode={lm}
+      lightMode={lm}
         onToggleLightMode={onToggleLightMode}
       />
+      {splitViewButton && (
+        <div className="flex justify-end px-3 py-1 border-b border-border/10">{splitViewButton}</div>
+      )}
       {/* Formula / Address Bar */}
       {(focusedCell || lastFocusedCell.current) && (() => {
         const cell = focusedCell || lastFocusedCell.current;

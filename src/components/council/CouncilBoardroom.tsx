@@ -625,9 +625,10 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
         boxShadow: state !== "idle" ? `0 0 30px ${persona.glow}, 0 0 60px ${persona.glow}` : undefined,
       }}
       transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
-      className="relative rounded-3xl border overflow-hidden backdrop-blur-xl min-w-0 bg-card/60 dark:bg-white/4"
+      className="relative rounded-3xl border overflow-hidden backdrop-blur-xl min-w-0 bg-card/60"
       style={{
-        borderColor: state !== "idle" ? persona.glowBorder : undefined,
+        borderColor: state !== "idle" ? persona.glowBorder : `${SENTIMENT_COLORS[persona.sentiment]}18`,
+        boxShadow: `0 2px 24px ${SENTIMENT_COLORS[persona.sentiment]}08`,
       }}
     >
       {state === "idle" && (
