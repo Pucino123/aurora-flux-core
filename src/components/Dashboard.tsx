@@ -171,6 +171,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       <OnboardingFlow />
 
       <CreateFolderModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onCreate={handleCreateFolder} />
+      {/* Global Ask Aura floating AI panel */}
+      {effectiveView !== "focus" && effectiveView !== "stream" && <AskAura />}
     </motion.div>
   );
 };
