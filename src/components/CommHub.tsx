@@ -74,9 +74,7 @@ const AuraTab = () => {
       <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-8">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Sparkles size={20} className="text-primary" />
-            </div>
+            <AuraOrb state="idle" size={52} />
             <p className="text-sm font-semibold text-foreground">Ask Aura anything</p>
             <p className="text-xs text-muted-foreground">Your AI assistant knows your tasks, goals & projects.</p>
           </div>
