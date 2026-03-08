@@ -405,7 +405,7 @@ const CommunityBoardView = () => {
             <Grid size={20} className="text-primary" /> Community Board
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Discover projects from the Flux community. Claim a space to promote your own startup.
+            Discover projects from the Dashiii community. Claim a space to promote your own startup.
           </p>
         </div>
       </div>
