@@ -1688,15 +1688,6 @@ const FocusContent = () => {
         document.body
       )}
 
-      <ToolDrawer
-        pageActiveWidgets={pageActiveWidgets}
-        onTogglePageWidget={(id) => {
-          const updated = pageActiveWidgets.includes(id)
-            ? pageActiveWidgets.filter(w => w !== id)
-            : [...pageActiveWidgets, id];
-          updatePageWidgets(updated);
-        }}
-      />
 
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
       {/* IMPORTANT: pillRef wraps ONLY the pill row so getBoundingClientRect() always reflects
