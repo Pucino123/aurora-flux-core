@@ -293,11 +293,11 @@ const DraggableWidget = ({
       animate={{
         opacity: isEditingOther ? 0.15 : 1,
         scale: isEditingOther ? 0.98 : 1,
-        y: isEditingOther ? 0 : 0,
         filter: isEditingOther ? "blur(4px)" : "none",
       }}
       exit={{ opacity: 0, scale: 0.92, y: 8 }}
-      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      // During drag: cut all spring transitions so content never lags behind the position
+      transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 20 }}
       className={`${isBeingEdited ? "fixed" : "absolute"} ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
       style={{
         left: pos.x,
@@ -305,7 +305,8 @@ const DraggableWidget = ({
         width: pos.w,
         ...(autoHeight ? {} : { height: pos.h }),
         pointerEvents: isEditingOther ? "none" : "auto",
-        zIndex: containerStyle?.zIndex ?? (isBeingEdited ? 65 : 50),
+        zIndex: containerStyle?.zIndex ?? (isBeingEdited ? 65 : isDragging ? 60 : 50),
+        willChange: isDragging ? "transform" : "auto",
         ...containerStyle,
       }}
       onMouseEnter={() => setIsHovered(true)}
