@@ -1070,10 +1070,10 @@ const FocusContent = () => {
             <motion.div
               key={activePageIndex}
               custom={pageDir}
-              initial={{ x: pageDir * 60, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: pageDir * -60, opacity: 0 }}
-              transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
+              initial={{ x: pageDir * 80, opacity: 0, scale: 0.97 }}
+              animate={{ x: 0, opacity: 1, scale: 1 }}
+              exit={{ x: pageDir * -80, opacity: 0, scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 280, damping: 28, mass: 0.9 }}
               className="absolute inset-0 pointer-events-none"
             >
               <div className="pointer-events-auto w-full h-full">
