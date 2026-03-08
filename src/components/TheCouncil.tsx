@@ -279,7 +279,7 @@ const TheCouncil = () => {
 
         {/* Tab switcher */}
         <div className="relative z-20 flex items-center justify-center pt-4 pb-2">
-        <div className="flex items-center gap-1 p-1 rounded-full bg-black/10 backdrop-blur-sm border border-black/8">
+        <div className="flex items-center gap-1 p-1 rounded-full backdrop-blur-sm border" style={{ background: "hsl(255 30% 12% / 0.8)", borderColor: "hsl(255 30% 50% / 0.2)" }}>
             {[
               { key: "council" as const, label: "Council", icon: "🔮" },
               { key: "boardroom" as const, label: "Boardroom", icon: "🪄" },
@@ -290,9 +290,14 @@ const TheCouncil = () => {
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
                   activeTab === tab.key
-                    ? "bg-white/80 text-foreground shadow-sm"
-                    : "text-foreground/50 hover:text-foreground/80"
+                    ? "text-white shadow-sm"
+                    : "hover:text-white/80"
                 }`}
+                style={activeTab === tab.key ? {
+                  background: "hsl(265 60% 45% / 0.8)",
+                  color: "white",
+                  boxShadow: "0 2px 12px hsl(265 60% 45% / 0.4)"
+                } : { color: "hsl(220 15% 55%)" }}
               >
                 <span>{tab.icon}</span>
                 {tab.label}

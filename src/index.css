@@ -319,6 +319,15 @@
     box-shadow: 0 6px 28px hsl(260 70% 55% / 0.5);
   }
 
+  /* Hidden scrollbar for council panels */
+  .council-hidden-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .council-hidden-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .flux-card {
     background: hsl(var(--glass-bg));
     backdrop-filter: saturate(180%) blur(20px);
