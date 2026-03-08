@@ -1163,11 +1163,98 @@ async function handleMessageToAction(messageText: string, senderName: string, ap
   });
 }
 
+async function handleBoardroomConsult(idea: string, apiKey: string) {
+  const systemPrompt = `You are a simulation engine for "The Council" — a boardroom of 4 expert advisors who review business ideas.
+
+You must generate responses for EXACTLY these 4 advisors, in this exact order:
+1. elena — Elena Verna, The Pragmatist (growth & unit economics expert). Supportive but data-driven. Confidence 70-90.
+2. helen — Helen Lee Kupp, The Branding Expert (positioning & storytelling). Balanced, creative. Confidence 50-75.
+3. anton — Anton Osika, The Devil's Advocate (risk & contrarian). Skeptical, probing. Confidence 20-45. MUST reference and disagree with at least one point Elena made.
+4. margot — Margot van Laer, The Visionary (long-term potential & community). Expansive, optimistic. Confidence 80-98. MUST build on at least one point another advisor made.
+
+RULES:
+- Each analysis must be 3-4 sentences, specific to the idea
+- Cross-references are REQUIRED: e.g. "Building on Elena's point about...", "I disagree with Helen here..."
+- Each advisor ends with a bold Socratic question in the format "**Question text?**"
+- Action plan: 3 concrete steps derived from the collective insights
+- Be specific to the idea — no generic business advice
+
+The idea to analyze: "${idea}"`;
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Analyze this idea with all 4 advisors: "${idea}"` },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "boardroom_responses",
+            description: "Return structured responses from all 4 boardroom advisors",
+            parameters: {
+              type: "object",
+              properties: {
+                personas: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      key: { type: "string", enum: ["elena", "helen", "anton", "margot"] },
+                      analysis: { type: "string", description: "3-4 sentence analysis with cross-references to other advisors" },
+                      question: { type: "string", description: "Bold Socratic question starting with **" },
+                      confidence: { type: "number", description: "Confidence score 0-100" },
+                    },
+                    required: ["key", "analysis", "question", "confidence"],
+                    additionalProperties: false,
+                  },
+                  minItems: 4,
+                  maxItems: 4,
+                },
+                action_plan: {
+                  type: "array",
+                  items: { type: "string" },
+                  minItems: 3,
+                  maxItems: 3,
+                  description: "3 concrete action steps derived from the advisors' collective insights",
+                },
+              },
+              required: ["personas", "action_plan"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "boardroom_responses" } },
+    }),
+  });
+
+  const errResp = handleAIError(response);
+  if (errResp) return errResp;
+  if (!response.ok) throw new Error("AI gateway error for boardroom-consult");
+
+  const data = await response.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall) throw new Error("No tool call in boardroom response");
+
+  const parsed = JSON.parse(toolCall.function.arguments);
+  return new Response(JSON.stringify(parsed), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, messages, context, action, text, question, mode, persona_key, sender_name, prompt } = await req.json();
+    const { type, messages, context, action, text, question, mode, persona_key, sender_name, prompt, idea } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -1177,6 +1264,7 @@ serve(async (req) => {
     if (type === "aura") return await handleAura(messages || [], context || "", LOVABLE_API_KEY);
     if (type === "council") return await handleCouncil(messages ?? [{ role: "user", content: question || "" }], LOVABLE_API_KEY);
     if (type === "council-quick") return await handleCouncilQuick(question, mode, persona_key, LOVABLE_API_KEY);
+    if (type === "boardroom-consult") return await handleBoardroomConsult(idea || question || (messages?.[0]?.content) || "a new business idea", LOVABLE_API_KEY);
     if (type === "document-chat") return await handleDocumentChat(messages, context, LOVABLE_API_KEY);
     if (type === "document-tools") return await handleDocumentTools(action, text, LOVABLE_API_KEY);
     if (type === "message-to-action") return await handleMessageToAction(text || "", sender_name || "Someone", LOVABLE_API_KEY);
