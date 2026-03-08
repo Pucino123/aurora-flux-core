@@ -1494,7 +1494,7 @@ const FocusContent = () => {
               };
 
               return (
-                <WindowFrame key={win.id} window={win}>
+                <WindowFrame key={win.id} window={win} focused={focusedId === win.id}>
                   {win.type === "document" && winDoc ? (
                     <DocumentView
                       document={winDoc}
