@@ -63,9 +63,14 @@ const WidgetToggleBar = () => {
         {/* ── More overflow menu ── */}
         <div className="relative">
           <button onClick={() => setMoreOpen(!moreOpen)} title="More tools"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${moreOpen ? "bg-white/15 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
+            className={`relative flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${moreOpen ? "bg-white/15 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
             <Plus size={15} className={`transition-transform ${moreOpen ? "rotate-45" : ""}`} />
             <span className="hidden sm:inline">More</span>
+            {windows.length > 0 && !moreOpen && (
+              <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 px-0.5 rounded-full bg-white/25 text-white text-[8px] font-bold flex items-center justify-center leading-none">
+                {windows.length}
+              </span>
+            )}
           </button>
           <AnimatePresence>
             {moreOpen && (
@@ -114,7 +119,13 @@ const WidgetToggleBar = () => {
                 const isFocused   = win.id === focusedId && !isMinimized;
                 const isHovered   = hoveredWin === win.id;
                 return (
-                  <motion.div key={win.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.15 }}
+                  <motion.div
+                    key={win.id}
+                    layoutId={`window-${win.id}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.7 }}
                     className="relative shrink-0"
                     onMouseEnter={() => setHoveredWin(win.id)}
                     onMouseLeave={() => setHoveredWin(null)}>

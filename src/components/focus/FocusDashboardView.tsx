@@ -48,7 +48,7 @@ import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChec
 import { toast } from "sonner";
 import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
 import WindowFrame from "@/components/windows/WindowFrame";
-import WindowDock from "@/components/windows/WindowDock";
+import WidgetToggleBar from "@/components/focus/WidgetToggleBar";
 import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
 
@@ -1519,8 +1519,8 @@ const FocusContent = () => {
         </div>
       </div>
 
-      {/* ── Window Dock (taskbar) ────────────────────────────────────────── */}
-      <WindowDock />
+      {/* ── Widget Toggle Bar (unified toolbar) ───────────────────────── */}
+      <WidgetToggleBar />
       <WindowSwitcher />
 
       {/* Canvas right-click context menu */}
