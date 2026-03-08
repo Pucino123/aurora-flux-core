@@ -231,7 +231,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                       style={{ boxShadow: isActive ? `0 0 0 1.5px ${p.color}60` : "none", borderRadius: "50%", padding: "1px" }}
                       title={t(p.name)}
                     >
-                      <BaymaxFace color={p.color} size={20} expression={expressions[p.key] || "straight"} />
+                      <BaymaxFace color={p.color} size={22} expression={expressions[p.key] || "straight"} />
                     </button>
                     {/* Tooltip */}
                     <div className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150 whitespace-nowrap">
