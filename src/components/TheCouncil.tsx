@@ -500,7 +500,7 @@ const TheCouncil = () => {
                       className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-black/8 text-foreground/70 hover:bg-black/12 backdrop-blur-md transition-all border border-black/10"
                     >
                       <Clock size={13} />
-                      {showPreviousIdeas ? "Skjul tidligere idéer" : `Tidligere idéer (${ideas.length})`}
+                      {showPreviousIdeas ? "Hide previous ideas" : `Previous ideas (${ideas.length})`}
                       <motion.div animate={{ rotate: showPreviousIdeas ? 180 : 0 }}>
                         <ChevronDown size={13} />
                       </motion.div>

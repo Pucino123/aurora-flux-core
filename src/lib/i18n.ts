@@ -293,8 +293,8 @@ const da: Record<string, string> = {
   "widget.no_pinned": "Ingen fastgjort note",
 
   // The Council
-  "council.title": "Rådet",
-  "council.nav": "Rådet",
+  "council.title": "Council",
+  "council.nav": "Council",
   "council.desc": "Indsend en idé eller beslutning, og lad fem strategiske perspektiver analysere den.",
   "council.placeholder": "Beskriv din idé, strategi eller beslutning...",
   "council.strategist": "Strategen",
