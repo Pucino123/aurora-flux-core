@@ -189,6 +189,6 @@ const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref
       )}
     </AnimatePresence>
   );
-};
+});
 
 export default OnboardingFlow;
