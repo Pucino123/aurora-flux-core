@@ -422,4 +422,3 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
 };
 
 export default LayoutCanvas;
-export type { CanvasEntity };
