@@ -2,7 +2,7 @@
  * OnboardingFlow — Professional minimalist redesign
  * Swiss-style typography, line-art icons, slide-fade transitions.
  */
-import { forwardRef, useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Cpu, Users, Calendar, Zap, CheckCircle2, ChevronRight, ArrowRight } from "lucide-react";
 import { useMonetization } from "@/context/MonetizationContext";
@@ -53,7 +53,7 @@ const ACCENTS = [
 
 type Phase = "welcome" | "systems" | "accent" | "reward";
 
-const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref) {
+const OnboardingFlow = () => {
   const { addSparks } = useMonetization();
   const [phase, setPhase] = useState<Phase>("welcome");
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
@@ -298,6 +298,6 @@ const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref
       )}
     </AnimatePresence>
   );
-});
+};
 
 export default OnboardingFlow;

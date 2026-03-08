@@ -141,7 +141,7 @@ const AnalyticsView = () => {
       .slice(0, 5);
   }, [deals]);
 
-  const navigateToCRM = useCallback(() => navTo("canvas" as any), [navTo]);
+  const navigateToCRM = useCallback(() => navTo("crm" as any), [navTo]);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
