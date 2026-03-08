@@ -23,6 +23,8 @@ interface DesktopDocumentProps {
   onGroupDragStart?: (e: React.PointerEvent, itemId: string) => boolean;
   onSingleSelect?: (id: string) => void;
   onBulkContextMenu?: (e: React.MouseEvent) => void;
+  positionOverride?: { x: number; y: number };
+  onPositionChange?: (id: string, pos: { x: number; y: number }) => void;
 }
 
 const ICON_COLORS = [
