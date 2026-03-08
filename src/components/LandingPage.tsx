@@ -428,12 +428,12 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-700"
         style={{
           backgroundImage: `url(${gradientBg})`,
-          filter: isDark ? "blur(8px) brightness(0.45) saturate(1.1)" : "blur(6px) brightness(0.75) saturate(1.1)",
+          filter: isDark ? "blur(8px) brightness(0.45) saturate(1.1)" : "blur(6px) brightness(0.88) saturate(1.1)",
           transform: "scale(1.06)",
         }}
       />
       <div className="fixed inset-0 z-0 pointer-events-none transition-colors duration-700"
-        style={{ background: isDark ? "rgba(4,2,10,0.55)" : "rgba(10,8,30,0.38)" }} />
+        style={{ background: isDark ? "rgba(4,2,10,0.55)" : "rgba(10,8,30,0.18)" }} />
 
       {/* Navbar */}
       <nav className="relative z-20 flex items-center justify-between px-5 md:px-16 py-4 md:py-5">
