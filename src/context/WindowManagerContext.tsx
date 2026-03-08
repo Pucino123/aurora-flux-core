@@ -98,6 +98,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
   const openWindow = useCallback((payload: Omit<AppWindow, 'id' | 'zIndex'>): string => {
     const id = `win-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const boost = payload.type === 'document' ? DOC_Z_BOOST : 0;
+    const now = new Date().toISOString();
     setWindows(prev => {
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), counterRef.current);
       counterRef.current = maxZ + 1;
@@ -106,58 +107,23 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
         setFocusedId(existing.id);
         return prev.map(w =>
           w.id === existing.id
-            ? { ...w, zIndex: counterRef.current + boost, minimized: false }
+            ? { ...w, zIndex: counterRef.current + boost, minimized: false, lastActiveAt: now }
             : w
         );
       }
       setFocusedId(id);
-      return [...prev, { ...payload, id, zIndex: counterRef.current + boost, minimized: false }];
+      return [...prev, { ...payload, id, zIndex: counterRef.current + boost, minimized: false, lastActiveAt: now }];
     });
     return id;
   }, []);
-
-  const closeWindow = useCallback((id: string) => {
-    setWindows(prev => {
-      const next = prev.filter(w => w.id !== id);
-      const visible = next.filter(w => !w.minimized);
-      setFocusedId(visible.length ? visible.reduce((a, b) => a.zIndex > b.zIndex ? a : b).id : null);
-      return next;
-    });
-  }, []);
-
-  const setWindowLayout = useCallback((id: string, layout: WindowLayout) => {
-    setWindows(prev => prev.map(w => w.id === id ? { ...w, layout } : w));
-  }, []);
-
-  const updateWindowPosition = useCallback((id: string, x: number, y: number) => {
-    setWindows(prev => {
-      const win = prev.find(w => w.id === id);
-      if (!win) return prev;
-      // If window is in a group, move the partner by the same delta
-      if (win.groupId) {
-        const dx = x - win.position.x;
-        const dy = y - win.position.y;
-        return prev.map(w => {
-          if (w.id === id) return { ...w, position: { x, y } };
-          if (w.groupId === win.groupId) return { ...w, position: { x: w.position.x + dx, y: w.position.y + dy } };
-          return w;
-        });
-      }
-      return prev.map(w => w.id === id ? { ...w, position: { x, y } } : w);
-    });
-  }, []);
-
-  const updateWindowSize = useCallback((id: string, w: number, h: number) => {
-    setWindows(prev => prev.map(win => win.id === id ? { ...win, size: { w, h } } : win));
-  }, []);
-
+...
   const bringToFront = useCallback((id: string) => {
     setFocusedId(id);
     setWindows(prev => {
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), 0);
       const win = prev.find(w => w.id === id);
       const boost = win?.type === 'document' ? DOC_Z_BOOST : 0;
-      return prev.map(w => w.id === id ? { ...w, zIndex: maxZ + 1 + boost } : w);
+      return prev.map(w => w.id === id ? { ...w, zIndex: maxZ + 1 + boost, lastActiveAt: new Date().toISOString() } : w);
     });
   }, []);
 
