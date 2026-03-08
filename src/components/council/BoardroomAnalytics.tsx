@@ -26,7 +26,7 @@ interface SessionRow {
   responses: { persona_key: string; vote_score: number | null }[];
 }
 
-const BoardroomAnalytics: React.FC<Props> = ({ userId }) => {
+const BoardroomAnalytics: React.FC<Props> = ({ userId, onRestoreIdea }) => {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
