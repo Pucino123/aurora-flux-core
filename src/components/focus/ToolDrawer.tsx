@@ -81,7 +81,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
   return (
     <>
       {/* Bottom bar with trigger + mode switcher */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 px-2 py-1.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 shadow-lg">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10100] flex items-center gap-1 px-2 py-1.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 shadow-lg">
         {/* Mode buttons */}
         {MODES.map(({ key, label, icon: Icon }) => (
           <button
