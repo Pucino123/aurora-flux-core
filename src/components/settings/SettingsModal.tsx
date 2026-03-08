@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, User, Link, Zap, Palette, LogOut, CheckCheck, Loader2,
   Globe, Sun, Moon, Monitor, Camera, Check, ChevronRight, Sparkles, CreditCard,
+  Building2, Upload,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
@@ -14,7 +15,7 @@ import { toast } from "sonner";
 import SparksCheckoutModal from "@/components/billing/SparksCheckoutModal";
 import { useAvatar } from "@/context/AvatarContext";
 
-type Tab = "account" | "integrations" | "sparks" | "appearance";
+type Tab = "account" | "company" | "integrations" | "sparks" | "appearance";
 
 interface SettingsModalProps {
   open: boolean;
