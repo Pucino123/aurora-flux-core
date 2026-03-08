@@ -102,7 +102,7 @@ const SENTIMENT_COLORS = {
   visionary: "#22d3ee",
 };
 
-const PERSONA_NAMES = ["Elena", "Helen", "Anton", "Margot"];
+const PERSONA_NAMES = ["Strategist", "Operator", "Skeptic", "Advocate"];
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
