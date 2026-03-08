@@ -188,15 +188,29 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                     const initials = t(p.name).slice(0, 2).toUpperCase();
                     const isActive = filterPersona === p.key;
                     return (
-                      <button
-                        key={p.key}
-                        onClick={(e) => { e.stopPropagation(); setActiveFolder(null); setActiveView("council"); setFilterPersona(isActive ? null : p.key); }}
-                        title={t(p.name)}
-                        className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-150 ${isActive ? "ring-[1.5px] ring-white/40 scale-110" : "opacity-50 hover:opacity-90 hover:scale-105"}`}
-                        style={{ backgroundColor: p.color, color: "#fff" }}
-                      >
-                        {initials}
-                      </button>
+                      <div key={p.key} className="relative group/avatar">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setActiveFolder(null); setActiveView("council"); setFilterPersona(isActive ? null : p.key); }}
+                          className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-200 ${isActive ? "scale-115" : "opacity-50 hover:opacity-90 hover:scale-105"}`}
+                          style={{
+                            backgroundColor: p.color,
+                            color: "#fff",
+                            boxShadow: isActive ? `0 0 0 2.5px ${p.color}80, 0 0 8px ${p.color}60` : "none",
+                          }}
+                        >
+                          {initials}
+                        </button>
+                        {/* Tooltip */}
+                        <div className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150 whitespace-nowrap">
+                          <div className="rounded-lg px-2.5 py-1.5 text-center shadow-xl"
+                            style={{ background: "rgba(12,10,20,0.88)", backdropFilter: "blur(16px)", border: `1px solid ${p.color}40` }}>
+                            <div className="text-[11px] font-semibold text-white leading-tight">{t(p.name)}</div>
+                            <div className="text-[9px] mt-0.5" style={{ color: p.color }}>{p.subtitle || p.role}</div>
+                          </div>
+                          {/* Arrow */}
+                          <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(12,10,20,0.88)", border: `0 0 1px 1px ${p.color}40` }} />
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
