@@ -625,7 +625,7 @@ const SavingsWidget = () => {
                   )}
 
                   {/* Progress bar */}
-                  <div className="h-1.5 rounded-full bg-white/8 overflow-hidden mb-2">
+                  <div className="h-1.5 rounded-full bg-white/8 overflow-hidden mb-1">
                     <motion.div
                       className={`h-full rounded-full bg-gradient-to-r ${gradClass}`}
                       initial={{ width: 0 }}
@@ -633,6 +633,19 @@ const SavingsWidget = () => {
                       transition={{ duration: 0.6, ease: "easeOut" }}
                     />
                   </div>
+
+                  {/* Savings forecast */}
+                  {(() => {
+                    const forecast = savingsForecast(goal.current, goal.target, goal.deadline);
+                    if (!forecast || done) return null;
+                    return (
+                      <p className="flex items-center gap-1 text-[9px] text-white/30 mb-2">
+                        <TrendingUp size={8} className="text-violet-300/50 shrink-0" />
+                        <span className="text-violet-300/70 font-medium">{forecast}/mo</span>
+                        <span>needed to reach goal</span>
+                      </p>
+                    );
+                  })()}
 
                   {/* Action buttons */}
                   <div className="flex items-center gap-1.5">
