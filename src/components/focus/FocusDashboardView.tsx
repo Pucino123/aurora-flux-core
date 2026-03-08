@@ -1615,8 +1615,6 @@ const FocusDashboardView = () => (
 );
 
 export default FocusDashboardView;
-
-      {/* Dot context menu (right-click / long-press) */}
       {dotMenu && (
         <>
           <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); }} />
