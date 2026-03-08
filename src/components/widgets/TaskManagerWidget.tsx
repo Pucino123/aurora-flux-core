@@ -1,17 +1,8 @@
-import React, { useState, useMemo } from "react";
-import { Plus, Check, Calendar, Flag, List, Clock } from "lucide-react";
+import React, { useState, useMemo, useRef } from "react";
+import { Plus, Check, Calendar, Flag, List, Clock, Pencil, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFlux } from "@/context/FluxContext";
 import { format } from "date-fns";
-
-interface LocalTask {
-  id: string;
-  title: string;
-  subtitle?: string;
-  done: boolean;
-  flag?: boolean;
-  dueToday?: boolean;
-}
 
 const SMART_LISTS = [
   { key: "today", label: "Today", icon: Calendar, color: "text-blue-400", bg: "bg-blue-400/15" },
@@ -20,49 +11,63 @@ const SMART_LISTS = [
   { key: "flagged", label: "Flagged", icon: Flag, color: "text-orange-400", bg: "bg-orange-400/15" },
 ];
 
+const PRIORITY_DOT: Record<string, string> = {
+  high: "bg-red-400 shadow-[0_0_5px_rgba(248,113,113,0.7)]",
+  medium: "bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.6)]",
+  low: "bg-blue-400 shadow-[0_0_5px_rgba(96,165,250,0.6)]",
+};
+
 const TaskManagerWidget = () => {
   const { tasks: fluxTasks, updateTask, createTask } = useFlux();
   const today = format(new Date(), "yyyy-MM-dd");
 
   const [newTitle, setNewTitle] = useState("");
   const [activeList, setActiveList] = useState("today");
+  const [viewTab, setViewTab] = useState<"active" | "completed">("active");
   const [completing, setCompleting] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const editRef = useRef<HTMLInputElement>(null);
 
-  const todayTasks = useMemo(() => fluxTasks.filter(t => !t.done && t.type === "task" && (t.scheduled_date === today || t.due_date === today)), [fluxTasks, today]);
-  const scheduledTasks = useMemo(() => fluxTasks.filter(t => !t.done && t.type === "task" && t.due_date && t.due_date !== today), [fluxTasks, today]);
-  const allTasks = useMemo(() => fluxTasks.filter(t => !t.done && t.type === "task"), [fluxTasks]);
-  const flaggedTasks = useMemo(() => fluxTasks.filter(t => !t.done && t.type === "task" && t.priority === "high"), [fluxTasks]);
+  const todayTasks = useMemo(() => fluxTasks.filter(t => t.type === "task" && (t.scheduled_date === today || t.due_date === today)), [fluxTasks, today]);
+  const scheduledTasks = useMemo(() => fluxTasks.filter(t => t.type === "task" && t.due_date && t.due_date !== today), [fluxTasks, today]);
+  const allTasks = useMemo(() => fluxTasks.filter(t => t.type === "task"), [fluxTasks]);
+  const flaggedTasks = useMemo(() => fluxTasks.filter(t => t.type === "task" && t.priority === "high"), [fluxTasks]);
 
-  const counts = {
-    today: todayTasks.length,
-    scheduled: scheduledTasks.length,
-    all: allTasks.length,
-    flagged: flaggedTasks.length,
-  };
+  const poolMap: Record<string, typeof allTasks> = { today: todayTasks, scheduled: scheduledTasks, all: allTasks, flagged: flaggedTasks };
+  const pool = poolMap[activeList] || [];
 
-  const activeTasks = {
-    today: todayTasks,
-    scheduled: scheduledTasks,
-    all: allTasks,
-    flagged: flaggedTasks,
-  }[activeList] || [];
+  const activeTasks = pool.filter(t => !t.done);
+  const completedTasks = pool.filter(t => t.done);
+  const counts = { today: todayTasks.filter(t => !t.done).length, scheduled: scheduledTasks.filter(t => !t.done).length, all: allTasks.filter(t => !t.done).length, flagged: flaggedTasks.filter(t => !t.done).length };
+
+  const visibleTasks = viewTab === "active" ? activeTasks : completedTasks;
 
   const handleComplete = async (id: string) => {
     setCompleting(id);
     setTimeout(() => {
       updateTask(id, { done: true });
       setCompleting(null);
-    }, 500);
+    }, 480);
   };
+
+  const handleUncomplete = (id: string) => updateTask(id, { done: false });
 
   const handleAdd = () => {
     if (!newTitle.trim()) return;
-    createTask({
-      title: newTitle.trim(),
-      type: "task",
-      scheduled_date: today,
-    });
+    createTask({ title: newTitle.trim(), type: "task", scheduled_date: today });
     setNewTitle("");
+  };
+
+  const startEdit = (id: string, title: string) => {
+    setEditingId(id);
+    setEditValue(title);
+    setTimeout(() => editRef.current?.focus(), 30);
+  };
+
+  const saveEdit = (id: string) => {
+    if (editValue.trim()) updateTask(id, { title: editValue.trim() });
+    setEditingId(null);
   };
 
   const cfg = SMART_LISTS.find(l => l.key === activeList)!;
@@ -92,53 +97,97 @@ const TaskManagerWidget = () => {
         ))}
       </div>
 
+      {/* iOS-style Active / Completed segmented control */}
+      <div className="flex items-center shrink-0 bg-white/5 rounded-xl p-0.5">
+        {(["active", "completed"] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setViewTab(tab)}
+            className={`flex-1 py-1.5 rounded-[10px] text-[11px] font-semibold transition-all ${
+              viewTab === tab ? "bg-white/12 text-white/90 shadow-sm" : "text-white/35 hover:text-white/55"
+            }`}
+          >
+            {tab === "active" ? "Active" : "Completed"}
+          </button>
+        ))}
+      </div>
+
       {/* List header */}
       <div className="flex items-center justify-between shrink-0 px-0.5">
         <span className={`text-[12px] font-semibold ${cfg.color}`}>{cfg.label}</span>
-        <span className="text-[10px] text-white/30">{activeTasks.length} tasks</span>
+        <span className="text-[10px] text-white/30">{visibleTasks.length} tasks</span>
       </div>
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto council-hidden-scrollbar">
-        <AnimatePresence>
-          {activeTasks.length === 0 ? (
+        <AnimatePresence initial={false}>
+          {visibleTasks.length === 0 ? (
             <div className="flex items-center justify-center h-16 text-[11px] text-white/20">
-              All clear ✨
+              {viewTab === "active" ? "All clear ✨" : "Nothing completed yet"}
             </div>
           ) : (
-            activeTasks.map(task => (
+            visibleTasks.map(task => (
               <motion.div
                 key={task.id}
-                initial={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="flex items-start gap-2.5 py-2 border-b border-white/5 last:border-0"
+                layout
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: viewTab === "completed" ? 0.55 : 1, x: 0 }}
+                exit={{ opacity: 0, x: 20, transition: { duration: 0.28 } }}
+                className="flex items-start gap-2.5 py-2 border-b border-white/5 last:border-0 group/row"
               >
                 {/* Checkbox */}
-                <button
-                  onClick={() => handleComplete(task.id)}
+                <motion.button
+                  whileTap={{ scale: 0.7 }}
+                  onClick={() => task.done ? handleUncomplete(task.id) : handleComplete(task.id)}
                   className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                    completing === task.id
+                    task.done || completing === task.id
                       ? `border-0 ${cfg.bg}`
-                      : `border-white/20 hover:border-white/40`
+                      : `border-white/20 hover:border-white/50`
                   }`}
                 >
-                  {completing === task.id && <Check size={10} className={cfg.color} />}
-                </button>
+                  {(task.done || completing === task.id) && (
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 22 }}>
+                      <Check size={10} className={cfg.color} />
+                    </motion.div>
+                  )}
+                </motion.button>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[12px] leading-tight transition-all ${completing === task.id ? "line-through text-white/30" : "text-white/80"}`}>
-                    {task.title}
-                  </p>
-                  {task.due_date && (
+                  {editingId === task.id ? (
+                    <input
+                      ref={editRef}
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") saveEdit(task.id); if (e.key === "Escape") setEditingId(null); }}
+                      onBlur={() => saveEdit(task.id)}
+                      className="w-full bg-white/5 border border-emerald-500/50 rounded px-2 py-0.5 outline-none text-white/90 text-[12px]"
+                    />
+                  ) : (
+                    <p className={`text-[12px] leading-tight transition-all ${task.done ? "line-through decoration-slate-400/60 text-white/30" : "text-white/80"}`}>
+                      {task.title}
+                    </p>
+                  )}
+                  {task.due_date && !editingId && (
                     <p className="text-[9px] text-white/30 mt-0.5 flex items-center gap-1">
                       <Clock size={8} /> {task.due_date}
                     </p>
                   )}
                 </div>
 
-                {task.priority === "high" && (
-                  <Flag size={10} className="text-orange-400 shrink-0 mt-1" />
+                {/* Priority dot */}
+                {task.priority && PRIORITY_DOT[task.priority] && (
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${PRIORITY_DOT[task.priority]}`} />
+                )}
+
+                {/* Edit icon — appears on row hover */}
+                {!task.done && editingId !== task.id && (
+                  <button
+                    onClick={() => startEdit(task.id, task.title)}
+                    className="opacity-0 group-hover/row:opacity-60 hover:!opacity-100 transition-opacity shrink-0 mt-0.5 text-white/40 hover:text-white"
+                  >
+                    <Pencil size={10} />
+                  </button>
                 )}
               </motion.div>
             ))
@@ -146,9 +195,9 @@ const TaskManagerWidget = () => {
         </AnimatePresence>
       </div>
 
-      {/* Quick add */}
+      {/* Quick add with Aura AI button */}
       <div className="flex items-center gap-2 pt-1 border-t border-white/6 shrink-0">
-        <button className="text-white/30">
+        <button className="text-white/30 hover:text-white/60 transition-colors" onClick={handleAdd}>
           <Plus size={14} />
         </button>
         <input
@@ -158,6 +207,19 @@ const TaskManagerWidget = () => {
           placeholder="New Reminder..."
           className="flex-1 bg-transparent text-[11px] text-white/70 placeholder:text-white/20 outline-none"
         />
+        <motion.button
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
+          title="Ask Aura to break down this task"
+          className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all"
+          style={{
+            background: "linear-gradient(135deg, rgba(139,92,246,0.3), rgba(16,185,129,0.3))",
+            boxShadow: "0 0 6px rgba(139,92,246,0.5)",
+            border: "0.5px solid rgba(139,92,246,0.4)",
+          }}
+        >
+          <Sparkles size={9} className="text-violet-300" />
+        </motion.button>
       </div>
     </div>
   );

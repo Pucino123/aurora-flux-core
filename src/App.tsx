@@ -13,6 +13,7 @@ import { WorkspaceProvider } from "./context/WorkspaceContext";
 import { CRMProvider } from "./context/CRMContext";
 import { FocusModeProvider } from "./context/FocusModeContext";
 import { TrashProvider } from "./context/TrashContext";
+import { AvatarProvider } from "./context/AvatarContext";
 import Index from "./pages/Index";
 import Focus from "./pages/Focus";
 import Auth from "./pages/Auth";
@@ -46,26 +47,28 @@ const App = () => (
             <TrashProvider>
               <FocusModeProvider>
                 <FluxProvider>
-                  <WorkspaceProvider>
-                    <CRMProvider>
-                      <FocusProvider>
-                        <TooltipProvider>
-                          <DarkModeShortcut />
-                          <Toaster />
-                          <Sonner />
-                          <BrowserRouter>
-                            <Routes>
-                              <Route path="/focus" element={<Focus />} />
-                              <Route path="/auth" element={<Auth />} />
-                              <Route path="/calendar" element={<CalendarCallback />} />
-                              <Route path="/" element={<Index />} />
-                              <Route path="*" element={<NotFound />} />
-                            </Routes>
-                          </BrowserRouter>
-                        </TooltipProvider>
-                      </FocusProvider>
-                    </CRMProvider>
-                  </WorkspaceProvider>
+                  <AvatarProvider>
+                    <WorkspaceProvider>
+                      <CRMProvider>
+                        <FocusProvider>
+                          <TooltipProvider>
+                            <DarkModeShortcut />
+                            <Toaster />
+                            <Sonner />
+                            <BrowserRouter>
+                              <Routes>
+                                <Route path="/focus" element={<Focus />} />
+                                <Route path="/auth" element={<Auth />} />
+                                <Route path="/calendar" element={<CalendarCallback />} />
+                                <Route path="/" element={<Index />} />
+                                <Route path="*" element={<NotFound />} />
+                              </Routes>
+                            </BrowserRouter>
+                          </TooltipProvider>
+                        </FocusProvider>
+                      </CRMProvider>
+                    </WorkspaceProvider>
+                  </AvatarProvider>
                 </FluxProvider>
               </FocusModeProvider>
             </TrashProvider>
