@@ -176,6 +176,49 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
 
   const allTags = allTagsWithCount;
 
+  // ── AI-powered keyword tag extraction from idea text ──
+  const extractAITags = (ideaContent: string): string[] => {
+    const text = ideaContent.toLowerCase();
+    const KEYWORD_MAP: Record<string, string[]> = {
+      // Business & startup
+      startup: ["startup", "launching", "new company", "found", "venture", "mvp", "minimum viable"],
+      mvp: ["mvp", "minimum viable", "prototype", "beta", "v1", "proof of concept"],
+      pivot: ["pivot", "change direction", "rebrand", "reposit", "shift focus"],
+      product: ["product", "feature", "roadmap", "user story", "sprint", "backlog"],
+      saas: ["saas", "software as a service", "subscription", "cloud", "platform"],
+      marketplace: ["marketplace", "two-sided", "buyer", "seller", "listing"],
+      // Finance
+      fundraising: ["fund", "invest", "raise", "seed", "series a", "angel", "vc", "venture capital", "pitch"],
+      revenue: ["revenue", "monetize", "profit", "income", "cash flow", "margin"],
+      budget: ["budget", "cost", "expense", "spending", "financial"],
+      // Growth & marketing
+      growth: ["growth", "scale", "expand", "acquire", "retention", "virality"],
+      marketing: ["marketing", "brand", "advertis", "campaign", "content", "seo", "social media"],
+      "go-to-market": ["go-to-market", "gtm", "launch strategy", "channel", "distribution"],
+      // Product & tech
+      "ai-powered": ["artificial intelligence", "machine learning", "ai ", "ml ", "neural", "llm", "gpt"],
+      "mobile-app": ["mobile app", "ios", "android", "app store", "smartphone"],
+      web: ["web app", "website", "frontend", "backend", "api", "saas"],
+      // People
+      hiring: ["hire", "recruit", "team", "talent", "headcount", "headhunting"],
+      partnership: ["partner", "alliance", "collaboration", "joint venture", "deal"],
+      // Risk & strategy
+      "high-risk": ["risk", "uncertain", "gamble", "bet", "volatile"],
+      strategic: ["strategy", "strategic", "long-term", "roadmap", "vision", "mission"],
+      decision: ["decide", "decision", "choose", "option", "trade-off"],
+      // General
+      personal: ["personal", "life", "career", "relationship", "health", "family"],
+      education: ["learn", "education", "course", "skill", "training"],
+      "eco-friendly": ["eco", "sustainable", "green", "carbon", "environment", "climate"],
+      retail: ["shop", "store", "retail", "ecommerce", "physical location", "cafe", "restaurant"],
+    };
+    const found: string[] = [];
+    for (const [tag, keywords] of Object.entries(KEYWORD_MAP)) {
+      if (keywords.some(kw => text.includes(kw))) found.push(tag);
+    }
+    return found;
+  };
+
   // ── Filtering logic ──
   const filteredIdeas = useMemo(() => {
     return ideas.filter(idea => {
