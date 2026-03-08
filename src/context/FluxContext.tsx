@@ -606,6 +606,7 @@ export function FluxProvider({ children }: { children: ReactNode }) {
         createGoal, updateGoal, removeGoal,
         logWorkout, editWorkout, removeWorkout,
         createBlock, updateBlock, removeBlock, replaceBlocksForDate,
+        scheduleTask,
         findFolderNode, getAllFoldersFlat, getDescendantFolderIds, refreshAll,
       }}
     >
