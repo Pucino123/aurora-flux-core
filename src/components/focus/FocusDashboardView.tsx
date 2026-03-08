@@ -1731,9 +1731,6 @@ const FocusContent = () => {
       />
 
 
-      {/* ── Focus Mode: Control Bar (timer + task + exit) ── */}
-      <FocusControlBar />
-
       {/* ── Intention Modal — shown before enabling focus mode ── */}
       <FocusIntentionModal
         open={intentionModalOpen}
