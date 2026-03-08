@@ -117,7 +117,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   useEffect(() => {
     if (editorRef.current && !initialized.current) {
       let html = (doc.content as any)?.html || "";
-      html = processCheckboxes(html);
+      html = sanitize(processCheckboxes(html));
       editorRef.current.innerHTML = html;
       initialized.current = true;
       bindCheckboxes(editorRef.current);
