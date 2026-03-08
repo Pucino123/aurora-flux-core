@@ -41,6 +41,39 @@ export type Database = {
         }
         Relationships: []
       }
+      community_slots: {
+        Row: {
+          created_at: string | null
+          id: string
+          project_name: string | null
+          slot_index: number
+          status: string
+          thumbnail_url: string | null
+          user_id: string | null
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          project_name?: string | null
+          slot_index: number
+          status?: string
+          thumbnail_url?: string | null
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          project_name?: string | null
+          slot_index?: number
+          status?: string
+          thumbnail_url?: string | null
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       council_debates: {
         Row: {
           challenger_argument: string | null
