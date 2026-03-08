@@ -458,28 +458,44 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
 
         {/* Minimized window chips — macOS Dock style */}
         <AnimatePresence initial={false}>
-          {minimizedWindows.map(win => (
-            <motion.button
-              key={win.id}
-              initial={{ opacity: 0, scale: 0.5, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.5, y: 8 }}
-              transition={{ duration: 0.2, type: "spring", stiffness: 380, damping: 28 }}
-              onPointerDown={e => e.stopPropagation()}
-              onClick={() => restoreWindow(win.id)}
-              title={`Restore: ${win.title}`}
-              className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] font-medium transition-all hover:bg-white/10 max-w-[100px]"
-              style={{
-                color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.6),
-                background: hexToRgba(toolbarStyle.bgColor || "#000000", 0.15),
-                border: `1px solid ${hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.15)}`,
-              }}
-            >
-              <FileText size={11} className="shrink-0" style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.5) }} />
-              <span className="truncate hidden sm:inline">{win.title}</span>
-              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", 0.3) }} />
-            </motion.button>
-          ))}
+          {minimizedWindows.map(win => {
+            const WinIcon = win.type === "document" ? FileText : AppWindow;
+            return (
+              <motion.div
+                key={win.id}
+                initial={{ opacity: 0, scale: 0.5, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.5, y: 8 }}
+                transition={{ duration: 0.2, type: "spring", stiffness: 380, damping: 28 }}
+                className="relative shrink-0 group"
+                onPointerDown={e => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => restoreWindow(win.id)}
+                  title={`Restore: ${win.title}`}
+                  className="flex items-center gap-1.5 pl-2 pr-2 py-1.5 rounded-full text-[10px] font-medium transition-all hover:bg-white/10 max-w-[110px]"
+                  style={{
+                    color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.65),
+                    background: hexToRgba(toolbarStyle.bgColor || "#000000", 0.18),
+                    border: `1px solid ${hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.18)}`,
+                  }}
+                >
+                  <WinIcon size={11} className="shrink-0" style={{ color: win.type === "document" ? hexToRgba("#7dd3fc", 0.8) : hexToRgba("#a78bfa", 0.8) }} />
+                  <span className="truncate hidden sm:inline">{win.title}</span>
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", 0.28) }} />
+                </button>
+                {/* X close button — appears on hover */}
+                <button
+                  onClick={() => closeWindow(win.id)}
+                  title="Close"
+                  className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  style={{ background: "rgba(239,68,68,0.85)", border: "1px solid rgba(255,255,255,0.2)" }}
+                >
+                  <X size={8} strokeWidth={2.5} style={{ color: "#fff" }} />
+                </button>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
 
         {minimizedWindows.length > 0 && (
