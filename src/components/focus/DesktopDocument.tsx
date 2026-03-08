@@ -49,11 +49,15 @@ const BG_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu }: DesktopDocumentProps) => {
+const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange }: DesktopDocumentProps) => {
   const { user } = useAuth();
   const store = useFocusStore();
   const { folders, createBlock } = useFlux();
-  const pos = store.desktopDocPositions[doc.id] ?? { x: 0, y: 0 };
+  const pos = positionOverride ?? store.desktopDocPositions[doc.id] ?? { x: 0, y: 0 };
+  const _updatePos = useCallback((id: string, p: { x: number; y: number }) => {
+    if (onPositionChange) onPositionChange(id, p);
+    else store.updateDesktopDocPosition(id, p);
+  }, [onPositionChange, store.updateDesktopDocPosition]);
   const docOpacity = store.desktopDocOpacities[doc.id] ?? 1;
   const titleSize = store.desktopDocTitleSizes[doc.id] ?? 10;
   const bgColor = store.desktopDocBgColors[doc.id] ?? "";

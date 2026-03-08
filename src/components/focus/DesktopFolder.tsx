@@ -35,7 +35,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
@@ -55,7 +55,11 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   const updateBgColor = focusStore.updateDesktopFolderBgColor;
   const systemMode = focusStore.systemMode ?? "focus";
 
-  const pos = desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };
+  const pos = positionOverride ?? desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };
+  const _updatePos = useCallback((id: string, p: { x: number; y: number }) => {
+    if (onPositionChange) onPositionChange(id, p);
+    else updateDesktopFolderPosition(id, p);
+  }, [onPositionChange, updateDesktopFolderPosition]);
   const folderOpacity = desktopFolderOpacities[folder.id] ?? 1;
   const titleSize = desktopFolderTitleSizes[folder.id] ?? 11;
   const iconFillOp = iconFillOpacities[folder.id] ?? 0.75;
