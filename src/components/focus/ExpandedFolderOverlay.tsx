@@ -206,9 +206,7 @@ const ExpandedFolderOverlay = ({
               <Pencil size={14} />
             </button>
             <button
-              onClick={async () => {
-                await createDocument("Untitled Document", "text", folderId);
-              }}
+              onClick={() => setShowTemplateChooser(true)}
               className="p-2 rounded-lg transition-colors"
               style={{ color: "rgba(255,255,255,0.35)" }}
               onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
