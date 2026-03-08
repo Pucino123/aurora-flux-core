@@ -37,6 +37,7 @@ function hydrateWindows(persisted: PersistedWindow[]): AppWindow[] {
 
 interface WindowManagerContextType {
   windows: AppWindow[];
+  focusedId: string | null;
   openWindow: (payload: Omit<AppWindow, 'id' | 'zIndex'>) => string;
   closeWindow: (id: string) => void;
   setWindowLayout: (id: string, layout: WindowLayout) => void;
@@ -53,6 +54,8 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
   const [windows, setWindows] = useState<AppWindow[]>(() =>
     hydrateWindows(loadPersistedWindows())
   );
+  // Track which window id is "focused" for keyboard shortcuts & focus ring
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const counterRef = useRef(200);
 
   // Persist to localStorage on every change
@@ -68,22 +71,29 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     setWindows(prev => {
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), counterRef.current);
       counterRef.current = maxZ + 1;
-      // If already open with same contentId+type, bring to front and restore if minimized
       const existing = prev.find(w => w.contentId === payload.contentId && w.type === payload.type);
       if (existing) {
+        setFocusedId(existing.id);
         return prev.map(w =>
           w.id === existing.id
             ? { ...w, zIndex: counterRef.current, minimized: false }
             : w
         );
       }
+      setFocusedId(id);
       return [...prev, { ...payload, id, zIndex: counterRef.current, minimized: false }];
     });
     return id;
   }, []);
 
   const closeWindow = useCallback((id: string) => {
-    setWindows(prev => prev.filter(w => w.id !== id));
+    setWindows(prev => {
+      const next = prev.filter(w => w.id !== id);
+      // Move focus to next highest visible window
+      const visible = next.filter(w => !w.minimized);
+      setFocusedId(visible.length ? visible.reduce((a, b) => a.zIndex > b.zIndex ? a : b).id : null);
+      return next;
+    });
   }, []);
 
   const setWindowLayout = useCallback((id: string, layout: WindowLayout) => {
@@ -99,6 +109,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
   }, []);
 
   const bringToFront = useCallback((id: string) => {
+    setFocusedId(id);
     setWindows(prev => {
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), 0);
       return prev.map(w => w.id === id ? { ...w, zIndex: maxZ + 1 } : w);
@@ -106,38 +117,67 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
   }, []);
 
   const minimizeWindow = useCallback((id: string) => {
-    setWindows(prev => prev.map(w => w.id === id ? { ...w, minimized: true } : w));
+    setWindows(prev => {
+      const next = prev.map(w => w.id === id ? { ...w, minimized: true } : w);
+      const visible = next.filter(w => !w.minimized);
+      setFocusedId(visible.length ? visible.reduce((a, b) => a.zIndex > b.zIndex ? a : b).id : null);
+      return next;
+    });
   }, []);
 
   const restoreWindow = useCallback((id: string) => {
+    setFocusedId(id);
     setWindows(prev => {
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), 0);
       return prev.map(w => w.id === id ? { ...w, minimized: false, zIndex: maxZ + 1 } : w);
     });
   }, []);
 
-  // ── Global keyboard shortcuts: Cmd+W = close, Cmd+M = minimize focused ────
+  // ── Global keyboard shortcuts ──────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().includes("MAC");
+      const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
       const mod = isMac ? e.metaKey : e.ctrlKey;
       if (!mod) return;
-      if (e.key === "w" || e.key === "W") {
-        setWindows(prev => {
-          const visible = prev.filter(w => !w.minimized);
-          if (!visible.length) return prev;
-          const top = visible.reduce((a, b) => (a.zIndex > b.zIndex ? a : b));
+
+      setWindows(prev => {
+        const visible = prev.filter(w => !w.minimized);
+        if (!visible.length) return prev;
+        const top = visible.reduce((a, b) => (a.zIndex > b.zIndex ? a : b));
+
+        // ⌘W — close focused window
+        if (e.key === "w" || e.key === "W") {
           e.preventDefault();
-          return prev.filter(w => w.id !== top.id);
-        });
-      }
-      if (e.key === "m" || e.key === "M") {
-        setWindows(prev => {
-          const visible = prev.filter(w => !w.minimized);
-          if (!visible.length) return prev;
-          const top = visible.reduce((a, b) => (a.zIndex > b.zIndex ? a : b));
+          const next = prev.filter(w => w.id !== top.id);
+          const nextVisible = next.filter(w => !w.minimized);
+          setFocusedId(nextVisible.length ? nextVisible.reduce((a, b) => a.zIndex > b.zIndex ? a : b).id : null);
+          return next;
+        }
+
+        // ⌘M — minimize focused window
+        if (e.key === "m" || e.key === "M") {
           e.preventDefault();
-          return prev.map(w => w.id === top.id ? { ...w, minimized: true } : w);
+          const next = prev.map(w => w.id === top.id ? { ...w, minimized: true } : w);
+          const nextVisible = next.filter(w => !w.minimized);
+          setFocusedId(nextVisible.length ? nextVisible.reduce((a, b) => a.zIndex > b.zIndex ? a : b).id : null);
+          return next;
+        }
+
+        return prev;
+      });
+
+      // ⌘` — cycle focus forward through visible windows
+      if (e.key === "`") {
+        e.preventDefault();
+        setWindows(prev => {
+          const visible = prev.filter(w => !w.minimized).sort((a, b) => a.zIndex - b.zIndex);
+          if (visible.length < 2) return prev;
+          // The currently focused window is the one with highest zIndex; bring the next one to front
+          const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), 0);
+          const top = visible[visible.length - 1];
+          const nextWin = visible[visible.findIndex(w => w.id === top.id) - 1] ?? visible[visible.length - 2];
+          setFocusedId(nextWin.id);
+          return prev.map(w => w.id === nextWin.id ? { ...w, zIndex: maxZ + 1 } : w);
         });
       }
     };
@@ -147,7 +187,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
 
   return (
     <WindowManagerContext.Provider value={{
-      windows, openWindow, closeWindow, setWindowLayout,
+      windows, focusedId, openWindow, closeWindow, setWindowLayout,
       updateWindowPosition, updateWindowSize, bringToFront,
       minimizeWindow, restoreWindow,
     }}>
