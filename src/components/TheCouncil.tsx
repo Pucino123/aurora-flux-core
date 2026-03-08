@@ -235,7 +235,7 @@ const TheCouncil = () => {
       if (activeIdeaId === ideaId) { setActiveIdeaId(null); setActiveIdeaContent(""); setResponses([]); setConsensusScore(null); setBiasData([]); setStickyNotes([]); }
       setIdeas((prev) => prev.filter((i) => i.id !== ideaId));
       toast.success("Idé slettet");
-    } catch (e: any) { console.error("Delete idea error:", e); toast.error("Kunne ikke slette idé"); }
+    } catch (e: any) { console.error("Delete idea error:", e); toast.error("Could not delete idea"); }
   };
 
   const handleAddStickyNote = async (parentId: string, color: string) => { if (!user) return; const { data } = await supabase.from("council_sticky_notes").insert({ user_id: user.id, parent_id: parentId, parent_type: "idea", color, content: "" }).select().single(); if (data) setStickyNotes((prev) => [...prev, data]); };
