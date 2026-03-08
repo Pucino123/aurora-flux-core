@@ -75,12 +75,12 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
       break;
     }
     case "frown": {
-      leftRotate  = 20;
-      rightRotate = -20;
-      leftEyeCX  = cx - baseSpread * 0.88;
-      rightEyeCX = cx + baseSpread * 0.88;
-      // Frown: control point ABOVE endpoints (lower Y in SVG) → arc bows upward = ∩ = sad face
-      barPath = `M ${leftEyeCX} ${barY + S * 0.02} Q ${cx} ${barY - S * 0.16} ${rightEyeCX} ${barY + S * 0.02}`;
+      // No eye rotation — squinted eyes, clear ∩ frown
+      leftEyeCX  = cx - baseSpread * 0.80;
+      rightEyeCX = cx + baseSpread * 0.80;
+      lRy = rRy = eyeRy * 0.72; // narrowed/squinting eyes
+      // Endpoints low, control point high → ∩ arc = frown
+      barPath = `M ${leftEyeCX - S * 0.01} ${barY + S * 0.14} Q ${cx} ${barY - S * 0.10} ${rightEyeCX + S * 0.01} ${barY + S * 0.14}`;
       break;
     }
     case "straight":
