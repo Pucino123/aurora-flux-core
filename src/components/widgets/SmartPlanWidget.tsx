@@ -628,6 +628,54 @@ const SmartPlanWidget = () => {
         >
           <Zap size={9} /> Focus Block
         </button>
+        {/* 📋 Daily Summary AI button */}
+        <Popover open={summaryOpen} onOpenChange={setSummaryOpen}>
+          <PopoverTrigger asChild>
+            <button
+              onClick={fetchDailySummary}
+              title="AI summary of today's blocks"
+              className="flex items-center gap-1 px-2 py-1 rounded-full bg-violet-500/15 border border-violet-400/20 text-[10px] text-violet-300 hover:bg-violet-500/30 hover:border-violet-400/40 transition-all"
+            >
+              <FileText size={9} /> Daily Summary
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-72 p-3 z-50 bg-[hsl(var(--card))] border border-border/30 shadow-xl rounded-2xl"
+            align="start"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                <Sparkles size={11} className="text-violet-400" /> Today's Summary
+              </p>
+              <button onClick={() => setSummaryOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                <X size={11} />
+              </button>
+            </div>
+            <AnimatePresence mode="wait">
+              {summaryLoading ? (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 py-4 justify-center"
+                >
+                  <Loader2 size={14} className="animate-spin text-violet-400" />
+                  <span className="text-[11px] text-muted-foreground">Summarizing your day…</span>
+                </motion.div>
+              ) : (
+                <motion.p
+                  key="summary"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-[12px] text-foreground/80 leading-relaxed"
+                >
+                  {summary}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Today vs Scheduled toggle + date header */}
