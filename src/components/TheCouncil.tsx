@@ -279,7 +279,7 @@ const TheCouncil = () => {
 
         {/* Tab switcher */}
         <div className="relative z-20 flex items-center justify-center pt-4 pb-2">
-        <div className="flex items-center gap-1 p-1 rounded-full bg-black/10 backdrop-blur-sm border border-black/8">
+        <div className="flex items-center gap-1 p-1 rounded-full backdrop-blur-sm border" style={{ background: "hsl(255 30% 12% / 0.8)", borderColor: "hsl(255 30% 50% / 0.2)" }}>
             {[
               { key: "council" as const, label: "Council", icon: "🔮" },
               { key: "boardroom" as const, label: "Boardroom", icon: "🪄" },
@@ -290,9 +290,14 @@ const TheCouncil = () => {
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
                   activeTab === tab.key
-                    ? "bg-white/80 text-foreground shadow-sm"
-                    : "text-foreground/50 hover:text-foreground/80"
+                    ? "text-white shadow-sm"
+                    : "hover:text-white/80"
                 }`}
+                style={activeTab === tab.key ? {
+                  background: "hsl(265 60% 45% / 0.8)",
+                  color: "white",
+                  boxShadow: "0 2px 12px hsl(265 60% 45% / 0.4)"
+                } : { color: "hsl(220 15% 55%)" }}
               >
                 <span>{tab.icon}</span>
                 {tab.label}
@@ -409,21 +414,20 @@ const TheCouncil = () => {
                       const expressions: Record<string, import("./council/BaymaxFace").BaymaxExpression> = {
                         strategist: "smile", operator: "straight", skeptic: "frown", advocate: "analytical", growth: "wide-smile",
                       };
-                      return (
-                        <motion.button
-                          key={p.key}
-                          initial={{ opacity: 0, y: 24, scale: 0.7 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          transition={{ delay: 0.1 + i * 0.08, type: "spring", stiffness: 200 }}
-                          whileHover={{ scale: 1.15, y: -6 }}
-                          onClick={() => setProfilePersona(p.key)}
-                          className="relative group"
-                          style={{ marginBottom: isCenter ? 0 : i === 1 || i === 3 ? 4 : 10 }}
-                        >
-                          <div className="absolute -inset-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle, ${p.color}35 0%, transparent 70%)` }} />
-                          <BaymaxFace color={p.color} size={size} expression={expressions[p.key] || "straight"} />
-                        </motion.button>
-                      );
+                       return (
+                         <motion.button
+                           key={p.key}
+                           initial={{ opacity: 0, y: 24, scale: 0.7 }}
+                           animate={{ opacity: 1, y: 0, scale: 1 }}
+                           transition={{ delay: 0.1 + i * 0.08, type: "spring", stiffness: 200 }}
+                           onClick={() => setProfilePersona(p.key)}
+                           className="relative group"
+                           style={{ marginBottom: isCenter ? 0 : i === 1 || i === 3 ? 4 : 10 }}
+                         >
+                           <div className="absolute -inset-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle, ${p.color}35 0%, transparent 70%)` }} />
+                           <BaymaxFace color={p.color} size={size} expression={expressions[p.key] || "straight"} personalityIndex={i} />
+                         </motion.button>
+                       );
                     })}
                   </div>
 
@@ -455,18 +459,19 @@ const TheCouncil = () => {
                         ))}
                       </div>
 
-                      {/* Textarea */}
-                      <textarea
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-                        onFocus={() => setInputFocused(true)}
-                        onBlur={() => setInputFocused(false)}
-                        placeholder={t("council.placeholder") || "Beskriv din idé, strategi eller beslutning…"}
-                        rows={isMobile ? 3 : 4}
-                        className="w-full bg-white/50 rounded-2xl px-4 py-3 sm:px-5 sm:py-4 outline-none text-sm sm:text-base resize-none border border-white/60 placeholder:text-muted-foreground/40 focus:border-[hsl(var(--aurora-violet)/0.3)] focus:bg-white/70 transition-all duration-300 leading-relaxed"
-                        disabled={loading}
-                      />
+                       {/* Textarea */}
+                       <textarea
+                         value={input}
+                         onChange={(e) => setInput(e.target.value)}
+                         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+                         onFocus={() => setInputFocused(true)}
+                         onBlur={() => setInputFocused(false)}
+                         placeholder={t("council.placeholder") || "Beskriv din idé, strategi eller beslutning…"}
+                         rows={isMobile ? 3 : 4}
+                         className="w-full rounded-2xl px-4 py-3 sm:px-5 sm:py-4 outline-none text-sm sm:text-base resize-none border transition-all duration-300 leading-relaxed text-slate-200 placeholder:text-slate-500"
+                         style={{ background: "hsl(240 20% 10% / 0.8)", borderColor: "hsl(255 30% 50% / 0.2)" }}
+                         disabled={loading}
+                       />
 
                        {/* Submit */}
                       <motion.button
@@ -552,17 +557,18 @@ const TheCouncil = () => {
                     <div className="space-y-4">
                       {/* Compact input card */}
                       <div className="council-glass-card p-4">
-                        <textarea
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-                          onFocus={() => setInputFocused(true)}
-                          onBlur={() => setInputFocused(false)}
-                          placeholder="Ny idé eller opfølgning…"
-                          rows={2}
-                          className="w-full bg-white/50 rounded-xl px-3 py-2.5 outline-none text-sm resize-none border border-white/60 placeholder:text-muted-foreground/40 focus:border-[hsl(var(--aurora-violet)/0.3)] focus:bg-white/70 transition-all duration-300"
-                          disabled={loading}
-                        />
+                         <textarea
+                           value={input}
+                           onChange={(e) => setInput(e.target.value)}
+                           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+                           onFocus={() => setInputFocused(true)}
+                           onBlur={() => setInputFocused(false)}
+                           placeholder="Ny idé eller opfølgning…"
+                           rows={2}
+                           className="w-full rounded-xl px-3 py-2.5 outline-none text-sm resize-none border transition-all duration-300 text-slate-200 placeholder:text-slate-500"
+                           style={{ background: "hsl(240 20% 10% / 0.8)", borderColor: "hsl(255 30% 50% / 0.2)" }}
+                           disabled={loading}
+                         />
                         <motion.button
                           onClick={handleSubmit}
                           disabled={loading || !input.trim()}

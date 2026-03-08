@@ -1,10 +1,9 @@
 /**
  * BaymaxFace — precision SVG component matching the canonical Baymax face.
- *
- * Reference: circular white/grey face, two dark vertical ovals (eyes) connected
- * by a thin horizontal stroke. Per-persona colour + expression tweaks.
+ * With continuous idle breathing, blinking, and pulsing aura (framer-motion).
  */
 import React from "react";
+import { motion } from "framer-motion";
 
 export type BaymaxExpression = "smile" | "straight" | "frown" | "analytical" | "wide-smile";
 
@@ -16,8 +15,12 @@ interface BaymaxFaceProps {
   /** Expression variant */
   expression?: BaymaxExpression;
   className?: string;
-  /** Extra CSS style on the root <svg> */
+  /** Extra CSS style on the root element */
   style?: React.CSSProperties;
+  /** 0–4 personalityIndex for unique animation timing */
+  personalityIndex?: number;
+  /** Disable animations (e.g. tiny sidebar chips) */
+  static?: boolean;
 }
 
 const BaymaxFace: React.FC<BaymaxFaceProps> = ({
@@ -26,47 +29,38 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
   expression = "straight",
   className = "",
   style,
+  personalityIndex = 0,
+  static: isStatic = false,
 }) => {
-  const S = size;          // shorthand
+  const S = size;
   const cx = S / 2;
   const cy = S / 2;
 
   /* ── Circle shell ── */
   const shellR = S * 0.46;
-  // Subtle gradient from near-white to a tinted light version of the accent
-  const gradId = `bf-grad-${color.replace(/[^a-z0-9]/gi, "")}`;
-  const glowId = `bf-glow-${color.replace(/[^a-z0-9]/gi, "")}`;
+  const gradId = `bf-grad-${color.replace(/[^a-z0-9]/gi, "")}-${S}`;
+  const glowId = `bf-glow-${color.replace(/[^a-z0-9]/gi, "")}-${S}`;
 
-  /* ── Eye geometry ──
-   * The canonical Baymax eyes are vertical ovals: rx < ry.
-   * Positioned symmetrically left/right of centre, slightly above mid-height.
-   */
-  const baseSpread  = S * 0.195;   // horizontal distance from centre to each eye
-  const eyeRx       = S * 0.075;   // eye horizontal radius
-  const eyeRy       = S * 0.115;   // eye vertical radius  (taller than wide)
-  const eyeCY       = cy - S * 0.04; // slightly above centre
+  /* ── Eye geometry ── */
+  const baseSpread  = S * 0.195;
+  const eyeRx       = S * 0.075;
+  const eyeRy       = S * 0.115;
+  const eyeCY       = cy - S * 0.04;
 
-  /* ── Per-expression overrides ── */
   let leftEyeCX  = cx - baseSpread;
   let rightEyeCX = cx + baseSpread;
   let lRx = eyeRx, lRy = eyeRy, rRx = eyeRx, rRy = eyeRy;
   let leftRotate  = 0;
   let rightRotate = 0;
-
-  // Connecting bar Y (centre of bar between the two eyes)
   const barY = eyeCY;
-
-  // Bar path — rebuilt per expression
   let barPath = "";
 
   switch (expression) {
     case "smile": {
-      // Gentle upward-curving smile line
       barPath = `M ${leftEyeCX} ${barY + S * 0.02} Q ${cx} ${barY + S * 0.12} ${rightEyeCX} ${barY + S * 0.02}`;
       break;
     }
     case "wide-smile": {
-      // Big warm deep-curve smile, slightly wider eye spacing
       leftEyeCX  = cx - baseSpread * 1.12;
       rightEyeCX = cx + baseSpread * 1.12;
       lRx = rRx = eyeRx * 1.1;
@@ -75,17 +69,14 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
       break;
     }
     case "analytical": {
-      // Eyes slightly closer, perfectly straight rigid line
       leftEyeCX  = cx - baseSpread * 0.82;
       rightEyeCX = cx + baseSpread * 0.82;
       barPath = `M ${leftEyeCX} ${barY} L ${rightEyeCX} ${barY}`;
       break;
     }
     case "frown": {
-      // Eyes rotated inward (furrowed brow): left eye rotates CW, right CCW
       leftRotate  = 18;
       rightRotate = -18;
-      // Eyes shift slightly inward+down for furrowed look
       leftEyeCX  = cx - baseSpread * 0.9;
       rightEyeCX = cx + baseSpread * 0.9;
       barPath = `M ${leftEyeCX} ${barY + S * 0.01} L ${rightEyeCX} ${barY + S * 0.01}`;
@@ -99,9 +90,18 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
   }
 
   const barStrokeW = Math.max(0.8, S * 0.045);
-  const eyeFill    = "#0f172a"; // near-black
+  const eyeFill    = "#0f172a";
 
-  return (
+  // ── Animation timings per personality ──
+  const breathDurations = [4.2, 3.6, 3.0, 3.8, 2.8];
+  const blinkDelays     = [3.5, 4.2, 2.8, 5.0, 3.1];
+  const auraDurations   = [3.0, 2.6, 2.2, 3.4, 2.0];
+  const pi = personalityIndex ?? 0;
+
+  // Only animate if size > 18 (don't animate tiny sidebar chips)
+  const shouldAnimate = !isStatic && S > 18;
+
+  const svgContent = (
     <svg
       width={S}
       height={S}
@@ -112,13 +112,11 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
       style={style}
     >
       <defs>
-        {/* Shell gradient: soft white centre → tinted edge */}
         <radialGradient id={gradId} cx="42%" cy="38%" r="60%">
           <stop offset="0%"   stopColor="#ffffff" stopOpacity="1" />
           <stop offset="65%"  stopColor="#f0f0f2" stopOpacity="1" />
           <stop offset="100%" stopColor={color}   stopOpacity="0.18" />
         </radialGradient>
-        {/* Outer glow filter */}
         <filter id={glowId} x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation={S * 0.08} result="blur" />
           <feFlood floodColor={color} floodOpacity="0.55" result="colour" />
@@ -130,12 +128,17 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
         </filter>
       </defs>
 
-      {/* Outer glow halo */}
-      <circle
-        cx={cx} cy={cy} r={shellR + S * 0.06}
-        fill={color}
-        opacity={0.18}
-      />
+      {/* Pulsing aura halo */}
+      {shouldAnimate ? (
+        <motion.circle
+          cx={cx} cy={cy} r={shellR + S * 0.06}
+          fill={color}
+          animate={{ opacity: [0.14, 0.28, 0.14], r: [shellR + S * 0.04, shellR + S * 0.10, shellR + S * 0.04] }}
+          transition={{ duration: auraDurations[pi] || 3, repeat: Infinity, ease: "easeInOut" }}
+        />
+      ) : (
+        <circle cx={cx} cy={cy} r={shellR + S * 0.06} fill={color} opacity={0.18} />
+      )}
 
       {/* Main circular shell */}
       <circle
@@ -147,31 +150,61 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
       />
 
       {/* Inner subtle sheen */}
-      <circle
-        cx={cx - S * 0.06} cy={cy - S * 0.1} r={shellR * 0.55}
-        fill="white"
-        opacity={0.18}
-      />
+      <circle cx={cx - S * 0.06} cy={cy - S * 0.1} r={shellR * 0.55} fill="white" opacity={0.18} />
 
-      {/* ── Left eye ── */}
-      <ellipse
-        cx={leftEyeCX}
-        cy={eyeCY}
-        rx={lRx}
-        ry={lRy}
-        fill={eyeFill}
-        transform={leftRotate !== 0 ? `rotate(${leftRotate}, ${leftEyeCX}, ${eyeCY})` : undefined}
-      />
+      {/* ── Left eye with blink ── */}
+      {shouldAnimate ? (
+        <motion.ellipse
+          cx={leftEyeCX}
+          cy={eyeCY}
+          rx={lRx}
+          ry={lRy}
+          fill={eyeFill}
+          transform={leftRotate !== 0 ? `rotate(${leftRotate}, ${leftEyeCX}, ${eyeCY})` : undefined}
+          animate={{ scaleY: [1, 1, 1, 0.08, 1] }}
+          transition={{
+            duration: 0.25,
+            repeat: Infinity,
+            repeatDelay: blinkDelays[pi] || 3.5,
+            ease: "easeInOut",
+            times: [0, 0.7, 0.9, 0.95, 1],
+          }}
+          style={{ transformOrigin: `${leftEyeCX}px ${eyeCY}px` }}
+          whileHover={{ scaleY: 1.15, scaleX: 1.12 }}
+        />
+      ) : (
+        <ellipse
+          cx={leftEyeCX} cy={eyeCY} rx={lRx} ry={lRy} fill={eyeFill}
+          transform={leftRotate !== 0 ? `rotate(${leftRotate}, ${leftEyeCX}, ${eyeCY})` : undefined}
+        />
+      )}
 
-      {/* ── Right eye ── */}
-      <ellipse
-        cx={rightEyeCX}
-        cy={eyeCY}
-        rx={rRx}
-        ry={rRy}
-        fill={eyeFill}
-        transform={rightRotate !== 0 ? `rotate(${rightRotate}, ${rightEyeCX}, ${eyeCY})` : undefined}
-      />
+      {/* ── Right eye with blink (slightly offset timing) ── */}
+      {shouldAnimate ? (
+        <motion.ellipse
+          cx={rightEyeCX}
+          cy={eyeCY}
+          rx={rRx}
+          ry={rRy}
+          fill={eyeFill}
+          transform={rightRotate !== 0 ? `rotate(${rightRotate}, ${rightEyeCX}, ${eyeCY})` : undefined}
+          animate={{ scaleY: [1, 1, 1, 0.08, 1] }}
+          transition={{
+            duration: 0.25,
+            repeat: Infinity,
+            repeatDelay: (blinkDelays[pi] || 3.5) + 0.08,
+            ease: "easeInOut",
+            times: [0, 0.7, 0.9, 0.95, 1],
+          }}
+          style={{ transformOrigin: `${rightEyeCX}px ${eyeCY}px` }}
+          whileHover={{ scaleY: 1.15, scaleX: 1.12 }}
+        />
+      ) : (
+        <ellipse
+          cx={rightEyeCX} cy={eyeCY} rx={rRx} ry={rRy} fill={eyeFill}
+          transform={rightRotate !== 0 ? `rotate(${rightRotate}, ${rightEyeCX}, ${eyeCY})` : undefined}
+        />
+      )}
 
       {/* ── Connecting bar ── */}
       <path
@@ -183,6 +216,19 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
         opacity={0.85}
       />
     </svg>
+  );
+
+  if (!shouldAnimate) return svgContent;
+
+  return (
+    <motion.div
+      style={{ display: "inline-flex" }}
+      animate={{ y: [-1.5, 1.5, -1.5] }}
+      transition={{ duration: breathDurations[pi] || 4, repeat: Infinity, ease: "easeInOut" }}
+      whileHover={{ scale: 1.15, filter: "brightness(1.3)" }}
+    >
+      {svgContent}
+    </motion.div>
   );
 };
 

@@ -22,6 +22,14 @@ const DEFAULT_PROFILE = {
   swift: "NDEADKKK",
   paymentTerms: "30",
   email: "billing@dashiii.io",
+  // Additional universal fields
+  routingNumber: "",
+  sortCode: "",
+  bsb: "",
+  extraField1Label: "",
+  extraField1Value: "",
+  extraField2Label: "",
+  extraField2Value: "",
 };
 
 type PaymentProfile = typeof DEFAULT_PROFILE;
@@ -46,11 +54,18 @@ const BankInfoPanel = ({ profile, onSave, onClose }: { profile: PaymentProfile; 
     { key: "companyName", label: "Company Name", ph: "Acme ApS" },
     { key: "email", label: "Billing Email", ph: "billing@acme.com" },
     { key: "bankName", label: "Bank Name", ph: "Nordea Bank" },
-    { key: "regNumber", label: "Reg. Number", ph: "2200" },
+    { key: "regNumber", label: "Reg. Number (DK/EU)", ph: "2200" },
     { key: "accountNumber", label: "Account Number", ph: "1234567890" },
-    { key: "iban", label: "IBAN", ph: "DK12 2200 1234 5678 90" },
+    { key: "iban", label: "IBAN (leave blank if unused)", ph: "DK12 2200 1234 5678 90" },
     { key: "swift", label: "SWIFT / BIC", ph: "NDEADKKK" },
+    { key: "routingNumber", label: "Routing Number (US)", ph: "021000021" },
+    { key: "sortCode", label: "Sort Code (UK)", ph: "20-00-00" },
+    { key: "bsb", label: "BSB (AU)", ph: "062-000" },
     { key: "paymentTerms", label: "Payment Terms (days)", ph: "30" },
+    { key: "extraField1Label", label: "Custom Label 1", ph: "e.g. MobilePay" },
+    { key: "extraField1Value", label: "Custom Value 1", ph: "e.g. +45 12345678" },
+    { key: "extraField2Label", label: "Custom Label 2", ph: "e.g. PayPal" },
+    { key: "extraField2Value", label: "Custom Value 2", ph: "e.g. payments@you.com" },
   ];
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -133,6 +148,13 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
           swift: data.swift_bic || DEFAULT_PROFILE.swift,
           paymentTerms: data.payment_terms?.replace(/\D/g, "") || DEFAULT_PROFILE.paymentTerms,
           email: user.email || DEFAULT_PROFILE.email,
+          routingNumber: DEFAULT_PROFILE.routingNumber,
+          sortCode: DEFAULT_PROFILE.sortCode,
+          bsb: DEFAULT_PROFILE.bsb,
+          extraField1Label: DEFAULT_PROFILE.extraField1Label,
+          extraField1Value: DEFAULT_PROFILE.extraField1Value,
+          extraField2Label: DEFAULT_PROFILE.extraField2Label,
+          extraField2Value: DEFAULT_PROFILE.extraField2Value,
         };
         setProfile(dbProfile);
         saveProfile(dbProfile);
