@@ -1,24 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { useDocuments } from "@/hooks/useDocuments";
-import { FileText, Plus, Trash2, Search } from "lucide-react";
+import { FileText, Table, Plus, Trash2, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DocumentView from "./documents/DocumentView";
 import { useFlux } from "@/context/FluxContext";
+import { useWorkspace } from "@/context/WorkspaceContext";
 
 const DocumentsView = () => {
   const { documents, createDocument, updateDocument, removeDocument, loading } = useDocuments();
-  const { pendingDocumentId, setPendingDocumentId } = useFlux();
+  const { pendingDocumentId, setPendingDocumentId, setActiveView } = useFlux();
+  const { openInWorkspace } = useWorkspace();
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  // Open pending document from sidebar click
+  // Open pending document from sidebar click → go to workspace
   useEffect(() => {
     if (pendingDocumentId && documents.length > 0) {
       const found = documents.find(d => d.id === pendingDocumentId);
-      if (found) setSelectedDoc(found.id);
+      if (found) {
+        openInWorkspace(found);
+        setActiveView("multitask" as any);
+      }
       setPendingDocumentId(null);
     }
-  }, [pendingDocumentId, documents, setPendingDocumentId]);
+  }, [pendingDocumentId, documents, setPendingDocumentId, openInWorkspace, setActiveView]);
 
   const filtered = documents.filter(d => d.title.toLowerCase().includes(search.toLowerCase()));
   const activeDoc = documents.find(d => d.id === selectedDoc);
