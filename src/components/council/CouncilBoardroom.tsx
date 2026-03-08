@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, BarChart2, Send, Loader2, Share2, X, MessageSquare, TrendingUp, AlertTriangle,
   Lightbulb, Star, Reply, Maximize2, BookmarkPlus, Check, RotateCcw, Download, Users, Link,
+  Copy, FileText, Eye,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import BoardroomPersonalitySliders, { DEFAULT_ALL_SLIDERS, AllSliders } from "./BoardroomPersonalitySliders";
 import { toast } from "sonner";
 
@@ -894,13 +895,17 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const [savedIdeaId, setSavedIdeaId] = useState<string | null>(null);
   // Personality sliders per advisor
   const [personalitySliders, setPersonalitySliders] = useState<AllSliders>(DEFAULT_ALL_SLIDERS);
+  // Shared session banner (viewing someone else's link)
+  const [isSharedView, setIsSharedView] = useState(false);
+  // Council Digest modal (shown after saving)
+  const [showDigest, setShowDigest] = useState(false);
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
   // Realtime presence: collaborators watching the boardroom
   const [collaborators, setCollaborators] = useState<{ userId: string; displayName: string; isConsulting: boolean }[]>([]);
   const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  // PDF export ref
+  // PDF export ref (not used for jsPDF but kept for future screenshots)
   const boardroomRef = useRef<HTMLDivElement>(null);
 
   const allRevealed = revealedCount === 4;
@@ -1052,49 +1057,136 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     sessionIdRef.current = resetSessionId();
   }, []);
 
-  // ── PDF Export ──
+  // ── PDF Export — styled summary card using jsPDF ──
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const handleExportPDF = useCallback(async () => {
-    if (!boardroomRef.current || isExportingPDF) return;
+    if (!allRevealed || isExportingPDF) return;
     setIsExportingPDF(true);
     try {
-      const canvas = await html2canvas(boardroomRef.current, {
-        backgroundColor: "#0a0814",
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        ignoreElements: (el) => {
-          // Skip buttons/inputs that don't render well in PDF
-          return el.tagName === "BUTTON" && (el as HTMLButtonElement).type === "button" && (el as HTMLElement).dataset.noPdf === "true";
-        },
-      });
-      const imgData = canvas.toDataURL("image/png");
-      // Build a simple print page
-      const printWindow = window.open("", "_blank");
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Boardroom — ${idea.slice(0, 60) || "Analysis"}</title>
-              <style>
-                body { margin: 0; background: #0a0814; display: flex; justify-content: center; align-items: flex-start; padding: 24px; }
-                img { max-width: 100%; border-radius: 16px; box-shadow: 0 0 60px rgba(139,92,246,0.4); }
-              </style>
-            </head>
-            <body>
-              <img src="${imgData}" alt="Boardroom Export" />
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.focus();
-        setTimeout(() => printWindow.print(), 800);
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const W = doc.internal.pageSize.getWidth();
+
+      // ── Background
+      doc.setFillColor(10, 8, 20);
+      doc.rect(0, 0, W, 297, "F");
+
+      // ── Header bar
+      doc.setFillColor(30, 20, 60);
+      doc.roundedRect(10, 10, W - 20, 18, 4, 4, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(139, 92, 246);
+      doc.text("THE COUNCIL  —  BOARDROOM ANALYSIS", W / 2, 20, { align: "center" });
+      doc.setFontSize(7);
+      doc.setTextColor(180, 160, 220);
+      doc.text(new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), W - 14, 20, { align: "right" });
+
+      // ── Idea
+      doc.setFontSize(13);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      const ideaLines = doc.splitTextToSize(`"${idea || "Your Idea"}"`, W - 28);
+      doc.text(ideaLines, W / 2, 38, { align: "center" });
+      let y = 38 + ideaLines.length * 6 + 6;
+
+      // ── Consensus bar
+      const consensusLabel = getConsensusLabel();
+      doc.setFontSize(8);
+      doc.setTextColor(180, 180, 200);
+      doc.setFont("helvetica", "normal");
+      doc.text("BOARD CONSENSUS", W / 2, y, { align: "center" });
+      y += 5;
+      const barW = W - 40;
+      const barX = 20;
+      doc.setFillColor(30, 25, 50);
+      doc.roundedRect(barX, y, barW, 5, 2, 2, "F");
+      const hex2rgb = (hex: string) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return [r, g, b] as [number, number, number];
+      };
+      const [cr, cg, cb] = hex2rgb(consensusLabel.color.replace(/[^#0-9a-fA-F]/g, "").padEnd(7, "0").slice(0, 7));
+      doc.setFillColor(cr, cg, cb);
+      doc.roundedRect(barX, y, (avgRing / 100) * barW, 5, 2, 2, "F");
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(cr, cg, cb);
+      doc.text(`${avgRing}%  ${consensusLabel.label}`, W / 2, y + 10, { align: "center" });
+      y += 18;
+
+      // ── 4 Advisor Cards
+      const personaColors: Record<string, [number, number, number]> = {
+        elena: [52, 211, 153], helen: [251, 191, 36], anton: [248, 113, 113], margot: [34, 211, 238],
+      };
+      const cardW = (W - 24) / 2;
+      const cards = PERSONAS.map(p => ({ p, r: responses[p.key] }));
+      for (let i = 0; i < 4; i++) {
+        const { p, r } = cards[i];
+        const cx = 10 + (i % 2) * (cardW + 4);
+        const cy = y + Math.floor(i / 2) * 52;
+        const [pr, pg, pb] = personaColors[p.key] || [180, 180, 180];
+        doc.setFillColor(15, 12, 30);
+        doc.roundedRect(cx, cy, cardW, 48, 3, 3, "F");
+        doc.setDrawColor(pr, pg, pb);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(cx, cy, cardW, 48, 3, 3, "S");
+        // Name + confidence
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(pr, pg, pb);
+        doc.text(p.name, cx + 4, cy + 7);
+        doc.setFontSize(7);
+        doc.setTextColor(pr * 0.7, pg * 0.7, pb * 0.7);
+        doc.text(p.title, cx + 4, cy + 12);
+        const conf = r?.confidence ?? p.ringPct;
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(pr, pg, pb);
+        doc.text(`${conf}%`, cx + cardW - 4, cy + 7, { align: "right" });
+        // Mini confidence bar
+        doc.setFillColor(30, 25, 50);
+        doc.roundedRect(cx + 4, cy + 14, cardW - 8, 2, 1, 1, "F");
+        doc.setFillColor(pr, pg, pb);
+        doc.roundedRect(cx + 4, cy + 14, ((conf / 100) * (cardW - 8)), 2, 1, 1, "F");
+        // Analysis text
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.5);
+        doc.setTextColor(180, 170, 200);
+        const analysis = r?.analysis || "No analysis available.";
+        const lines = doc.splitTextToSize(analysis, cardW - 8);
+        doc.text(lines.slice(0, 4), cx + 4, cy + 20);
       }
+      y += 108;
+
+      // ── Action Plan
+      doc.setFillColor(18, 12, 40);
+      doc.roundedRect(10, y, W - 20, 8 + actionPlan.length * 10, 3, 3, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(139, 92, 246);
+      doc.text("✦  RECOMMENDED ACTION PLAN", 14, y + 6);
+      actionPlan.forEach((step, idx) => {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(200, 190, 220);
+        const lines = doc.splitTextToSize(`${idx + 1}. ${step}`, W - 28);
+        doc.text(lines, 14, y + 12 + idx * 10);
+      });
+
+      // ── Footer
+      doc.setFontSize(6);
+      doc.setTextColor(80, 70, 100);
+      doc.text("Generated by Flux Boardroom  ·  aurora-flux-core.lovable.app", W / 2, 287, { align: "center" });
+
+      doc.save(`boardroom-${(idea || "analysis").slice(0, 40).replace(/\s+/g, "-").toLowerCase()}.pdf`);
+      toast.success("PDF downloaded!");
     } catch (e) {
       console.error("PDF export failed:", e);
+      toast.error("PDF export failed");
     }
     setIsExportingPDF(false);
-  }, [idea, isExportingPDF]);
+  }, [idea, actionPlan, responses, avgRing, allRevealed, isExportingPDF]);
 
   // ── Shared Session: generate shareable URL with base64-encoded analysis ──
   const handleShareSession = useCallback(async () => {
@@ -1141,6 +1233,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
         setResponses(newResponses);
         setRevealedCount(4);
         revealedCountRef.current = 4;
+        setIsSharedView(true);
         const clean = new URL(window.location.href);
         clean.searchParams.delete("boardroom");
         window.history.replaceState({}, "", clean.toString());
@@ -1235,6 +1328,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       setSavedIdeaId(ideaData.id);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 3000);
+      // Show digest modal
+      setShowDigest(true);
     } catch {
       setSaveState("idle");
     }
@@ -1244,8 +1339,62 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const fullscreenP = fullscreenPersona ? PERSONAS.find(p => p.key === fullscreenPersona) : null;
   const fullscreenR = fullscreenPersona ? responses[fullscreenPersona] : null;
 
+  // ── Council Digest text ──
+  const digestText = `THE COUNCIL — BOARDROOM ANALYSIS
+Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+
+IDEA: ${idea || "Your Idea"}
+CONSENSUS SCORE: ${avgRing}%  —  ${consensus.label}
+
+ADVISOR VERDICTS:
+${PERSONAS.map(p => {
+    const r = responses[p.key];
+    if (!r) return "";
+    return `▸ ${p.name} (${p.title}) — ${r.confidence}% confidence\n  ${r.analysis}\n  ${r.question}`;
+  }).filter(Boolean).join("\n\n")}
+
+ACTION PLAN:
+${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+— Flux Boardroom · aurora-flux-core.lovable.app`;
+
   return (
     <div ref={boardroomRef} className="flex flex-col h-full min-h-0 gap-4">
+      {/* Shared session banner */}
+      <AnimatePresence>
+        {isSharedView && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl"
+            style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}
+          >
+            <div className="flex items-center gap-2">
+              <Eye size={12} className="text-purple-400/70 shrink-0" />
+              <div>
+                <p className="text-[11px] font-semibold text-purple-300">You're viewing a shared Boardroom analysis</p>
+                <p className="text-[9px] text-white/35">This analysis was shared with you. Sign up to save your own sessions and consult the board.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {!user && (
+                <a
+                  href="/auth"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-purple-200 transition-colors"
+                  style={{ background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.35)" }}
+                >
+                  <Sparkles size={9} /> Sign up free
+                </a>
+              )}
+              <button onClick={() => setIsSharedView(false)} className="w-5 h-5 flex items-center justify-center text-white/25 hover:text-white/50 transition-colors">
+                <X size={11} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Realtime collaborators pill */}
       <AnimatePresence>
         {collaborators.length > 0 && (
@@ -1467,6 +1616,72 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       <AnimatePresence>
         {showExport && (
           <ExportModal avgRing={avgRing} idea={idea} responses={responses} onClose={() => setShowExport(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Council Digest modal */}
+      <AnimatePresence>
+        {showDigest && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xl"
+            onClick={() => setShowDigest(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.93, opacity: 0, y: 20 }}
+              transition={{ duration: 0.25 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-lg rounded-3xl overflow-hidden border"
+              style={{ background: "linear-gradient(135deg, rgba(10,8,20,0.98), rgba(20,12,40,0.98))", borderColor: "rgba(139,92,246,0.3)", boxShadow: "0 0 60px rgba(139,92,246,0.2)" }}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center gap-2">
+                  <FileText size={13} className="text-purple-400/70" />
+                  <p className="text-[11px] font-semibold text-white/60 uppercase tracking-widest">Council Digest</p>
+                </div>
+                <button onClick={() => setShowDigest(false)} className="w-6 h-6 flex items-center justify-center text-white/30 hover:text-white transition-colors">
+                  <X size={12} />
+                </button>
+              </div>
+              <div className="p-5 space-y-3">
+                <p className="text-[10px] text-white/35">Copy this digest to paste into email, Notion, Slack, or anywhere you need a formatted summary.</p>
+                <pre
+                  className="w-full p-4 rounded-2xl text-[10px] leading-relaxed text-white/60 overflow-auto max-h-60 font-mono"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", whiteSpace: "pre-wrap" }}
+                >
+                  {digestText}
+                </pre>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(digestText); toast.success("Digest copied to clipboard!"); }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-purple-200 transition-colors"
+                    style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.3)" }}
+                  >
+                    <Copy size={11} /> Copy Digest
+                  </button>
+                  <button
+                    onClick={() => { handleExportPDF(); setShowDigest(false); }}
+                    disabled={isExportingPDF}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white/40 hover:text-white/70 transition-colors"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    {isExportingPDF ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+                    PDF
+                  </button>
+                  <button
+                    onClick={() => setShowDigest(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs text-white/25 hover:text-white/50 transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

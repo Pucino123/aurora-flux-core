@@ -1169,14 +1169,24 @@ async function handleMessageToAction(messageText: string, senderName: string, ap
   });
 }
 
-async function handleBoardroomConsult(idea: string, apiKey: string) {
+async function handleBoardroomConsult(idea: string, personalitySliders: Record<string, { riskTolerance: number; innovation: number; pragmatism: number }> | undefined, apiKey: string) {
+  // Build slider-aware personality descriptions for each advisor
+  const sliderDesc = (key: string) => {
+    const s = personalitySliders?.[key];
+    if (!s) return "";
+    const risk = s.riskTolerance <= 30 ? "very conservative on risk" : s.riskTolerance >= 70 ? "very risk-tolerant" : "moderately risk-aware";
+    const innov = s.innovation <= 30 ? "pragmatic and grounded" : s.innovation >= 70 ? "highly visionary and forward-thinking" : "balanced between pragmatic and visionary";
+    const prag = s.pragmatism <= 30 ? "theoretical and abstract" : s.pragmatism >= 70 ? "extremely direct and action-oriented" : "balanced between theory and practice";
+    return ` [PERSONALITY TUNING: Be ${risk}, ${innov}, ${prag} in your response.]`;
+  };
+
   const systemPrompt = `You are a simulation engine for "The Council" — a boardroom of 4 expert advisors who review business ideas.
 
 You must generate responses for EXACTLY these 4 advisors, in this exact order:
-1. elena — Elena Verna, The Pragmatist (growth & unit economics expert). Supportive but data-driven. Confidence 70-90.
-2. helen — Helen Lee Kupp, The Branding Expert (positioning & storytelling). Balanced, creative. Confidence 50-75.
-3. anton — Anton Osika, The Devil's Advocate (risk & contrarian). Skeptical, probing. Confidence 20-45. MUST reference and disagree with at least one point Elena made.
-4. margot — Margot van Laer, The Visionary (long-term potential & community). Expansive, optimistic. Confidence 80-98. MUST build on at least one point another advisor made.
+1. elena — Elena Verna, The Pragmatist (growth & unit economics expert). Supportive but data-driven. Confidence 70-90.${sliderDesc("elena")}
+2. helen — Helen Lee Kupp, The Branding Expert (positioning & storytelling). Balanced, creative. Confidence 50-75.${sliderDesc("helen")}
+3. anton — Anton Osika, The Devil's Advocate (risk & contrarian). Skeptical, probing. Confidence 20-45. MUST reference and disagree with at least one point Elena made.${sliderDesc("anton")}
+4. margot — Margot van Laer, The Visionary (long-term potential & community). Expansive, optimistic. Confidence 80-98. MUST build on at least one point another advisor made.${sliderDesc("margot")}
 
 RULES:
 - Each analysis must be 3-4 sentences, specific to the idea
@@ -1260,7 +1270,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, messages, context, action, text, question, mode, persona_key, sender_name, prompt, idea } = await req.json();
+    const { type, messages, context, action, text, question, mode, persona_key, sender_name, prompt, idea, personality_sliders } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -1270,7 +1280,7 @@ serve(async (req) => {
     if (type === "aura") return await handleAura(messages || [], context || "", LOVABLE_API_KEY);
     if (type === "council") return await handleCouncil(messages ?? [{ role: "user", content: question || "" }], LOVABLE_API_KEY);
     if (type === "council-quick") return await handleCouncilQuick(question, mode, persona_key, LOVABLE_API_KEY);
-    if (type === "boardroom-consult") return await handleBoardroomConsult(idea || question || (messages?.[0]?.content) || "a new business idea", LOVABLE_API_KEY);
+    if (type === "boardroom-consult") return await handleBoardroomConsult(idea || question || (messages?.[0]?.content) || "a new business idea", personality_sliders, LOVABLE_API_KEY);
     if (type === "document-chat") return await handleDocumentChat(messages, context, LOVABLE_API_KEY);
     if (type === "document-tools") return await handleDocumentTools(action, text, LOVABLE_API_KEY);
     if (type === "message-to-action") return await handleMessageToAction(text || "", sender_name || "Someone", LOVABLE_API_KEY);
