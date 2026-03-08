@@ -133,6 +133,7 @@ const FocusContent = () => {
     try { const s = loadPaginationSettings(); return s.pillPosition ?? null; } catch { return null; }
   });
   const [isDraggingPill, setIsDraggingPill] = useState(false);
+  const [pillBouncing, setPillBouncing] = useState(false);
   // Cloud sync debounce
   const cloudSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
