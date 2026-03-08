@@ -88,6 +88,7 @@ const CRMPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editDeal, setEditDeal] = useState<CRMDeal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [invoiceContact, setInvoiceContact] = useState<CRMDeal | null>(null);
 
   const filtered = deals.filter(d => {
     const matchSearch = d.name.toLowerCase().includes(search.toLowerCase()) || d.company.toLowerCase().includes(search.toLowerCase());
