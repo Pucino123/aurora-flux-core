@@ -88,10 +88,10 @@ const WindowChip = ({
   return (
     <motion.div
       key={win.id}
-      layoutId={`window-${win.id}`}
+      // Only minimized chips own the layoutId — active window's wrapper in FocusDashboardView owns it while open
+      layoutId={isMinimized ? `window-${win.id}` : undefined}
       variants={bounceVariants}
       animate={shouldBounce ? "bounce" : "idle"}
-      // also scale up on hover (macOS magnification)
       whileHover={{ scale: 1.12 }}
       initial={{ opacity: 0, scale: 0.8, y: 20 }}
       exit={{ opacity: 0, scale: 0.4, y: 16 }}
