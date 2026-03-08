@@ -1465,8 +1465,7 @@ const FocusContent = () => {
           )}
 
           {/* ── iPadOS Window Manager Layer ─────────────────────────── */}
-          <AnimatePresence>
-            {windows.filter(w => !w.minimized).map((win) => {
+          {windows.filter(w => !w.minimized).map((win) => {
               const winDoc = win.type === "document"
                 ? desktopDocs.find(d => d.id === win.contentId)
                 : null;
@@ -1515,7 +1514,6 @@ const FocusContent = () => {
                 </WindowFrame>
               );
             })}
-          </AnimatePresence>
         </div>
       </div>
 
