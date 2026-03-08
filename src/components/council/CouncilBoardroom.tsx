@@ -1312,14 +1312,30 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
           >
             {isExportingPDF ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           </button>
+          {/* Share session link */}
+          <button
+            onClick={handleShareSession}
+            disabled={!allRevealed}
+            title="Copy Shareable Link"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0 disabled:opacity-30"
+          >
+            <Link size={14} />
+          </button>
+          {/* Share verdict card */}
           <button
             onClick={() => setShowExport(true)}
             className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0"
-            title="Share Verdict"
+            title="Share Verdict Card"
           >
             <Share2 size={15} />
           </button>
         </div>
+
+        {/* Personality sliders */}
+        <BoardroomPersonalitySliders
+          sliders={personalitySliders}
+          onChange={setPersonalitySliders}
+        />
 
         <AnimatePresence>
           {allRevealed && (
