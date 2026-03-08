@@ -633,7 +633,7 @@ const AITaskManager = () => {
   const sharedProps = {
     editingId, editValue, expandedId, colTitles,
     setEditingId, setEditValue, setExpandedId,
-    onToggle: handleToggle, onRemove: removeTask, onUpdate: updateTask, onUndone: handleUndone,
+    onToggle: handleToggle, onRemove: softRemoveTask, onUpdate: updateTask, onUndone: handleUndone,
     onRenameCol: handleRenameCol, onDeleteCol: handleDeleteCol,
     onAddTask: handleAddTaskToColumn,
     teamMembers: members,
