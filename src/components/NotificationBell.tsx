@@ -17,7 +17,7 @@ export interface AppNotification {
 }
 
 // ── Storage helpers ─────────────────────────────────────────────────────────
-const NOTIF_KEY = "flux-notifications-v2";
+const NOTIF_KEY = "dashiii-notifications-v2";
 
 export function loadNotifications(): AppNotification[] {
   try {
@@ -42,7 +42,7 @@ export function pushNotification(notif: Omit<AppNotification, "id" | "timestamp"
   };
   const updated = [newNotif, ...notifs];
   saveNotifications(updated);
-  window.dispatchEvent(new Event("flux-notifications-updated"));
+  window.dispatchEvent(new Event("dashiii-notifications-updated"));
   return newNotif;
 }
 
@@ -221,14 +221,14 @@ const NotificationBell = () => {
   }, []);
 
   useEffect(() => {
-    window.addEventListener("flux-notifications-updated", refresh);
-    return () => window.removeEventListener("flux-notifications-updated", refresh);
+    window.addEventListener("dashiii-notifications-updated", refresh);
+    return () => window.removeEventListener("dashiii-notifications-updated", refresh);
   }, [refresh]);
 
   // Watch for overdue tasks and push new notifications
   useEffect(() => {
     const today = format(new Date(), "yyyy-MM-dd");
-    const overdueKey = "flux-notif-overdue-sent";
+    const overdueKey = "dashiii-notif-overdue-sent";
     const sentIds: Set<string> = new Set(
       JSON.parse(localStorage.getItem(overdueKey) ?? "[]")
     );

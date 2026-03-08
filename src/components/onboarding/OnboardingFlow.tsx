@@ -31,7 +31,7 @@ const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref
   const [phase, setPhase] = useState<"welcome" | "tour" | "reward" | "done">("welcome");
   const [step, setStep] = useState(0);
   const [sparkCount, setSparkCount] = useState(0);
-  const [done, setDone] = useState(() => !!localStorage.getItem("flux_onboarding_done_v1"));
+  const [done, setDone] = useState(() => !!localStorage.getItem("dashiii_onboarding_done_v1"));
   const counterRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -52,13 +52,13 @@ const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref
   if (done) return null;
 
   const skip = () => {
-    localStorage.setItem("flux_onboarding_done_v1", "1");
+    localStorage.setItem("dashiii_onboarding_done_v1", "1");
     setDone(true);
   };
 
   const finish = () => {
     addSparks(SPARKS_REWARD);
-    localStorage.setItem("flux_onboarding_done_v1", "1");
+    localStorage.setItem("dashiii_onboarding_done_v1", "1");
     setDone(true);
   };
 
@@ -95,7 +95,7 @@ const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref
               </div>
               <h1 className="text-2xl font-bold text-foreground mb-3">Welcome to your new Workspace.</h1>
               <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-                Flux is designed to help you think clearer, work faster, and make better decisions with your own personal AI advisory board.
+                Dashiii is designed to help you think clearer, work faster, and make better decisions with your own personal AI advisory board.
               </p>
               <button
                 onClick={() => setPhase("tour")}

@@ -91,11 +91,11 @@ const VideoSection = () => {
 
   return (
     <div className="rounded-3xl overflow-hidden border border-white/20 shadow-[0_40px_100px_rgba(0,0,0,0.28)] bg-black/50 backdrop-blur-2xl relative">
-      <div className="flex items-center gap-2 px-5 py-3 border-b border-white/10 bg-white/[0.04]">
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-white/10 bg-white/[0.04]">
         <div className="w-3 h-3 rounded-full bg-red-400/80" />
         <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
         <div className="w-3 h-3 rounded-full bg-green-400/80" />
-        <div className="flex-1 mx-4 bg-white/10 rounded-full px-4 py-1 text-[11px] text-white/30 text-center">flux.app · Overview</div>
+        <div className="flex-1 mx-4 bg-white/10 rounded-full px-4 py-1 text-[11px] text-white/30 text-center">dashiii.app · Overview</div>
       </div>
       <div className="relative aspect-video bg-black/40">
         {videoUrl ? (
@@ -170,7 +170,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
 
       {/* ── Navbar ── */}
       <nav className="relative z-20 flex items-center justify-between px-5 md:px-16 py-4 md:py-5">
-        <span className="text-xl md:text-2xl font-bold text-white drop-shadow-lg tracking-tight" style={{ fontFamily: "Georgia, serif" }}>Flux</span>
+        <span className="text-xl md:text-2xl font-bold text-white drop-shadow-lg tracking-tight" style={{ fontFamily: "Georgia, serif" }}>Dashiii</span>
         <div className="flex items-center gap-2 md:gap-3">
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
@@ -200,7 +200,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
             fully yours.
           </h1>
           <p className="text-base md:text-xl text-white/85 max-w-sm md:max-w-lg mx-auto mb-8 md:mb-10 leading-relaxed drop-shadow font-sans">
-            Drag widgets, build your dashboard, let AI handle the rest. Flux is the personalizable OS for focused people.
+            Drag widgets, build your dashboard, let AI handle the rest. Dashiii is the personalizable workspace for focused people.
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
             <button onClick={handleCTA} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-slate-800 font-bold px-8 py-3.5 md:py-4 rounded-full shadow-2xl hover:scale-[1.03] active:scale-[0.98] transition-all text-sm md:text-base">
@@ -361,7 +361,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         </motion.div>
       </section>
 
-      <footer className="relative z-10 text-center pb-10 text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>© 2025 Flux. Built for deep work.</footer>
+      <footer className="relative z-10 text-center pb-10 text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>© 2025 Dashiii. Built for deep work.</footer>
     </div>
   );
 };

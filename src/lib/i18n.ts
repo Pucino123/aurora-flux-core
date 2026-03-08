@@ -10,17 +10,17 @@ const isDanish = userLang.startsWith("da") || userLang === "da-DK";
 
 const da: Record<string, string> = {
   // App
-  "app.name": "Flux",
+  "app.name": "Dashiii",
   "app.tagline": "Planlæg, følg og opnå dine mål — ubesværet",
   "app.headline": "Hvad vil du opnå?",
   "app.hint": "Tryk Enter for at starte · Cmd+K for hurtige handlinger",
-  "app.pill": "Nyt: Flux Intelligens →",
+  "app.pill": "Nyt: Dashiii Intelligens →",
   "app.signin": "Log ind",
   "app.plan": "Gratis Plan",
 
   // Auth
-  "auth.join": "Opret en Flux-konto.",
-  "auth.welcome": "Velkommen tilbage til Flux.",
+  "auth.join": "Opret en Dashiii-konto.",
+  "auth.welcome": "Velkommen tilbage til Dashiii.",
   "auth.create_desc": "Opret din konto for at komme i gang",
   "auth.signin_desc": "Log ind for at fortsætte hvor du slap",
   "auth.display_name": "Visningsnavn",
@@ -62,7 +62,7 @@ const da: Record<string, string> = {
   "brain.move_prompt": "Flyt ind i hvilken mappe?",
 
   // Stream
-  "stream.welcome_title": "Velkommen til Flux",
+  "stream.welcome_title": "Velkommen til Dashiii",
   "stream.welcome_desc": "Skriv et mål, budget eller en opgave nedenfor for at komme i gang.",
   "stream.tracking": "Aktiv Sporing",
   "stream.progress": "Fremgang",
@@ -329,15 +329,15 @@ const da: Record<string, string> = {
 };
 
 const en: Record<string, string> = {
-  "app.name": "Flux",
+  "app.name": "Dashiii",
   "app.tagline": "Plan, track, and accomplish your goals — effortlessly",
   "app.headline": "What do you want to achieve?",
   "app.hint": "Press Enter to start planning · Cmd+K for quick actions",
-  "app.pill": "New: Introducing Flux Intelligence →",
+  "app.pill": "New: Introducing Dashiii Intelligence →",
   "app.signin": "Sign in",
   "app.plan": "Free Plan",
-  "auth.join": "Join Flux.",
-  "auth.welcome": "Welcome back to Flux.",
+  "auth.join": "Join Dashiii.",
+  "auth.welcome": "Welcome back to Dashiii.",
   "auth.create_desc": "Create your account to get started",
   "auth.signin_desc": "Sign in to continue where you left off",
   "auth.display_name": "Display Name",
@@ -373,7 +373,7 @@ const en: Record<string, string> = {
   "brain.new_folder_prompt": "Folder name:",
   "brain.rename_prompt": "New folder name:",
   "brain.move_prompt": "Move into which folder?",
-  "stream.welcome_title": "Welcome to Flux",
+  "stream.welcome_title": "Welcome to Dashiii",
   "stream.welcome_desc": "Type a goal, budget, or task below to get started.",
   "stream.tracking": "Tracking Active",
   "stream.progress": "Progress",
