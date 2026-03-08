@@ -1723,9 +1723,20 @@ const FocusContent = () => {
         }}
       />
 
-      {/* ── Focus Mode: floating exit pill ── */}
-      <AnimatePresence>
-        {isFocusModeActive && (
+
+      {/* ── Focus Mode: Control Bar (timer + task + exit) ── */}
+      <FocusControlBar />
+
+      {/* ── Intention Modal — shown before enabling focus mode ── */}
+      <FocusIntentionModal
+        open={intentionModalOpen}
+        onConfirm={(taskTitle, durationSeconds) => {
+          setIntentionModalOpen(false);
+          enableFocusMode(taskTitle, durationSeconds);
+        }}
+        onCancel={() => setIntentionModalOpen(false)}
+      />
+
           <motion.button
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
