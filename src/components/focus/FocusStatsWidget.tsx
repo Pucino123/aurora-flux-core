@@ -172,7 +172,7 @@ const FocusStatsWidget = () => {
     return () => window.removeEventListener("focus-stats-updated", handler);
   }, [loadDbSessions]);
 
-  // ── Persist a session to DB ──────────────────────────────────────────────
+  // ── Persist a session to DB + check goal reached ────────────────────────
   const persistSession = useCallback(async (minutes: number) => {
     if (!user) return;
     await supabase.from("focus_sessions").insert({
@@ -180,8 +180,16 @@ const FocusStatsWidget = () => {
       session_date: getToday(),
       minutes,
     });
+    // Optimistically check if crossing 100%
+    const currentMin = (dailyLog[getToday()] ?? 0) + minutes;
+    const newPct = Math.min((currentMin / DAILY_GOAL_MIN) * 100, 100);
+    if (newPct >= 100 && prevDailyPctRef.current < 100) {
+      setGoalReached(true);
+      setTimeout(() => setGoalReached(false), 2800);
+    }
+    prevDailyPctRef.current = newPct;
     loadDbSessions();
-  }, [user, loadDbSessions]);
+  }, [user, loadDbSessions, dailyLog]);
 
   // ── Pomodoro logic ───────────────────────────────────────────────────────
   useEffect(() => {
