@@ -297,7 +297,7 @@ const TheCouncil = () => {
         {/* Boardroom view */}
         {activeTab === "boardroom" && (
           <div className="relative z-10 px-4 md:px-8 pb-8 pt-4 max-w-5xl mx-auto" style={{ minHeight: "calc(100vh - 80px)" }}>
-            <CouncilBoardroom />
+            <CouncilBoardroom onRestoreIdea={() => {}} />
             {user && (
               <div className="mt-6 rounded-2xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,0.02)" }}>
                 <BoardroomIdeasHistory
