@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Loader2, ChevronDown, ChevronUp, Clock, X, Swords } from "lucide-react";
+import { Send, Loader2, ChevronDown, ChevronUp, Clock, X, Swords, Cpu } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ import WeaknessScanner from "./council/WeaknessScanner";
 import PersonalityControls from "./council/PersonalityControls";
 import VoteTooltip from "./council/VoteTooltip";
 import ProactiveIntelligence from "./council/ProactiveIntelligence";
+import CouncilBoardroom from "./council/CouncilBoardroom";
 
 // ── Types ──
 
