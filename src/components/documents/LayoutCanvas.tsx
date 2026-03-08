@@ -368,21 +368,20 @@ const EntityNode: React.FC<EntityNodeProps> = ({
     <motion.div
       drag
       dragMomentum={false}
-      dragElastic={0.05}
+      dragElastic={0}
       dragConstraints={canvasRef}
-      initial={{ x: position.x, y: position.y }}
-      animate={{ x: position.x, y: position.y }}
       onDragStart={() => { didDrag.current = false; }}
       onDrag={() => { didDrag.current = true; }}
       onDragEnd={(_, info) => {
-        const canvas = canvasRef.current?.getBoundingClientRect();
-        if (!canvas) return;
-        onDragEnd(entity.id, clamp(position.x + info.offset.x, 0, canvas.width - size.w), clamp(position.y + info.offset.y, 0, canvas.height - size.h));
+        onDragEnd(entity.id,
+          clamp(position.x + info.offset.x, 0, (canvasRef.current?.offsetWidth ?? 9999) - size.w),
+          clamp(position.y + info.offset.y, 0, (canvasRef.current?.offsetHeight ?? 9999) - size.h)
+        );
       }}
       onPointerDown={e => { e.stopPropagation(); didDrag.current = false; }}
       onPointerUp={e => { e.stopPropagation(); if (!didDrag.current) onSelect(entity.id); }}
       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, entity.id); }}
-      className="absolute cursor-move touch-none"
+      className="absolute cursor-grab active:cursor-grabbing touch-none"
       style={{ zIndex, position: "absolute", left: position.x, top: position.y, willChange: "transform" }}
       whileHover={{ filter: "brightness(1.06)" }}
     >
