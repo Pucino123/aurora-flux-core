@@ -235,7 +235,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     );
   }
 
-  const layoutPillColor = LAYOUT_PILL_COLORS[win.layout];
+  const layoutPillBg = LAYOUT_PILL_BG[win.layout];
 
   return (
     <>
