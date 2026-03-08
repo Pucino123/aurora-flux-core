@@ -391,12 +391,10 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
           if ((window as any).__auraStreamFinish) (window as any).__auraStreamFinish();
         }}
       />
-      {/* Split View trigger (rendered between toolbar and editor body) */}
       {splitViewButton && (
-        <div className="flex justify-end px-3 py-1 border-b border-border/10">
-          {splitViewButton}
-        </div>
+        <div className="flex justify-end px-3 py-1 border-b border-border/10">{splitViewButton}</div>
       )}
+      <div className="relative flex-1 flex flex-col min-h-0">
         {ghostText && (
           <div
             className="absolute inset-0 px-6 py-4 pointer-events-none z-10 text-sm leading-relaxed whitespace-pre-wrap font-mono select-none"
