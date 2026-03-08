@@ -1179,7 +1179,7 @@ const FocusContent = () => {
             const parent = await createFolder({ title: data.title, type: "project", color: data.color, icon: data.icon });
             if (parent) {
               if (pos) {
-                updateDesktopFolderPosition(parent.id, { x: pos.x, y: pos.y });
+                updatePageFolderPosition(parent.id, { x: pos.x, y: pos.y });
               }
               if (data.subfolders.length > 0) {
                 for (const sub of data.subfolders) {
