@@ -65,9 +65,14 @@ const WidgetToggleBar = () => {
         {/* ── More overflow menu ── */}
         <div className="relative">
           <button onClick={() => setMoreOpen(!moreOpen)} title="More tools"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${moreOpen ? "bg-white/15 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
+            className={`relative flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${moreOpen ? "bg-white/15 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
             <Plus size={15} className={`transition-transform ${moreOpen ? "rotate-45" : ""}`} />
             <span className="hidden sm:inline">More</span>
+            {windows.length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-black/30 sm:hidden">
+                {windows.length > 9 ? "9+" : windows.length}
+              </span>
+            )}
           </button>
           <AnimatePresence>
             {moreOpen && (
