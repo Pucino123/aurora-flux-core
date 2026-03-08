@@ -195,6 +195,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     if ((e.target as HTMLElement).closest("button,[role='button'],[data-radix-collection-item]")) return;
     e.preventDefault();
     dragging.current = true;
+    setIsDragging(true);
     offset.current = { x: e.clientX - rawX.current, y: e.clientY - rawY.current };
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   }, [isFloating]);
