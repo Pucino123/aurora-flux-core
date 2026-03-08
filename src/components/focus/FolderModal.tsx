@@ -428,22 +428,10 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
                   <FolderPlus size={12} /> Folder
                 </button>
                 <button
-                  onClick={() => handleCreateDocument("text")}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <FileText size={12} /> Doc
-                </button>
-                <button
-                  onClick={() => handleCreateDocument("spreadsheet")}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Table size={12} /> Sheet
-                </button>
-                <button
-                  onClick={() => setShowTemplates(true)}
+                  onClick={() => setShowInlineTemplate(true)}
                   className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
-                  <Sparkles size={12} /> Templates
+                  <Plus size={12} /> New…
                 </button>
               </div>
             </div>
@@ -500,6 +488,17 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
             onClose={() => setShowTemplates(false)}
             onCreateDocument={handleCreateFromTemplate}
           />
+
+          {/* Inline Template Chooser */}
+          {showInlineTemplate && (
+            <TemplateChooserModal
+              onClose={() => setShowInlineTemplate(false)}
+              onCreateDocument={async (title, type, content) => {
+                await handleCreateFromTemplate(title, type, content);
+                setShowInlineTemplate(false);
+              }}
+            />
+          )}
         </div>
       </motion.div>
     </AnimatePresence>,
