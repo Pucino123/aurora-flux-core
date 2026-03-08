@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ChevronRight, FolderOpen, Folder, Plus, Inbox, Brain, Pencil, Palette, Trash2, GripVertical, Image, Search, FileText, Table } from "lucide-react";
+import { ChevronRight, FolderOpen, Folder, Plus, Brain, Pencil, Palette, Trash2, GripVertical, Image, Search, FileText, Table } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { supabase } from "@/integrations/supabase/client";
