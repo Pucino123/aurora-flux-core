@@ -312,19 +312,8 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
     prevMinimizedIds.current = current;
   }, [minimizedWindows]);
 
-  // ── Mission Control keyboard shortcut (⌘⇧M / F11) ────────────────
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
-      const mod = isMac ? e.metaKey : e.ctrlKey;
-      if ((mod && e.shiftKey && (e.key === "m" || e.key === "M")) || e.key === "F11") {
-        e.preventDefault();
-        setMissionControlOpen(p => !p);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+
+  // (Mission Control removed)
 
   // ── Toolbar style ─────────────────────────────────────────────────
   const [toolbarStyle, setToolbarStyleState] = useState<ToolbarStyle>(loadToolbarStyle);
