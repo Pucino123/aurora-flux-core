@@ -28,6 +28,20 @@ interface BgEntry {
   colors?: [string, string, string];
 }
 
+export interface SpaceSettings {
+  dimming: number;   // 0–0.7
+  blur: number;      // 0–20
+  vignette: number;  // 0–1
+  volume: number;    // 0–1
+}
+
+export const DEFAULT_SPACE_SETTINGS: SpaceSettings = {
+  dimming: 0.15,
+  blur: 4,
+  vignette: 0.22,
+  volume: 0,
+};
+
 // ── YouTube-based live video backgrounds ──────────────
 const YOUTUBE_VIDEOS: Record<string, string> = {
   "cozy-fireplace": "8myYyMg1fFE",
@@ -256,11 +270,15 @@ const BackgroundEngine = ({
   onMouseMove,
   pageBackground,
   onPageBackgroundChange,
+  pageSpaceSettings,
+  onPageSpaceSettingsChange,
 }: {
   embedded?: boolean;
   onMouseMove?: (e: React.MouseEvent) => void;
   pageBackground?: string;
   onPageBackgroundChange?: (id: string) => void;
+  pageSpaceSettings?: SpaceSettings;
+  onPageSpaceSettingsChange?: (s: SpaceSettings) => void;
 }) => {
   const { currentBackground: globalBackground, setCurrentBackground: setGlobalBackground, isZenMode } = useFocusStore();
   // Use per-page background if provided, otherwise fall back to global
@@ -269,6 +287,7 @@ const BackgroundEngine = ({
     if (onPageBackgroundChange) onPageBackgroundChange(id);
     else setGlobalBackground(id);
   };
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -276,17 +295,45 @@ const BackgroundEngine = ({
   const [customGrads, setCustomGrads] = useState<CustomGrad[]>(loadCustomGrads);
   const [showGradCreator, setShowGradCreator] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [youtubeVolume, setYoutubeVolume] = useState(() => { try { return parseFloat(localStorage.getItem("flux-yt-volume") || "0"); } catch { return 0; } });
-  const [dimming, setDimming] = useState(() => { try { return parseFloat(localStorage.getItem("flux-bg-dimming") || "0.15"); } catch { return 0.15; } });
-  const [bgBlur, setBgBlur] = useState(() => { try { const v = localStorage.getItem("flux-bg-blur"); return v !== null ? parseFloat(v) : 4; } catch { return 4; } });
-  const [vignette, setVignette] = useState(() => { try { const v = localStorage.getItem("flux-bg-vignette"); return v !== null ? parseFloat(v) : 0.22; } catch { return 0.22; } });
+
+  // Per-page space settings — if pageSpaceSettings is provided use it, else fall back to localStorage globals
+  const [localDimming, setLocalDimming] = useState(() => { try { return parseFloat(localStorage.getItem("flux-bg-dimming") || "0.15"); } catch { return 0.15; } });
+  const [localBgBlur, setLocalBgBlur] = useState(() => { try { const v = localStorage.getItem("flux-bg-blur"); return v !== null ? parseFloat(v) : 4; } catch { return 4; } });
+  const [localVignette, setLocalVignette] = useState(() => { try { const v = localStorage.getItem("flux-bg-vignette"); return v !== null ? parseFloat(v) : 0.22; } catch { return 0.22; } });
+  const [localYoutubeVolume, setLocalYoutubeVolume] = useState(() => { try { return parseFloat(localStorage.getItem("flux-yt-volume") || "0"); } catch { return 0; } });
+
+  // Use per-page values if available, else local (which syncs to localStorage)
+  const dimming = pageSpaceSettings?.dimming ?? localDimming;
+  const bgBlur = pageSpaceSettings?.blur ?? localBgBlur;
+  const vignette = pageSpaceSettings?.vignette ?? localVignette;
+  const youtubeVolume = pageSpaceSettings?.volume ?? localYoutubeVolume;
+
+  const updateSpaceSetting = useCallback((patch: Partial<SpaceSettings>) => {
+    const current: SpaceSettings = { dimming, blur: bgBlur, vignette, volume: youtubeVolume };
+    const next = { ...current, ...patch };
+    if (onPageSpaceSettingsChange) {
+      onPageSpaceSettingsChange(next);
+    } else {
+      // Fallback: update localStorage globals
+      if (patch.dimming !== undefined) { setLocalDimming(patch.dimming); localStorage.setItem("flux-bg-dimming", String(patch.dimming)); }
+      if (patch.blur !== undefined) { setLocalBgBlur(patch.blur); localStorage.setItem("flux-bg-blur", String(patch.blur)); }
+      if (patch.vignette !== undefined) { setLocalVignette(patch.vignette); localStorage.setItem("flux-bg-vignette", String(patch.vignette)); }
+      if (patch.volume !== undefined) { setLocalYoutubeVolume(patch.volume); localStorage.setItem("flux-yt-volume", String(patch.volume)); }
+    }
+    // Dispatch volume change event regardless
+    if (patch.volume !== undefined) {
+      window.dispatchEvent(new CustomEvent("flux-yt-volume-change", { detail: patch.volume }));
+    }
+  }, [dimming, bgBlur, vignette, youtubeVolume, onPageSpaceSettingsChange]);
 
   React.useEffect(() => { supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null)); }, []);
+  // Sync external volume changes (from other components)
   React.useEffect(() => {
-    const handler = (e: Event) => { setYoutubeVolume((e as CustomEvent).detail as number); };
+    if (onPageSpaceSettingsChange) return; // per-page mode — don't listen to global events
+    const handler = (e: Event) => { setLocalYoutubeVolume((e as CustomEvent).detail as number); };
     window.addEventListener("flux-yt-volume-change", handler);
     return () => window.removeEventListener("flux-yt-volume-change", handler);
-  }, []);
+  }, [onPageSpaceSettingsChange]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => { setMousePos({ x: e.clientX, y: e.clientY }); onMouseMove?.(e); }, [onMouseMove]);
 
@@ -393,7 +440,10 @@ const BackgroundEngine = ({
           {menuOpen && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
               className="absolute bottom-14 left-0 w-80 max-h-[480px] rounded-2xl bg-black/60 backdrop-blur-[20px] border border-white/15 p-4 overflow-auto shadow-2xl">
-              {/* Visual controls */}
+              {/* Visual controls — all per-page */}
+              <div className="mb-3">
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-2">This page only</p>
+              </div>
               <div className="mb-4 space-y-3">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
@@ -401,7 +451,7 @@ const BackgroundEngine = ({
                     <span className="text-[10px] text-white/30 tabular-nums">{Math.round((1 - dimming) * 100)}%</span>
                   </div>
                   <input type="range" min={0} max={0.7} step={0.01} value={dimming}
-                    onChange={(e) => { const v = parseFloat(e.target.value); setDimming(v); localStorage.setItem("flux-bg-dimming", String(v)); }}
+                    onChange={(e) => updateSpaceSetting({ dimming: parseFloat(e.target.value) })}
                     className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
                 </div>
                 <div className="space-y-1">
@@ -410,7 +460,7 @@ const BackgroundEngine = ({
                     <span className="text-[10px] text-white/30 tabular-nums">{Math.round(bgBlur)}px</span>
                   </div>
                   <input type="range" min={0} max={20} step={0.5} value={bgBlur}
-                    onChange={(e) => { const v = parseFloat(e.target.value); setBgBlur(v); localStorage.setItem("flux-bg-blur", String(v)); }}
+                    onChange={(e) => updateSpaceSetting({ blur: parseFloat(e.target.value) })}
                     className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
                 </div>
                 <div className="space-y-1">
@@ -419,7 +469,7 @@ const BackgroundEngine = ({
                     <span className="text-[10px] text-white/30 tabular-nums">{Math.round(vignette * 100)}%</span>
                   </div>
                   <input type="range" min={0} max={1} step={0.01} value={vignette}
-                    onChange={(e) => { const v = parseFloat(e.target.value); setVignette(v); localStorage.setItem("flux-bg-vignette", String(v)); }}
+                    onChange={(e) => updateSpaceSetting({ vignette: parseFloat(e.target.value) })}
                     className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
                 </div>
                 <div className="space-y-1">
@@ -428,12 +478,7 @@ const BackgroundEngine = ({
                     <span className="text-[10px] text-white/30 tabular-nums">{Math.round(youtubeVolume * 100)}%</span>
                   </div>
                   <input type="range" min={0} max={1} step={0.01} value={youtubeVolume}
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value);
-                      setYoutubeVolume(v);
-                      localStorage.setItem("flux-yt-volume", String(v));
-                      window.dispatchEvent(new CustomEvent("flux-yt-volume-change", { detail: v }));
-                    }}
+                    onChange={(e) => updateSpaceSetting({ volume: parseFloat(e.target.value) })}
                     className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-white/80 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:shadow-md" />
                 </div>
               </div>
