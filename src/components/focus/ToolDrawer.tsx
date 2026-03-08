@@ -54,14 +54,29 @@ const MODES: { key: SystemMode; label: string; icon: any; desc: string }[] = [
   { key: "build", label: "Build", icon: Hammer, desc: "Customize layout" },
 ];
 
-const ToolDrawer = () => {
+interface ToolDrawerProps {
+  /** Per-page active widgets override. When provided, toggle affects this list instead of the global store. */
+  pageActiveWidgets?: string[];
+  onTogglePageWidget?: (id: string) => void;
+}
+
+const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps = {}) => {
   const { activeWidgets, toggleWidget, systemMode, setSystemMode, resetDashboard } = useFocusStore();
   
+  const effectiveWidgets = pageActiveWidgets ?? activeWidgets;
+  const effectiveToggle = (id: string) => {
+    if (onTogglePageWidget) {
+      onTogglePageWidget(id);
+    } else {
+      toggleWidget(id);
+    }
+  };
+
   const [open, setOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
-  const suggestions = useMemo(() => getSuggestedWidgets(activeWidgets as string[]), [activeWidgets]);
+  const suggestions = useMemo(() => getSuggestedWidgets(effectiveWidgets as string[]), [effectiveWidgets]);
   const { unreadCount, markAsRead, setModalOpen } = useTeamChat();
   return (
     <>
