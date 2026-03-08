@@ -109,7 +109,7 @@ const ExpandedFolderOverlay = ({
   const IconComp = customIcon ? customIcon.icon : Folder;
   const iconColor = folder.color || "hsl(var(--muted-foreground))";
 
-  return createPortal(
+  const portal = createPortal(
     <AnimatePresence>
       {/* Backdrop */}
       <motion.div
