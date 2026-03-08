@@ -48,9 +48,9 @@ Be concise, warm, and specific. No bullet points — write in flowing prose.`;
     }),
   });
 
-  if (!resp.ok) return `Hi ${displayName}, here's your weekly Flux digest!`;
+  if (!resp.ok) return `Hi ${displayName}, here's your weekly Dashiii digest!`;
   const json = await resp.json();
-  return json.choices?.[0]?.message?.content || `Hi ${displayName}, here's your weekly Flux digest!`;
+  return json.choices?.[0]?.message?.content || `Hi ${displayName}, here's your weekly Dashiii digest!`;
 }
 
 function buildEmailHtml(opts: {
@@ -99,7 +99,7 @@ function buildEmailHtml(opts: {
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Weekly Flux Digest</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Weekly Dashiii Digest</title></head>
 <body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
     <tr>
@@ -110,7 +110,7 @@ function buildEmailHtml(opts: {
           <tr>
             <td style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a78bfa 100%);padding:40px 40px 32px;text-align:center;">
               <div style="font-size:28px;margin-bottom:8px;">✨</div>
-              <h1 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 4px;">Your Weekly Flux Digest</h1>
+              <h1 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 4px;">Your Weekly Dashiii Digest</h1>
               <p style="font-size:13px;color:rgba(255,255,255,0.8);margin:0;">${weekLabel}</p>
             </td>
           </tr>
@@ -190,8 +190,8 @@ function buildEmailHtml(opts: {
           <!-- Footer -->
           <tr>
             <td style="background:#f9fafb;padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;">
-              <p style="font-size:12px;color:#9ca3af;margin:0 0 4px;">Sent by <strong style="color:#6366f1;">Flux</strong> — Your AI Productivity OS</p>
-              <p style="font-size:11px;color:#d1d5db;margin:0;">You're receiving this because you have a Flux account.</p>
+              <p style="font-size:12px;color:#9ca3af;margin:0 0 4px;">Sent by <strong style="color:#6366f1;">Dashiii</strong> — Your AI Productivity OS</p>
+              <p style="font-size:11px;color:#d1d5db;margin:0;">You're receiving this because you have a Dashiii account.</p>
             </td>
           </tr>
 
@@ -282,7 +282,7 @@ serve(async (req) => {
           body: JSON.stringify({
             from: FROM_EMAIL,
             to: user.email,
-            subject: `✨ Your weekly Flux digest — ${weekLabel}`,
+            subject: `✨ Your weekly Dashiii digest — ${weekLabel}`,
             html,
           }),
         });
