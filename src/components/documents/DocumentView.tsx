@@ -64,6 +64,7 @@ interface EditorProps {
   setConfirmDelete: (v: boolean) => void;
   lightMode?: boolean;
   onToggleLightMode?: () => void;
+  splitViewButton?: React.ReactNode;
 }
 
 /* ─── Text Editor ─── */
