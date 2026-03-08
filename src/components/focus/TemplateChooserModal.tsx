@@ -719,6 +719,262 @@ const TEMPLATES: Template[] = [
     },
   },
 
+  // ── APPLE PAGES INSPIRED ─────────────────────────────────────────────────
+  {
+    id: "cover-letter-minimal",
+    title: "Minimalist Cover Letter",
+    subtitle: "Elegant & well-spaced",
+    type: "text",
+    category: "Creative",
+    content: {
+      html: `<div style="max-width:680px;margin:0 auto;padding:72px 64px;font-family:'Georgia',serif;background:#fafaf9;min-height:900px">
+  <div style="border-bottom:2px solid #1a1a2e;padding-bottom:24px;margin-bottom:40px">
+    <h1 style="font-size:36px;font-weight:400;letter-spacing:-1px;color:#1a1a2e;margin:0 0 4px">J. DOE</h1>
+    <p style="color:#6b7280;font-size:13px;letter-spacing:2px;text-transform:uppercase;margin:0">Product Designer &amp; Strategist</p>
+  </div>
+  <div style="display:flex;gap:48px;margin-bottom:48px">
+    <p style="color:#9ca3af;font-size:12px;margin:0;line-height:1.8">contact@johndoe.com<br/>+45 12 34 56 78<br/>johndoe.com</p>
+    <p style="color:#9ca3af;font-size:12px;margin:0;line-height:1.8">${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</p>
+  </div>
+  <p style="color:#374151;font-size:14px;line-height:1.9;margin:0 0 24px">To the Hiring Manager,</p>
+  <p style="color:#374151;font-size:14px;line-height:1.9;margin:0 0 20px">Begin your application here. Lead with your strongest quality and connect it directly to what the company needs. Make this paragraph impossible to skip.</p>
+  <p style="color:#374151;font-size:14px;line-height:1.9;margin:0 0 20px">In your second paragraph, demonstrate your specific value. Use a concrete example or achievement that proves your claim. Numbers and outcomes work best here.</p>
+  <p style="color:#374151;font-size:14px;line-height:1.9;margin:0 0 48px">Close with a clear call to action. Express genuine enthusiasm for the role and invite next steps.</p>
+  <p style="color:#374151;font-size:14px;margin:0 0 32px">Yours sincerely,</p>
+  <p style="color:#1a1a2e;font-size:16px;font-weight:600;letter-spacing:-0.5px;margin:0">J. Doe</p>
+</div>`,
+    },
+    thumbnail: (isDark) => {
+      const bg = isDark ? "#1e293b" : "#fafaf9";
+      const textCol = isDark ? "#94a3b8" : "#374151";
+      const accent = isDark ? "#e2e8f0" : "#1a1a2e";
+      return (
+        <div className="w-full h-full flex flex-col px-4 py-4" style={{ background: bg }}>
+          <div style={{ borderBottom: `1.5px solid ${accent}`, paddingBottom: 6, marginBottom: 8 }}>
+            <div className="w-16 h-2.5 rounded-sm" style={{ background: accent }} />
+            <div className="w-10 h-1 rounded-full mt-1" style={{ background: textCol, opacity: 0.4 }} />
+          </div>
+          <div className="flex gap-4 mb-4">
+            {[0, 1].map(i => (
+              <div key={i} className="flex flex-col gap-0.5">
+                {[14, 18, 12].map((w, j) => (
+                  <div key={j} className="h-0.5 rounded-full" style={{ width: w, background: textCol, opacity: 0.35 }} />
+                ))}
+              </div>
+            ))}
+          </div>
+          {[100, 98, 92, 100, 96, 88, 100, 90, 60].map((w, i) => (
+            <div key={i} className="h-0.5 rounded-full mb-1" style={{ width: `${w}%`, background: textCol, opacity: 0.3 }} />
+          ))}
+          <div className="mt-3">
+            <div className="w-14 h-0.5 rounded-full mb-1.5" style={{ background: textCol, opacity: 0.3 }} />
+            <div className="w-10 h-1.5 rounded-sm" style={{ background: accent, opacity: 0.7 }} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "tech-case-study",
+    title: "Tech Case Study",
+    subtitle: "Dark-native, neon accents",
+    type: "text",
+    category: "Creative",
+    content: {
+      html: `<div style="background:#0f0c1a;color:#e2e8f0;font-family:system-ui,sans-serif;min-height:900px">
+  <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:48px 56px 40px">
+    <p style="color:rgba(255,255,255,0.5);font-size:11px;letter-spacing:4px;text-transform:uppercase;margin:0 0 12px">CASE STUDY · Q3 2024</p>
+    <h1 style="font-size:48px;font-weight:900;letter-spacing:-2px;margin:0 0 8px;line-height:1.1">SYSTEM<br/>MIGRATION</h1>
+    <p style="color:rgba(255,255,255,0.6);font-size:15px;margin:0">Zero-downtime monolith to microservices migration at scale</p>
+  </div>
+  <div style="padding:48px 56px">
+    <div style="display:flex;gap:16px;margin-bottom:48px">
+      <div style="flex:1;background:rgba(79,70,229,0.12);border:1px solid rgba(79,70,229,0.3);border-radius:12px;padding:20px;text-align:center"><p style="color:#818cf8;font-size:26px;font-weight:800;margin:0 0 4px">99.97%</p><p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:0">Uptime</p></div>
+      <div style="flex:1;background:rgba(79,70,229,0.12);border:1px solid rgba(79,70,229,0.3);border-radius:12px;padding:20px;text-align:center"><p style="color:#818cf8;font-size:26px;font-weight:800;margin:0 0 4px">3.2M</p><p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:0">Req/day</p></div>
+      <div style="flex:1;background:rgba(79,70,229,0.12);border:1px solid rgba(79,70,229,0.3);border-radius:12px;padding:20px;text-align:center"><p style="color:#818cf8;font-size:26px;font-weight:800;margin:0 0 4px">-62%</p><p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:0">Latency</p></div>
+    </div>
+    <h2 style="color:#a78bfa;font-size:12px;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">Executive Summary</h2>
+    <p style="color:#94a3b8;line-height:1.8;margin:0 0 32px">Replace with your project abstract. Describe the challenge, the approach, and the outcome.</p>
+    <h2 style="color:#a78bfa;font-size:12px;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">Architecture</h2>
+    <div style="background:#0a0814;border:1px solid rgba(79,70,229,0.2);border-radius:8px;padding:20px;margin-bottom:32px;font-family:monospace;font-size:13px;color:#a78bfa">
+// services: [auth, api, worker, db, cache]<br/>// deployment: kubernetes + helm
+    </div>
+    <h2 style="color:#a78bfa;font-size:12px;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">Outcome</h2>
+    <p style="color:#94a3b8;line-height:1.8;margin:0">Describe the measurable results and what was learned.</p>
+  </div>
+</div>`,
+    },
+    thumbnail: (_isDark) => {
+      return (
+        <div className="w-full h-full flex flex-col overflow-hidden" style={{ background: "#0f0c1a" }}>
+          <div className="px-3 py-3 flex flex-col gap-1" style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+            <div className="w-8 h-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.35)" }} />
+            <div className="w-16 h-2.5 rounded-sm" style={{ background: "rgba(255,255,255,0.9)" }} />
+            <div className="w-20 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.4)" }} />
+          </div>
+          <div className="flex gap-1 px-2.5 py-2">
+            {["99.97%", "3.2M", "−62%"].map((v, i) => (
+              <div key={i} className="flex-1 rounded py-1 flex flex-col items-center gap-0.5"
+                style={{ background: "rgba(79,70,229,0.12)", border: "0.5px solid rgba(79,70,229,0.3)" }}>
+                <div className="text-[5px] font-bold" style={{ color: "#818cf8" }}>{v}</div>
+                <div className="w-4 h-0.5 rounded-full" style={{ background: "#4f46e5", opacity: 0.4 }} />
+              </div>
+            ))}
+          </div>
+          <div className="px-2.5 flex flex-col gap-1">
+            <div className="w-8 h-0.5 rounded-full" style={{ background: "#a78bfa", opacity: 0.6 }} />
+            {[100, 85, 70].map((w, i) => (
+              <div key={i} className="h-0.5 rounded-full" style={{ width: `${w}%`, background: "#334155" }} />
+            ))}
+            <div className="rounded mt-1 p-1.5" style={{ background: "#0a0814", border: "0.5px solid rgba(79,70,229,0.2)" }}>
+              {[70, 55, 45].map((w, i) => (
+                <div key={i} className="h-0.5 rounded-full mb-0.5" style={{ width: `${w}%`, background: "#4f46e5", opacity: 0.6 }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "academic-paper-twocol",
+    title: "Academic Paper",
+    subtitle: "Two-column formal layout",
+    type: "text",
+    category: "Basic",
+    content: {
+      html: `<div style="max-width:800px;margin:0 auto;font-family:'Georgia',serif;padding:48px 40px;background:#ffffff;min-height:900px">
+  <div style="text-align:center;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid #e5e7eb">
+    <h1 style="font-size:24px;font-weight:700;color:#111827;margin:0 0 8px;line-height:1.3">The Impact of Artificial Intelligence on User Interface Design</h1>
+    <p style="color:#6b7280;font-size:13px;margin:0 0 4px">Author Name · Department of Computer Science</p>
+    <p style="color:#9ca3af;font-size:12px;margin:0">University of Technology · ${new Date().getFullYear()}</p>
+  </div>
+  <div style="background:#f9fafb;border-left:3px solid #6366f1;padding:16px 20px;margin-bottom:32px;border-radius:0 8px 8px 0">
+    <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6366f1;margin:0 0 6px">Abstract</p>
+    <p style="font-size:13px;color:#374151;line-height:1.7;margin:0">Replace with your abstract text. Concise overview of research, methodology, and key findings in 150-250 words.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+    <div>
+      <h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#374151;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin:0 0 12px">1. Introduction</h2>
+      <p style="font-size:13px;color:#4b5563;line-height:1.8;margin:0 0 16px">Start your introduction here. Establish context, state the problem, and outline your argument.</p>
+      <h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#374151;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin:0 0 12px">2. Methodology</h2>
+      <p style="font-size:13px;color:#4b5563;line-height:1.8;margin:0">Describe your research methods, sample size, data collection approach, and analytical framework.</p>
+    </div>
+    <div>
+      <h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#374151;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin:0 0 12px">3. Results</h2>
+      <p style="font-size:13px;color:#4b5563;line-height:1.8;margin:0 0 16px">Present your findings here. Use clear, factual language. Reference figures and tables where applicable.</p>
+      <h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#374151;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin:0 0 12px">4. Discussion</h2>
+      <p style="font-size:13px;color:#4b5563;line-height:1.8;margin:0">Interpret your results. Compare with existing literature and explain implications of your findings.</p>
+    </div>
+  </div>
+  <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb">
+    <h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#374151;margin:0 0 8px">References</h2>
+    <p style="font-size:12px;color:#6b7280;line-height:1.8;margin:0">[1] Author, A. B. (2023). Title of paper. <em>Journal Name</em>, 12(3), 45-67.</p>
+  </div>
+</div>`,
+    },
+    thumbnail: (isDark) => {
+      const bg = isDark ? "#1e293b" : "#ffffff";
+      const heading = isDark ? "#e2e8f0" : "#111827";
+      const line = isDark ? "#334155" : "#e5e7eb";
+      const body = isDark ? "#475569" : "#9ca3af";
+      return (
+        <div className="w-full h-full flex flex-col px-3 py-3" style={{ background: bg }}>
+          <div className="flex flex-col items-center gap-0.5 pb-2 mb-2" style={{ borderBottom: `1px solid ${line}` }}>
+            <div className="w-3/4 h-1.5 rounded-full" style={{ background: heading }} />
+            <div className="w-2/3 h-1.5 rounded-full" style={{ background: heading, opacity: 0.7 }} />
+            <div className="w-1/2 h-1 rounded-full mt-0.5" style={{ background: body }} />
+          </div>
+          <div className="px-1.5 py-1.5 mb-2 rounded-r" style={{ background: isDark ? "rgba(99,102,241,0.1)" : "#f9fafb", borderLeft: "2px solid #6366f1" }}>
+            {[100, 90, 75].map((w, i) => (
+              <div key={i} className="h-0.5 rounded-full mb-0.5" style={{ width: `${w}%`, background: body }} />
+            ))}
+          </div>
+          <div className="flex gap-2 flex-1">
+            {[0, 1].map(col => (
+              <div key={col} className="flex-1 flex flex-col gap-0.5">
+                <div className="w-full h-1 rounded-full mb-0.5" style={{ background: heading, opacity: 0.5 }} />
+                {[100, 85, 70, 100, 80].map((w, i) => (
+                  <div key={i} className="h-0.5 rounded-full" style={{ width: `${w}%`, background: body }} />
+                ))}
+                <div className="w-full h-0.5 my-1" style={{ background: line }} />
+                <div className="w-3/4 h-1 rounded-full mb-0.5" style={{ background: heading, opacity: 0.5 }} />
+                {[100, 75, 90].map((w, i) => (
+                  <div key={i} className="h-0.5 rounded-full" style={{ width: `${w}%`, background: body }} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "mood-board",
+    title: "Creative Mood Board",
+    subtitle: "Masonry layout & bold impact",
+    type: "text",
+    category: "Creative",
+    content: {
+      html: `<div style="background:#0a0a0a;min-height:900px;padding:48px;font-family:system-ui,sans-serif">
+  <div style="text-align:center;margin-bottom:48px">
+    <h1 style="font-size:80px;font-weight:900;letter-spacing:-4px;color:white;margin:0;line-height:0.9;text-transform:uppercase">VISION<br/><span style="color:#f59e0b">BOARD</span></h1>
+    <p style="color:#6b7280;font-size:12px;letter-spacing:4px;text-transform:uppercase;margin:16px 0 0">Brand Identity v2.0</p>
+  </div>
+  <div style="display:grid;grid-template-columns:2fr 1fr;grid-template-rows:auto auto;gap:16px;margin-bottom:24px">
+    <div style="grid-row:span 2;background:linear-gradient(135deg,#1c1c2e,#2d1b4e);border-radius:16px;padding:32px;display:flex;align-items:center;justify-content:center;min-height:240px;border:1px dashed rgba(255,255,255,0.1)">
+      <p style="color:rgba(255,255,255,0.2);font-size:14px;text-align:center;margin:0">Drop Image or Paste URL</p>
+    </div>
+    <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);border-radius:12px;padding:24px;display:flex;align-items:center;justify-content:center;min-height:110px;border:1px dashed rgba(255,255,255,0.1)">
+      <p style="color:rgba(255,255,255,0.4);font-size:12px;text-align:center;margin:0">Drop Image</p>
+    </div>
+    <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;padding:24px;display:flex;align-items:center;justify-content:center;min-height:110px;border:1px dashed rgba(255,255,255,0.1)">
+      <p style="color:rgba(255,255,255,0.4);font-size:12px;text-align:center;margin:0">Drop Image</p>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+    <div style="background:#1c1c2e;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05)">
+      <p style="color:#f59e0b;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">Palette</p>
+      <div style="display:flex;gap:6px"><div style="width:20px;height:20px;border-radius:50%;background:#f59e0b"></div><div style="width:20px;height:20px;border-radius:50%;background:#ef4444"></div><div style="width:20px;height:20px;border-radius:50%;background:#6366f1"></div><div style="width:20px;height:20px;border-radius:50%;background:#0f172a;border:1px solid rgba(255,255,255,0.1)"></div><div style="width:20px;height:20px;border-radius:50%;background:#f8fafc"></div></div>
+    </div>
+    <div style="background:#1c1c2e;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05)">
+      <p style="color:#6366f1;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">Typography</p>
+      <p style="color:white;font-size:18px;font-weight:800;margin:0;line-height:1.2">Aa</p>
+    </div>
+    <div style="background:#1c1c2e;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05)">
+      <p style="color:#ef4444;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">Tone</p>
+      <p style="color:#9ca3af;font-size:12px;line-height:1.6;margin:0">Bold. Minimal. Impactful.</p>
+    </div>
+  </div>
+</div>`,
+    },
+    thumbnail: (_isDark) => {
+      return (
+        <div className="w-full h-full flex flex-col" style={{ background: "#0a0a0a" }}>
+          <div className="flex flex-col items-center justify-center py-2.5">
+            <div className="w-16 h-3 rounded-sm" style={{ background: "white", opacity: 0.9 }} />
+            <div className="w-12 h-2.5 rounded-sm mt-0.5" style={{ background: "#f59e0b" }} />
+            <div className="w-8 h-0.5 rounded-full mt-1" style={{ background: "rgba(255,255,255,0.3)" }} />
+          </div>
+          <div className="flex gap-1 px-2 flex-1">
+            <div className="flex-[2] rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg,#1c1c2e,#2d1b4e)", border: "1px dashed rgba(255,255,255,0.1)" }}>
+              <div className="w-3 h-3 rounded opacity-30" style={{ background: "white" }} />
+            </div>
+            <div className="flex-1 flex flex-col gap-1">
+              <div className="flex-1 rounded-lg" style={{ background: "linear-gradient(135deg,#f59e0b,#ef4444)" }} />
+              <div className="flex-1 rounded-lg" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }} />
+            </div>
+          </div>
+          <div className="flex gap-0.5 justify-center py-1.5">
+            {["#f59e0b","#ef4444","#6366f1","#0f172a","#f8fafc"].map(c => (
+              <div key={c} className="w-2 h-2 rounded-full" style={{ background: c }} />
+            ))}
+          </div>
+        </div>
+      );
+    },
+  },
+
   // ── CRM & SALES ──────────────────────────────────────────────────────────
   {
     id: "project-budget",
@@ -757,13 +1013,11 @@ const TEMPLATES: Template[] = [
       const rows = ["Design", "Development", "Marketing", "Infrastructure", "Legal"];
       return (
         <div className="w-full h-full flex flex-col" style={{ background: mainBg }}>
-          {/* Green header */}
           <div className="flex gap-0.5 px-1.5 py-1.5" style={{ background: greenBg }}>
             {["Category", "Expected", "Actual", "Var"].map((h, i) => (
               <div key={i} className="flex-1 text-[3.5px] font-bold" style={{ color: "white" }}>{h}</div>
             ))}
           </div>
-          {/* Data rows alternating */}
           {rows.map((label, i) => (
             <div key={i} className="flex gap-0.5 px-1.5 py-0.5" style={{ background: i % 2 === 0 ? mainBg : altRow, borderBottom: `0.5px solid ${isDark ? "#334155" : "#d1fae5"}` }}>
               <div className="flex-1 text-[3px]" style={{ color: isDark ? "#94a3b8" : "#374151" }}>{label}</div>
@@ -772,7 +1026,6 @@ const TEMPLATES: Template[] = [
               ))}
             </div>
           ))}
-          {/* Red total row */}
           <div className="flex gap-0.5 px-1.5 py-1 mt-auto" style={{ background: redBg }}>
             {["TOTAL", "$47,850", "$44,400", "$3,450"].map((v, i) => (
               <div key={i} className="flex-1 text-[3.5px] font-bold" style={{ color: "white" }}>{v}</div>
