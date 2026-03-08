@@ -9,7 +9,7 @@ import {
   MessageCircle, Globe, Layers, GitBranch, HeartPulse, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import cherryBg from "@/assets/bg-cherry-blossom.jpg";
+import gradientBg from "@/assets/bg-gradient.png";
 
 interface LandingPageProps {
   onEnter: (text: string) => void;
@@ -427,7 +427,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       <div
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-700"
         style={{
-          backgroundImage: `url(${cherryBg})`,
+          backgroundImage: `url(${gradientBg})`,
           filter: isDark ? "blur(22px) brightness(0.38) saturate(0.5)" : "blur(18px)",
           transform: "scale(1.08)",
         }}
