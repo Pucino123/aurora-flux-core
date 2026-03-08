@@ -7,6 +7,7 @@ import DocumentView from "./documents/DocumentView";
 import { useFlux } from "@/context/FluxContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useTrash } from "@/context/TrashContext";
+import TemplateChooserModal from "./focus/TemplateChooserModal";
 
 const DocumentsView = () => {
   const { moveToTrash } = useTrash();

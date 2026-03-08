@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, MoreHorizontal, Pencil, Trash2, Copy, FolderPlus, FileText, Table,
   ChevronRight, LayoutGrid, List, Folder, ArrowLeft, Search, SlidersHorizontal,
-  Sparkles, Sun, Moon,
+  Sparkles, Sun, Moon, Plus,
 } from "lucide-react";
+import TemplateChooserModal from "./TemplateChooserModal";
 
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { useDocuments, DbDocument } from "@/hooks/useDocuments";
