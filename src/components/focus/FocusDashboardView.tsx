@@ -1296,6 +1296,20 @@ const FocusContent = () => {
         className="absolute inset-0 z-[15] pointer-events-none"
         style={{ background: "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.35) 100%)" }}
       />
+      {/* Focus Mode: subtle dim overlay over wallpaper */}
+      <AnimatePresence>
+        {isFocusModeActive && (
+          <motion.div
+            key="focus-dim"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 z-[16] pointer-events-none"
+            style={{ background: "rgba(0,0,0,0.28)" }}
+          />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {systemMode === "build" && (
           <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
