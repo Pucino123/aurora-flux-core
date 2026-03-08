@@ -434,7 +434,7 @@ const BackgroundEngine = ({
       {embedded ? createPortal(
         <>
           {menuOpen && <div className="fixed inset-0 z-[10109]" onClick={() => setMenuOpen(false)} />}
-          <div className="fixed bottom-6 left-6 z-[10110]">
+          <div className="fixed bottom-[76px] left-6 z-[10110]">
             <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 text-white/80 text-sm font-medium hover:bg-white/15 transition-all shadow-lg">
               <Image size={16} /><span>Spaces</span><ChevronDown size={14} className={`transition-transform ${menuOpen ? "rotate-180" : ""}`} />
             </button>

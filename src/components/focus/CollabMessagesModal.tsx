@@ -384,9 +384,27 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Lighten default overlay so frosted glass effect is visible */}
-      <style dangerouslySetInnerHTML={{ __html: `[data-state="open"][class*="bg-black"] { background: rgba(0,0,0,0.35) !important; backdrop-filter: blur(4px); }` }} />
+      {/* Suppress default Radix animation; we handle it ourselves */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        [data-state="open"][class*="bg-black"] { background: rgba(0,0,0,0.35) !important; backdrop-filter: blur(4px); }
+        @keyframes genie-in {
+          0%   { opacity:0; transform: translateY(60px) scaleY(0.08) scaleX(0.55); transform-origin: center bottom; border-radius: 20px; }
+          30%  { opacity:1; transform: translateY(20px) scaleY(0.55) scaleX(0.80); transform-origin: center bottom; }
+          65%  { transform: translateY(4px) scaleY(1.04) scaleX(1.01); transform-origin: center bottom; }
+          80%  { transform: translateY(-3px) scaleY(0.98) scaleX(1.005); }
+          100% { opacity:1; transform: translateY(0) scaleY(1) scaleX(1); border-radius: 14px; }
+        }
+        @keyframes genie-out {
+          0%   { opacity:1; transform: translateY(0) scaleY(1) scaleX(1); transform-origin: center bottom; }
+          30%  { transform: translateY(10px) scaleY(0.85) scaleX(0.92); transform-origin: center bottom; }
+          70%  { transform: translateY(40px) scaleY(0.22) scaleX(0.65); border-radius: 18px; }
+          100% { opacity:0; transform: translateY(60px) scaleY(0.05) scaleX(0.45); border-radius: 24px; }
+        }
+        [data-collab-modal][data-state="open"]  { animation: genie-in  0.52s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        [data-collab-modal][data-state="closed"] { animation: genie-out 0.38s cubic-bezier(0.4,0,1,1)        forwards; }
+      ` }} />
       <DialogContent
+        data-collab-modal
         className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden"
         onOpenAutoFocus={e => e.preventDefault()}
         onPointerDownOutside={e => {

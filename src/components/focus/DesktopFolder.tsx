@@ -266,7 +266,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
           : justAbsorbed ? { duration: 0.4, ease: "easeOut" } : { duration: 0.2 }
         }
         className={`desktop-folder absolute flex flex-col items-center justify-center p-2 pb-1 cursor-pointer select-none rounded-2xl transition-shadow duration-200 ${
-          isDropTarget ? "ring-2 ring-blue-400/60" : (!isMarqueeSelected && selected && !isDragging ? "ring-2 ring-primary/50" : "")
+          isDropTarget ? "ring-2 ring-[rgba(0,122,255,0.6)]" : (!isMarqueeSelected && selected && !isDragging ? "ring-2 ring-[rgba(0,122,255,0.5)]" : "")
         }`}
         style={{
           left: pos.x, top: pos.y, width: 90, minHeight: 90,

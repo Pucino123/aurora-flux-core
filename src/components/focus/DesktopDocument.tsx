@@ -191,7 +191,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   return (
     <>
       <motion.div
-        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group transition-shadow duration-200 ${!isMarqueeSelected && selected ? "ring-2 ring-primary/60" : ""}`}
+        className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl group transition-shadow duration-200 ${!isMarqueeSelected && selected ? "ring-2 ring-[rgba(0,122,255,0.6)]" : ""}`}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={flyingOff
           ? { x: flyingOff.dir * (window.innerWidth * 0.6), opacity: 0, scale: 0.7, rotate: flyingOff.dir * 12 }
