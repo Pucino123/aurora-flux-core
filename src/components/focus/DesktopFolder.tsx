@@ -239,17 +239,27 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   const isDragging = dragState?.id === folder.id;
   const iconFill = folder.color || "hsl(var(--muted-foreground))";
 
+  // Fly-off: animate item flying off-screen in the target page direction
+  const triggerFlyOff = useCallback((targetPageIndex: number, cb: () => void) => {
+    const dir = (targetPageIndex > (currentPageIndex ?? 0) ? 1 : -1) as 1 | -1;
+    setFlyingOff({ dir });
+    setTimeout(() => { cb(); setFlyingOff(null); }, 420);
+  }, [currentPageIndex]);
+
   return (
     <>
       <motion.div
         ref={folderRef}
         data-folder-id={folder.id}
         initial={{ opacity: 0, scale: 0.9 }}
-        animate={{
-          opacity: 1,
-          scale: justAbsorbed ? [1, 1.15, 0.92, 1.05, 1] : (isDropTarget ? 1.08 : 1),
-        }}
-        transition={justAbsorbed ? { duration: 0.4, ease: "easeOut" } : { duration: 0.2 }}
+        animate={flyingOff
+          ? { x: flyingOff.dir * (window.innerWidth * 0.6), opacity: 0, scale: 0.7, rotate: flyingOff.dir * 12 }
+          : { opacity: 1, scale: justAbsorbed ? [1, 1.15, 0.92, 1.05, 1] : (isDropTarget ? 1.08 : 1), x: 0, rotate: 0 }
+        }
+        transition={flyingOff
+          ? { duration: 0.38, ease: [0.4, 0, 1, 1] }
+          : justAbsorbed ? { duration: 0.4, ease: "easeOut" } : { duration: 0.2 }
+        }
         className={`desktop-folder absolute flex flex-col items-center justify-center gap-0 p-2 pb-1 cursor-pointer select-none rounded-2xl transition-shadow duration-200 ${
           isDropTarget ? "ring-2 ring-blue-400/60" : (!isMarqueeSelected && selected && !isDragging ? "ring-2 ring-primary/50" : "")
         }`}
@@ -270,6 +280,12 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
         onClick={(e) => { e.stopPropagation(); if (!didDrag.current && !isMarqueeSelected) { if (onSingleSelect) onSingleSelect(folder.id); else setSelected(true); } }}
         onContextMenu={handleContextMenu}
       >
+        {/* Pin badge */}
+        {isPinned && (
+          <div className="absolute -top-1 -right-1 z-20 w-4 h-4 rounded-full bg-primary flex items-center justify-center shadow-md" title="Pinned to all pages">
+            <Pin size={8} className="text-primary-foreground" />
+          </div>
+        )}
         {/* Background layer */}
         {folderOpacity > 0.06 ? (
           <div
