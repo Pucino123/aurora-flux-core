@@ -1125,6 +1125,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
               onCollapse={() => setExpandedCard(null)}
               onFullscreen={() => setFullscreenPersona(persona.key)}
               floatingEmojis={floatingEmojis[persona.key]}
+              userId={user?.id}
+              sessionId={sessionIdRef.current}
             />
           ))}
         </div>
@@ -1141,6 +1143,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
               onCollapse={() => setExpandedCard(null)}
               onFullscreen={() => setFullscreenPersona(persona.key)}
               floatingEmojis={floatingEmojis[persona.key]}
+              userId={user?.id}
+              sessionId={sessionIdRef.current}
             />
           ))}
         </div>
