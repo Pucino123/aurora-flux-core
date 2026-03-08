@@ -87,29 +87,40 @@ const SLIDES = [
     body: "Submit any idea. Four AI personas with distinct worldviews debate it — so you decide with confidence.",
     accentColor: "rgba(139,92,246,0.3)",
     visual: (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2.5 mb-5">
+      <div className="space-y-2.5">
+        {/* Persona row */}
+        <div className="flex items-center gap-2 mb-4">
           {[
-            { initials: "EV", color: "#34d399" },
-            { initials: "HK", color: "#fbbf24" },
-            { initials: "AO", color: "#f87171" },
-            { initials: "ML", color: "#22d3ee" },
+            { initials: "EV", name: "Evangelist", color: "#34d399" },
+            { initials: "HK", name: "Hawk", color: "#fbbf24" },
+            { initials: "AO", name: "Analyst", color: "#f87171" },
+            { initials: "ML", name: "Mentor", color: "#22d3ee" },
           ].map((a) => (
-            <div key={a.initials} className="w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-bold"
-              style={{ background: `${a.color}22`, border: `1.5px solid ${a.color}50`, color: a.color }}>
-              {a.initials}
+            <div key={a.initials} className="flex flex-col items-center gap-1">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold"
+                style={{ background: `${a.color}20`, border: `1.5px solid ${a.color}45`, color: a.color }}>
+                {a.initials}
+              </div>
+              <span className="text-[8px] text-white/30">{a.name}</span>
             </div>
           ))}
-          <span className="ml-auto text-xs text-white/30">Live debate</span>
+          <div className="ml-auto flex items-center gap-1.5 rounded-full px-2 py-1" style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)" }}>
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] text-emerald-300 font-medium">Debating</span>
+          </div>
         </div>
+        {/* Messages */}
         {[
-          { who: "🔴 Skeptic", msg: "This plan has a fatal assumption — the market isn't ready.", c: "rgba(239,68,68,0.12)", b: "rgba(239,68,68,0.22)" },
-          { who: "🔵 Optimist", msg: "Early adopters will pay a premium for this exact pain point.", c: "rgba(59,130,246,0.12)", b: "rgba(59,130,246,0.22)" },
-          { who: "🟡 Pragmatist", msg: "Both valid. Can you reach PMF in 90 days?", c: "rgba(234,179,8,0.12)", b: "rgba(234,179,8,0.22)" },
+          { who: "Skeptic", color: "#f87171", msg: "Fatal assumption — market isn't ready." },
+          { who: "Optimist", color: "#34d399", msg: "Early adopters will pay a premium." },
+          { who: "Pragmatist", color: "#fbbf24", msg: "Can you reach PMF in 90 days?" },
         ].map(m => (
-          <div key={m.who} className="rounded-xl px-4 py-3" style={{ background: m.c, border: `1px solid ${m.b}` }}>
-            <div className="text-xs font-semibold text-white/50 mb-1">{m.who}</div>
-            <p className="text-sm text-white/80">{m.msg}</p>
+          <div key={m.who} className="flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-lg shrink-0 flex items-center justify-center text-[9px] font-bold mt-0.5"
+              style={{ background: `${m.color}20`, color: m.color }}>{m.who[0]}</div>
+            <div className="flex-1 rounded-xl px-3 py-2.5 text-sm text-white/75" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              {m.msg}
+            </div>
           </div>
         ))}
       </div>
@@ -123,21 +134,33 @@ const SLIDES = [
     body: "A fully customizable focus environment — drag widgets, pick your soundscape, and enter deep work.",
     accentColor: "rgba(52,211,153,0.25)",
     visual: (
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { title: "Focus Timer", sub: "25:00 Pomodoro", icon: "⏱" },
-          { title: "Soundscape", sub: "☔ Rain + Café", icon: "🎵" },
-          { title: "Today's Plan", sub: "4 of 7 done", icon: "✅" },
-          { title: "Aura AI", sub: "Ask anything…", icon: "✨" },
-        ].map(w => (
-          <div key={w.title} className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}>
-            <div className="text-2xl mb-2">{w.icon}</div>
-            <div className="text-xs font-bold text-white">{w.title}</div>
-            <div className="text-xs text-white/45 mt-0.5">{w.sub}</div>
+      <div className="space-y-2.5">
+        {/* Timer */}
+        <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.2)" }}>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(52,211,153,0.15)", border: "2px solid rgba(52,211,153,0.4)" }}>
+            <span className="text-emerald-300 font-mono font-bold text-sm">24:58</span>
           </div>
-        ))}
-        <div className="col-span-2 rounded-xl px-4 py-3 text-xs text-white/50" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-          🌲 Forest — Deep Work Mode active
+          <div>
+            <div className="text-sm font-bold text-white">Deep Work</div>
+            <div className="text-xs text-white/45 mt-0.5">Session 2 of 4</div>
+            <div className="flex items-center gap-1 mt-1.5">
+              {[1,2,0,0].map((v,i) => <div key={i} className="w-5 h-1 rounded-full" style={{ background: v ? "rgba(52,211,153,0.7)" : "rgba(255,255,255,0.12)" }} />)}
+            </div>
+          </div>
+        </div>
+        {/* Soundscape + widgets */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { icon: "🎵", label: "Rain + Café", sub: "Playing" },
+            { icon: "✅", label: "4 / 7 done", sub: "Tasks" },
+            { icon: "🌲", label: "Forest", sub: "Theme" },
+          ].map(w => (
+            <div key={w.label} className="rounded-xl p-2.5 text-center" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)" }}>
+              <div className="text-base mb-1">{w.icon}</div>
+              <div className="text-[10px] font-semibold text-white/80 leading-tight">{w.label}</div>
+              <div className="text-[9px] text-white/35">{w.sub}</div>
+            </div>
+          ))}
         </div>
       </div>
     ),
@@ -150,20 +173,28 @@ const SLIDES = [
     body: "A document editor that thinks with you. Rich text, spreadsheets, AI writing — all inside one tab.",
     accentColor: "rgba(251,191,36,0.2)",
     visual: (
-      <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(18,16,10,0.7)", border: "1px solid rgba(251,191,36,0.15)" }}>
-        <div className="flex items-center gap-1.5 px-4 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)" }}>
-          {["Bold","Italic","H1","H2","AI ✨"].map(t => (
-            <span key={t} className="text-xs px-2 py-0.5 rounded text-white/50 font-medium" style={{ background: "rgba(255,255,255,0.08)" }}>{t}</span>
+      <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(14,12,8,0.75)", border: "1px solid rgba(251,191,36,0.18)" }}>
+        {/* Toolbar */}
+        <div className="flex items-center gap-1 px-3 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)" }}>
+          {["B", "I", "H1", "H2"].map(b => (
+            <span key={b} className="text-[11px] px-1.5 py-0.5 rounded font-semibold text-white/40" style={{ background: "rgba(255,255,255,0.07)" }}>{b}</span>
           ))}
+          <div className="ml-auto flex items-center gap-1 text-[10px] text-yellow-300/60 font-medium">
+            <span>✨</span> AI
+          </div>
         </div>
-        <div className="p-5 space-y-2.5">
-          <div className="h-4 rounded-full w-2/3" style={{ background: "rgba(255,255,255,0.15)" }} />
-          <div className="h-2.5 rounded-full w-full" style={{ background: "rgba(255,255,255,0.07)" }} />
-          <div className="h-2.5 rounded-full w-5/6" style={{ background: "rgba(255,255,255,0.07)" }} />
-          <div className="mt-4 rounded-xl p-3 border" style={{ background: "rgba(251,191,36,0.08)", borderColor: "rgba(251,191,36,0.2)" }}>
-            <div className="text-xs text-yellow-300/70 mb-1.5 font-semibold">✨ AI Suggestion</div>
-            <div className="h-2.5 rounded-full w-full mb-1" style={{ background: "rgba(255,255,255,0.1)" }} />
-            <div className="h-2.5 rounded-full w-3/4" style={{ background: "rgba(255,255,255,0.1)" }} />
+        {/* Content */}
+        <div className="p-4 space-y-2">
+          <div className="text-sm font-bold text-white/85">2025 Product Roadmap</div>
+          <div className="h-2 rounded-full w-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+          <div className="h-2 rounded-full w-5/6" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="h-2 rounded-full w-4/5" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(251,191,36,0.09)", border: "1px solid rgba(251,191,36,0.22)" }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="text-[10px] text-yellow-300/80 font-semibold">✨ Aura suggests</span>
+            </div>
+            <div className="h-2 rounded-full w-full mb-1.5" style={{ background: "rgba(255,255,255,0.1)" }} />
+            <div className="h-2 rounded-full w-3/4" style={{ background: "rgba(255,255,255,0.08)" }} />
           </div>
         </div>
       </div>
@@ -177,26 +208,33 @@ const SLIDES = [
     body: "Contacts, deals, invoices, and finances — all connected. No more spreadsheets or separate tools.",
     accentColor: "rgba(56,189,248,0.2)",
     visual: (
-      <div className="space-y-2.5">
-        <div className="text-xs font-semibold text-white/35 uppercase tracking-wider mb-3">Deal Pipeline</div>
+      <div className="space-y-3">
+        {/* Pipeline */}
+        <div className="text-[10px] font-semibold text-white/30 uppercase tracking-widest mb-2">Pipeline</div>
         {[
-          { stage: "Lead", color: "rgba(148,163,184,0.6)", w: "35%" },
-          { stage: "Proposal", color: "rgba(56,189,248,0.7)", w: "55%" },
-          { stage: "Negotiation", color: "rgba(251,191,36,0.7)", w: "75%" },
-          { stage: "Closed Won", color: "rgba(52,211,153,0.7)", w: "90%" },
+          { stage: "Lead", val: "$8k", pct: "35%", color: "rgba(148,163,184,0.55)" },
+          { stage: "Proposal", val: "$31k", pct: "55%", color: "rgba(56,189,248,0.65)" },
+          { stage: "Negotiation", val: "$19k", pct: "75%", color: "rgba(251,191,36,0.65)" },
+          { stage: "Closed", val: "$54k", pct: "92%", color: "rgba(52,211,153,0.65)" },
         ].map(s => (
           <div key={s.stage} className="flex items-center gap-3">
-            <div className="text-xs text-white/45 w-24 shrink-0">{s.stage}</div>
+            <div className="text-xs text-white/40 w-20 shrink-0">{s.stage}</div>
             <div className="flex-1 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }}>
-              <div className="h-1.5 rounded-full" style={{ background: s.color, width: s.w }} />
+              <div className="h-1.5 rounded-full transition-all" style={{ background: s.color, width: s.pct }} />
             </div>
+            <div className="text-xs font-semibold text-white/55 w-10 text-right">{s.val}</div>
           </div>
         ))}
-        <div className="grid grid-cols-2 gap-2 mt-4">
-          {[{ label: "Revenue MTD", val: "$24,300" }, { label: "Budget Left", val: "$1,840" }].map(s => (
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-2 mt-1">
+          {[
+            { label: "Revenue MTD", val: "$24,300", up: true },
+            { label: "Budget Left", val: "$1,840", up: false },
+          ].map(s => (
             <div key={s.label} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <div className="text-xs text-white/35 mb-1">{s.label}</div>
+              <div className="text-[10px] text-white/35 mb-0.5">{s.label}</div>
               <div className="text-sm font-bold text-white">{s.val}</div>
+              <div className={`text-[9px] mt-0.5 ${s.up ? "text-emerald-400" : "text-rose-400"}`}>{s.up ? "↑ 12% vs last month" : "↓ 3% remaining"}</div>
             </div>
           ))}
         </div>
@@ -211,17 +249,21 @@ const SLIDES = [
     body: "Describe your tasks. Dashiii builds a realistic, energy-aware daily schedule. Syncs with Google Calendar.",
     accentColor: "rgba(167,139,250,0.2)",
     visual: (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {[
-          { time: "9:00", title: "Deep Work Block", color: "rgba(167,139,250,0.2)", border: "rgba(167,139,250,0.35)" },
-          { time: "11:00", title: "Team Standup", color: "rgba(56,189,248,0.15)", border: "rgba(56,189,248,0.3)" },
-          { time: "13:00", title: "Lunch Break", color: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.09)" },
-          { time: "14:00", title: "Client Proposal", color: "rgba(167,139,250,0.2)", border: "rgba(167,139,250,0.35)" },
-          { time: "16:30", title: "Workout", color: "rgba(52,211,153,0.15)", border: "rgba(52,211,153,0.3)" },
+          { time: "9:00", dur: "2h", title: "Deep Work Block", tag: "Focus", color: "rgba(167,139,250,0.18)", border: "rgba(167,139,250,0.3)", dot: "#a78bfa" },
+          { time: "11:00", dur: "30m", title: "Team Standup", tag: "Meeting", color: "rgba(56,189,248,0.12)", border: "rgba(56,189,248,0.25)", dot: "#38bdf8" },
+          { time: "13:00", dur: "1h", title: "Lunch Break", tag: "Break", color: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)", dot: "#94a3b8" },
+          { time: "14:00", dur: "2h", title: "Client Proposal", tag: "Work", color: "rgba(167,139,250,0.18)", border: "rgba(167,139,250,0.3)", dot: "#a78bfa" },
+          { time: "16:30", dur: "1h", title: "Workout", tag: "Health", color: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.25)", dot: "#34d399" },
         ].map(b => (
-          <div key={b.time} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: b.color, border: `1px solid ${b.border}` }}>
-            <span className="text-xs text-white/35 w-10 shrink-0 font-mono">{b.time}</span>
-            <span className="text-sm text-white/80">{b.title}</span>
+          <div key={b.time} className="flex items-center gap-2.5 rounded-xl px-3 py-2" style={{ background: b.color, border: `1px solid ${b.border}` }}>
+            <div className="w-1 h-8 rounded-full shrink-0" style={{ background: b.dot }} />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white/85 font-medium truncate">{b.title}</div>
+              <div className="text-[10px] text-white/35">{b.time} · {b.dur}</div>
+            </div>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium shrink-0" style={{ background: `${b.dot}20`, color: b.dot }}>{b.tag}</span>
           </div>
         ))}
       </div>
@@ -238,40 +280,34 @@ const SLIDES = [
       <div className="space-y-3">
         {/* Streak heatmap */}
         <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-          <div className="text-xs text-white/40 mb-2 font-semibold uppercase tracking-wider">7-day streak 🔥</div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-white/50 font-semibold">Weekly Activity</span>
+            <span className="text-xs text-emerald-400 font-bold">🔥 7 day streak</span>
+          </div>
           <div className="flex gap-1.5">
             {[4, 6, 3, 7, 5, 6, 7].map((v, i) => (
-              <div key={i} className="flex-1 rounded-md" style={{ height: 28, background: `rgba(52,211,153,${(v / 7) * 0.8 + 0.1})` }} />
+              <div key={i} className="flex-1 rounded-md" style={{ height: 28, background: `rgba(52,211,153,${(v / 7) * 0.75 + 0.1})` }} />
             ))}
           </div>
-          <div className="flex justify-between mt-1">
+          <div className="flex mt-1">
             {["M","T","W","T","F","S","S"].map((d, i) => (
               <span key={i} className="text-[9px] text-white/25 flex-1 text-center">{d}</span>
             ))}
           </div>
         </div>
-        {/* Mood + workout */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div className="text-lg mb-1">😊</div>
-            <div className="text-xs font-bold text-white">Mood</div>
-            <div className="text-xs text-white/40 mt-0.5">Feeling great</div>
-          </div>
-          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div className="text-lg mb-1">🏃</div>
-            <div className="text-xs font-bold text-white">Run</div>
-            <div className="text-xs text-white/40 mt-0.5">5.2 km today</div>
-          </div>
-        </div>
-        {/* Energy bar */}
-        <div className="rounded-xl px-3 py-2.5" style={{ background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.2)" }}>
-          <div className="flex justify-between items-center mb-1.5">
-            <span className="text-xs text-white/60">Energy level</span>
-            <span className="text-xs font-bold text-emerald-300">82%</span>
-          </div>
-          <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <div className="h-1.5 rounded-full" style={{ background: "rgba(52,211,153,0.8)", width: "82%" }} />
-          </div>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { icon: "😊", label: "Mood", val: "Great" },
+            { icon: "🏃", label: "Run", val: "5.2 km" },
+            { icon: "⚡", label: "Energy", val: "82%" },
+          ].map(w => (
+            <div key={w.label} className="rounded-xl p-2.5 text-center" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="text-sm mb-1">{w.icon}</div>
+              <div className="text-xs font-bold text-white/80">{w.val}</div>
+              <div className="text-[9px] text-white/35">{w.label}</div>
+            </div>
+          ))}
         </div>
       </div>
     ),
