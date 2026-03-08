@@ -658,29 +658,26 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
     onClose();
   }, [selectedTemplate, onCreateDocument, onClose]);
 
-  // Keyboard navigation
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { onClose(); return; }
-      if (e.key === "Enter") { handleCreate(); return; }
-      const catIndex = CATEGORIES.indexOf(selectedCategory);
-      if (e.key === "Tab") {
-        e.preventDefault();
-        const next = e.shiftKey
-          ? (catIndex - 1 + CATEGORIES.length) % CATEGORIES.length
-          : (catIndex + 1) % CATEGORIES.length;
-        handleCategoryChange(CATEGORIES[next]);
-        return;
-      }
-      const currentIndex = filtered.findIndex(t => t.id === selectedTemplateId);
-      const cols = 3;
-      if (e.key === "ArrowRight") { e.preventDefault(); setSelectedTemplateId(filtered[Math.min(currentIndex + 1, filtered.length - 1)].id); }
-      else if (e.key === "ArrowLeft") { e.preventDefault(); setSelectedTemplateId(filtered[Math.max(currentIndex - 1, 0)].id); }
-      else if (e.key === "ArrowDown") { e.preventDefault(); setSelectedTemplateId(filtered[Math.min(currentIndex + cols, filtered.length - 1)].id); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); setSelectedTemplateId(filtered[Math.max(currentIndex - cols, 0)].id); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+  // Keyboard navigation — isolated to modal div (no window listener → no bleed)
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    e.stopPropagation(); // prevent arrow keys from triggering desktop pagination
+    if (e.key === "Escape") { onClose(); return; }
+    if (e.key === "Enter") { handleCreate(); return; }
+    const catIndex = CATEGORIES.indexOf(selectedCategory);
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const next = e.shiftKey
+        ? (catIndex - 1 + CATEGORIES.length) % CATEGORIES.length
+        : (catIndex + 1) % CATEGORIES.length;
+      handleCategoryChange(CATEGORIES[next]);
+      return;
+    }
+    const currentIndex = filtered.findIndex(t => t.id === selectedTemplateId);
+    const cols = 3;
+    if (e.key === "ArrowRight") { e.preventDefault(); setSelectedTemplateId(filtered[Math.min(currentIndex + 1, filtered.length - 1)].id); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); setSelectedTemplateId(filtered[Math.max(currentIndex - 1, 0)].id); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); setSelectedTemplateId(filtered[Math.min(currentIndex + cols, filtered.length - 1)].id); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setSelectedTemplateId(filtered[Math.max(currentIndex - cols, 0)].id); }
   }, [onClose, handleCreate, filtered, selectedTemplateId, selectedCategory, handleCategoryChange]);
 
   useEffect(() => { modalRef.current?.focus(); }, []);
