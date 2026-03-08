@@ -881,6 +881,7 @@ interface CouncilBoardroomProps {
 
 const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) => {
   const { user } = useAuth();
+  const { consumeSparks } = useMonetization();
   const [idea, setIdea] = useState("");
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({
     strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle",
