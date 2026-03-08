@@ -107,8 +107,8 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
 
   return (
     <div
-      className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden relative"
-      style={{ background: "radial-gradient(ellipse at top, rgba(139,92,246,0.04) 0%, transparent 60%)" }}
+      className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden relative ${pageLight ? "page-light" : ""}`}
+      style={{ background: pageLight ? undefined : "radial-gradient(ellipse at top, rgba(139,92,246,0.04) 0%, transparent 60%)" }}
     >
       {/* Scan line */}
       <AnimatePresence>
