@@ -1350,76 +1350,51 @@ const FocusContent = () => {
                       width: 160,
                     }}
                   >
-                    {/* Mini canvas preview */}
-                    <div
-                      className="relative w-full"
-                      style={{
-                        height: 90,
-                        background: dashboardPages[hoverDotIdx]?.background
-                          ? "rgba(30,20,60,0.8)"
-                          : "rgba(20,15,40,0.7)",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {/* Tiny dot grid mimicking build grid */}
-                      <div className="absolute inset-0" style={{
-                        backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
-                        backgroundSize: "14px 14px",
-                      }} />
-                      {/* Widget pill representations */}
-                      {(() => {
-                        const widgets = dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets;
-                        const WIDGET_COLORS: Record<string, string> = {
-                          clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa",
-                          notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c",
-                          quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc",
-                          routine: "#4ade80", "budget-preview": "#f59e0b", "savings-ring": "#10b981",
-                          "weekly-workout": "#ef4444", "project-status": "#3b82f6", "top-tasks": "#8b5cf6",
-                          "smart-plan": "#06b6d4", gamification: "#f97316",
-                        };
-                        const WIDGET_LABELS: Record<string, string> = {
-                          clock: "🕐", timer: "⏱", music: "🎵", planner: "📋",
-                          notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️",
-                          quote: "💬", breathing: "🫁", council: "🤝", aura: "✨",
-                          routine: "🔄", "budget-preview": "💰", "savings-ring": "🏦",
-                          "weekly-workout": "💪", "project-status": "📌", "top-tasks": "✅",
-                          "smart-plan": "🧠", gamification: "🏆",
-                        };
-                        // Layout a grid of mini widget blocks
-                        const cols = 4;
-                        const cellW = 34;
-                        const cellH = 22;
-                        const gap = 4;
-                        const padX = 8;
-                        const padY = 8;
-                        return widgets.slice(0, 8).map((w, wi) => {
-                          const col = wi % cols;
-                          const row = Math.floor(wi / cols);
-                          const x = padX + col * (cellW + gap);
-                          const y = padY + row * (cellH + gap);
-                          const color = WIDGET_COLORS[w] || "#6b7280";
-                          const emoji = WIDGET_LABELS[w] || "□";
-                          return (
-                            <div
-                              key={w}
-                              className="absolute flex items-center justify-center rounded"
-                              style={{
-                                left: x, top: y, width: cellW, height: cellH,
-                                background: `${color}22`,
-                                border: `1px solid ${color}44`,
-                              }}
-                            >
-                              <span style={{ fontSize: 10 }}>{emoji}</span>
-                            </div>
-                          );
-                        });
-                      })()}
-                      {/* Background badge */}
-                      {dashboardPages[hoverDotIdx]?.background && (
-                        <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[7px] font-medium"
-                          style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)" }}>
-                          {dashboardPages[hoverDotIdx].background!.split("-").slice(-1)[0]}
-                        </div>
+                    {/* Mini canvas preview — real screenshot if available, else emoji grid */}
+                    <div className="relative w-full overflow-hidden" style={{ height: 90 }}>
+                      {pageThumbnails[dashboardPages[hoverDotIdx]?.id] ? (
+                        <img
+                          src={pageThumbnails[dashboardPages[hoverDotIdx].id]}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <>
+                          <div className="absolute inset-0" style={{
+                            background: dashboardPages[hoverDotIdx]?.background ? "rgba(30,20,60,0.8)" : "rgba(20,15,40,0.7)",
+                          }} />
+                          <div className="absolute inset-0" style={{
+                            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
+                            backgroundSize: "14px 14px",
+                          }} />
+                          {(() => {
+                            const widgets = dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets;
+                            const WIDGET_COLORS: Record<string, string> = {
+                              clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa",
+                              notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c",
+                              quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc",
+                              routine: "#4ade80",
+                            };
+                            const WIDGET_LABELS: Record<string, string> = {
+                              clock: "🕐", timer: "⏱", music: "🎵", planner: "📋",
+                              notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️",
+                              quote: "💬", breathing: "🫁", council: "🤝", aura: "✨",
+                              routine: "🔄",
+                            };
+                            const cols = 4; const cellW = 34; const cellH = 22; const gap = 4; const padX = 8; const padY = 8;
+                            return widgets.slice(0, 8).map((w, wi) => {
+                              const col = wi % cols; const row = Math.floor(wi / cols);
+                              const x = padX + col * (cellW + gap); const y = padY + row * (cellH + gap);
+                              const color = WIDGET_COLORS[w] || "#6b7280";
+                              return (
+                                <div key={w} className="absolute flex items-center justify-center rounded"
+                                  style={{ left: x, top: y, width: cellW, height: cellH, background: `${color}22`, border: `1px solid ${color}44` }}>
+                                  <span style={{ fontSize: 10 }}>{WIDGET_LABELS[w] || "□"}</span>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </>
                       )}
                     </div>
                     {/* Label row */}
