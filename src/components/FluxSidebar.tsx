@@ -102,8 +102,8 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
 
   return (
     <>
-      {/* Floating re-open trigger when sidebar is hidden */}
-      {!visible && (
+      {/* Floating re-open trigger when sidebar is hidden (suppressed during Focus Mode) */}
+      {!visible && !isFocusModeActive && (
         <motion.button
           onClick={onToggle}
           initial={{ opacity: 0, x: -8 }}
