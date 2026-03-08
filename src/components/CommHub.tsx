@@ -4,11 +4,12 @@
  */
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Sparkles, X, Send, Loader2, MessageSquare } from "lucide-react";
+import { Users, X, Send, Loader2, MessageSquare } from "lucide-react";
 import { useTeamChat } from "@/hooks/useTeamChat";
 import { useFlux } from "@/context/FluxContext";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
+import AuraOrb from "@/components/focus/AuraOrb";
 
 type Tab = "aura" | "team";
 
