@@ -426,11 +426,9 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
             onClick={() => setSystemMode(key)}
             title={label}
             className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all ${
-              systemMode === key
-                ? "bg-white/15 shadow-[0_0_10px_rgba(255,255,255,0.05)]"
-                : "hover:bg-white/5"
+              systemMode === key ? "bg-white/15 shadow-[0_0_10px_rgba(255,255,255,0.05)]" : "hover:bg-white/5"
             }`}
-            style={{ color: systemMode === key ? `rgba(255,255,255,${textAlpha})` : `rgba(255,255,255,${textAlpha * 0.4})` }}
+            style={{ color: systemMode === key ? textRgba : hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
           >
             <Icon size={14} />
             <span className="hidden sm:inline">{label}</span>
@@ -443,7 +441,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           onClick={() => { setCollabOpen(true); markAsRead(); }}
           title="Collab"
           className="relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all hover:bg-white/5"
-          style={{ color: `rgba(255,255,255,${textAlpha * 0.4})` }}
+          style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
         >
           <MessageCircle size={14} />
           <span className="hidden sm:inline">Collab</span>
@@ -454,35 +452,37 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           )}
         </button>
 
-        <div className="w-px h-5 mx-1" style={{ background: `rgba(255,255,255,${textAlpha * 0.15})` }} />
+        <div className="w-px h-5 mx-1" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.15) }} />
 
         {/* Tools trigger */}
         <motion.button
           onPointerDown={e => e.stopPropagation()}
           onClick={() => { setOpen(!open); setStyleOpen(false); }}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-medium transition-all ${open ? "bg-white/15" : "hover:bg-white/5"}`}
-          style={{ color: open ? `rgba(255,255,255,${textAlpha})` : `rgba(255,255,255,${textAlpha * 0.5})` }}
+          style={{ color: open ? textRgba : hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.5) }}
           whileTap={{ scale: 0.96 }}
         >
           <ChevronUp size={14} className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
           <span className="hidden sm:inline">Tools</span>
-          <span className="text-[10px] tabular-nums" style={{ color: `rgba(255,255,255,${textAlpha * 0.3})` }}>{effectiveWidgets.length}</span>
+          <span className="text-[10px] tabular-nums" style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.3) }}>{effectiveWidgets.length}</span>
         </motion.button>
 
-        {/* Style button — always visible */}
-        <button
-          onPointerDown={e => e.stopPropagation()}
-          onClick={() => { setStyleOpen(!styleOpen); setOpen(false); }}
-          title="Customize toolbar style"
-          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all ${styleOpen ? "bg-white/15" : "hover:bg-white/5"}`}
-          style={{ color: styleOpen ? `rgba(255,255,255,${textAlpha})` : `rgba(255,255,255,${textAlpha * 0.4})` }}
-        >
-          <Palette size={13} />
-        </button>
+        {/* Style button — build mode only */}
+        {isBuild && (
+          <button
+            onPointerDown={e => e.stopPropagation()}
+            onClick={() => { setStyleOpen(!styleOpen); setOpen(false); }}
+            title="Customize toolbar style"
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all ${styleOpen ? "bg-white/15" : "hover:bg-white/5"}`}
+            style={{ color: styleOpen ? textRgba : hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
+          >
+            <Palette size={13} />
+          </button>
+        )}
 
         {/* Style panel */}
         <AnimatePresence>
-          {styleOpen && (
+          {styleOpen && isBuild && (
             <ToolbarStylePanel
               style={toolbarStyle}
               onUpdate={updateToolbarStyle}
