@@ -542,6 +542,8 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
     setContextMenu(null);
   };
 
+  const selected = entities.find(e => e.id === selectedId) ?? null;
+
   return (
     <div
       ref={canvasRef}
@@ -550,8 +552,27 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
       onClick={() => { setSelectedId(null); setContextMenu(null); }}
       onContextMenu={handleCanvasContextMenu}
     >
-      {/* Add toolbar */}
-      <AddToolbar onAdd={handleAdd} />
+      {/* Mode toggle pill */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-1 px-1.5 py-1 rounded-full shadow-2xl"
+        style={{ background: "rgba(10,8,24,0.85)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(18px)" }}
+        onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={() => setDraggable(true)}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all ${isDraggable ? "bg-indigo-500 text-white shadow-md" : "text-slate-400 hover:text-slate-200"}`}
+        >
+          <Paintbrush size={10} /> Design Layout
+        </button>
+        <button
+          onClick={() => setDraggable(false)}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all ${!isDraggable ? "bg-indigo-500 text-white shadow-md" : "text-slate-400 hover:text-slate-200"}`}
+        >
+          <Type size={10} /> Edit Text
+        </button>
+      </div>
+
+      {/* Add toolbar — only in design mode */}
+      {isDraggable && <AddToolbar onAdd={handleAdd} />}
 
       {/* Entities */}
       {entities.map(entity => (
@@ -565,12 +586,13 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
           onResizeEnd={handleResizeEnd}
           onContentChange={handleContentChange}
           onContextMenu={handleContextMenu}
+          isDraggable={isDraggable}
         />
       ))}
 
-      {/* Style toolbar for selected entity */}
+      {/* Style toolbar for selected entity — only in design mode */}
       <AnimatePresence>
-        {selected && (
+        {isDraggable && selected && (
           <StyleToolbar
             entity={selected}
             onUpdate={update}
@@ -584,7 +606,7 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
 
       {/* Right-click context menu */}
       <AnimatePresence>
-        {contextMenu && (
+        {isDraggable && contextMenu && (
           <ContextMenu
             key="ctx-menu"
             x={contextMenu.x}
@@ -601,10 +623,9 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
 
       {/* Empty state */}
       {entities.length === 0 && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none" style={{ top: 48 }}>
           <p className="text-[13px] text-muted-foreground/30 font-medium">Layout Canvas</p>
           <p className="text-[11px] text-muted-foreground/20">Use the toolbar above to add shapes and text boxes</p>
-          <p className="text-[10px] text-muted-foreground/15 mt-1">Right-click any element for quick actions</p>
         </div>
       )}
     </div>
