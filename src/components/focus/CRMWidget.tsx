@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, GripVertical, ChevronDown, ChevronRight, Phone, Mail, StickyNote, X, Loader2 } from "lucide-react";
+import {
+  Plus, Search, GripVertical, ChevronDown, ChevronRight, Phone, Mail,
+  StickyNote, X, Loader2, Building2, DollarSign, User,
+} from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -15,6 +18,7 @@ import {
 import DraggableWidget from "./DraggableWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { z } from "zod";
 
 type Stage = "leads" | "contacted" | "proposal" | "closed";
 
@@ -50,6 +54,159 @@ const getInitials = (name: string) =>
 
 const formatValue = (v: number) =>
   v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`;
+
+// ── New Deal Schema ──
+const dealSchema = z.object({
+  name: z.string().trim().min(1, "Name required").max(100),
+  company: z.string().trim().min(1, "Company required").max(100),
+  value: z.number().min(0, "Value must be ≥ 0").max(99_999_999),
+  stage: z.enum(["leads", "contacted", "proposal", "closed"]),
+});
+
+// ── New Deal Modal ──
+interface NewDealModalProps {
+  onSave: (deal: Omit<Deal, "id">) => void;
+  onClose: () => void;
+}
+
+const NewDealModal: React.FC<NewDealModalProps> = ({ onSave, onClose }) => {
+  const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
+  const [valueStr, setValueStr] = useState("5000");
+  const [stage, setStage] = useState<Stage>("leads");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleSubmit = () => {
+    const parsed = dealSchema.safeParse({
+      name, company,
+      value: parseInt(valueStr.replace(/\D/g, "") || "0"),
+      stage,
+    });
+    if (!parsed.success) {
+      const errs: Record<string, string> = {};
+      parsed.error.errors.forEach(e => { errs[e.path[0] as string] = e.message; });
+      setErrors(errs);
+      return;
+    }
+    onSave(parsed.data);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 60, opacity: 0, scale: 0.96 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 40, opacity: 0, scale: 0.97 }}
+        transition={{ type: "spring", stiffness: 380, damping: 32 }}
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-sm rounded-2xl border border-white/12 overflow-hidden"
+        style={{
+          background: "linear-gradient(145deg, rgba(12,10,25,0.98) 0%, rgba(8,6,18,0.98) 100%)",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06)",
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+          <p className="text-sm font-bold text-white/90">New Deal</p>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Fields */}
+        <div className="px-5 py-4 space-y-4">
+          {/* Name */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] text-white/40 uppercase tracking-widest font-medium flex items-center gap-1.5">
+              <User size={9} /> Contact Name
+            </label>
+            <input
+              autoFocus
+              value={name}
+              onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: "" })); }}
+              placeholder="Alex Turner"
+              className={`w-full bg-white/5 border rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-white/20 transition-colors ${errors.name ? "border-red-400/50" : "border-white/10"}`}
+            />
+            {errors.name && <p className="text-[10px] text-red-400">{errors.name}</p>}
+          </div>
+
+          {/* Company */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] text-white/40 uppercase tracking-widest font-medium flex items-center gap-1.5">
+              <Building2 size={9} /> Company
+            </label>
+            <input
+              value={company}
+              onChange={e => { setCompany(e.target.value); setErrors(p => ({ ...p, company: "" })); }}
+              placeholder="Acme Corp."
+              className={`w-full bg-white/5 border rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-white/20 transition-colors ${errors.company ? "border-red-400/50" : "border-white/10"}`}
+            />
+            {errors.company && <p className="text-[10px] text-red-400">{errors.company}</p>}
+          </div>
+
+          {/* Value */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] text-white/40 uppercase tracking-widest font-medium flex items-center gap-1.5">
+              <DollarSign size={9} /> Deal Value
+            </label>
+            <input
+              value={valueStr}
+              onChange={e => { setValueStr(e.target.value); setErrors(p => ({ ...p, value: "" })); }}
+              placeholder="5000"
+              inputMode="numeric"
+              className={`w-full bg-white/5 border rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-white/20 transition-colors ${errors.value ? "border-red-400/50" : "border-white/10"}`}
+            />
+            {errors.value && <p className="text-[10px] text-red-400">{errors.value}</p>}
+          </div>
+
+          {/* Stage */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] text-white/40 uppercase tracking-widest font-medium">Stage</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {STAGE_ORDER.map(s => (
+                <button
+                  key={s}
+                  onClick={() => setStage(s)}
+                  className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] font-medium transition-all ${stage === s ? "bg-white/12 text-white" : "bg-white/4 text-white/40 hover:bg-white/8 hover:text-white/70"}`}
+                  style={stage === s ? { border: `1px solid ${STAGE_CONFIG[s].dot}50` } : { border: "1px solid transparent" }}
+                >
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: STAGE_CONFIG[s].dot }} />
+                  {STAGE_CONFIG[s].label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="px-5 pb-5 flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-[12px] font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex-1 py-2.5 rounded-xl text-[12px] font-bold text-white transition-all"
+            style={{
+              background: "linear-gradient(135deg, rgba(139,92,246,0.7), rgba(59,130,246,0.7))",
+              boxShadow: "0 4px 16px rgba(139,92,246,0.25)",
+            }}
+          >
+            Add Deal
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 // ── Draggable Deal Card ──
 
@@ -246,7 +403,9 @@ const CRMWidgetContent = () => {
   const [expanded, setExpanded] = useState<Set<Stage>>(new Set(["leads", "contacted", "proposal", "closed"]));
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<Stage | null>(null);
+  const [showNewDeal, setShowNewDeal] = useState(false);
   const seededRef = useRef(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -255,33 +414,27 @@ const CRMWidgetContent = () => {
   // ── Load from DB ──
   useEffect(() => {
     if (!user) {
-      // Guest: use local initial deals with temp IDs
       setDeals(INITIAL_DEALS.map((d, i) => ({ ...d, id: `local-${i}` })));
       return;
     }
     setLoading(true);
     supabase
-      .from("crm_deals" as any)
+      .from("crm_deals")
       .select("id, name, company, value, stage")
       .eq("user_id", user.id)
       .order("sort_order", { ascending: true })
       .then(async ({ data, error }) => {
         setLoading(false);
-        if (error || !data || (data as any[]).length === 0) {
+        if (error || !data || data.length === 0) {
           if (!seededRef.current) {
             seededRef.current = true;
-            // Seed initial deals for new user
-            const inserts = INITIAL_DEALS.map((d, i) => ({
-              ...d,
-              user_id: user.id,
-              sort_order: i,
-            }));
+            const inserts = INITIAL_DEALS.map((d, i) => ({ ...d, user_id: user.id, sort_order: i }));
             const { data: inserted } = await supabase
-              .from("crm_deals" as any)
+              .from("crm_deals")
               .insert(inserts)
               .select("id, name, company, value, stage");
             if (inserted) {
-              setDeals((inserted as any[]).map(r => ({
+              setDeals(inserted.map(r => ({
                 id: r.id, name: r.name, company: r.company,
                 value: Number(r.value), stage: r.stage as Stage,
               })));
@@ -289,11 +442,43 @@ const CRMWidgetContent = () => {
           }
           return;
         }
-        setDeals((data as any[]).map(r => ({
+        setDeals(data.map(r => ({
           id: r.id, name: r.name, company: r.company,
           value: Number(r.value), stage: r.stage as Stage,
         })));
       });
+  }, [user]);
+
+  // ── Realtime subscription ──
+  useEffect(() => {
+    if (!user) return;
+    channelRef.current = supabase
+      .channel(`crm-rt-${user.id}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "crm_deals",
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        if (payload.eventType === "DELETE") {
+          const oldId = (payload.old as { id: string }).id;
+          setDeals(prev => prev.filter(d => d.id !== oldId));
+        } else if (payload.eventType === "INSERT") {
+          const r = payload.new as { id: string; name: string; company: string; value: number; stage: string };
+          setDeals(prev => {
+            if (prev.find(d => d.id === r.id)) return prev;
+            return [...prev, { id: r.id, name: r.name, company: r.company, value: Number(r.value), stage: r.stage as Stage }];
+          });
+        } else if (payload.eventType === "UPDATE") {
+          const r = payload.new as { id: string; name: string; company: string; value: number; stage: string };
+          setDeals(prev => prev.map(d => d.id === r.id
+            ? { ...d, stage: r.stage as Stage, name: r.name, company: r.company, value: Number(r.value) }
+            : d
+          ));
+        }
+      })
+      .subscribe();
+    return () => { channelRef.current?.unsubscribe(); };
   }, [user]);
 
   const filtered = useMemo(() =>
@@ -307,7 +492,10 @@ const CRMWidgetContent = () => {
   const stageTotals = useMemo(() =>
     STAGE_ORDER.reduce((acc, s) => ({
       ...acc,
-      [s]: { count: filtered.filter(d => d.stage === s).length, value: filtered.filter(d => d.stage === s).reduce((a, d) => a + d.value, 0) }
+      [s]: {
+        count: filtered.filter(d => d.stage === s).length,
+        value: filtered.filter(d => d.stage === s).reduce((a, d) => a + d.value, 0),
+      },
     }), {} as Record<Stage, { count: number; value: number }>),
     [filtered]
   );
@@ -323,30 +511,27 @@ const CRMWidgetContent = () => {
   const handleStageChange = useCallback(async (id: string, stage: Stage) => {
     setDeals(prev => prev.map(d => d.id === id ? { ...d, stage } : d));
     if (user && !id.startsWith("local-")) {
-      await supabase.from("crm_deals" as any).update({ stage }).eq("id", id).eq("user_id", user.id);
+      await supabase.from("crm_deals").update({ stage }).eq("id", id).eq("user_id", user.id);
     }
   }, [user]);
 
-  const addDeal = async () => {
-    const name = prompt("Contact name:") || "New Contact";
-    const company = prompt("Company:") || "Unknown Co.";
-    const valueStr = prompt("Deal value ($):") || "5000";
-    const value = parseInt(valueStr.replace(/\D/g, "")) || 5000;
-
+  const handleNewDeal = useCallback(async (dealData: Omit<Deal, "id">) => {
+    setShowNewDeal(false);
     if (user) {
       const { data, error } = await supabase
-        .from("crm_deals" as any)
-        .insert({ name, company, value, stage: "leads", user_id: user.id, sort_order: 0 })
+        .from("crm_deals")
+        .insert({ ...dealData, user_id: user.id, sort_order: 0 })
         .select("id, name, company, value, stage")
         .single();
       if (!error && data) {
-        const r = data as any;
-        setDeals(prev => [{ id: r.id, name: r.name, company: r.company, value: Number(r.value), stage: r.stage as Stage }, ...prev]);
+        setDeals(prev => [{ id: data.id, name: data.name, company: data.company, value: Number(data.value), stage: data.stage as Stage }, ...prev]);
+        setExpanded(prev => new Set([...prev, dealData.stage]));
         return;
       }
     }
-    setDeals(prev => [{ id: `local-${Date.now()}`, name, company, value, stage: "leads" }, ...prev]);
-  };
+    setDeals(prev => [{ id: `local-${Date.now()}`, ...dealData }, ...prev]);
+    setExpanded(prev => new Set([...prev, dealData.stage]));
+  }, [user]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDealId(event.active.id as string);
@@ -376,59 +561,70 @@ const CRMWidgetContent = () => {
   const activeDeal = activeDealId ? deals.find(d => d.id === activeDealId) : null;
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver as any} onDragEnd={handleDragEnd}>
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="flex items-center gap-2 px-3 pt-2 pb-2 shrink-0">
-          <div className="flex items-center gap-1.5 flex-1 px-2 py-1.5 rounded-lg bg-white/5 border border-white/8">
-            <Search size={10} className="text-white/30 shrink-0" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search pipeline..."
-              className="flex-1 bg-transparent text-[10px] text-white/70 outline-none placeholder:text-white/25"
-            />
-            {search && <button onClick={() => setSearch("")}><X size={9} className="text-white/30" /></button>}
+    <>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver as any} onDragEnd={handleDragEnd}>
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center gap-2 px-3 pt-2 pb-2 shrink-0">
+            <div className="flex items-center gap-1.5 flex-1 px-2 py-1.5 rounded-lg bg-white/5 border border-white/8">
+              <Search size={10} className="text-white/30 shrink-0" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search pipeline..."
+                className="flex-1 bg-transparent text-[10px] text-white/70 outline-none placeholder:text-white/25"
+              />
+              {search && <button onClick={() => setSearch("")}><X size={9} className="text-white/30" /></button>}
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowNewDeal(true)}
+              className="w-7 h-7 rounded-lg bg-white/8 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center transition-colors shrink-0"
+            >
+              <Plus size={12} />
+            </motion.button>
           </div>
-          <button
-            onClick={addDeal}
-            className="w-7 h-7 rounded-lg bg-white/8 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center transition-colors shrink-0"
-          >
-            <Plus size={12} />
-          </button>
+
+          {/* Pipeline Stages */}
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 size={18} className="animate-spin text-white/20" />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto council-hidden-scrollbar px-3 pb-3 space-y-2">
+              {STAGE_ORDER.map(stage => (
+                <DroppableStage
+                  key={stage}
+                  stage={stage}
+                  isOpen={expanded.has(stage)}
+                  stageDeals={filtered.filter(d => d.stage === stage)}
+                  total={stageTotals[stage]}
+                  isOver={overStage === stage}
+                  onToggle={() => toggleStage(stage)}
+                  onStageChange={handleStageChange}
+                  activeDealId={activeDealId}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Pipeline Stages */}
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 size={18} className="animate-spin text-white/20" />
-          </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto council-hidden-scrollbar px-3 pb-3 space-y-2">
-            {STAGE_ORDER.map(stage => (
-              <DroppableStage
-                key={stage}
-                stage={stage}
-                isOpen={expanded.has(stage)}
-                stageDeals={filtered.filter(d => d.stage === stage)}
-                total={stageTotals[stage]}
-                isOver={overStage === stage}
-                onToggle={() => toggleStage(stage)}
-                onStageChange={handleStageChange}
-                activeDealId={activeDealId}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+        {/* Drag overlay */}
+        <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
+          {activeDeal && (
+            <DealCardCore deal={activeDeal} onStageChange={() => {}} overlay />
+          )}
+        </DragOverlay>
+      </DndContext>
 
-      {/* Drag overlay */}
-      <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
-        {activeDeal && (
-          <DealCardCore deal={activeDeal} onStageChange={() => {}} overlay />
+      {/* New Deal Modal */}
+      <AnimatePresence>
+        {showNewDeal && (
+          <NewDealModal onSave={handleNewDeal} onClose={() => setShowNewDeal(false)} />
         )}
-      </DragOverlay>
-    </DndContext>
+      </AnimatePresence>
+    </>
   );
 };
 
