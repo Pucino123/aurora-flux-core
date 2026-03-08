@@ -1,4 +1,4 @@
-import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap } from "lucide-react";
+import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -188,6 +188,15 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
               >
                 <Grid size={18} className="shrink-0" />
                 <span>Community Board</span>
+              </button>
+
+              {/* Community Admin */}
+              <button
+                onClick={() => { setActiveFolder(null); setActiveView("community-admin" as any); }}
+                className={`sidebar-item w-full ${activeView === ("community-admin" as any) ? "sidebar-item-active" : ""}`}
+              >
+                <ShieldCheck size={18} className="shrink-0" />
+                <span>Community Admin</span>
               </button>
             </div>
 

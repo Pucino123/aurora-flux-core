@@ -19,6 +19,7 @@ import CreateFolderModal, { suggestIcon } from "./CreateFolderModal";
 import TeamChatWidget from "./chat/TeamChatWidget";
 import MultitaskingView from "./MultitaskingView";
 import CommunityBoardView from "./CommunityBoardView";
+import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
 import { UpgradeModal, OutOfSparksModal } from "./billing/BillingView";
 import { useFlux } from "@/context/FluxContext";
@@ -48,7 +49,7 @@ function deriveFolderName(text: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-const VIEWS_WITHOUT_INPUT = ["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "billing"];
+const VIEWS_WITHOUT_INPUT = ["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing"];
 const VIEWS_WITHOUT_SCHEDULER = [...VIEWS_WITHOUT_INPUT];
 
 const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible, onToggleSidebar, focusMode }: DashboardProps) => {
@@ -138,6 +139,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
           <MultitaskingView />
         ) : (effectiveView as string) === "community" ? (
           <CommunityBoardView />
+        ) : (effectiveView as string) === "community-admin" ? (
+          <CommunityAdminView />
         ) : (effectiveView as string) === "billing" ? (
           <BillingView />
         ) : (

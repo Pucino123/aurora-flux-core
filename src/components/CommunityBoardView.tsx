@@ -513,21 +513,44 @@ const CommunityBoardView = () => {
                   </button>
                 )}
 
-                {/* My pending */}
+                {/* My pending — rich badge with thumbnail + animated pulse ring */}
                 {isMyPending && (
-                  <div className="relative w-full h-full flex items-center justify-center">
+                  <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl">
+                    {/* Blurred background */}
                     {slot.thumbnailUrl && (
                       <img
                         src={slot.thumbnailUrl}
-                        className="absolute inset-0 w-full h-full object-cover blur-md opacity-40"
+                        className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30"
                         alt=""
                       />
                     )}
-                    <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-1 p-2">
-                      <Clock size={16} className="text-amber-500" />
-                      <span className="text-[9px] font-semibold text-center text-foreground">
-                        ⏳ Pending Approval
+                    {/* Amber overlay */}
+                    <div className="absolute inset-0 bg-amber-500/10" />
+
+                    {/* Animated amber border ring */}
+                    <div className="absolute inset-0 rounded-2xl border-2 border-amber-400/60 animate-pulse" />
+
+                    {/* Content */}
+                    <div className="relative z-10 flex flex-col items-center gap-1.5 p-3 text-center">
+                      {slot.thumbnailUrl ? (
+                        <img
+                          src={slot.thumbnailUrl}
+                          className="w-9 h-9 rounded-lg object-cover ring-2 ring-amber-400/60 mb-0.5"
+                          alt={slot.projectName}
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center mb-0.5">
+                          <Clock size={14} className="text-amber-400" />
+                        </div>
+                      )}
+                      <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wide leading-tight">
+                        Pending Review
                       </span>
+                      {slot.projectName && (
+                        <span className="text-[8px] text-foreground/70 truncate w-full text-center leading-tight">
+                          {slot.projectName}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
