@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { BarChart3, Lightbulb, MessageSquare, StickyNote } from "lucide-react";
 import { t } from "@/lib/i18n";
 import CouncilAvatar from "./CouncilAvatar";
-import { PERSONAS } from "../TheCouncil";
+import { PERSONAS as ALL_PERSONAS } from "../TheCouncil";
 
 const PERSONAS = [
   { key: "strategist", name: "council.strategist", color: "hsl(270 70% 65%)" },
