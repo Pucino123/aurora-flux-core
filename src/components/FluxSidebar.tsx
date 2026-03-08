@@ -22,31 +22,15 @@ interface FluxSidebarProps {
 
 const UserSection = () => {
   const { user, signOut } = useAuth();
+  const { avatarUrl, uploadAvatar, uploading } = useAvatar();
   const name = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
   const fileRef = useRef<HTMLInputElement>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    supabase.from("profiles").select("avatar_url").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data && (data as any).avatar_url) setAvatarUrl((data as any).avatar_url);
-    });
-  }, [user]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/avatar.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("document-images").upload(path, file, { upsert: true });
-    if (uploadError) { toast.error("Failed to upload avatar"); setUploading(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from("document-images").getPublicUrl(path);
-    await supabase.from("profiles").update({ avatar_url: publicUrl } as any).eq("id", user.id);
-    setAvatarUrl(publicUrl);
+    if (!file) return;
+    await uploadAvatar(file);
     toast.success("Avatar updated!");
-    setUploading(false);
   };
 
   const { userPlan, openBilling } = useMonetization();
