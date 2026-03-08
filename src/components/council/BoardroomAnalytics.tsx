@@ -210,6 +210,66 @@ const BoardroomAnalytics: React.FC<Props> = ({ userId, onRestoreIdea }) => {
           </div>
         </div>
       )}
+
+      {/* Trending Ideas: Top 3 highest + 3 lowest consensus */}
+      {sessions.length >= 2 && (() => {
+        const scored = sessions.filter(s => s.consensus_score !== null).sort((a, b) => (b.consensus_score ?? 0) - (a.consensus_score ?? 0));
+        const top3 = scored.slice(0, 3);
+        const bottom3 = scored.slice(-3).reverse();
+        const TrendCard = ({ s, rank, accent }: { s: SessionRow; rank: number; accent: string }) => (
+          <motion.div
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: rank * 0.08 }}
+            className="flex items-center gap-2.5 rounded-xl p-2.5 group cursor-pointer hover:bg-white/5 transition-colors"
+            style={{ border: `1px solid ${accent}15` }}
+            onClick={() => onRestoreIdea?.({ ...s })}
+          >
+            <div
+              className="w-7 h-7 rounded-xl flex items-center justify-center text-[10px] font-bold shrink-0"
+              style={{ background: `${accent}15`, color: accent }}
+            >
+              {rank + 1}
+            </div>
+            <p className="flex-1 text-[10px] text-white/60 leading-snug line-clamp-2 min-w-0">{s.content}</p>
+            <div className="flex flex-col items-end shrink-0 gap-0.5">
+              <span className="text-[10px] font-bold" style={{ color: accent }}>{s.consensus_score}%</span>
+              {onRestoreIdea && (
+                <span className="text-[8px] text-white/20 group-hover:text-white/50 flex items-center gap-0.5 transition-colors">
+                  <RotateCcw size={7} /> Restore
+                </span>
+              )}
+            </div>
+          </motion.div>
+        );
+
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {top3.length > 0 && (
+              <div className="rounded-2xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,0.02)" }}>
+                <div className="flex items-center gap-1.5 mb-3">
+                  <TrendingUp size={11} style={{ color: "#34d399" }} />
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">Highest Consensus</p>
+                </div>
+                <div className="space-y-1">
+                  {top3.map((s, i) => <TrendCard key={s.created_at + i} s={s} rank={i} accent="#34d399" />)}
+                </div>
+              </div>
+            )}
+            {bottom3.length > 0 && (
+              <div className="rounded-2xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,0.02)" }}>
+                <div className="flex items-center gap-1.5 mb-3">
+                  <TrendingDown size={11} style={{ color: "#f87171" }} />
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">Most Controversial</p>
+                </div>
+                <div className="space-y-1">
+                  {bottom3.map((s, i) => <TrendCard key={s.created_at + i} s={s} rank={i} accent="#f87171" />)}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };
