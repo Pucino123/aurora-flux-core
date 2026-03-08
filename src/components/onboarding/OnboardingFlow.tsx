@@ -53,7 +53,7 @@ const ACCENTS = [
 
 type Phase = "welcome" | "systems" | "accent" | "reward";
 
-const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref) {
+const OnboardingFlow = () => {
   const { addSparks } = useMonetization();
   const [phase, setPhase] = useState<Phase>("welcome");
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
