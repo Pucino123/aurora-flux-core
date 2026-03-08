@@ -296,19 +296,8 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     return { width: size.w, height: size.h };
   }, [win.layout, size.w, size.h]);
 
-  // ── Minimized ghost — flies to ~30vh so it clears dock + pill ─────────────
-  if (win.minimized) {
-    return (
-      <motion.div
-        layoutId={`window-${win.id}`}
-        className="absolute rounded-2xl bg-card/90 backdrop-blur-2xl border border-border/20 overflow-hidden pointer-events-none"
-        initial={false}
-        animate={{ opacity: 0, scale: 0.08, y: "30vh" }}
-        transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.7 }}
-        style={{ zIndex: win.zIndex, left: rawX.current, top: rawY.current, width: liveSizeRef.current.w, height: 48 }}
-      />
-    );
-  }
+  // ── Minimized: render nothing — toolbar chip owns the layoutId ────────────
+  if (win.minimized) return null;
 
   const layoutPillBg = LAYOUT_PILL_BG[win.layout];
   const layoutLabel  = LAYOUT_LABEL[win.layout];
