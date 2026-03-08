@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { forwardRef, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles, ChevronRight, X } from "lucide-react";
+import { ArrowRight, Sparkles, ChevronRight } from "lucide-react";
 import { useMonetization } from "@/context/MonetizationContext";
 
 const TOUR_STEPS = [
@@ -26,7 +26,7 @@ const TOUR_STEPS = [
 
 const SPARKS_REWARD = 50;
 
-const OnboardingFlow = () => {
+const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref) {
   const { addSparks } = useMonetization();
   const [phase, setPhase] = useState<"welcome" | "tour" | "reward" | "done">("welcome");
   const [step, setStep] = useState(0);
@@ -189,6 +189,6 @@ const OnboardingFlow = () => {
       )}
     </AnimatePresence>
   );
-};
+});
 
 export default OnboardingFlow;

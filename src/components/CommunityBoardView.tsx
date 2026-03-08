@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Grid, Plus, ExternalLink, CheckCircle, Clock, X, Loader2 } from "lucide-react";
+import { Grid, Plus, ExternalLink, Clock, X, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
+
+
 
 interface Slot {
   id?: string;
@@ -240,7 +242,6 @@ const CommunityBoardView = () => {
   const [loading, setLoading] = useState(true);
   const [checkoutSlot, setCheckoutSlot] = useState<number | null>(null);
   const [setupSlot, setSetupSlot] = useState<number | null>(null);
-  const [adminMode, setAdminMode] = useState(false);
 
   /* ── Fetch from DB ── */
   const fetchSlots = useCallback(async () => {
@@ -287,11 +288,9 @@ const CommunityBoardView = () => {
     };
   }, [fetchSlots]);
 
-  /* ── Pending queue (only user's own + admin) ── */
+  /* ── Pending queue (only current user's own) ── */
   const pendingSlots = slots.filter(
-    (s) =>
-      s.status === "pending" &&
-      (adminMode || s.userId === user?.id)
+    (s) => s.status === "pending" && s.userId === user?.id
   );
 
   /* ── Claim ── */
@@ -409,74 +408,9 @@ const CommunityBoardView = () => {
             Discover projects from the Flux community. Claim a space to promote your own startup.
           </p>
         </div>
-        <button
-          onClick={() => setAdminMode((v) => !v)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-            adminMode
-              ? "bg-primary/10 border-primary/30 text-primary"
-              : "border-border text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {adminMode ? "Exit Admin" : "Admin Mode"}
-        </button>
       </div>
 
-      {/* Admin Pending Queue */}
-      <AnimatePresence>
-        {adminMode && pendingSlots.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-4 mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 overflow-hidden"
-          >
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Clock size={14} className="text-amber-500" /> Pending Submissions Queue
-            </h3>
-            <div className="space-y-3">
-              {pendingSlots.map((slot) => (
-                <div
-                  key={slot.slotIndex}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
-                >
-                  {slot.thumbnailUrl && (
-                    <img
-                      src={slot.thumbnailUrl}
-                      className="w-10 h-10 rounded-lg object-cover shrink-0"
-                      alt={slot.projectName}
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{slot.projectName}</p>
-                    <a
-                      href={slot.websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground hover:text-primary truncate flex items-center gap-0.5"
-                    >
-                      {slot.websiteUrl} <ExternalLink size={9} />
-                    </a>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleApprove(slot)}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-green-500/10 text-green-500 text-xs font-medium hover:bg-green-500/20 transition-colors"
-                    >
-                      <CheckCircle size={12} /> Approve
-                    </button>
-                    <button
-                      onClick={() => handleReject(slot)}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
-                    >
-                      <X size={12} /> Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Admin Pending Queue - removed (use Community Admin view in sidebar) */}
 
       {/* Slot Grid */}
       {loading ? (
@@ -555,8 +489,8 @@ const CommunityBoardView = () => {
                   </div>
                 )}
 
-                {/* Other pending (hidden to non-admins, show as available) */}
-                {isOtherPending && !adminMode && (
+                {/* Other pending — always show as available (admins manage via Community Admin view) */}
+                {isOtherPending && (
                   <button
                     onClick={() => handleClaim(slot.slotIndex)}
                     className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -565,25 +499,6 @@ const CommunityBoardView = () => {
                     <span className="text-[10px] font-medium">Claim this space</span>
                     <span className="text-[9px] text-muted-foreground/70">$10 / month</span>
                   </button>
-                )}
-
-                {/* Admin sees pending as pending */}
-                {isOtherPending && adminMode && (
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    {slot.thumbnailUrl && (
-                      <img
-                        src={slot.thumbnailUrl}
-                        className="absolute inset-0 w-full h-full object-cover blur-md opacity-40"
-                        alt=""
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-1 p-2">
-                      <Clock size={16} className="text-amber-500" />
-                      <span className="text-[9px] font-semibold text-center text-foreground">
-                        ⏳ {slot.projectName}
-                      </span>
-                    </div>
-                  </div>
                 )}
 
                 {/* Approved */}
@@ -616,16 +531,6 @@ const CommunityBoardView = () => {
                       </span>
                     </div>
                   </a>
-                )}
-
-                {/* Admin remove button on approved */}
-                {adminMode && slot.status === "approved" && (
-                  <button
-                    onClick={() => handleReject(slot)}
-                    className="absolute top-1 right-1 p-1 rounded-lg bg-destructive/80 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <X size={10} />
-                  </button>
                 )}
               </motion.div>
             );
