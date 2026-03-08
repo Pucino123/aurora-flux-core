@@ -102,13 +102,14 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return; // only left-click drags
+    if (renaming) return; // don't drag while renaming
     e.stopPropagation();
     if (isMarqueeSelected && onGroupDragStart && onGroupDragStart(e, doc.id)) return;
     dragging.current = true;
     didDrag.current = false;
     setIsDraggingActive(true);
     offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-  }, [pos.x, pos.y, isMarqueeSelected, onGroupDragStart, doc.id]);
+  }, [pos.x, pos.y, isMarqueeSelected, onGroupDragStart, doc.id, renaming]);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {

@@ -128,6 +128,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   }, [triggerAbsorb]);
 
   const handleDoubleClick = () => {
+    if (renaming) return;
     if (onOpenModal) { onOpenModal(folder.id); } else { setActiveFolder(folder.id); setActiveView("canvas"); }
   };
 
