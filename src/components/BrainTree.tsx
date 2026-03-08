@@ -337,6 +337,18 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
     setDraggingId(null);
   };
 
+  // ── Aggregated inbox badge ──
+  const unreadEmails = useMemo(() => MOCK_EMAILS.filter(e => !e.isRead).length, []);
+  const pendingTodayTasks = useMemo(() => {
+    return inboxTasks.filter(t => {
+      if (t.done) return false;
+      const due = t.due_date || t.scheduled_date;
+      if (!due) return false;
+      try { return isToday(parseISO(due)); } catch { return false; }
+    }).length;
+  }, [inboxTasks]);
+  const totalInboxBadge = unreadEmails + pendingTodayTasks;
+
   return (
     <div className="space-y-1" onDragOver={(e) => e.preventDefault()} onDrop={handleRootDrop}>
       {/* Inbox */}
@@ -346,10 +358,24 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
       >
         <Inbox size={16} className="shrink-0" />
         <span className="flex-1 text-left">{t("brain.inbox")}</span>
-        {inboxTasks.length > 0 && (
-          <span className="text-[10px] bg-primary/10 text-primary rounded-full px-1.5 py-0.5 font-semibold">
-            {inboxTasks.length}
-          </span>
+        {totalInboxBadge > 0 && (
+          <motion.span
+            key={totalInboxBadge}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 18 }}
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+            style={{
+              background: "hsl(217 90% 55%)",
+              color: "#fff",
+              boxShadow: "0 0 8px hsla(217,90%,55%,0.6)",
+              minWidth: 18,
+              textAlign: "center",
+              display: "inline-block",
+            }}
+          >
+            {totalInboxBadge > 99 ? "99+" : totalInboxBadge}
+          </motion.span>
         )}
       </button>
 
