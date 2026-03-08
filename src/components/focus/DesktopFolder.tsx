@@ -367,6 +367,20 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
               />
               <span className="text-[10px] text-muted-foreground tabular-nums w-7 text-right">{titleSize}px</span>
             </div>
+            {/* Icon Spacing row */}
+            <div className="px-4 py-2 border-b border-border/30 flex items-center gap-3">
+              <p className="text-[10px] text-muted-foreground uppercase shrink-0">Spacing</p>
+              <div className="flex gap-1">
+                {([{ label: "Tight", val: 0 }, { label: "Normal", val: 4 }, { label: "Wide", val: 10 }] as const).map(opt => (
+                  <button key={opt.label}
+                    onClick={(e) => { e.stopPropagation(); updateTitleGap(folder.id, opt.val); }}
+                    onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
+                    className={`px-2 py-0.5 rounded text-[10px] transition-colors border ${titleGap === opt.val ? "bg-primary/15 text-primary border-primary/30" : "text-muted-foreground border-border/30 hover:bg-secondary"}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="flex gap-0">
               {/* Column 1 — Actions */}
