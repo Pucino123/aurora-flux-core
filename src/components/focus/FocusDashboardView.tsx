@@ -1015,47 +1015,102 @@ const FocusContent = () => {
         }}
       />
 
-      {/* ── iOS-style Dashboard Pagination ── positioned just above ToolDrawer (~60px from bottom) */}
-      <div className="fixed left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-1.5"
-        style={{ bottom: "68px" }}
+      {/* ── iOS-style Dashboard Pagination ── raised above toolbar */}
+      <div
+        className="fixed left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-1.5"
+        style={{ bottom: "88px" }}
       >
-        {/* Page labels row — show only active page label (or inline edit) */}
-        <div className="flex items-center gap-3 h-5">
-          {dashboardPages.map((page, i) => {
-            if (i !== activePageIndex) return null;
-            if (editingLabelIdx === i) {
-              return (
-                <input
-                  key={page.id}
-                  ref={labelInputRef}
-                  value={editingLabelValue}
-                  onChange={e => setEditingLabelValue(e.target.value)}
-                  onBlur={commitLabelEdit}
-                  onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
-                  className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 text-white w-24"
-                  maxLength={20}
-                  autoFocus
-                />
-              );
-            }
-            return (
-              <span
-                key={page.id}
-                className="text-[11px] font-medium text-white/70 cursor-default select-none"
-                onDoubleClick={() => startLabelEdit(i)}
-                title="Double-click to rename"
-              >
-                {page.label || "Home"}
-              </span>
-            );
-          })}
-        </div>
+        {/* Build mode: settings gear */}
+        <AnimatePresence>
+          {systemMode === "build" && (
+            <motion.button
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+              onClick={() => setShowPillSettings(v => !v)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all mb-0.5"
+              style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}
+              title="Customize pagination"
+            >
+              <span style={{ fontSize: 11 }}>⚙</span> Customize
+            </motion.button>
+          )}
+        </AnimatePresence>
 
-        {/* Pill — dots + plus */}
+        {/* Build-mode settings panel */}
+        <AnimatePresence>
+          {showPillSettings && systemMode === "build" && (
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ duration: 0.18 }}
+              className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 px-4 py-3 rounded-2xl flex flex-col gap-2.5 min-w-[200px]"
+              style={{ background: "rgba(10,8,20,0.9)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}
+            >
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Pagination Style</p>
+              <label className="flex items-center justify-between gap-3 cursor-pointer">
+                <span className="text-[11px] text-white/70">Show page label</span>
+                <button
+                  onClick={() => setPaginationSettings(s => ({ ...s, showLabel: !s.showLabel }))}
+                  className={`w-8 h-4 rounded-full transition-colors relative ${paginationSettings.showLabel ? "bg-white/30" : "bg-white/10"}`}
+                >
+                  <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${paginationSettings.showLabel ? "left-[18px]" : "left-0.5"}`} />
+                </button>
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span className="text-[11px] text-white/70">Pill opacity</span>
+                <input
+                  type="range" min={20} max={100} value={paginationSettings.pillOpacity}
+                  onChange={e => setPaginationSettings(s => ({ ...s, pillOpacity: Number(e.target.value) }))}
+                  className="w-20 accent-white"
+                />
+              </label>
+              <button
+                onClick={() => setShowPillSettings(false)}
+                className="text-[10px] text-white/30 hover:text-white/60 text-center mt-1"
+              >Done</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Page label */}
+        {paginationSettings.showLabel && (
+          <div className="flex items-center h-5">
+            {dashboardPages.map((page, i) => {
+              if (i !== activePageIndex) return null;
+              if (editingLabelIdx === i) {
+                return (
+                  <input
+                    key={page.id}
+                    ref={labelInputRef}
+                    value={editingLabelValue}
+                    onChange={e => setEditingLabelValue(e.target.value)}
+                    onBlur={commitLabelEdit}
+                    onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
+                    className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 text-white w-28"
+                    maxLength={20}
+                    autoFocus
+                  />
+                );
+              }
+              return (
+                <span
+                  key={page.id}
+                  className="text-[11px] font-medium text-white/70 cursor-default select-none"
+                  onDoubleClick={() => startLabelEdit(i)}
+                  title="Double-click to rename"
+                >
+                  {page.label || "Home"}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pill: dots + reorder + delete + plus */}
         <div
-          className="flex items-center gap-2.5 px-4 py-2 rounded-full"
+          className="flex items-center gap-2.5 px-4 py-2 rounded-full select-none"
           style={{
-            background: "rgba(15,12,25,0.82)",
+            background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
             backdropFilter: "blur(24px)",
             WebkitBackdropFilter: "blur(24px)",
             border: "1px solid rgba(255,255,255,0.18)",
@@ -1065,16 +1120,32 @@ const FocusContent = () => {
           {dashboardPages.map((page, i) => (
             <button
               key={page.id}
-              onClick={() => goToPage(i)}
+              onClick={() => { if (draggingDotIdx === null) goToPage(i); }}
               onDoubleClick={() => startLabelEdit(i)}
-              className="transition-all duration-300 flex-shrink-0"
+              onContextMenu={(e) => { e.preventDefault(); setDotMenu({ idx: i, x: e.clientX, y: e.clientY - 80 }); }}
+              onTouchStart={(e) => handleDotTouchStart(i, e)}
+              onTouchEnd={handleDotTouchEnd}
+              draggable
+              onDragStart={() => handleDotDragStart(i)}
+              onDragOver={(e) => handleDotDragOver(i, e)}
+              onDrop={() => handleDotDrop(i)}
+              onDragEnd={() => { setDraggingDotIdx(null); setDragOverIdx(null); }}
+              className="transition-all duration-300 flex-shrink-0 cursor-grab active:cursor-grabbing"
               title={page.label || `Page ${i + 1}`}
               style={{
                 width: i === activePageIndex ? 24 : 8,
                 height: 8,
                 borderRadius: 9999,
-                background: i === activePageIndex ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.35)",
-                boxShadow: i === activePageIndex ? "0 0 10px rgba(255,255,255,0.7)" : "none",
+                background: draggingDotIdx === i
+                  ? "rgba(255,255,255,0.15)"
+                  : dragOverIdx === i
+                  ? "rgba(255,255,255,0.7)"
+                  : i === activePageIndex
+                  ? "rgba(255,255,255,1)"
+                  : "rgba(255,255,255,0.35)",
+                boxShadow: i === activePageIndex && draggingDotIdx !== i ? "0 0 10px rgba(255,255,255,0.7)" : "none",
+                opacity: draggingDotIdx === i ? 0.4 : 1,
+                transform: dragOverIdx === i && draggingDotIdx !== i ? "scale(1.4)" : "scale(1)",
               }}
             />
           ))}
@@ -1093,6 +1164,65 @@ const FocusContent = () => {
           </button>
         </div>
       </div>
+
+      {/* Dot context menu (right-click / long-press) */}
+      {dotMenu && (
+        <>
+          <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); }} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed z-[10001] rounded-xl py-1.5 min-w-[160px] overflow-hidden"
+            style={{ left: dotMenu.x, top: dotMenu.y, background: "rgba(10,8,20,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)", transform: "translateX(-50%)" }}
+          >
+            <div className="px-3 py-1.5 text-[10px] font-semibold text-white/35 uppercase tracking-wider">
+              {dashboardPages[dotMenu.idx]?.label || `Page ${dotMenu.idx + 1}`}
+            </div>
+            <div className="h-px bg-white/10 mx-2 mb-1" />
+            <button
+              onClick={() => { startLabelEdit(dotMenu.idx); setDotMenu(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
+            >
+              ✏️ Rename
+            </button>
+            <button
+              onClick={() => goToPage(dotMenu.idx)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
+            >
+              → Switch to page
+            </button>
+            {dashboardPages.length > 1 && (
+              deleteConfirmIdx === dotMenu.idx ? (
+                <div className="px-3 py-2">
+                  <p className="text-[11px] text-white/60 mb-2">
+                    {dashboardPages[dotMenu.idx]?.activeWidgets
+                      ? "This page has custom widgets. Delete anyway?"
+                      : "Delete this page?"}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => deletePage(dotMenu.idx)}
+                      className="flex-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-red-500/70 hover:bg-red-500/90 transition-colors"
+                    >Delete</button>
+                    <button
+                      onClick={() => setDeleteConfirmIdx(null)}
+                      className="flex-1 px-2 py-1 rounded-lg text-[11px] text-white/50 hover:bg-white/8 transition-colors"
+                    >Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setDeleteConfirmIdx(dotMenu.idx)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  🗑 Delete page
+                </button>
+              )
+            )}
+          </motion.div>
+        </>
+      )}
     </div>
     </StyleEditorProvider>
   );
