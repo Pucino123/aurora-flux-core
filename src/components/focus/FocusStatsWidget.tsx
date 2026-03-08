@@ -266,12 +266,15 @@ const FocusStatsWidget = () => {
                 <circle cx="50" cy="50" r={RING_R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
                 <motion.circle
                   cx="50" cy="50" r={RING_R} fill="none"
-                  stroke="url(#focusGrad)"
+                  stroke={goalReached ? "url(#focusGradGreen)" : "url(#focusGrad)"}
                   strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={RING_C}
                   initial={{ strokeDashoffset: RING_C }}
-                  animate={{ strokeDashoffset: ringAnim ? RING_C * (1 - dailyPct / 100) : RING_C }}
+                  animate={{
+                    strokeDashoffset: ringAnim ? RING_C * (1 - dailyPct / 100) : RING_C,
+                    filter: goalReached ? "drop-shadow(0 0 8px #34d399)" : "none",
+                  }}
                   transition={{ duration: 1.2, ease: "easeOut" }}
                 />
                 <defs>
@@ -279,15 +282,56 @@ const FocusStatsWidget = () => {
                     <stop offset="0%" stopColor="hsl(250 80% 70%)" />
                     <stop offset="100%" stopColor="hsl(200 90% 65%)" />
                   </linearGradient>
+                  <linearGradient id="focusGradGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#34d399" />
+                    <stop offset="100%" stopColor="#6ee7b7" />
+                  </linearGradient>
                 </defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-[15px] font-bold text-white/90 leading-none">
-                  {Math.floor(todayMin / 60)}h {todayMin % 60}m
-                </p>
+                <AnimatePresence mode="wait">
+                  {goalReached ? (
+                    <motion.p
+                      key="reached"
+                      initial={{ scale: 0.6, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      className="text-[11px] font-bold text-emerald-300 leading-none text-center"
+                    >
+                      🎉 Goal!
+                    </motion.p>
+                  ) : (
+                    <motion.p
+                      key="time"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-[15px] font-bold text-white/90 leading-none"
+                    >
+                      {Math.floor(todayMin / 60)}h {todayMin % 60}m
+                    </motion.p>
+                  )}
+                </AnimatePresence>
                 <p className="text-[8px] text-white/30 mt-0.5">/ 5h goal</p>
               </div>
+              {/* Confetti burst on goal reached */}
+              <AnimatePresence>
+                {goalReached && <ConfettiBurst />}
+              </AnimatePresence>
             </div>
+            {/* Goal reached banner */}
+            <AnimatePresence>
+              {goalReached && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="mt-2 px-3 py-1 rounded-full bg-emerald-400/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-semibold"
+                >
+                  🏆 Daily Goal Reached!
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Stats badges */}
