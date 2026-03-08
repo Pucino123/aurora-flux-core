@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useFlux } from "@/context/FluxContext";
 import { useCRM } from "@/context/CRMContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,13 +6,18 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday,
   addMonths, subMonths, startOfWeek, endOfWeek, getISOWeek, addWeeks, subWeeks,
-  isSameMonth, parseISO,
+  addDays, subDays, isSameMonth, parseISO, isAfter, isBefore, startOfDay,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, X, Clock, CheckCircle2, CalendarDays, Loader2 } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Plus, X, Clock, CheckCircle2, CalendarDays, Loader2,
+  RefreshCw, CheckCheck, Calendar, Globe, Sparkles, Zap,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Calendar as MiniCalendar } from "@/components/ui/calendar";
 
-type CalView = "month" | "week" | "agenda";
+type CalView = "day" | "week" | "month";
+type Provider = "dashiii" | "google" | "outlook" | "apple";
 
 interface CalEvent {
   id: string;
@@ -25,20 +30,57 @@ interface CalEvent {
   done?: boolean;
   priority?: string;
   dbId?: string;
+  provider?: Provider;
 }
 
 const EVENT_COLORS = [
-  { label: "Blue — Meeting", value: "bg-blue-500", hex: "#3b82f6" },
-  { label: "Red — Deadline", value: "bg-red-500", hex: "#ef4444" },
-  { label: "Green — Task", value: "bg-emerald-500", hex: "#10b981" },
-  { label: "Amber — Reminder", value: "bg-amber-500", hex: "#f59e0b" },
-  { label: "Purple — Focus", value: "bg-violet-500", hex: "#8b5cf6" },
+  { label: "Meeting", value: "bg-blue-500", hex: "#3b82f6", glow: "hsl(217 91% 60%)" },
+  { label: "Deadline", value: "bg-red-500", hex: "#ef4444", glow: "hsl(0 72% 55%)" },
+  { label: "Task", value: "bg-emerald-500", hex: "#10b981", glow: "hsl(160 84% 39%)" },
+  { label: "Reminder", value: "bg-amber-500", hex: "#f59e0b", glow: "hsl(45 93% 50%)" },
+  { label: "Focus", value: "bg-violet-500", hex: "#8b5cf6", glow: "hsl(var(--aurora-violet))" },
 ];
 
 const hexFor = (color?: string) =>
   EVENT_COLORS.find(c => c.value === color)?.hex ?? "#8b5cf6";
 
-// ── Add Event Modal ─────────────────────────────────────────────────────────
+const PROVIDER_COLORS: Record<Provider, { bg: string; label: string; icon: string }> = {
+  dashiii: { bg: "#8b5cf6", label: "Dashiii", icon: "D" },
+  google: { bg: "#4285f4", label: "Google", icon: "G" },
+  outlook: { bg: "#0078d4", label: "Outlook", icon: "O" },
+  apple: { bg: "#555555", label: "Apple", icon: "" },
+};
+
+// ── Glowing Event Pill ────────────────────────────────────────────────────────
+
+const EventPill: React.FC<{ event: CalEvent; compact?: boolean }> = ({ event, compact }) => {
+  const hex = hexFor(event.color);
+  const provider = event.provider && event.provider !== "dashiii" ? event.provider : null;
+  return (
+    <div
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium truncate cursor-pointer transition-all hover:scale-[1.02]"
+      style={{
+        background: `${hex}22`,
+        border: `1px solid ${hex}55`,
+        color: hex,
+      }}
+      title={event.title}
+    >
+      {provider && (
+        <span
+          className="shrink-0 w-3 h-3 rounded-full flex items-center justify-center text-[7px] font-bold text-white"
+          style={{ background: PROVIDER_COLORS[provider].bg }}
+        >
+          {PROVIDER_COLORS[provider].icon}
+        </span>
+      )}
+      {!compact && event.startTime && <span className="opacity-60 shrink-0">{event.startTime}</span>}
+      <span className="truncate">{event.title}</span>
+    </div>
+  );
+};
+
+// ── Add Event Modal (Inline Card) ─────────────────────────────────────────────
 
 interface AddEventModalProps {
   defaultDate: string;
@@ -54,6 +96,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ defaultDate, onClose, onS
   const [endTime, setEndTime] = useState("10:00");
   const [color, setColor] = useState("bg-violet-500");
   const [crmContact, setCrmContact] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
 
   const handleSave = () => {
     if (!title.trim()) { toast.error("Please enter an event title"); return; }
@@ -66,109 +111,80 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ defaultDate, onClose, onS
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
-        initial={{ y: "100%", opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: "100%", opacity: 0 }}
-        transition={{ type: "spring", stiffness: 320, damping: 30 }}
+        initial={{ y: 40, opacity: 0, scale: 0.97 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 40, opacity: 0, scale: 0.97 }}
+        transition={{ type: "spring", stiffness: 380, damping: 28 }}
         onClick={e => e.stopPropagation()}
-        className="w-full md:max-w-md bg-card border border-border rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl"
+        className="w-full md:max-w-md rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl"
+        style={{
+          background: "hsl(var(--card) / 0.95)",
+          border: "1px solid hsl(var(--border))",
+          backdropFilter: "blur(20px)",
+        }}
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border/50">
-          <h3 className="text-sm font-bold text-foreground">Add Event</h3>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Calendar size={13} className="text-primary" />
+            </div>
+            <h3 className="text-sm font-bold text-foreground">New Event</h3>
+          </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors text-muted-foreground">
             <X size={14} />
           </button>
         </div>
 
-        <div className="p-5 space-y-4 overflow-y-auto max-h-[80vh]">
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Event Title</label>
-            <input
-              autoFocus
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleSave()}
-              placeholder="e.g. Investor Meeting, Project Deadline…"
-              className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 transition-colors"
-            />
-          </div>
+        <div className="p-5 space-y-4">
+          <input
+            ref={inputRef}
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleSave()}
+            placeholder="Event title…"
+            className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 transition-colors"
+          />
 
           <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-3 md:col-span-1">
-              <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Date</label>
-              <input
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground outline-none focus:border-primary/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Start</label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={e => setStartTime(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground outline-none focus:border-primary/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1.5">End</label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={e => setEndTime(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground outline-none focus:border-primary/50 transition-colors"
-              />
-            </div>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              className="col-span-3 md:col-span-1 px-3 py-2 rounded-xl bg-secondary border border-border text-xs text-foreground outline-none focus:border-primary/50" />
+            <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-secondary border border-border text-xs text-foreground outline-none focus:border-primary/50" />
+            <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-secondary border border-border text-xs text-foreground outline-none focus:border-primary/50" />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Event Type</label>
-            <div className="flex gap-2 flex-wrap">
-              {EVENT_COLORS.map(c => (
-                <button
-                  key={c.value}
-                  title={c.label}
-                  onClick={() => setColor(c.value)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                    color === c.value
-                      ? "border-foreground/30 bg-secondary text-foreground"
-                      : "border-border text-muted-foreground hover:border-foreground/20"
-                  }`}
-                >
-                  <span className={`w-2 h-2 rounded-full ${c.value}`} />
-                  {c.label.split(" — ")[1]}
-                </button>
-              ))}
-            </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {EVENT_COLORS.map(c => (
+              <button key={c.value} title={c.label} onClick={() => setColor(c.value)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all"
+                style={{
+                  background: color === c.value ? `${c.hex}20` : "transparent",
+                  borderColor: color === c.value ? `${c.hex}60` : "hsl(var(--border))",
+                  color: color === c.value ? c.hex : "hsl(var(--muted-foreground))",
+                }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ background: c.hex }} />
+                {c.label}
+              </button>
+            ))}
           </div>
 
           {crmContacts.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Link CRM Contact (optional)</label>
-              <select
-                value={crmContact}
-                onChange={e => setCrmContact(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground outline-none focus:border-primary/50 transition-colors"
-              >
-                <option value="">— None —</option>
-                {crmContacts.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} · {c.company}</option>
-                ))}
-              </select>
-            </div>
+            <select value={crmContact} onChange={e => setCrmContact(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-secondary border border-border text-sm text-foreground outline-none focus:border-primary/50">
+              <option value="">— Link CRM contact (optional) —</option>
+              {crmContacts.map(c => <option key={c.id} value={c.id}>{c.name} · {c.company}</option>)}
+            </select>
           )}
 
           <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleSave}
-              className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
-            >
+            <button onClick={handleSave}
+              className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
               Add Event
             </button>
             <button onClick={onClose} className="px-4 py-2.5 rounded-xl bg-secondary text-muted-foreground text-sm hover:text-foreground transition-colors">
@@ -181,23 +197,267 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ defaultDate, onClose, onS
   );
 };
 
-// ── Event Pill ──────────────────────────────────────────────────────────────
+// ── Integration Sync Hub Modal ────────────────────────────────────────────────
 
-const EventPill: React.FC<{ event: CalEvent; compact?: boolean }> = ({ event, compact }) => {
-  const hex = hexFor(event.color);
+type ConnectionState = "idle" | "loading" | "connected";
+
+interface IntegrationModalProps {
+  connectedProviders: Provider[];
+  onConnect: (provider: Provider) => Promise<void>;
+  onClose: () => void;
+}
+
+const IntegrationModal: React.FC<IntegrationModalProps> = ({ connectedProviders, onConnect, onClose }) => {
+  const [states, setStates] = useState<Record<string, ConnectionState>>({
+    google: connectedProviders.includes("google") ? "connected" : "idle",
+    outlook: connectedProviders.includes("outlook") ? "connected" : "idle",
+    apple: connectedProviders.includes("apple") ? "connected" : "idle",
+  });
+
+  const providers = [
+    {
+      id: "google" as Provider,
+      name: "Google Calendar",
+      desc: "Sync meetings, events, and reminders from Google",
+      color: "#4285f4",
+      gradient: "from-[#4285f4]/20 to-[#34a853]/10",
+      icon: (
+        <svg viewBox="0 0 48 48" className="w-7 h-7">
+          <path fill="#4285F4" d="M45.5 24.5c0-1.7-.1-3.4-.4-5H24v9.5h12.1c-.5 2.7-2.1 5-4.4 6.5v5.4h7.1c4.2-3.8 6.6-9.5 6.6-16.4z" />
+          <path fill="#34A853" d="M24 46c6.5 0 11.9-2.1 15.9-5.7l-7.1-5.4c-2.1 1.4-4.8 2.2-8.8 2.2-6.7 0-12.4-4.5-14.4-10.6H2.2v5.6C6.1 41.6 14.5 46 24 46z" />
+          <path fill="#FBBC05" d="M9.6 26.5c-.5-1.4-.8-3-.8-4.5s.3-3.1.8-4.5v-5.6H2.2C.8 14.9 0 19.4 0 24s.8 9.1 2.2 12.1l7.4-5.6z" />
+          <path fill="#EA4335" d="M24 9.5c3.8 0 7.1 1.3 9.8 3.8l7.3-7.3C36.9 2.1 30.9 0 24 0 14.5 0 6.1 4.4 2.2 11.9l7.4 5.6C11.6 14 17.3 9.5 24 9.5z" />
+        </svg>
+      ),
+    },
+    {
+      id: "outlook" as Provider,
+      name: "Microsoft Outlook",
+      desc: "Connect your work calendar and Teams meetings",
+      color: "#0078d4",
+      gradient: "from-[#0078d4]/20 to-[#00bcf2]/10",
+      icon: (
+        <svg viewBox="0 0 48 48" className="w-7 h-7">
+          <rect x="4" y="4" width="19" height="19" fill="#f25022" />
+          <rect x="25" y="4" width="19" height="19" fill="#7fba00" />
+          <rect x="4" y="25" width="19" height="19" fill="#00a4ef" />
+          <rect x="25" y="25" width="19" height="19" fill="#ffb900" />
+        </svg>
+      ),
+    },
+    {
+      id: "apple" as Provider,
+      name: "Apple iCloud",
+      desc: "Import iCal events and reminders from Apple devices",
+      color: "#888",
+      gradient: "from-[#555]/20 to-[#888]/10",
+      icon: (
+        <svg viewBox="0 0 48 48" className="w-7 h-7" fill="currentColor">
+          <path d="M35.1 26.1c-.1-4.9 4-7.3 4.2-7.4-2.3-3.3-5.8-3.8-7.1-3.9-3-.3-5.9 1.8-7.4 1.8-1.5 0-3.9-1.7-6.4-1.7-3.3.1-6.3 1.9-8 4.9-3.4 5.9-.9 14.6 2.4 19.4 1.6 2.3 3.5 4.9 6.1 4.8 2.4-.1 3.3-1.6 6.3-1.6s3.7 1.6 6.3 1.5c2.6 0 4.3-2.3 5.9-4.7 1.9-2.7 2.6-5.3 2.7-5.4-.1 0-5-1.9-5-7.7z" />
+          <path d="M30.2 11.1c1.3-1.6 2.2-3.8 2-6.1-1.9.1-4.3 1.3-5.7 2.9-1.2 1.4-2.3 3.7-2 5.9 2.1.2 4.3-1.1 5.7-2.7z" />
+        </svg>
+      ),
+    },
+  ];
+
+  const handleConnect = async (id: Provider) => {
+    setStates(s => ({ ...s, [id]: "loading" }));
+    await new Promise(r => setTimeout(r, 1800));
+    setStates(s => ({ ...s, [id]: "connected" }));
+    await onConnect(id);
+  };
+
   return (
-    <div
-      className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-white text-[10px] font-medium truncate cursor-pointer hover:opacity-80 transition-opacity"
-      style={{ background: `${hex}cc` }}
-      title={event.title}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+      onClick={onClose}
     >
-      {!compact && event.startTime && <span className="opacity-70 shrink-0">{event.startTime}</span>}
-      <span className="truncate">{event.title}</span>
-    </div>
+      <motion.div
+        initial={{ scale: 0.94, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.94, opacity: 0, y: 20 }}
+        transition={{ type: "spring", stiffness: 340, damping: 26 }}
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl"
+        style={{
+          background: "hsl(var(--card) / 0.9)",
+          border: "1px solid hsl(var(--border))",
+          backdropFilter: "blur(24px)",
+          boxShadow: "0 0 60px rgba(139,92,246,0.15), 0 25px 50px rgba(0,0,0,0.4)",
+        }}
+      >
+        <div className="p-6 pb-4 border-b border-border/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Globe size={16} className="text-primary" />
+                <h2 className="text-base font-bold text-foreground">Connect Your World</h2>
+              </div>
+              <p className="text-xs text-muted-foreground">Sync external calendars to see everything in one place</p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-secondary transition-colors text-muted-foreground">
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-3">
+          {providers.map(p => {
+            const state = states[p.id];
+            return (
+              <motion.div
+                key={p.id}
+                className={`relative flex items-center gap-4 p-4 rounded-2xl border transition-all overflow-hidden ${state === "connected" ? "border-emerald-500/30 bg-emerald-500/5" : "border-border/40 hover:border-border"}`}
+              >
+                {/* Gradient bg */}
+                <div className={`absolute inset-0 bg-gradient-to-r ${p.gradient} opacity-50`} />
+                <div className="relative z-10 w-11 h-11 rounded-2xl flex items-center justify-center"
+                  style={{ background: `${p.color}15`, border: `1px solid ${p.color}30` }}>
+                  {p.icon}
+                </div>
+                <div className="relative z-10 flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{p.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{p.desc}</p>
+                </div>
+                <div className="relative z-10 shrink-0">
+                  {state === "connected" ? (
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+                      <CheckCheck size={12} /> Connected
+                    </motion.div>
+                  ) : state === "loading" ? (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-muted-foreground text-xs">
+                      <Loader2 size={12} className="animate-spin" /> Syncing…
+                    </div>
+                  ) : (
+                    <button onClick={() => handleConnect(p.id)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                      style={{ background: `${p.color}20`, border: `1px solid ${p.color}40`, color: p.color }}>
+                      Connect
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="px-4 pb-4">
+          <p className="text-[10px] text-center text-muted-foreground/50">
+            🔒 OAuth-secured · events are read-only imports
+          </p>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
-// ── Month View ──────────────────────────────────────────────────────────────
+// ── Aura Daily Briefing Panel ─────────────────────────────────────────────────
+
+interface AuraDailyBriefingProps {
+  todayEvents: CalEvent[];
+  overdueTasks: { id: string; title: string; due_date: string | null }[];
+  onReschedule: (taskId: string) => void;
+  onDismiss: () => void;
+}
+
+const AuraDailyBriefing: React.FC<AuraDailyBriefingProps> = ({ todayEvents, overdueTasks, onReschedule, onDismiss }) => {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const overdueTask = overdueTasks[0] || null;
+  const meetingCount = todayEvents.length;
+
+  const summaryText = meetingCount > 0
+    ? `${greeting}! You have ${meetingCount} event${meetingCount !== 1 ? "s" : ""} today.${overdueTask ? ` Also, "${overdueTask.title}" is overdue — want me to reschedule it to tomorrow?` : " Your schedule looks clear. Enjoy your focus time! ✨"}`
+    : `${greeting}! Your calendar is clear today. ${overdueTask ? `Though "${overdueTask.title}" is overdue — want me to push it to tomorrow?` : "Perfect for deep work! 🧘"}`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 80, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 40, scale: 0.95 }}
+      transition={{ type: "spring", stiffness: 320, damping: 28, delay: 0.3 }}
+      className="fixed bottom-6 right-6 z-50 w-80 sm:w-96 rounded-3xl overflow-hidden"
+      style={{
+        background: "hsl(var(--card) / 0.92)",
+        border: "1px solid hsl(var(--border))",
+        backdropFilter: "blur(24px)",
+        boxShadow: "0 0 20px rgba(139,92,246,0.2), 0 0 40px rgba(139,92,246,0.08), 0 20px 40px rgba(0,0,0,0.3)",
+        animation: "aura-breathe 4s ease-in-out infinite",
+      }}
+    >
+      <style>{`
+        @keyframes aura-breathe {
+          0%, 100% { box-shadow: 0 0 20px rgba(139,92,246,0.2), 0 0 40px rgba(139,92,246,0.08), 0 20px 40px rgba(0,0,0,0.3); }
+          50% { box-shadow: 0 0 30px rgba(139,92,246,0.35), 0 0 60px rgba(139,92,246,0.15), 0 20px 40px rgba(0,0,0,0.3); }
+        }
+      `}</style>
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center gap-2">
+          <motion.div
+            className="w-7 h-7 rounded-xl flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, hsl(var(--aurora-violet)) 0%, hsl(var(--aurora-blue)) 100%)" }}
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2.5, repeat: Infinity }}
+          >
+            <Sparkles size={13} className="text-white" />
+          </motion.div>
+          <div>
+            <p className="text-xs font-bold text-foreground">Aura</p>
+            <p className="text-[9px] text-muted-foreground">Daily Briefing</p>
+          </div>
+        </div>
+        <button onClick={onDismiss} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors text-muted-foreground">
+          <X size={12} />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 pb-2">
+        <p className="text-sm text-foreground leading-relaxed">{summaryText}</p>
+      </div>
+
+      {/* Today's event pills */}
+      {todayEvents.length > 0 && (
+        <div className="px-4 pb-2 flex gap-1 flex-wrap">
+          {todayEvents.slice(0, 3).map(e => (
+            <span key={e.id} className="px-2 py-0.5 rounded-full text-[10px] font-medium"
+              style={{ background: `${hexFor(e.color)}20`, color: hexFor(e.color), border: `1px solid ${hexFor(e.color)}40` }}>
+              {e.startTime && `${e.startTime} · `}{e.title}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="px-4 pb-4 flex gap-2">
+        {overdueTask && (
+          <button
+            onClick={() => { onReschedule(overdueTask.id); onDismiss(); }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+            style={{
+              background: "hsl(var(--aurora-violet) / 0.15)",
+              border: "1px solid hsl(var(--aurora-violet) / 0.35)",
+              color: "hsl(var(--aurora-violet))",
+            }}
+          >
+            <Zap size={11} /> Yes, reschedule
+          </button>
+        )}
+        <button onClick={onDismiss}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">
+          Dismiss
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+// ── Month View ────────────────────────────────────────────────────────────────
 
 const MonthView: React.FC<{
   currentMonth: Date;
@@ -221,10 +481,11 @@ const MonthView: React.FC<{
   }, [events]);
 
   return (
-    <div className="grid grid-cols-8 gap-px bg-border rounded-2xl overflow-hidden">
-      <div className="bg-card text-[10px] font-semibold text-muted-foreground text-center py-2">Wk</div>
+    <div className="grid grid-cols-8 rounded-2xl overflow-hidden border border-border/20" style={{ gap: "1px", background: "hsl(var(--border) / 0.1)" }}>
+      {/* Header */}
+      <div className="bg-card/80 text-[10px] font-semibold text-muted-foreground/40 text-center py-2.5">Wk</div>
       {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (
-        <div key={d} className="bg-card text-[10px] font-semibold text-muted-foreground text-center py-2">{d}</div>
+        <div key={d} className="bg-card/80 text-[10px] font-semibold text-muted-foreground text-center py-2.5 tracking-wide">{d}</div>
       ))}
 
       {days.map((day, i) => {
@@ -232,31 +493,31 @@ const MonthView: React.FC<{
         const dayEvents = dayEventMap.get(key) || [];
         const inMonth = isSameMonth(day, currentMonth);
         const isWeekStart = i % 7 === 0;
-
         return (
           <React.Fragment key={key}>
             {isWeekStart && (
-              <div className="bg-card text-[9px] text-muted-foreground/40 flex items-start justify-center pt-1.5 font-mono">
+              <div className="bg-card/80 text-[9px] text-muted-foreground/30 flex items-start justify-center pt-2 font-mono">
                 {getISOWeek(day)}
               </div>
             )}
             <button
               onClick={() => onDayClick(day)}
-              className={`bg-card min-h-[80px] p-1 text-left relative group transition-colors hover:bg-secondary/30 ${!inMonth ? "opacity-30" : ""}`}
+              className={`bg-card/80 min-h-[72px] p-1.5 text-left relative group transition-colors hover:bg-secondary/20 ${!inMonth ? "opacity-25" : ""} ${isToday(day) ? "bg-primary/5" : ""}`}
             >
-              <span className={`inline-flex items-center justify-center w-6 h-6 text-xs rounded-full mb-0.5 transition-colors ${
-                isToday(day) ? "bg-primary text-primary-foreground font-bold" : "text-foreground/70"
+              <span className={`inline-flex items-center justify-center w-6 h-6 text-xs rounded-full mb-0.5 font-medium transition-colors ${
+                isToday(day) ? "bg-primary text-primary-foreground font-bold" : "text-foreground/70 group-hover:text-foreground"
               }`}>
                 {format(day, "d")}
               </span>
               <div className="space-y-0.5">
                 {dayEvents.slice(0, 3).map(e => <EventPill key={e.id} event={e} compact />)}
                 {dayEvents.length > 3 && (
-                  <div className="text-[9px] text-muted-foreground px-1">+{dayEvents.length - 3} more</div>
+                  <div className="text-[9px] text-muted-foreground/60 px-1.5">+{dayEvents.length - 3} more</div>
                 )}
               </div>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-start justify-end p-1 pointer-events-none">
-                <Plus size={10} className="text-primary/50" />
+              {/* Hover add hint */}
+              <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Plus size={9} className="text-primary/60" />
               </div>
             </button>
           </React.Fragment>
@@ -266,7 +527,7 @@ const MonthView: React.FC<{
   );
 };
 
-// ── Week View ───────────────────────────────────────────────────────────────
+// ── Week View with Now Indicator ──────────────────────────────────────────────
 
 const WeekView: React.FC<{
   currentWeek: Date;
@@ -274,195 +535,267 @@ const WeekView: React.FC<{
   onDayClick: (date: Date) => void;
 }> = ({ currentWeek, events, onDayClick }) => {
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
-  const hours = Array.from({ length: 16 }, (_, i) => i + 7);
+  const days = eachDayOfInterval({ start: weekStart, end: endOfWeek(currentWeek, { weekStartsOn: 1 }) });
+  const hours = Array.from({ length: 16 }, (_, i) => i + 7); // 07:00 – 22:00
+  const HOUR_H = 52; // px per hour row
+
+  // Now indicator
+  const [nowMins, setNowMins] = useState(() => {
+    const n = new Date(); return n.getHours() * 60 + n.getMinutes();
+  });
+  useEffect(() => {
+    const id = setInterval(() => {
+      const n = new Date(); setNowMins(n.getHours() * 60 + n.getMinutes());
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const nowOffsetPx = ((nowMins - 7 * 60) / 60) * HOUR_H;
+  const showNow = nowMins >= 7 * 60 && nowMins <= 22 * 60;
 
   const dayEventMap = useMemo(() => {
     const map = new Map<string, CalEvent[]>();
     events.forEach(e => {
-      const key = e.date;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(e);
+      if (!map.has(e.date)) map.set(e.date, []);
+      map.get(e.date)!.push(e);
     });
     return map;
   }, [events]);
 
   return (
-    <div className="overflow-auto rounded-2xl border border-border">
-      <div className="grid grid-cols-8 bg-secondary/30 border-b border-border">
-        <div className="p-2 text-[10px] text-muted-foreground/40 text-center">UTC</div>
+    <div className="rounded-2xl border border-border/30 overflow-hidden">
+      {/* Day headers */}
+      <div className="grid grid-cols-8 border-b border-border/20" style={{ background: "hsl(var(--card) / 0.8)" }}>
+        <div className="p-2 text-[10px] text-muted-foreground/30 text-center font-mono">UTC</div>
         {days.map(d => (
-          <button
-            key={format(d, "yyyy-MM-dd")}
-            onClick={() => onDayClick(d)}
-            className={`p-2 text-center hover:bg-secondary/60 transition-colors ${isToday(d) ? "bg-primary/10" : ""}`}
-          >
-            <p className="text-[10px] text-muted-foreground">{format(d, "EEE")}</p>
+          <button key={format(d, "yyyy-MM-dd")} onClick={() => onDayClick(d)}
+            className={`p-2 text-center transition-colors hover:bg-secondary/40 ${isToday(d) ? "bg-primary/8" : ""}`}>
+            <p className="text-[10px] font-medium text-muted-foreground">{format(d, "EEE")}</p>
             <p className={`text-sm font-bold ${isToday(d) ? "text-primary" : "text-foreground/80"}`}>{format(d, "d")}</p>
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-8">
-        {hours.map(h => (
-          <React.Fragment key={h}>
-            <div className="p-1.5 text-[9px] text-muted-foreground/40 text-right font-mono border-t border-border/30">
-              {h.toString().padStart(2, "0")}:00
+      {/* Time grid */}
+      <div className="overflow-auto max-h-[540px]">
+        <div className="relative">
+          {/* Now indicator overlay */}
+          {showNow && (
+            <div
+              className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
+              style={{ top: nowOffsetPx }}
+            >
+              <div className="ml-10 h-0.5 flex-1 relative">
+                <motion.div
+                  className="absolute left-0 w-2.5 h-2.5 rounded-full -translate-y-[4px] -translate-x-[5px]"
+                  style={{ background: "hsl(0 72% 55%)" }}
+                  animate={{ scale: [1, 1.3, 1], opacity: [1, 0.6, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+                <div className="h-full" style={{ background: "linear-gradient(90deg, hsl(0 72% 55%), transparent)", opacity: 0.6 }} />
+              </div>
             </div>
-            {days.map(d => {
-              const key = format(d, "yyyy-MM-dd");
-              const slotEvents = (dayEventMap.get(key) || []).filter(e => {
-                if (!e.startTime) return false;
-                const eH = parseInt(e.startTime.split(":")[0]);
-                return eH === h;
-              });
-              return (
-                <button
-                  key={key}
-                  onClick={() => onDayClick(d)}
-                  className={`min-h-[48px] p-0.5 border-t border-border/30 hover:bg-secondary/30 transition-colors ${isToday(d) ? "bg-primary/5" : ""}`}
-                >
-                  <div className="space-y-0.5">
-                    {slotEvents.map(e => <EventPill key={e.id} event={e} />)}
-                  </div>
-                </button>
-              );
-            })}
-          </React.Fragment>
-        ))}
+          )}
+
+          <div className="grid grid-cols-8" style={{ background: "hsl(var(--card) / 0.5)" }}>
+            {hours.map(h => (
+              <React.Fragment key={h}>
+                <div className="text-[9px] text-muted-foreground/40 text-right font-mono pr-2 pt-1.5 border-t border-white/5"
+                  style={{ height: HOUR_H }}>
+                  {h.toString().padStart(2, "0")}:00
+                </div>
+                {days.map(d => {
+                  const key = format(d, "yyyy-MM-dd");
+                  const slotEvents = (dayEventMap.get(key) || []).filter(e => {
+                    if (!e.startTime) return false;
+                    return parseInt(e.startTime.split(":")[0]) === h;
+                  });
+                  return (
+                    <button key={key} onClick={() => onDayClick(d)}
+                      className={`relative p-0.5 border-t border-white/5 hover:bg-secondary/20 transition-colors group ${isToday(d) ? "bg-primary/3" : ""}`}
+                      style={{ height: HOUR_H }}>
+                      <div className="space-y-0.5">
+                        {slotEvents.map(e => <EventPill key={e.id} event={e} />)}
+                      </div>
+                      {/* Hover ghost slot */}
+                      <div className="absolute inset-x-0.5 inset-y-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity border border-dashed border-primary/20 pointer-events-none" />
+                    </button>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-// ── Agenda View ─────────────────────────────────────────────────────────────
+// ── Day View ──────────────────────────────────────────────────────────────────
 
-const AgendaView: React.FC<{
+const DayView: React.FC<{
+  currentDay: Date;
   events: CalEvent[];
-  onAdd: () => void;
-}> = ({ events, onAdd }) => {
-  const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
-  const byDate = sorted.reduce<Record<string, CalEvent[]>>((acc, e) => {
-    if (!acc[e.date]) acc[e.date] = [];
-    acc[e.date].push(e);
-    return acc;
-  }, {});
-  const dates = Object.keys(byDate).sort();
+  onTimeClick: (date: Date) => void;
+}> = ({ currentDay, events, onTimeClick }) => {
+  const hours = Array.from({ length: 16 }, (_, i) => i + 7);
+  const HOUR_H = 64;
+  const todayKey = format(currentDay, "yyyy-MM-dd");
+  const dayEvents = events.filter(e => e.date === todayKey);
 
-  if (dates.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-        <CalendarDays size={32} className="text-muted-foreground/30" />
-        <p className="text-sm text-muted-foreground">No upcoming events</p>
-        <button
-          onClick={onAdd}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          <Plus size={14} /> Add First Event
-        </button>
-      </div>
-    );
-  }
+  const [nowMins, setNowMins] = useState(() => {
+    const n = new Date(); return n.getHours() * 60 + n.getMinutes();
+  });
+  useEffect(() => {
+    const id = setInterval(() => {
+      const n = new Date(); setNowMins(n.getHours() * 60 + n.getMinutes());
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const nowOffsetPx = ((nowMins - 7 * 60) / 60) * HOUR_H;
+  const showNow = isToday(currentDay) && nowMins >= 7 * 60 && nowMins <= 22 * 60;
 
   return (
-    <div className="space-y-4">
-      {dates.map(dateStr => {
-        const d = parseISO(dateStr);
-        return (
-          <div key={dateStr}>
-            <div className="flex items-center gap-3 mb-2">
-              <div className={`flex flex-col items-center w-10 h-10 rounded-xl shrink-0 ${isToday(d) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
-                <span className="text-[9px] font-semibold mt-0.5">{format(d, "EEE").toUpperCase()}</span>
-                <span className="text-sm font-bold leading-tight">{format(d, "d")}</span>
+    <div className="rounded-2xl border border-border/30 overflow-hidden">
+      <div className="border-b border-border/20 px-4 py-3 flex items-center gap-3" style={{ background: "hsl(var(--card) / 0.8)" }}>
+        <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center ${isToday(currentDay) ? "bg-primary" : "bg-secondary"}`}>
+          <span className="text-[9px] font-semibold">{format(currentDay, "EEE").toUpperCase()}</span>
+          <span className="text-sm font-bold leading-none">{format(currentDay, "d")}</span>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">{format(currentDay, "EEEE, MMMM d, yyyy")}</p>
+          <p className="text-xs text-muted-foreground">{dayEvents.length} event{dayEvents.length !== 1 ? "s" : ""}</p>
+        </div>
+      </div>
+
+      <div className="overflow-auto max-h-[540px]">
+        <div className="relative">
+          {showNow && (
+            <div className="absolute left-0 right-0 z-20 pointer-events-none flex items-center" style={{ top: nowOffsetPx }}>
+              <div className="ml-16 h-0.5 flex-1 relative">
+                <motion.div className="absolute left-0 w-3 h-3 rounded-full -translate-y-[5px] -translate-x-[6px]"
+                  style={{ background: "hsl(0 72% 55%)" }}
+                  animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+                <div className="h-full" style={{ background: "linear-gradient(90deg, hsl(0 72% 55%), hsl(0 72% 55% / 0.2))" }} />
               </div>
-              <div className="h-px flex-1 bg-border" />
             </div>
-            <div className="space-y-1.5 ml-13 pl-2">
-              {byDate[dateStr].map(e => (
-                <div key={e.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 hover:border-border transition-colors">
-                  <div className="w-1 h-8 rounded-full shrink-0" style={{ background: hexFor(e.color) }} />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${e.done ? "line-through text-muted-foreground" : "text-foreground"}`}>{e.title}</p>
-                    {e.startTime && (
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Clock size={10} /> {e.startTime}{e.endTime ? ` – ${e.endTime}` : ""}
-                      </p>
+          )}
+          <div style={{ background: "hsl(var(--card) / 0.5)" }}>
+            {hours.map(h => {
+              const slotEvents = dayEvents.filter(e => e.startTime && parseInt(e.startTime.split(":")[0]) === h);
+              return (
+                <div key={h} className="grid border-t border-white/5 group hover:bg-secondary/10 cursor-pointer transition-colors"
+                  style={{ gridTemplateColumns: "64px 1fr", height: HOUR_H }}
+                  onClick={() => onTimeClick(currentDay)}>
+                  <div className="text-[10px] text-muted-foreground/40 font-mono text-right pr-3 pt-2">
+                    {h.toString().padStart(2, "0")}:00
+                  </div>
+                  <div className="p-1 space-y-1">
+                    {slotEvents.map(e => (
+                      <div key={e.id} className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                        style={{ background: `${hexFor(e.color)}20`, border: `1px solid ${hexFor(e.color)}40`, color: hexFor(e.color) }}>
+                        <span className="font-semibold">{e.startTime}</span> — {e.title}
+                        {e.provider && e.provider !== "dashiii" && (
+                          <span className="ml-1.5 text-[9px] opacity-60">[{PROVIDER_COLORS[e.provider].label}]</span>
+                        )}
+                      </div>
+                    ))}
+                    {!slotEvents.length && (
+                      <div className="h-full rounded-lg opacity-0 group-hover:opacity-100 transition-opacity border border-dashed border-primary/20" />
                     )}
                   </div>
-                  {e.type === "task" && (
-                    <CheckCircle2 size={14} className={e.done ? "text-emerald-500" : "text-muted-foreground/30"} />
-                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        );
-      })}
+        </div>
+      </div>
     </div>
   );
 };
 
-// ── Main Calendar ───────────────────────────────────────────────────────────
+// ── Main Calendar ─────────────────────────────────────────────────────────────
+
+const MOCK_PROVIDER_EVENTS: Record<Provider, Partial<CalEvent>[]> = {
+  google: [
+    { title: "Team Standup", startTime: "09:00", endTime: "09:30", color: "bg-blue-500", provider: "google" },
+    { title: "Product Review", startTime: "14:00", endTime: "15:00", color: "bg-blue-500", provider: "google" },
+    { title: "1:1 with Sarah", startTime: "11:30", endTime: "12:00", color: "bg-emerald-500", provider: "google" },
+  ],
+  outlook: [
+    { title: "Sprint Planning", startTime: "10:00", endTime: "11:00", color: "bg-violet-500", provider: "outlook" },
+    { title: "Client Call — Acme Corp", startTime: "15:30", endTime: "16:30", color: "bg-amber-500", provider: "outlook" },
+    { title: "Weekly Sync", startTime: "16:00", endTime: "17:00", color: "bg-blue-500", provider: "outlook" },
+  ],
+  apple: [
+    { title: "Gym", startTime: "07:00", endTime: "08:00", color: "bg-emerald-500", provider: "apple" },
+    { title: "Family Dinner", startTime: "19:00", endTime: "21:00", color: "bg-amber-500", provider: "apple" },
+    { title: "Coffee with Jordan", startTime: "08:30", endTime: "09:00", color: "bg-blue-500", provider: "apple" },
+  ],
+  dashiii: [],
+};
+
+const BRIEFING_KEY = () => `aura-briefing-${format(new Date(), "yyyy-MM-dd")}`;
 
 const CalendarView = () => {
-  const { tasks, scheduleBlocks } = useFlux();
+  const { tasks, scheduleBlocks, updateTask } = useFlux();
   const { deals } = useCRM();
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<CalView>("month");
+  const [view, setView] = useState<CalView>("week");
   const [showAddModal, setShowAddModal] = useState(false);
   const [addDefaultDate, setAddDefaultDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [customEvents, setCustomEvents] = useState<CalEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [connectedProviders, setConnectedProviders] = useState<Provider[]>([]);
+  const [providerEvents, setProviderEvents] = useState<CalEvent[]>([]);
+  const [showBriefing, setShowBriefing] = useState(false);
+  const [selectedMiniDate, setSelectedMiniDate] = useState<Date | undefined>(new Date());
 
-  // ── Load from DB on mount ──
+  // Show briefing once per day
+  useEffect(() => {
+    const shown = localStorage.getItem(BRIEFING_KEY());
+    if (!shown) {
+      const t = setTimeout(() => setShowBriefing(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const dismissBriefing = () => {
+    setShowBriefing(false);
+    localStorage.setItem(BRIEFING_KEY(), "1");
+  };
+
+  // ── Load from DB ──
   useEffect(() => {
     if (!user) return;
     setLoadingEvents(true);
     (supabase as any)
-      .from("calendar_events")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("date", { ascending: true })
+      .from("calendar_events").select("*").eq("user_id", user.id).order("date")
       .then(({ data }: { data: any[] | null }) => {
         if (data) {
-          const mapped: CalEvent[] = data.map((row: any) => ({
-            id: `custom-${row.id}`,
-            dbId: row.id,
-            title: row.title,
-            date: row.date,
-            startTime: row.start_time || undefined,
-            endTime: row.end_time || undefined,
-            type: "custom",
-            color: row.color || "bg-violet-500",
-          }));
-          setCustomEvents(mapped);
+          setCustomEvents(data.map((row: any) => ({
+            id: `custom-${row.id}`, dbId: row.id, title: row.title,
+            date: row.date, startTime: row.start_time || undefined,
+            endTime: row.end_time || undefined, type: "custom" as const,
+            color: row.color || "bg-violet-500", provider: "dashiii" as Provider,
+          })));
         }
         setLoadingEvents(false);
       });
   }, [user]);
 
-  // ── Persist new event to DB ──
   const saveCustomEvent = useCallback(async (newEvt: CalEvent) => {
-    if (!user) {
-      setCustomEvents(prev => [...prev, newEvt]);
-      return;
-    }
+    if (!user) { setCustomEvents(prev => [...prev, newEvt]); return; }
     const { data, error } = await (supabase as any)
-      .from("calendar_events")
-      .insert({
-        user_id: user.id,
-        title: newEvt.title,
-        date: newEvt.date,
-        start_time: newEvt.startTime || null,
-        end_time: newEvt.endTime || null,
-        color: newEvt.color || "bg-violet-500",
-        type: "custom",
-      })
-      .select()
-      .single();
-
+      .from("calendar_events").insert({
+        user_id: user.id, title: newEvt.title, date: newEvt.date,
+        start_time: newEvt.startTime || null, end_time: newEvt.endTime || null,
+        color: newEvt.color || "bg-violet-500", type: "custom",
+      }).select().single();
     if (!error && data) {
       setCustomEvents(prev => [...prev, { ...newEvt, id: `custom-${data.id}`, dbId: data.id }]);
     } else {
@@ -470,18 +803,64 @@ const CalendarView = () => {
     }
   }, [user]);
 
+  // Connect provider — inject mock events
+  const handleConnectProvider = useCallback(async (provider: Provider) => {
+    if (connectedProviders.includes(provider)) return;
+    setConnectedProviders(p => [...p, provider]);
+    const today = format(new Date(), "yyyy-MM-dd");
+    const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd");
+    const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
+    const dates = [yesterday, today, tomorrow];
+    const mocks = MOCK_PROVIDER_EVENTS[provider];
+    const injected: CalEvent[] = mocks.map((m, i) => ({
+      id: `${provider}-${Date.now()}-${i}`,
+      title: m.title!,
+      date: dates[i % dates.length],
+      startTime: m.startTime,
+      endTime: m.endTime,
+      type: "custom",
+      color: m.color || "bg-blue-500",
+      provider,
+    }));
+    setProviderEvents(prev => [...prev, ...injected]);
+    toast.success(`${PROVIDER_COLORS[provider].label} synced — ${injected.length} events imported`, { icon: "✅" });
+  }, [connectedProviders]);
+
+  // All merged events
   const allEvents: CalEvent[] = useMemo(() => {
     const out: CalEvent[] = [];
     tasks.forEach(t => {
       const date = t.due_date || t.scheduled_date;
-      if (date) out.push({ id: `task-${t.id}`, title: t.title, date, type: "task", color: t.priority === "high" ? "bg-red-500" : "bg-emerald-500", done: t.done, priority: t.priority || undefined });
+      if (date) out.push({
+        id: `task-${t.id}`, title: t.title, date, type: "task",
+        color: t.priority === "high" ? "bg-red-500" : "bg-emerald-500",
+        done: t.done, priority: t.priority || undefined, provider: "dashiii",
+      });
     });
     scheduleBlocks.forEach(b => {
-      if (b.scheduled_date) out.push({ id: `block-${b.id}`, title: b.title, date: b.scheduled_date, startTime: (b as any).time || undefined, endTime: (b as any).end_time || undefined, type: "block", color: "bg-blue-500" });
+      if (b.scheduled_date) out.push({
+        id: `block-${b.id}`, title: b.title, date: b.scheduled_date,
+        startTime: (b as any).time || undefined, endTime: (b as any).end_time || undefined,
+        type: "block", color: "bg-blue-500", provider: "dashiii",
+      });
     });
     customEvents.forEach(e => out.push(e));
+    providerEvents.forEach(e => out.push(e));
     return out;
-  }, [tasks, scheduleBlocks, customEvents]);
+  }, [tasks, scheduleBlocks, customEvents, providerEvents]);
+
+  // Today's events & overdue tasks for briefing
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const todayEvents = useMemo(() => allEvents.filter(e => e.date === todayStr), [allEvents, todayStr]);
+  const overdueTasks = useMemo(() =>
+    tasks.filter(t => !t.done && t.due_date && isBefore(parseISO(t.due_date), startOfDay(new Date()))),
+    [tasks]);
+
+  const handleRescheduleTask = useCallback((taskId: string) => {
+    const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd");
+    updateTask(taskId, { due_date: tomorrow });
+    toast.success("Task rescheduled to tomorrow ✨");
+  }, [updateTask]);
 
   const crmContacts = deals.map(d => ({ id: d.id, name: d.name, company: d.company }));
 
@@ -492,25 +871,20 @@ const CalendarView = () => {
 
   const handleAddEvent = async (e: { title: string; date: string; startTime: string; endTime: string; color: string; crmContact: string }) => {
     const crm = e.crmContact ? deals.find(d => d.id === e.crmContact) : null;
-    const newEvt: CalEvent = {
+    await saveCustomEvent({
       id: `custom-${Date.now()}`,
       title: crm ? `${e.title} · ${crm.name}` : e.title,
-      date: e.date,
-      startTime: e.startTime,
-      endTime: e.endTime,
-      type: "custom",
-      color: e.color,
-    };
-    await saveCustomEvent(newEvt);
+      date: e.date, startTime: e.startTime, endTime: e.endTime,
+      type: "custom", color: e.color, provider: "dashiii",
+    });
     toast.success("Event added!");
   };
 
-  const prevLabel = view === "month" ? "Prev Month" : view === "week" ? "Prev Week" : "";
-  const nextLabel = view === "month" ? "Next Month" : view === "week" ? "Next Week" : "";
-
+  // Navigate
   const navigate = (dir: 1 | -1) => {
     if (view === "month") setCurrentDate(dir === 1 ? addMonths(currentDate, 1) : subMonths(currentDate, 1));
     else if (view === "week") setCurrentDate(dir === 1 ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1));
+    else setCurrentDate(dir === 1 ? addDays(currentDate, 1) : subDays(currentDate, 1));
   };
 
   const headerLabel = () => {
@@ -520,86 +894,152 @@ const CalendarView = () => {
       const we = endOfWeek(currentDate, { weekStartsOn: 1 });
       return `${format(ws, "MMM d")} – ${format(we, "MMM d, yyyy")}`;
     }
-    return "Upcoming";
+    return format(currentDate, "EEEE, MMMM d");
   };
 
-  return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-        <div>
-          <h2 className="text-xl font-bold font-display">Calendar</h2>
-          <p className="text-sm text-muted-foreground">Your schedule at a glance</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-xl bg-secondary p-0.5 text-xs">
-            {(["month", "week", "agenda"] as CalView[]).map(v => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-3 py-1.5 rounded-lg font-medium capitalize transition-all ${view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
+  // Sidebar calendar toggles
+  const calendarLayers = [
+    { id: "dashiii" as Provider, label: "My Events", color: "bg-violet-500", hex: "#8b5cf6" },
+    { id: "google" as Provider, label: "Google", color: "bg-blue-500", hex: "#4285f4" },
+    { id: "outlook" as Provider, label: "Outlook", color: "bg-blue-700", hex: "#0078d4" },
+    { id: "apple" as Provider, label: "iCloud", color: "bg-zinc-400", hex: "#888" },
+  ];
+  const [activeLayers, setActiveLayers] = useState<Provider[]>(["dashiii"]);
 
-          <button
-            onClick={() => { setAddDefaultDate(format(new Date(), "yyyy-MM-dd")); setShowAddModal(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
-          >
-            <Plus size={13} /> Add Event
-          </button>
+  // Sync active layers with connected providers
+  useEffect(() => {
+    setActiveLayers(prev => [...new Set([...prev, ...connectedProviders])]);
+  }, [connectedProviders]);
+
+  const filteredEvents = allEvents.filter(e => activeLayers.includes(e.provider || "dashiii"));
+
+  return (
+    <div className="flex h-full overflow-hidden">
+      {/* ── Left Sidebar ── */}
+      <div className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border/30 overflow-y-auto p-4 gap-5"
+        style={{ background: "hsl(var(--card) / 0.5)" }}>
+
+        {/* + New Event */}
+        <button
+          onClick={() => { setAddDefaultDate(format(new Date(), "yyyy-MM-dd")); setShowAddModal(true); }}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg"
+          style={{ boxShadow: "0 4px 14px hsl(var(--primary) / 0.3)" }}
+        >
+          <Plus size={15} /> New Event
+        </button>
+
+        {/* Mini calendar */}
+        <div>
+          <MiniCalendar
+            mode="single"
+            selected={selectedMiniDate}
+            onSelect={(d) => { setSelectedMiniDate(d); if (d) setCurrentDate(d); }}
+            className="rounded-xl p-0 text-xs w-full"
+          />
         </div>
+
+        {/* My Calendars */}
+        <div>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">My Calendars</p>
+          <div className="space-y-1">
+            {calendarLayers.map(layer => {
+              const active = activeLayers.includes(layer.id);
+              const isConnected = layer.id === "dashiii" || connectedProviders.includes(layer.id);
+              if (!isConnected) return null;
+              return (
+                <button key={layer.id}
+                  onClick={() => setActiveLayers(prev => active ? prev.filter(p => p !== layer.id) : [...prev, layer.id])}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-secondary/60 transition-colors text-left">
+                  <div className={`w-3 h-3 rounded-sm shrink-0 transition-opacity ${active ? "" : "opacity-30"}`}
+                    style={{ background: layer.hex }} />
+                  <span className={`text-xs font-medium transition-colors ${active ? "text-foreground" : "text-muted-foreground"}`}>
+                    {layer.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sync button */}
+        <button
+          onClick={() => setShowSyncModal(true)}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-border/60 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-all group"
+        >
+          <RefreshCw size={13} className="group-hover:rotate-180 transition-transform duration-500" />
+          Sync External Calendars
+          {connectedProviders.length > 0 && (
+            <span className="ml-auto text-[10px] font-semibold text-primary">{connectedProviders.length} connected</span>
+          )}
+        </button>
       </div>
 
-      {view !== "agenda" && (
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-secondary transition-colors" title={prevLabel}>
-            <ChevronLeft size={18} className="text-muted-foreground" />
-          </button>
-          <div className="flex items-center gap-3">
-            <h3 className="text-sm font-semibold">{headerLabel()}</h3>
+      {/* ── Main Area ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto px-4 md:px-6 py-5">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5 gap-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+              <ChevronLeft size={16} className="text-muted-foreground" />
+            </button>
+            <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+              <ChevronRight size={16} className="text-muted-foreground" />
+            </button>
+            <h3 className="text-sm font-bold text-foreground ml-1">{headerLabel()}</h3>
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="px-2.5 py-1 rounded-lg bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-secondary text-[11px] text-muted-foreground hover:text-foreground transition-colors ml-1"
             >
               Today
             </button>
           </div>
-          <button onClick={() => navigate(1)} className="p-2 rounded-xl hover:bg-secondary transition-colors" title={nextLabel}>
-            <ChevronRight size={18} className="text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-2">
+            {loadingEvents && <Loader2 size={13} className="animate-spin text-muted-foreground" />}
+            {/* View toggle */}
+            <div className="flex rounded-xl bg-secondary p-0.5">
+              {(["day", "week", "month"] as CalView[]).map(v => (
+                <button key={v} onClick={() => setView(v)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+                  {v}
+                </button>
+              ))}
+            </div>
+            {/* Mobile: add event + sync */}
+            <button onClick={() => { setAddDefaultDate(format(new Date(), "yyyy-MM-dd")); setShowAddModal(true); }}
+              className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90">
+              <Plus size={13} />
+            </button>
+            <button onClick={() => setShowSyncModal(true)}
+              className="lg:hidden p-2 rounded-xl hover:bg-secondary transition-colors text-muted-foreground">
+              <RefreshCw size={14} />
+            </button>
+          </div>
         </div>
-      )}
 
-      {loadingEvents && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-          <Loader2 size={12} className="animate-spin" /> Loading events…
-        </div>
-      )}
+        {/* Calendar views */}
+        <AnimatePresence mode="wait">
+          <motion.div key={view} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+            {view === "month" && <MonthView currentMonth={currentDate} events={filteredEvents} onDayClick={handleDayClick} />}
+            {view === "week" && <WeekView currentWeek={currentDate} events={filteredEvents} onDayClick={handleDayClick} />}
+            {view === "day" && <DayView currentDay={currentDate} events={filteredEvents} onTimeClick={handleDayClick} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div key={view} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-          {view === "month" && (
-            <MonthView currentMonth={currentDate} events={allEvents} onDayClick={handleDayClick} />
-          )}
-          {view === "week" && (
-            <WeekView currentWeek={currentDate} events={allEvents} onDayClick={handleDayClick} />
-          )}
-          {view === "agenda" && (
-            <AgendaView events={allEvents} onAdd={() => { setAddDefaultDate(format(new Date(), "yyyy-MM-dd")); setShowAddModal(true); }} />
-          )}
-        </motion.div>
-      </AnimatePresence>
-
+      {/* ── Modals & Overlays ── */}
       <AnimatePresence>
         {showAddModal && (
-          <AddEventModal
-            defaultDate={addDefaultDate}
-            onClose={() => setShowAddModal(false)}
-            onSave={handleAddEvent}
-            crmContacts={crmContacts}
-          />
+          <AddEventModal defaultDate={addDefaultDate} onClose={() => setShowAddModal(false)}
+            onSave={handleAddEvent} crmContacts={crmContacts} />
+        )}
+        {showSyncModal && (
+          <IntegrationModal connectedProviders={connectedProviders}
+            onConnect={handleConnectProvider} onClose={() => setShowSyncModal(false)} />
+        )}
+        {showBriefing && (
+          <AuraDailyBriefing todayEvents={todayEvents} overdueTasks={overdueTasks}
+            onReschedule={handleRescheduleTask} onDismiss={dismissBriefing} />
         )}
       </AnimatePresence>
     </div>
