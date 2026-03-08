@@ -89,6 +89,7 @@ const voteLabels: Record<string, { label: string; score: number }> = {
 const TheCouncil = () => {
   const { user } = useAuth();
   const { filterPersona } = useFlux();
+  const { consumeSparks } = useMonetization();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<"council" | "boardroom" | "analytics">("council");
   const [input, setInput] = useState("");
