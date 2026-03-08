@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { useMonetization } from "@/context/MonetizationContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, BarChart2, Send, Loader2, Share2, X, MessageSquare, TrendingUp, AlertTriangle,
