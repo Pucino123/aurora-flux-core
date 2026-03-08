@@ -718,8 +718,9 @@ const FocusContent = () => {
           }, 300);
         }
       }
-      if (e.key === "Escape" && showMissionControl) {
-        setShowMissionControl(false);
+      if (e.key === "Escape") {
+        if (showMissionControl) setShowMissionControl(false);
+        else if (isFocusModeActive) disableFocusMode();
       }
     };
 
