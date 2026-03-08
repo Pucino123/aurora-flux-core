@@ -764,3 +764,49 @@
   .prose table { border-color: #ccc !important; }
   .prose td, .prose th { border-color: #ccc !important; color: black !important; }
 }
+
+/* ─────────────────────────────────────────────
+   GLOBAL SELECTION GUARD
+   Prevent blue highlight bleed during widget
+   drags while keeping editable zones selectable.
+   ───────────────────────────────────────────── */
+
+/* 1. Structural shell: sidebar, header, canvas, widget chrome */
+#root,
+body > div,
+[data-widget-id],
+[data-canvas-root],
+nav, aside, header,
+.focus-canvas,
+.dashboard-canvas {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 2. Restore selection precisely where users need it */
+input,
+textarea,
+[contenteditable],
+[contenteditable="true"],
+.select-text,
+.prose,
+.document-content,
+.crm-field,
+[data-selectable="true"] {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* 3. Suppress default browser drag ghost on all images/SVGs inside widgets */
+[data-widget-id] img,
+[data-widget-id] svg {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
+/* Re-enable pointer events for interactive SVG icons (buttons) */
+[data-widget-id] button svg,
+[data-widget-id] a svg {
+  pointer-events: auto;
+}
+
