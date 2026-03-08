@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import SEO from "./SEO";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useMonetization } from "@/context/MonetizationContext";

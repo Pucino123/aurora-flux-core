@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Users, LayoutGrid, Zap, X, ArrowRight, ChevronRight, Check } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";

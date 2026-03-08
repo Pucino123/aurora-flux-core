@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, Trash2, Pencil, X, Check, Building2, DollarSign, User, Receipt } from "lucide-react";
 import { useCRM, CRMDeal, Stage } from "@/context/CRMContext";

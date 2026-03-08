@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import SEO from "@/components/SEO";
 import { useFlux } from "@/context/FluxContext";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday,

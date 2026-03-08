@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import SEO from "@/components/SEO";
 import { useFlux } from "@/context/FluxContext";
 import { format, isToday, isTomorrow, isPast, parseISO } from "date-fns";
 import {

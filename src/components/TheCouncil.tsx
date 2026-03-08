@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import SEO from "./SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Loader2, ChevronDown, ChevronUp, Clock, X, Swords, Cpu } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";

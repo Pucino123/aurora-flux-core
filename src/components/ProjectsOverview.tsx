@@ -1,4 +1,5 @@
 import React from "react";
+import SEO from "./SEO";
 import { useFlux } from "@/context/FluxContext";
 import { Folder, CheckCircle2, Circle, Plus } from "lucide-react";
 import { motion } from "framer-motion";

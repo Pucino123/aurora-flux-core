@@ -3,6 +3,7 @@ import ProjectBoard from "./ProjectBoard";
 import FitnessTracker from "./FitnessTracker";
 import InboxView from "./InboxView";
 import { motion } from "framer-motion";
+import SEO from "./SEO";
 
 const FITNESS_TYPES = ["fitness", "health"];
 const FINANCE_TYPES = ["finance"];

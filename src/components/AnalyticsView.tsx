@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback } from "react";
+import SEO from "./SEO";
 import type { LucideIcon } from "lucide-react";
 import { useFlux } from "@/context/FluxContext";
 import { useCRM } from "@/context/CRMContext";
