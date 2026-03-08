@@ -248,6 +248,10 @@ const FocusContent = () => {
       stickyNotes: source.stickyNotes ? source.stickyNotes.map(n => ({ ...n, id: `fn-${Date.now()}-${Math.random().toString(36).slice(2,6)}` })) : undefined,
       background: source.background,
       spaceSettings: source.spaceSettings ? { ...source.spaceSettings } : undefined,
+      folderPositions: source.folderPositions ? { ...source.folderPositions } : undefined,
+      docPositions: source.docPositions ? { ...source.docPositions } : undefined,
+      visibleFolderIds: source.visibleFolderIds ? [...source.visibleFolderIds] : undefined,
+      visibleDocIds: source.visibleDocIds ? [...source.visibleDocIds] : undefined,
     };
     const insertAt = idx + 1;
     setPages(prev => { const next = [...prev]; next.splice(insertAt, 0, newPage); return next; });
@@ -257,14 +261,32 @@ const FocusContent = () => {
     toast.success("Page duplicated");
   }, [dashboardPages, setPages]);
 
-  const deletePage = useCallback((idx: number) => {
+  const deletePage = useCallback((idx: number, skipConfirm = false) => {
     if (dashboardPages.length <= 1) { toast.error("Can't delete the only page"); return; }
+    const pageToDelete = dashboardPages[idx];
+    deletedPageBuffer.current = { page: pageToDelete, idx };
     setPages(prev => prev.filter((_, i) => i !== idx));
     setActivePageIndex(prev => Math.min(prev, dashboardPages.length - 2));
     setDeleteConfirmIdx(null);
     setDotMenu(null);
-    toast.success("Page deleted");
-  }, [dashboardPages.length, setPages]);
+    toast.success(`"${pageToDelete.label || `Page ${idx + 1}`}" deleted`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const buf = deletedPageBuffer.current;
+          if (!buf) return;
+          setPages(prev => {
+            const next = [...prev];
+            next.splice(buf.idx, 0, buf.page);
+            return next;
+          });
+          setActivePageIndex(buf.idx);
+          deletedPageBuffer.current = null;
+          toast.success("Page restored");
+        },
+      },
+    });
+  }, [dashboardPages, setPages]);
 
   const startLabelEdit = useCallback((idx: number) => {
     setEditingLabelIdx(idx);
