@@ -52,6 +52,7 @@ import WindowDock from "@/components/windows/WindowDock";
 import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
 import { useFocusMode } from "@/context/FocusModeContext";
+import { useTrash } from "@/context/TrashContext";
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
