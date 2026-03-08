@@ -363,6 +363,23 @@ const FocusContent = () => {
     } : p));
   }, [activePageIndex, setPages, updateDesktopDocPosition, desktopDocPositions]);
 
+  // ── Move item to a different page ──────────────────────────────────────────
+  const handleMoveToPage = useCallback((itemId: string, type: 'folder' | 'doc', targetPageIndex: number) => {
+    setPages(prev => prev.map((p, i) => {
+      if (i === activePageIndex) {
+        if (type === 'folder') return { ...p, visibleFolderIds: (p.visibleFolderIds ?? []).filter(id => id !== itemId) };
+        return { ...p, visibleDocIds: (p.visibleDocIds ?? []).filter(id => id !== itemId) };
+      }
+      if (i === targetPageIndex) {
+        if (type === 'folder') return { ...p, visibleFolderIds: [...(p.visibleFolderIds ?? []), itemId] };
+        return { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), itemId] };
+      }
+      return p;
+    }));
+    const label = dashboardPages[targetPageIndex]?.label || `Page ${targetPageIndex + 1}`;
+    toast.success(`Moved to "${label}"`);
+  }, [activePageIndex, setPages, dashboardPages]);
+
   // Touch swipe
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
