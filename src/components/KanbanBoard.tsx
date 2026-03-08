@@ -242,7 +242,7 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
                         }}
                         exit={{ opacity: 0, scale: 0.92, y: -6, transition: { duration: 0.2 } }}
                         draggable
-                        onDragStart={e => {
+                        onDragStart={(e: React.DragEvent) => {
                           handleDragStart(task.id);
                           e.dataTransfer.effectAllowed = "move";
                         }}
