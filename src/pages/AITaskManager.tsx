@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import SEO from "@/components/SEO";
 import { useFlux } from "@/context/FluxContext";
+import { useTrash } from "@/context/TrashContext";
 import { format, isToday, isTomorrow, isPast, parseISO } from "date-fns";
 import {
   Check, Plus, Trash2, ArrowUpRight, Sparkles, Loader2,
