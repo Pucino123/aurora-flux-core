@@ -197,8 +197,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       {/* Focus Mode Control Bar — global, visible on all views */}
       <FocusControlBar />
 
-      {/* CommHub floating chat — hidden on focus dashboard, during focus mode, and on Ideapad */}
-      {effectiveView !== "focus" && !isFocusModeActive && (effectiveView as string) !== "thinkpad" && <CommHub />}
+      {/* CommHub floating chat — hidden on focus dashboard, during focus mode, Ideapad and Inbox */}
+      {effectiveView !== "focus" && !isFocusModeActive && (effectiveView as string) !== "thinkpad" && (effectiveView as string) !== "inbox" && <CommHub />}
 
       {/* Control Center */}
       <ControlCenter open={controlCenterOpen} onClose={() => setControlCenterOpen(false)} />
