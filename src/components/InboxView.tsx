@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useFlux } from "@/context/FluxContext";
+import { useTrash } from "@/context/TrashContext";
 import { Check, Trash2, AlertTriangle, Calendar, ListTodo, Mail, MessageSquare, Search, Plus, Reply, Forward, Archive, Users, MailPlus, Send, Users2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
