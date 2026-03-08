@@ -22,6 +22,9 @@ const FitnessTracker = ({ folderId }: FitnessTrackerProps) => {
   const [editEnergy, setEditEnergy] = useState(5);
   const [editActivity, setEditActivity] = useState("");
   const [editMood, setEditMood] = useState("");
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const heatmapRef = useRef<HTMLDivElement>(null);
   const folder = findFolderNode(folderId);
 
   const stats = useMemo(() => {
