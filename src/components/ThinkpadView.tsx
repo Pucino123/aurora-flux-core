@@ -541,7 +541,7 @@ const TabBar = ({
 /* ─── Main view ─── */
 const IdeapadView = () => {
   const STORAGE_KEY = "ideapad_tracks";
-  const { theme, setTheme } = useTheme();
+  const [pageLight, setPageLight] = useState(false);
 
   const loadTracks = (): IdeaTrack[] => {
     try {

@@ -34,7 +34,7 @@ interface KanbanBoardProps {
 const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
   const { tasks: allTasks, createTask, updateTask, removeTask } = useFlux();
   const { moveToTrash } = useTrash();
-  const { theme, setTheme } = useTheme();
+  const [pageLight, setPageLight] = useState(false);
   const tasks = propTasks || allTasks;
 
   const [newTaskCol, setNewTaskCol]       = useState<string | null>(null);
