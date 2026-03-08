@@ -98,7 +98,7 @@ const Auth = () => {
 
       {/* Logo */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="fixed top-6 left-1/2 -translate-x-1/2 z-50">
-        <span className="text-2xl font-bold text-white drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>Flux</span>
+        <span className="text-2xl font-bold text-white drop-shadow-lg" style={{ fontFamily: "Georgia, serif" }}>Dashiii</span>
       </motion.div>
 
       {/* Dark mode toggle */}
