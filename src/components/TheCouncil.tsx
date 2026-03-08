@@ -857,7 +857,8 @@ const TheCouncil = () => {
             </AnimatePresence>
           </div>
         )}
-        </>
+          </>
+        )}
       </div>
 
       {/* Persona Profile Modal */}
@@ -868,4 +869,5 @@ const TheCouncil = () => {
   );
 };
 
+export default TheCouncil;
 export default TheCouncil;
