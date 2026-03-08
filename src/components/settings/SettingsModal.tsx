@@ -97,16 +97,15 @@ const LS_INTEGRATIONS = "flux_connected_integrations";
 const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
   const { user, signOut } = useAuth();
   const { sparksBalance, userPlan, setUserPlan } = useMonetization();
+  const { avatarUrl, uploadAvatar, uploading } = useAvatar();
   const { theme, setTheme } = useTheme();
   const [tab, setTab] = useState<Tab>("account");
   const [connectedProviders, setConnectedProviders] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(LS_INTEGRATIONS) || "[]"); } catch { return []; }
   });
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [savingName, setSavingName] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [sparksCheckoutOpen, setSparksCheckoutOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -115,11 +114,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
 
   useEffect(() => {
     if (!user || !open) return;
-    supabase.from("profiles").select("avatar_url, display_name").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data) {
-        if ((data as any).avatar_url) setAvatarUrl((data as any).avatar_url);
-        setDisplayName((data as any).display_name || name);
-      }
+    supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (data) setDisplayName((data as any).display_name || name);
     });
   }, [user, open]);
 
@@ -138,23 +134,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/avatar.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("document-images")
-      .upload(path, file, { upsert: true });
-    if (uploadError) {
-      toast.error("Upload failed: " + uploadError.message);
-      setUploading(false);
-      return;
-    }
-    const { data: { publicUrl } } = supabase.storage.from("document-images").getPublicUrl(path);
-    await supabase.from("profiles").update({ avatar_url: publicUrl } as any).eq("id", user.id);
-    setAvatarUrl(publicUrl + "?t=" + Date.now());
+    if (!file) return;
+    await uploadAvatar(file);
     toast.success("Profile picture updated!");
-    setUploading(false);
   };
 
   const handleConnect = async (id: string) => {
