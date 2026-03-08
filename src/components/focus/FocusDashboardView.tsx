@@ -104,7 +104,17 @@ const FocusContent = () => {
       const raw = localStorage.getItem("flux-dashboard-pages");
       if (raw) {
         const parsed = JSON.parse(raw);
-        return parsed.map((p: any) => ({ id: p.id, label: p.label || "Home", activeWidgets: p.activeWidgets }));
+        return parsed.map((p: any) => ({
+          id: p.id, label: p.label || "Home",
+          activeWidgets: p.activeWidgets,
+          stickyNotes: p.stickyNotes,
+          background: p.background,
+          spaceSettings: p.spaceSettings,
+          folderPositions: p.folderPositions,
+          docPositions: p.docPositions,
+          visibleFolderIds: p.visibleFolderIds,
+          visibleDocIds: p.visibleDocIds,
+        }));
       }
     } catch {}
     return [{ id: "page-1", label: "Home" }];
@@ -144,6 +154,10 @@ const FocusContent = () => {
   const [showShortcuts, setShowShortcuts] = useState(false);
   // Deleted page undo buffer
   const deletedPageBuffer = useRef<{ page: DashboardPage; idx: number } | null>(null);
+  // Mission Control overlay (hold arrow key 300ms)
+  const [showMissionControl, setShowMissionControl] = useState(false);
+  const arrowHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const arrowHoldKey = useRef<string | null>(null);
 
   // Persist pages locally
   useEffect(() => {
