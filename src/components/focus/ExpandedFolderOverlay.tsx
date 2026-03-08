@@ -11,6 +11,7 @@ import { FOLDER_ICONS } from "@/components/CreateFolderModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import TemplateChooserModal from "./TemplateChooserModal";
 
 interface ExpandedFolderOverlayProps {
   folderId: string;
