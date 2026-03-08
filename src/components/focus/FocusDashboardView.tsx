@@ -41,7 +41,6 @@ import {
   FocusTopTasksWidget,
   FocusSmartPlanWidget,
   FocusGamificationWidget,
-  FocusChatWidget,
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
