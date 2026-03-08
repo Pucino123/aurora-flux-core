@@ -65,14 +65,9 @@ const AskAura = () => {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: `You are Aura, an AI executive assistant embedded in a personal productivity OS called Flux. You have full context of the user's workspace. Be concise, actionable, and warm. Workspace context: ${workspaceContext()}`,
-            },
-            ...nextMessages,
-          ],
-          stream: false,
+          type: "aura",
+          messages: nextMessages,
+          context: workspaceContext(),
         }),
       });
 
