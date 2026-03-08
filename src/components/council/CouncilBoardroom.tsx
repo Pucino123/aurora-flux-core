@@ -1401,7 +1401,6 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                 </p>
               </div>
             </div>
-             </div>
             <div className="flex items-center gap-2 shrink-0">
               {!user && (
                 <a
