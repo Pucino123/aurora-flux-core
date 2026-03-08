@@ -196,6 +196,84 @@ function MilestoneBadges({ pct, goalId }: { pct: number; goalId: string }) {
   );
 }
 
+// ── Full-screen goal celebration overlay ──────────────────────────────────
+function GoalCelebrationOverlay({ goal, onDone }: { goal: SavingsGoal; onDone: () => void }) {
+  const COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#f59e0b", "#f472b6", "#fb923c"];
+  const pieces = Array.from({ length: 60 }, (_, i) => ({
+    id: i,
+    color: COLORS[i % COLORS.length],
+    x: (Math.random() - 0.5) * (window.innerWidth * 0.9),
+    y: -(Math.random() * window.innerHeight * 0.8 + 100),
+    rotate: Math.random() * 1080 - 540,
+    size: 5 + Math.random() * 7,
+    delay: Math.random() * 0.3,
+  }));
+
+  useEffect(() => {
+    const t = setTimeout(onDone, 3200);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return createPortal(
+    <motion.div
+      className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      {/* Dark backdrop */}
+      <motion.div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      />
+      {/* Confetti */}
+      <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
+        {pieces.map(p => (
+          <motion.div
+            key={p.id}
+            className="absolute rounded-sm"
+            style={{ width: p.size, height: p.size, background: p.color, top: "50%", left: "50%" }}
+            initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
+            animate={{ x: p.x, y: p.y, opacity: 0, rotate: p.rotate }}
+            transition={{ duration: 1.4 + Math.random() * 0.6, delay: p.delay, ease: "easeOut" }}
+          />
+        ))}
+      </div>
+      {/* Card */}
+      <motion.div
+        className="relative z-10 flex flex-col items-center gap-4 text-center px-8"
+        initial={{ scale: 0.6, opacity: 0, y: 30 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.8, opacity: 0, y: -20 }}
+        transition={{ type: "spring", stiffness: 280, damping: 22, delay: 0.1 }}
+      >
+        <motion.span
+          className="text-7xl leading-none"
+          animate={{ rotate: [0, -15, 15, -10, 10, 0], scale: [1, 1.2, 1] }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+        >
+          {goal.emoji}
+        </motion.span>
+        <div>
+          <p className="text-3xl font-bold text-white mb-1">Goal Achieved!</p>
+          <p className="text-white/60 text-base">{goal.name}</p>
+        </div>
+        <motion.div
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-400/20 border border-emerald-400/30 text-emerald-300 font-semibold text-sm"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", delay: 0.5 }}
+        >
+          🏆 100% Complete
+        </motion.div>
+      </motion.div>
+    </motion.div>,
+    document.body
+  );
+}
+
 // ── Main widget ─────────────────────────────────────────────────────────────
 const SavingsWidget = () => {
   const { user } = useAuth();
