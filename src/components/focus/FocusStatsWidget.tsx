@@ -79,6 +79,33 @@ function computeStreak(dailyLog: Record<string, number>): number {
   return streak;
 }
 
+// Lightweight CSS confetti — no external library needed
+function ConfettiBurst() {
+  const COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#f59e0b", "#f472b6"];
+  const pieces = Array.from({ length: 24 }, (_, i) => ({
+    id: i,
+    color: COLORS[i % COLORS.length],
+    x: (Math.random() - 0.5) * 160,
+    y: -(40 + Math.random() * 80),
+    rotate: Math.random() * 720,
+    size: 4 + Math.random() * 5,
+  }));
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden z-10">
+      {pieces.map(p => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-sm"
+          style={{ width: p.size, height: p.size, background: p.color, top: "50%", left: "50%" }}
+          initial={{ x: 0, y: 0, opacity: 1, rotate: 0, scale: 1 }}
+          animate={{ x: p.x, y: p.y, opacity: 0, rotate: p.rotate, scale: 0.4 }}
+          transition={{ duration: 0.9 + Math.random() * 0.4, ease: "easeOut" }}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 const FocusStatsWidget = () => {
   const { user } = useAuth();
@@ -86,6 +113,8 @@ const FocusStatsWidget = () => {
   const [timerSecs, setTimerSecs] = useState(POMODORO_SECS);
   const [timerRunning, setTimerRunning] = useState(false);
   const [ringAnim, setRingAnim] = useState(false);
+  const [goalReached, setGoalReached] = useState(false);
+  const prevDailyPctRef = useRef(0);
 
   // DB-driven state
   const [dailyLog, setDailyLog] = useState<Record<string, number>>({});
