@@ -745,7 +745,7 @@ const FocusContent = () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage, showMissionControl]);
+  }, [activePageIndex, dashboardPages.length, goToPage, setPages, deletePage, showMissionControl, isFocusModeActive, disableFocusMode]);
 
   // Dot drag-to-reorder handlers
   const handleDotDragStart = useCallback((i: number) => {
