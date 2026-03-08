@@ -1101,6 +1101,46 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     toast("New session started — advisor personalities reset to defaults.", { duration: 2500 });
   }, []);
 
+  // ── Notion Export ──
+  const handleSendToNotion = useCallback(async () => {
+    if (!allRevealed || isSendingNotion) return;
+    setIsSendingNotion(true);
+    try {
+      const consensus = getConsensusLabel();
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/notion-export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_KEY}` },
+        body: JSON.stringify({
+          idea: idea || "Your Idea",
+          avgConsensus: avgRing,
+          consensusLabel: consensus.label,
+          date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+          personas: PERSONAS.filter(p => responses[p.key]).map(p => ({
+            key: p.key, name: p.name, title: p.title,
+            analysis: responses[p.key]!.analysis,
+            question: responses[p.key]!.question,
+            confidence: responses[p.key]!.confidence,
+          })),
+          actionPlan,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || data.error) throw new Error(data.error || "Failed");
+      toast.success("Sent to Notion!", { description: "Page created in your Notion workspace." });
+      if (data.url) window.open(data.url, "_blank");
+    } catch (e: any) {
+      const msg = e?.message || "";
+      if (msg.includes("NOTION_API_KEY")) {
+        toast.error("Notion not configured", { description: "Add your NOTION_API_KEY in project secrets to enable this feature." });
+      } else if (msg.includes("No accessible")) {
+        toast.error("No pages found", { description: "Share at least one Notion page with your integration." });
+      } else {
+        toast.error("Notion export failed", { description: msg });
+      }
+    }
+    setIsSendingNotion(false);
+  }, [allRevealed, isSendingNotion, idea, avgRing, responses, actionPlan]);
+
   // ── PDF Export — styled summary card using jsPDF ──
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const handleExportPDF = useCallback(async () => {
