@@ -984,7 +984,7 @@ const CalendarView = () => {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex h-full overflow-hidden">
+      <div className={`flex h-full overflow-hidden ${pageLight ? "page-light" : ""}`}>
         {/* ── Left Sidebar ── */}
         <div className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border/30 overflow-y-auto p-4 gap-5"
           style={{ background: "hsl(var(--card) / 0.5)" }}>
