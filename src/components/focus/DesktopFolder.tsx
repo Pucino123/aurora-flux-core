@@ -141,11 +141,25 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
       _updatePos(folder.id, { x: nx, y: ny });
       onDragStateChange?.({ id: folder.id, x: e.clientX, y: e.clientY });
     };
+    const onUp = () => {
+      dragging.current = false;
+      setSelected(false);
+      onDragStateChange?.(null);
+    };
+    window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
   }, [folder.id, _updatePos, onDragStateChange]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (isMarqueeSelected && onBulkContextMenu) { onBulkContextMenu(e); return; }
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleDuplicate = async () => {
+    setContextMenu(null);
+    const newFolder = await createFolder({ parent_id: folder.parent_id, title: `${folder.title} (copy)`, type: folder.type, color: folder.color ?? undefined, icon: folder.icon ?? undefined });
     if (newFolder) {
       const srcPos = desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };
       _updatePos(newFolder.id, { x: srcPos.x + 30, y: srcPos.y + 30 });
@@ -153,6 +167,19 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
       if (titleSize !== 11) updateDesktopFolderTitleSize(newFolder.id, titleSize);
       toast.success("Folder duplicated");
     }
+  };
+
+  const commitRename = () => {
+    if (renamingValue.trim()) {
+      updateFolder(folder.id, { title: renamingValue.trim() });
+    }
+    setRenaming(false);
+  };
+
+  const handleDelete = async () => {
+    setContextMenu(null);
+    await removeFolder(folder.id);
+    toast.success("Folder deleted");
   };
 
   const handleMoveTo = async (targetParentId: string | null) => {
