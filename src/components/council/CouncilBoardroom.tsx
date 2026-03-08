@@ -202,11 +202,11 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
   };
 
   // Bold key terms in text
-  const renderBoldTerms = (text: string) => {
+  const renderBoldTerms = (text: string): React.ReactNode[] => {
     const terms = ["insurance", "depreciation", "brand", "positioning", "market", "eco", "revenue", "burn rate", "churn", "moat", "unit economics", "row 14", "LTV"];
-    let parts = [text];
+    let parts: React.ReactNode[] = [text];
     terms.forEach(term => {
-      parts = parts.flatMap(part => {
+      parts = parts.flatMap((part) => {
         if (typeof part !== "string") return [part];
         const regex = new RegExp(`(${term})`, "gi");
         const split = part.split(regex);
