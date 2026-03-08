@@ -273,6 +273,7 @@ interface ToolDrawerProps {
 
 const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps = {}) => {
   const { activeWidgets, toggleWidget, systemMode, setSystemMode, resetDashboard } = useFocusStore();
+  const { openWindow } = useWindowManager();
 
   const effectiveWidgets = pageActiveWidgets ?? activeWidgets;
   const effectiveToggle = (id: string) => {
