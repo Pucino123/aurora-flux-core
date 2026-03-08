@@ -62,14 +62,26 @@ const BuildModeGrid = () => (
   </div>
 );
 
-type DashboardPage = { id: string; label: string; activeWidgets?: string[] };
+type StickyNote = { id: string; text: string; color: string; x: number; y: number; rotation: number; opacity: number };
+type DashboardPage = {
+  id: string;
+  label: string;
+  activeWidgets?: string[];
+  stickyNotes?: StickyNote[];
+  background?: string; // override global bg
+};
 
-// Pagination settings persisted in FocusContext state-adjacent localStorage key
+// Pagination settings persisted per-session
 const PAGINATION_SETTINGS_KEY = "flux-pagination-settings";
-interface PaginationSettings { showLabel: boolean; pillOpacity: number; }
+interface PaginationSettings {
+  showLabel: boolean;
+  pillOpacity: number;
+  showPagination: boolean;
+  pillPosition: { x: number; y: number } | null; // null = default centered
+}
 function loadPaginationSettings(): PaginationSettings {
-  try { const r = localStorage.getItem(PAGINATION_SETTINGS_KEY); if (r) return JSON.parse(r); } catch {}
-  return { showLabel: true, pillOpacity: 82 };
+  try { const r = localStorage.getItem(PAGINATION_SETTINGS_KEY); if (r) return { showLabel: true, pillOpacity: 82, showPagination: true, pillPosition: null, ...JSON.parse(r) }; } catch {}
+  return { showLabel: true, pillOpacity: 82, showPagination: true, pillPosition: null };
 }
 
 const FocusContent = () => {
