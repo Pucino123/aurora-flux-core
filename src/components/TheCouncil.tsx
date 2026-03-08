@@ -303,9 +303,13 @@ const TheCouncil = () => {
                 <BoardroomIdeasHistory
                   userId={user.id}
                   onRestoreIdea={(idea) => {
-                    // Switch to council tab and load the idea
-                    setActiveTab("council");
-                    loadIdea(idea.id);
+                    // Use the global restore bridge exposed by CouncilBoardroom
+                    const restore = (window as any).__boardroomRestore;
+                    if (typeof restore === "function") {
+                      restore(idea);
+                      // Scroll to top so restored cards are visible
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
                   }}
                 />
               </div>
