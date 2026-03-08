@@ -470,21 +470,51 @@ const GridDashboard = () => {
 
       {/* ─── Pagination Dots + Add Page ─── */}
       <div className="flex items-center justify-center gap-2 mt-5 pb-2" data-tour="pagination-dots">
-        <div className="flex items-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-sm" style={{ background: "hsl(var(--card)/0.6)", border: "1px solid hsl(var(--border)/0.4)" }}>
-          {pages.map((_, idx) => (
+        <div
+          className="flex items-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-sm"
+          style={{ background: "hsl(var(--card)/0.6)", border: "1px solid hsl(var(--border)/0.4)" }}
+        >
+          {pages.map((p, idx) => (
             <button
               key={idx}
               onClick={() => goToPage(idx, idx > currentPage ? 1 : -1)}
-              onDragOver={() => {
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                setHoverDotIdx(idx);
                 if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
                 hoverDotTimer.current = setTimeout(() => goToPage(idx, idx > currentPage ? 1 : -1), 500);
               }}
-              onDragLeave={() => { if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current); }}
+              onDragLeave={() => {
+                setHoverDotIdx(null);
+                if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setHoverDotIdx(null);
+                if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
+                const wId = e.dataTransfer.getData("application/flux-widget");
+                const fromPId = e.dataTransfer.getData("application/flux-from-page");
+                if (!wId || !fromPId || fromPId === p.id) return;
+                // Move widget: remove from source page, add to target page
+                const next = pages.map((pg) => {
+                  if (pg.id === fromPId) return { ...pg, widgets: pg.widgets.filter(w => w !== wId) };
+                  if (pg.id === p.id) return { ...pg, widgets: [...pg.widgets.filter(w => w !== wId), wId] };
+                  return pg;
+                });
+                updatePages(next);
+                goToPage(idx, idx > currentPage ? 1 : -1);
+                toast.success(`Moved widget to ${p.name}`);
+                setDraggingWidgetId(null);
+                setDraggingFromPageId(null);
+              }}
               aria-label={`Go to page ${idx + 1}`}
               className={`transition-all duration-300 rounded-full ${
                 idx === currentPage
                   ? "w-5 h-2 bg-primary"
-                  : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
+                  : hoverDotIdx === idx && draggingWidgetId
+                    ? "w-4 h-3 bg-primary/60 scale-125"
+                    : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
               }`}
             />
           ))}
@@ -497,6 +527,20 @@ const GridDashboard = () => {
           <Plus size={14} />
         </button>
       </div>
+
+      {/* ─── Drag hint bar ─── */}
+      <AnimatePresence>
+        {draggingWidgetId && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium shadow-lg"
+            style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
+          >
+            <GripHorizontal size={12} />
+            Hover a page dot for 0.5s to move here
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
