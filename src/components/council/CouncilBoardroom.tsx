@@ -1019,9 +1019,6 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     stopFloatingEmojis();
   }, [startFloatingEmojis, stopFloatingEmojis]);
 
-  // Replay mode state
-  const [isReplaying, setIsReplaying] = useState(false);
-
   // Restore a previously saved boardroom session
   const handleRestore = useCallback((savedIdea: RestorableBoardroomIdea, replay = false) => {
     setIdea(savedIdea.content);
