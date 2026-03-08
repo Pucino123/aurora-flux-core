@@ -158,6 +158,10 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
       dragging.current = false;
       setSelected(false);
       onDragStateChange?.(null);
+      if (didDrag.current) {
+        setDropBounce(true);
+        setTimeout(() => setDropBounce(false), 500);
+      }
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
