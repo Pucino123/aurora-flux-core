@@ -68,15 +68,25 @@ const FocusContent = () => {
   const { user } = useAuth();
 
   // iOS-style dashboard pages state
-  const [dashboardPages, setDashboardPages] = useState<{ id: string }[]>(() => {
+  type DashboardPage = { id: string; label: string; activeWidgets?: string[] };
+  const [dashboardPages, setDashboardPages] = useState<DashboardPage[]>(() => {
     try {
       const raw = localStorage.getItem("flux-dashboard-pages");
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Migrate old format (just {id}) to new format
+        return parsed.map((p: any) => ({ id: p.id, label: p.label || "Home", activeWidgets: p.activeWidgets }));
+      }
     } catch {}
-    return [{ id: "page-1" }];
+    return [{ id: "page-1", label: "Home" }];
   });
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [pageDir, setPageDir] = useState<1 | -1>(1);
+  const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
+  const [editingLabelValue, setEditingLabelValue] = useState("");
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  // Touch swipe state
+  const touchStartX = useRef<number | null>(null);
 
   // Persist pages
   useEffect(() => {
@@ -89,7 +99,7 @@ const FocusContent = () => {
   }, [activePageIndex]);
 
   const addPage = useCallback(() => {
-    const newPage = { id: `page-${Date.now()}` };
+    const newPage: DashboardPage = { id: `page-${Date.now()}`, label: `Page ${dashboardPages.length + 1}` };
     setDashboardPages(prev => {
       const next = [...prev, newPage];
       localStorage.setItem("flux-dashboard-pages", JSON.stringify(next));
@@ -98,6 +108,41 @@ const FocusContent = () => {
     setPageDir(1);
     setActivePageIndex(dashboardPages.length);
   }, [dashboardPages.length]);
+
+  const startLabelEdit = useCallback((idx: number) => {
+    setEditingLabelIdx(idx);
+    setEditingLabelValue(dashboardPages[idx]?.label || "");
+    setTimeout(() => labelInputRef.current?.select(), 50);
+  }, [dashboardPages]);
+
+  const commitLabelEdit = useCallback(() => {
+    if (editingLabelIdx === null) return;
+    const trimmed = editingLabelValue.trim() || dashboardPages[editingLabelIdx]?.label || "Page";
+    setDashboardPages(prev => prev.map((p, i) => i === editingLabelIdx ? { ...p, label: trimmed } : p));
+    setEditingLabelIdx(null);
+  }, [editingLabelIdx, editingLabelValue, dashboardPages]);
+
+  // Per-page active widgets — current page overrides global if set
+  const currentPage = dashboardPages[activePageIndex];
+  const pageActiveWidgets: string[] = currentPage?.activeWidgets ?? activeWidgets;
+
+  const updatePageWidgets = useCallback((widgets: string[]) => {
+    setDashboardPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, activeWidgets: widgets } : p));
+  }, [activePageIndex]);
+
+  // Touch swipe handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) < 50) return;
+    if (dx < 0 && activePageIndex < dashboardPages.length - 1) goToPage(activePageIndex + 1);
+    if (dx > 0 && activePageIndex > 0) goToPage(activePageIndex - 1);
+  }, [activePageIndex, dashboardPages.length, goToPage]);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
