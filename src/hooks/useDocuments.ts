@@ -81,11 +81,12 @@ export function useDocuments(folderId?: string | null, onMoveToTrash?: MoveToTra
   }, [fetchDocuments]);
 
   const createDocument = useCallback(
-    async (title: string, type: "text" | "spreadsheet", folder_id?: string | null) => {
-      const defaultContent =
+    async (title: string, type: "text" | "spreadsheet", folder_id?: string | null, initialContent?: any) => {
+      const defaultContent = initialContent || (
         type === "text"
           ? { html: "" }
-          : { rows: Array.from({ length: 10 }, () => Array(5).fill("")) };
+          : { rows: Array.from({ length: 10 }, () => Array(5).fill("")) }
+      );
 
       const localId = crypto.randomUUID();
       const localUserId = user?.id || "local";
