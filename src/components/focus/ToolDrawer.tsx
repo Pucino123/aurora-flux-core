@@ -460,6 +460,16 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
         <AnimatePresence initial={false}>
           {minimizedWindows.map(win => {
             const WinIcon = win.type === "document" ? FileText : AppWindow;
+            const iconColor = win.type === "document" ? hexToRgba("#7dd3fc", 0.85) : hexToRgba("#a78bfa", 0.85);
+            const lastActive = win.lastActiveAt ? (() => {
+              const diff = Date.now() - new Date(win.lastActiveAt).getTime();
+              const mins = Math.floor(diff / 60000);
+              if (mins < 1) return "just now";
+              if (mins < 60) return `${mins}m ago`;
+              const hrs = Math.floor(mins / 60);
+              if (hrs < 24) return `${hrs}h ago`;
+              return `${Math.floor(hrs / 24)}d ago`;
+            })() : "just now";
             return (
               <motion.div
                 key={win.id}
@@ -470,9 +480,24 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
                 className="relative shrink-0 group"
                 onPointerDown={e => e.stopPropagation()}
               >
+                {/* Frosted tooltip — appears on hover above the chip */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-2 rounded-xl pointer-events-none z-[10300] opacity-0 group-hover:opacity-100 transition-opacity duration-150 min-w-[130px] max-w-[200px]"
+                  style={{ background: "rgba(10,8,22,0.82)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.13)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <WinIcon size={10} style={{ color: iconColor, flexShrink: 0 }} />
+                    <span className="text-[11px] font-semibold text-white truncate">{win.title}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[9px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>{win.type}</span>
+                    <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.3)" }}>{lastActive}</span>
+                  </div>
+                  <span className="text-[9px] block mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>Click to restore</span>
+                  {/* Arrow */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent" style={{ borderTopColor: "rgba(255,255,255,0.1)" }} />
+                </div>
+
                 <button
                   onClick={() => restoreWindow(win.id)}
-                  title={`Restore: ${win.title}`}
                   className="flex items-center gap-1.5 pl-2 pr-2 py-1.5 rounded-full text-[10px] font-medium transition-all hover:bg-white/10 max-w-[110px]"
                   style={{
                     color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.65),
@@ -480,10 +505,11 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
                     border: `1px solid ${hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.18)}`,
                   }}
                 >
-                  <WinIcon size={11} className="shrink-0" style={{ color: win.type === "document" ? hexToRgba("#7dd3fc", 0.8) : hexToRgba("#a78bfa", 0.8) }} />
+                  <WinIcon size={11} className="shrink-0" style={{ color: iconColor }} />
                   <span className="truncate hidden sm:inline">{win.title}</span>
                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", 0.28) }} />
                 </button>
+
                 {/* X close button — appears on hover */}
                 <button
                   onClick={() => closeWindow(win.id)}
