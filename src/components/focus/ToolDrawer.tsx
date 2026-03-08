@@ -579,7 +579,9 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
         >
           <ChevronUp size={14} className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
           <span className="hidden sm:inline">Tools</span>
-          <span className="text-[10px] tabular-nums" style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.3) }}>{effectiveWidgets.length}</span>
+          {effectiveWidgets.length > 0 && (
+            <span className="text-[10px] tabular-nums" style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.3) }}>{effectiveWidgets.length}</span>
+          )}
         </motion.button>
 
         {/* Style button — build mode only */}
