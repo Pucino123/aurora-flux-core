@@ -309,6 +309,17 @@ const IdeaCanvas = ({
             <ZoomOut size={15} />
           </motion.button>
 
+          {/* Fit to view / home */}
+          <motion.button
+            onClick={() => fitView({ duration: 500, padding: 0.15 })}
+            whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
+            title="Fit all nodes in view"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+          >
+            <Maximize2 size={14} />
+          </motion.button>
+
           <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
 
           {/* Mark / bookmark */}
