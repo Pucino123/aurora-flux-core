@@ -1876,8 +1876,8 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       </AnimatePresence>
     </div>
   );
-};
-      {/* Ambient orbs — Council atmosphere */}
+
+export default CouncilBoardroom;
       <div className="pointer-events-none absolute inset-0 overflow-hidden -z-0">
         <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full opacity-[0.07]"
           style={{ background: "radial-gradient(circle, #34d399, transparent 70%)" }} />
