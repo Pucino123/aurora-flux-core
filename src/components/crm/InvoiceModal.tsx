@@ -284,8 +284,8 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                           <Building2 size={14} className="text-white" />
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900 text-base leading-none">{PAYMENT_PROFILE.companyName}</p>
-                          <p className="text-[10px] text-gray-400">{PAYMENT_PROFILE.email}</p>
+                          <p className="font-bold text-gray-900 text-base leading-none">{profile.companyName}</p>
+                          <p className="text-[10px] text-gray-400">{profile.email}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -298,8 +298,8 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                     <div className="grid grid-cols-2 gap-4 mb-6 text-[11px]">
                       <div>
                         <p className="text-gray-400 uppercase tracking-wide font-semibold mb-1">From</p>
-                        <p className="font-semibold text-gray-900">{PAYMENT_PROFILE.companyName}</p>
-                        <p className="text-gray-500">{PAYMENT_PROFILE.email}</p>
+                        <p className="font-semibold text-gray-900">{profile.companyName}</p>
+                        <p className="text-gray-500">{profile.email}</p>
                       </div>
                       <div>
                         <p className="text-gray-400 uppercase tracking-wide font-semibold mb-1">Billed To</p>
@@ -339,15 +339,15 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                         <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Payment Details</p>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
                           <span className="text-gray-400">Bank</span>
-                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.bankName}</span>
+                          <span className="text-gray-700 font-medium">{profile.bankName}</span>
                           <span className="text-gray-400">Reg / Account</span>
-                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.regNumber} – {PAYMENT_PROFILE.accountNumber}</span>
+                          <span className="text-gray-700 font-medium">{profile.regNumber} – {profile.accountNumber}</span>
                           <span className="text-gray-400">IBAN</span>
-                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.iban}</span>
+                          <span className="text-gray-700 font-medium">{profile.iban}</span>
                           <span className="text-gray-400">SWIFT</span>
-                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.swift}</span>
+                          <span className="text-gray-700 font-medium">{profile.swift}</span>
                         </div>
-                        <p className="text-[9px] text-gray-400 italic mt-2">Please pay within {PAYMENT_PROFILE.paymentTerms} days of invoice date.</p>
+                        <p className="text-[9px] text-gray-400 italic mt-2">Please pay within {profile.paymentTerms} days of invoice date.</p>
                       </div>
                     )}
 
@@ -361,6 +361,12 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
           </motion.div>
         </>
       )}
+      {/* Bank settings panel */}
+      <AnimatePresence>
+        {showBankSettings && (
+          <BankInfoPanel profile={profile} onSave={setProfile} onClose={() => setShowBankSettings(false)} />
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 };
