@@ -264,6 +264,103 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         </motion.div>
       </section>
 
+
+      {/* ── Bento Box Feature Grid ── */}
+      <section className="relative z-10 px-4 md:px-6 pb-20">
+        <motion.h2 initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="text-3xl md:text-4xl font-bold text-white text-center mb-10" style={{ fontFamily: "Georgia, serif" }}>
+          Everything you need, unified.
+        </motion.h2>
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]">
+          {/* Large: The Council */}
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0 }}
+            className="col-span-2 row-span-2 rounded-3xl p-7 flex flex-col justify-between overflow-hidden relative"
+            style={{ background: isDark ? "rgba(20,20,30,0.65)" : "rgba(255,255,255,0.15)", backdropFilter: "blur(24px)", border: isDark ? "1.5px solid rgba(255,255,255,0.10)" : "1.5px solid rgba(255,255,255,0.25)" }}>
+            <div className="flex gap-3 mb-4">
+              {["🔵","🟣","🔴","🟡"].map((e, i) => (
+                <div key={i} className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl" style={{ background: "rgba(255,255,255,0.12)" }}>{e}</div>
+              ))}
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-white mb-2">Meet The Council.</h3>
+              <p className="text-sm" style={{ color: isDark ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.75)" }}>Don't make decisions alone. Get instant, multi-perspective feedback on your ideas.</p>
+            </div>
+          </motion.div>
+          {/* Split-View */}
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
+            className="col-span-2 rounded-3xl p-5 flex flex-col justify-between"
+            style={{ background: isDark ? "rgba(20,20,30,0.55)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", border: isDark ? "1.5px solid rgba(255,255,255,0.08)" : "1.5px solid rgba(255,255,255,0.22)" }}>
+            <div className="flex gap-2 mb-3 flex-1">
+              <div className="flex-1 rounded-xl bg-white/10 flex items-center justify-center text-xs text-white/60">Doc A</div>
+              <div className="w-px bg-white/20" />
+              <div className="flex-1 rounded-xl bg-white/10 flex items-center justify-center text-xs text-white/60">Doc B</div>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">True Multitasking.</h3>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Drag and snap documents side-by-side in our native iPadOS-style workspace.</p>
+            </div>
+          </motion.div>
+          {/* iOS Dashboard */}
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.15 }}
+            className="col-span-1 rounded-3xl p-5 flex flex-col justify-between"
+            style={{ background: isDark ? "rgba(20,20,30,0.55)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", border: isDark ? "1.5px solid rgba(255,255,255,0.08)" : "1.5px solid rgba(255,255,255,0.22)" }}>
+            <div className="flex gap-1.5 justify-center mb-3">
+              {[0,1,2].map(i => <div key={i} className={`rounded-full transition-all ${i === 1 ? "w-5 h-2 bg-white" : "w-2 h-2 bg-white/30"}`} />)}
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white mb-1">Swipe & Organize.</h3>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Organize tools across multiple pages with keyboard navigation.</p>
+            </div>
+          </motion.div>
+          {/* Sparks */}
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}
+            className="col-span-1 rounded-3xl p-5 flex flex-col justify-between"
+            style={{ background: isDark ? "rgba(20,20,30,0.55)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", border: isDark ? "1.5px solid rgba(255,255,255,0.08)" : "1.5px solid rgba(255,255,255,0.22)" }}>
+            <div className="text-3xl mb-2">✨</div>
+            <div>
+              <h3 className="text-base font-bold text-white mb-1">Fuel creativity.</h3>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Pay only for the AI you use, or bring your own key.</p>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Security Banner ── */}
+      <section className="relative z-10 px-4 md:px-6 pb-16">
+        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="max-w-4xl mx-auto rounded-3xl px-8 py-6 flex flex-col md:flex-row items-center gap-6"
+          style={{ background: isDark ? "rgba(10,10,14,0.8)" : "rgba(20,20,40,0.7)", backdropFilter: "blur(24px)", border: "1.5px solid rgba(255,255,255,0.08)" }}>
+          <div className="text-4xl shrink-0">🔒</div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-white mb-1">Enterprise-Grade Privacy.</h3>
+            <p className="text-sm text-white/50 mb-3">Your data is cryptographically isolated. Not even we can read your notes.</p>
+            <div className="flex flex-wrap gap-4">
+              {["Row-Level Security (RLS) Database", "BYOK (Bring Your Own Key) Support", "Strict Prompt-Injection Defenses"].map(f => (
+                <span key={f} className="flex items-center gap-1.5 text-xs text-white/70">
+                  <span className="text-green-400">✓</span> {f}
+                </span>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ── Pricing Teaser & Final CTA ── */}
+      <section className="relative z-10 px-4 md:px-6 pb-24">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="max-w-2xl mx-auto rounded-3xl p-10 text-center shadow-2xl"
+          style={{ background: "linear-gradient(135deg, rgba(100,60,200,0.35), rgba(60,140,240,0.35))", backdropFilter: "blur(32px)", border: "1.5px solid rgba(255,255,255,0.15)" }}>
+          <div className="text-3xl mb-3">✨</div>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-3" style={{ fontFamily: "Georgia, serif" }}>
+            Ready to upgrade your workflow?
+          </h2>
+          <p className="text-base text-white/70 mb-8">Claim your first 50 Sparks ✨ today and start consulting The Council.</p>
+          <button onClick={handleCTA} className="inline-flex items-center gap-2 bg-white text-slate-800 font-bold px-10 py-4 rounded-full shadow-2xl hover:scale-[1.03] active:scale-[0.98] transition-all text-base">
+            Get Started for Free <ArrowRight size={16} />
+          </button>
+        </motion.div>
+      </section>
+
       <footer className="relative z-10 text-center pb-10 text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>© 2025 Flux. Built for deep work.</footer>
     </div>
   );
