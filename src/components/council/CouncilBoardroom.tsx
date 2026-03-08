@@ -1322,8 +1322,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
       if (payload?.responses && payload?.idea) {
         setIdea(payload.idea);
         if (payload.actionPlan) setActionPlan(payload.actionPlan);
-        const newStates: Record<string, CardState> = { elena: "idle", helen: "idle", anton: "idle", margot: "idle" };
-        const newResponses: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+        const newStates: Record<string, CardState> = { strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" };
+        const newResponses: Record<string, BoardroomPersonaResponse | null> = { strategist: null, operator: null, skeptic: null, advocate: null };
         (payload.responses as { key: string; analysis: string; question: string; confidence: number }[]).forEach(r => {
           if (r.key in newStates) {
             newStates[r.key] = "revealed";
