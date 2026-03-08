@@ -12,6 +12,7 @@ import { PERSONAS } from "./TheCouncil";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useFocusMode } from "@/context/FocusModeContext";
 
 interface FluxSidebarProps {
   visible: boolean;
