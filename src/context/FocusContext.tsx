@@ -424,6 +424,12 @@ export function FocusProvider({ children }: { children: ReactNode }) {
         ...prev,
         desktopFolderBgColors: { ...(prev.desktopFolderBgColors ?? {}), [folderId]: color },
       })),
+    desktopFolderTitleGaps: state.desktopFolderTitleGaps ?? {},
+    updateDesktopFolderTitleGap: (folderId, gap) =>
+      setState((prev) => ({
+        ...prev,
+        desktopFolderTitleGaps: { ...(prev.desktopFolderTitleGaps ?? {}), [folderId]: gap },
+      })),
     // Document customization
     desktopDocPositions: state.desktopDocPositions ?? {},
     updateDesktopDocPosition: (docId, pos) =>
@@ -443,6 +449,9 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     desktopDocIconColors: state.desktopDocIconColors ?? {},
     updateDesktopDocIconColor: (docId, color) =>
       setState((prev) => ({ ...prev, desktopDocIconColors: { ...(prev.desktopDocIconColors ?? {}), [docId]: color } })),
+    desktopDocTitleGaps: state.desktopDocTitleGaps ?? {},
+    updateDesktopDocTitleGap: (docId, gap) =>
+      setState((prev) => ({ ...prev, desktopDocTitleGaps: { ...(prev.desktopDocTitleGaps ?? {}), [docId]: gap } })),
     resetDashboard: () => setState({
       ...DEFAULT_STATE,
       currentBackground: state.currentBackground,
