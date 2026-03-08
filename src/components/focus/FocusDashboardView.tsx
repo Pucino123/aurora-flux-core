@@ -85,7 +85,7 @@ function loadPaginationSettings(): PaginationSettings {
 }
 
 const FocusContent = () => {
-  const { activeWidgets, systemMode, setFocusStickyNotes, focusStickyNotes, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions } = useFocusStore();
+  const { activeWidgets, systemMode, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
 
