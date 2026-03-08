@@ -444,7 +444,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-700"
         style={{
           backgroundImage: `url(${gradientBg})`,
-          filter: isDark ? "blur(8px) brightness(0.45) saturate(1.1)" : "blur(6px) brightness(0.88) saturate(1.1)",
+          filter: isDark ? "blur(8px) brightness(0.55) saturate(1.1)" : "blur(6px) brightness(0.88) saturate(1.1)",
           transform: "scale(1.06)",
         }}
       />
