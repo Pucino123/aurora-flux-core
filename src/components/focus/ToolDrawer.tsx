@@ -414,7 +414,13 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
       <motion.div
         ref={barRef}
         className="fixed z-[10100] flex items-center gap-1 px-2 py-1.5 select-none"
-        animate={isBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
+        animate={
+          isFocusModeActive
+            ? { opacity: 0, y: 24, pointerEvents: "none" as const }
+            : isBouncing
+            ? { scale: [1, 1.06, 0.97, 1.02, 1], opacity: 1, y: 0 }
+            : { scale: 1, opacity: 1, y: 0 }
+        }
         transition={isBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
         style={{
           ...posStyle,
@@ -427,6 +433,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           boxShadow: isDragging
             ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
             : "0 8px 32px rgba(0,0,0,0.55)",
+          pointerEvents: isFocusModeActive ? "none" : undefined,
         }}
         onPointerDown={isBuild ? handlePointerDown : undefined}
       >
