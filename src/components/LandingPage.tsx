@@ -2,13 +2,7 @@ import { useState, useRef } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { ArrowRight, Sparkles, CheckSquare, Calendar, Brain, LayoutGrid, Play, Upload, Zap, Target, Music, BarChart3, Users, FileText, Clock, Star, LucideIcon, Sun, Moon } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import cherryBg from "@/assets/bg-cherry-blossom.jpg";
-
-interface LandingPageProps {
-  onEnter: (text: string) => void;
-}
+import { ArrowRight, Sparkles, CheckSquare, Calendar, Brain, LayoutGrid, Play, Upload, Zap, Target, Music, BarChart3, Users, FileText, Clock, Star, LucideIcon, Sun, Moon, Briefcase, FolderKanban, Dumbbell, Smile, MessageCircle, Globe, Layers, GitBranch, Wallet, HeartPulse } from "lucide-react";
 
 const FEATURES_ROW1 = [
   { icon: LayoutGrid, title: "Personal Dashboard" },
@@ -19,6 +13,10 @@ const FEATURES_ROW1 = [
   { icon: BarChart3, title: "Finance Tracker" },
   { icon: Music, title: "Soundscapes" },
   { icon: Zap, title: "Quick Capture" },
+  { icon: Briefcase, title: "CRM" },
+  { icon: FolderKanban, title: "Projects" },
+  { icon: Dumbbell, title: "Fitness Tracker" },
+  { icon: HeartPulse, title: "Mood Tracker" },
 ];
 
 const FEATURES_ROW2 = [
@@ -30,6 +28,10 @@ const FEATURES_ROW2 = [
   { icon: BarChart3, title: "Analytics" },
   { icon: Target, title: "Kanban Board" },
   { icon: Zap, title: "AI Scheduler" },
+  { icon: MessageCircle, title: "Ask Aura" },
+  { icon: Globe, title: "Community" },
+  { icon: Layers, title: "Multitasking" },
+  { icon: GitBranch, title: "Brain Tree" },
 ];
 
 /* ── Marquee Pill ── */
