@@ -7,6 +7,7 @@ import {
   Check, Plus, Trash2, ArrowUpRight, Sparkles, Loader2,
   GripVertical, Calendar, Circle,
   MoreHorizontal, Search, X, CheckCircle2, AlertCircle, Minus, RotateCcw, Pencil, UserCircle2,
+  Sun, Moon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";

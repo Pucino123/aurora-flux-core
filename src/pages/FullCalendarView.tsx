@@ -5,7 +5,7 @@ import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday,
   addMonths, subMonths, startOfWeek, endOfWeek, addDays, isSameMonth, getISOWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Clock, CheckCircle2, Plus, CalendarDays, Grip, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, CheckCircle2, Plus, CalendarDays, Grip, Calendar, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
