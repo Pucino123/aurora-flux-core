@@ -70,6 +70,10 @@ type DashboardPage = {
   stickyNotes?: StickyNote[];
   background?: string; // override global bg
   spaceSettings?: SpaceSettings; // per-page brightness/blur/vignette/volume
+  folderPositions?: Record<string, { x: number; y: number }>; // per-page folder positions
+  docPositions?: Record<string, { x: number; y: number }>;    // per-page doc positions
+  visibleFolderIds?: string[];  // which folders are on this page
+  visibleDocIds?: string[];     // which docs are on this page
 };
 
 // Screenshot cache for dot hover thumbnails
