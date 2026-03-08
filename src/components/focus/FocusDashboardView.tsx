@@ -157,9 +157,12 @@ const FocusContent = () => {
   const labelInputRef = useRef<HTMLInputElement>(null);
   // Touch swipe
   const touchStartX = useRef<number | null>(null);
-  // Dot context menu (delete)
+  // Dot context menu (delete / background)
   const [dotMenu, setDotMenu] = useState<{ idx: number; x: number; y: number } | null>(null);
   const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null);
+  const [dotBgPickerOpen, setDotBgPickerOpen] = useState(false);
+  // Thumbnail grid overlay (from pill ⊞ button)
+  const [showThumbGrid, setShowThumbGrid] = useState(false);
   // Drag-to-reorder dots
   const dragDotIdx = useRef<number | null>(null);
   const [draggingDotIdx, setDraggingDotIdx] = useState<number | null>(null);
