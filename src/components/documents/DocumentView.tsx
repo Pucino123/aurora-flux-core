@@ -618,6 +618,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
             ${lm ? "selection:bg-primary/20" : "selection:bg-primary/20"}`}
           data-placeholder="Start typing..."
         />
+        )}
         </div>
         {/* ── Slash Command Palette ── */}
         <AnimatePresence>
