@@ -117,37 +117,48 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
         <FluxSidebar visible={sidebarVisible} onToggle={onToggleSidebar} onRequestCreateFolder={() => setShowCreateModal(true)} />
       </div>
 
-      {/* Center stage */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-[64px] md:pb-0">
-        {effectiveView === "focus" || effectiveView === "stream" ? (
-          <FocusDashboardView />
-        ) : effectiveView === "council" ? (
-          <TheCouncil />
-        ) : effectiveView === "calendar" ? (
-          <FullCalendarView />
-        ) : effectiveView === "tasks" ? (
-          <AITaskManager />
-        ) : effectiveView === "analytics" ? (
-          <AnalyticsView />
-        ) : effectiveView === "projects" ? (
-          <ProjectsOverview />
-        ) : effectiveView === "documents" ? (
-          <DocumentsView />
-        ) : effectiveView === "settings" ? (
-          <SettingsView />
-        ) : (effectiveView as string) === "multitask" ? (
-          <MultitaskingView />
-        ) : (effectiveView as string) === "community" ? (
-          <CommunityBoardView />
-        ) : (effectiveView as string) === "community-admin" ? (
-          <CommunityAdminView />
-        ) : (effectiveView as string) === "billing" ? (
-          <BillingView />
-        ) : (effectiveView as string) === "crm" ? (
-          <CRMPage />
-        ) : (
-          <Canvas />
-        )}
+      {/* Center stage — animated view transitions */}
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-[64px] md:pb-0 overflow-hidden">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={effectiveView}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="flex-1 flex flex-col h-full min-h-screen"
+          >
+            {effectiveView === "focus" || effectiveView === "stream" ? (
+              <FocusDashboardView />
+            ) : effectiveView === "council" ? (
+              <TheCouncil />
+            ) : effectiveView === "calendar" ? (
+              <FullCalendarView />
+            ) : effectiveView === "tasks" ? (
+              <AITaskManager />
+            ) : effectiveView === "analytics" ? (
+              <AnalyticsView />
+            ) : effectiveView === "projects" ? (
+              <ProjectsOverview />
+            ) : effectiveView === "documents" ? (
+              <DocumentsView />
+            ) : effectiveView === "settings" ? (
+              <SettingsView />
+            ) : (effectiveView as string) === "multitask" ? (
+              <MultitaskingView />
+            ) : (effectiveView as string) === "community" ? (
+              <CommunityBoardView />
+            ) : (effectiveView as string) === "community-admin" ? (
+              <CommunityAdminView />
+            ) : (effectiveView as string) === "billing" ? (
+              <BillingView />
+            ) : (effectiveView as string) === "crm" ? (
+              <CRMPage />
+            ) : (
+              <Canvas />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Right scheduler */}
