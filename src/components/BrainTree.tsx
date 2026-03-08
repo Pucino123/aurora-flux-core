@@ -239,10 +239,6 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
     fetchDocs();
   }, [user, folderTree]);
 
-  const handleInboxClick = () => {
-    setActiveFolder(null);
-    setActiveView("canvas");
-  };
 
   const handleNewFolder = (e: React.MouseEvent) => {
     e.stopPropagation();
