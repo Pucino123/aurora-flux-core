@@ -390,6 +390,7 @@ const TabBar = ({
 /* ─── Main view ─── */
 const IdeapadView = () => {
   const STORAGE_KEY = "ideapad_tracks";
+  const { theme, setTheme } = useTheme();
 
   const loadTracks = (): IdeaTrack[] => {
     try {
@@ -440,15 +441,28 @@ const IdeapadView = () => {
     <div className="flex flex-col flex-1 h-full min-h-screen" style={{ background: "#06080f" }}>
       <SEO title="Ideapad" description="Multi-track infinite canvas for idea mapping." />
 
-      {/* Tab bar */}
-      <TabBar
-        tracks={tracks}
-        activeId={activeId}
-        onSelect={setActiveId}
-        onAdd={addTrack}
-        onDelete={deleteTrack}
-        onRename={renameTrack}
-      />
+      {/* Tab bar with theme toggle */}
+      <div className="flex items-center" style={{ background: "rgba(6,8,15,0.9)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex-1 overflow-x-auto">
+          <TabBar
+            tracks={tracks}
+            activeId={activeId}
+            onSelect={setActiveId}
+            onAdd={addTrack}
+            onDelete={deleteTrack}
+            onRename={renameTrack}
+          />
+        </div>
+        {/* Theme toggle */}
+        <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="shrink-0 mr-3 p-2 rounded-lg transition-colors hover:bg-white/10"
+          style={{ color: "rgba(255,255,255,0.5)" }}
+          title="Toggle theme"
+        >
+          {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+        </button>
+      </div>
 
       {/* Canvas */}
       <div className="flex-1 relative overflow-hidden">
