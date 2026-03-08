@@ -568,7 +568,7 @@ const TheCouncil = () => {
                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
                            onFocus={() => setInputFocused(true)}
                            onBlur={() => setInputFocused(false)}
-                           placeholder="Ny idé eller opfølgning…"
+                          placeholder="New idea or follow-up…"
                            rows={2}
                            className="w-full rounded-xl px-3 py-2.5 outline-none text-sm resize-none border transition-all duration-300 text-slate-200 placeholder:text-slate-500"
                            style={{ background: "hsl(240 20% 10% / 0.8)", borderColor: "hsl(255 30% 50% / 0.2)" }}
@@ -582,7 +582,7 @@ const TheCouncil = () => {
                           className="w-full mt-2 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-all council-submit-btn"
                         >
                           {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                          Indsend <span className="opacity-60 font-normal">−5 ✨</span>
+                          Submit <span className="opacity-60 font-normal">−5 ✨</span>
                         </motion.button>
                       </div>
 
