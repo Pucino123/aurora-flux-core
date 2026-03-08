@@ -1196,8 +1196,20 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const handleShareSession = useCallback(async () => {
     if (!allRevealed) return;
     try {
+      // Fetch sharer's display name for the banner
+      let sharedBy = user?.email?.split("@")[0] || "Someone";
+      if (user) {
+        const db = supabase as any;
+        const { data: profile } = await db
+          .from("profiles")
+          .select("display_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profile?.display_name) sharedBy = profile.display_name;
+      }
       const payload = {
         idea: idea || "Should I start a new business?",
+        sharedBy,
         responses: PERSONAS.map(p => ({
           key: p.key,
           analysis: responses[p.key]?.analysis || "",
