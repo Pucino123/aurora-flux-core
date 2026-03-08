@@ -866,7 +866,6 @@ const FocusContent = () => {
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
-  const [showDocPicker, setShowDocPicker] = useState(false);
   const [auraImages, setAuraImages] = useState<{ id: string; url: string; prompt: string }[]>([]);
   const [dragState, setDragState] = useState<{ id: string; x: number; y: number } | null>(null);
   const [docDragState, setDocDragState] = useState<{ id: string; x: number; y: number } | null>(null);
