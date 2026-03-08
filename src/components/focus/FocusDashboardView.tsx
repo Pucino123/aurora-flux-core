@@ -1470,7 +1470,6 @@ const FocusContent = () => {
             >
               <Plus size={14} strokeWidth={2.5} />
             </button>
-          </div>
         </motion.div>
       )}
 
