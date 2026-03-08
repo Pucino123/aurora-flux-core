@@ -1615,6 +1615,12 @@ const FocusContent = () => {
                 >
                   <Table size={13} className="text-accent-foreground" /> Spreadsheet
                 </button>
+                <button
+                  onClick={() => { setContextMenu(null); setShowDocPicker(false); setShowTemplateChooser(true); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary/60 transition-colors"
+                >
+                  <Sparkles size={13} className="text-primary" /> From Template…
+                </button>
               </div>
             )}
             <button
