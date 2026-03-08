@@ -373,7 +373,7 @@ const en: Record<string, string> = {
   "brain.new_folder_prompt": "Folder name:",
   "brain.rename_prompt": "New folder name:",
   "brain.move_prompt": "Move into which folder?",
-  "stream.welcome_title": "Welcome to Flux",
+  "stream.welcome_title": "Welcome to Dashiii",
   "stream.welcome_desc": "Type a goal, budget, or task below to get started.",
   "stream.tracking": "Tracking Active",
   "stream.progress": "Progress",
