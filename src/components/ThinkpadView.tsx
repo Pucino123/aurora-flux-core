@@ -19,7 +19,8 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash2, Save, Lightbulb, Zap, Target, Rocket,
-  Code, Database, Star, Heart, Brain, LayoutTemplate, X, Pencil, Check, Sun, Moon
+  Code, Database, Star, Heart, Brain, LayoutTemplate, X, Pencil, Check, Sun, Moon,
+  ZoomIn, ZoomOut, Bookmark, Lock, Unlock
 } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
@@ -165,7 +166,9 @@ const IdeaCanvas = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(track.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(track.edges);
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const { screenToFlowPosition } = useReactFlow();
+  const [isLocked, setIsLocked] = useState(false);
+  const [markedNodes, setMarkedNodes] = useState<Set<string>>(new Set());
+  const { screenToFlowPosition, zoomIn, zoomOut, setCenter, getNode } = useReactFlow();
   const nodeIdRef = useRef(200);
 
   // Sync when track changes
@@ -207,28 +210,52 @@ const IdeaCanvas = ({
     toast("Canvas cleared.");
   };
 
+  const toggleMarkSelected = () => {
+    const selectedIds = nodes.filter(n => n.selected).map(n => n.id);
+    if (selectedIds.length === 0) { toast("Select nodes first to mark them."); return; }
+    setMarkedNodes(prev => {
+      const next = new Set(prev);
+      selectedIds.forEach(id => next.has(id) ? next.delete(id) : next.add(id));
+      return next;
+    });
+  };
+
+  const navigateToMarked = () => {
+    const firstMarked = nodes.find(n => markedNodes.has(n.id));
+    if (!firstMarked) { toast("No marked nodes."); return; }
+    setCenter(firstMarked.position.x + 90, firstMarked.position.y + 50, { duration: 600, zoom: 1.2 });
+  };
+
   return (
     <div className="flex-1 relative h-full w-full">
       <ReactFlow
-        nodes={nodes}
+        nodes={nodes.map(n => ({
+          ...n,
+          style: markedNodes.has(n.id)
+            ? { ...((n.style as object) || {}), outline: "2px solid #3b82f6", outlineOffset: "3px" }
+            : n.style,
+        }))}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onNodesChange={isLocked ? () => {} : onNodesChange}
+        onEdgesChange={isLocked ? () => {} : onEdgesChange}
+        onConnect={isLocked ? () => {} : onConnect}
         nodeTypes={nodeTypes}
         fitView
-        deleteKeyCode="Delete"
+        nodesDraggable={!isLocked}
+        nodesConnectable={!isLocked}
+        elementsSelectable={!isLocked}
+        deleteKeyCode={isLocked ? null : "Delete"}
         style={{ background: "transparent" }}
         proOptions={{ hideAttribution: true }}
       >
         <Background color="rgba(255,255,255,0.06)" gap={28} size={1} />
-        <Controls
-          style={{ background: "rgba(15,18,30,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }}
-        />
+        {/* Hide default Controls — we use our own toolbar */}
         <MiniMap
-          style={{ background: "rgba(15,18,30,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }}
-          nodeColor={(n) => ICONS.find((i) => i.key === (n.data as IdeaNodeData).iconKey)?.color ?? "#6366f1"}
-          maskColor="rgba(0,0,0,0.4)"
+          style={{ background: "rgba(15,18,30,0.95)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: "14px", cursor: "pointer" }}
+          nodeColor={(n) => markedNodes.has(n.id) ? "#3b82f6" : (ICONS.find((i) => i.key === (n.data as IdeaNodeData).iconKey)?.color ?? "#6366f1")}
+          maskColor="rgba(0,0,0,0.5)"
+          pannable
+          zoomable
         />
       </ReactFlow>
 
@@ -243,34 +270,121 @@ const IdeaCanvas = ({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-full"
+          className="flex items-center gap-2 px-3 py-2 rounded-full"
           style={{ background: "rgba(15,18,30,0.92)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}
         >
+          {/* Add node */}
           <motion.button
             onClick={() => setShowIconPicker((p) => !p)}
-            whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
-            style={{ background: showIconPicker ? "rgba(99,102,241,0.4)" : "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.5)", color: "#a5b4fc" }}
+            whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+            title="Add idea box"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold transition-all"
+            style={{ background: showIconPicker ? "rgba(59,130,246,0.4)" : "rgba(59,130,246,0.18)", border: "1px solid rgba(59,130,246,0.45)", color: "#93c5fd" }}
           >
-            <Plus size={14} /> Add Idea Box
+            <Plus size={15} />
+            <span className="text-xs font-bold">Add</span>
           </motion.button>
 
+          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+
+          {/* Zoom in */}
+          <motion.button
+            onClick={() => zoomIn({ duration: 300 })}
+            whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
+            title="Zoom in"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+          >
+            <ZoomIn size={15} />
+          </motion.button>
+
+          {/* Zoom out */}
+          <motion.button
+            onClick={() => zoomOut({ duration: 300 })}
+            whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
+            title="Zoom out"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+          >
+            <ZoomOut size={15} />
+          </motion.button>
+
+          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+
+          {/* Mark / bookmark */}
+          <motion.button
+            onClick={toggleMarkSelected}
+            whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
+            title={markedNodes.size > 0 ? `${markedNodes.size} marked — click to go there` : "Mark selected nodes"}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all relative"
+            style={{
+              background: markedNodes.size > 0 ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.06)",
+              border: markedNodes.size > 0 ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(255,255,255,0.1)",
+              color: markedNodes.size > 0 ? "#60a5fa" : "rgba(255,255,255,0.7)"
+            }}
+          >
+            <Bookmark size={15} fill={markedNodes.size > 0 ? "#60a5fa" : "none"} />
+            {markedNodes.size > 0 && (
+              <span className="absolute -top-1 -right-1 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center"
+                style={{ background: "#3b82f6", color: "#fff" }}>
+                {markedNodes.size}
+              </span>
+            )}
+          </motion.button>
+
+          {/* Navigate to marked */}
+          {markedNodes.size > 0 && (
+            <motion.button
+              onClick={navigateToMarked}
+              initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }}
+              title="Jump to marked node"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all"
+              style={{ background: "rgba(59,130,246,0.2)", border: "1px solid rgba(59,130,246,0.4)", color: "#93c5fd" }}
+            >
+              Go to mark
+            </motion.button>
+          )}
+
+          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+
+          {/* Lock / unlock */}
+          <motion.button
+            onClick={() => { setIsLocked(l => !l); toast(isLocked ? "Canvas unlocked" : "Canvas locked — drag disabled"); }}
+            whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
+            title={isLocked ? "Unlock canvas" : "Lock canvas (disable drag)"}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{
+              background: isLocked ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.06)",
+              border: isLocked ? "1px solid rgba(234,179,8,0.5)" : "1px solid rgba(255,255,255,0.1)",
+              color: isLocked ? "#fbbf24" : "rgba(255,255,255,0.7)"
+            }}
+          >
+            {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
+          </motion.button>
+
+          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+
+          {/* Save */}
           <motion.button
             onClick={handleSave}
-            whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
-            className="flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+            whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+            title="Save track"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "rgba(74,222,128,0.85)" }}
           >
-            <Save size={13} /> Save
+            <Save size={15} />
           </motion.button>
 
+          {/* Clear */}
           <motion.button
             onClick={clearCanvas}
-            whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
-            className="flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all"
+            whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+            title="Clear canvas"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
             style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "rgba(239,68,68,0.7)" }}
           >
-            <Trash2 size={13} /> Clear
+            <Trash2 size={14} />
           </motion.button>
         </motion.div>
       </div>
