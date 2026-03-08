@@ -343,9 +343,72 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     editorRef.current.focus();
   }, [ghostText, doc.id, onUpdate]);
 
+  const filteredSlashCmds = SLASH_COMMANDS.filter(c =>
+    c.label.toLowerCase().includes(slashQuery.toLowerCase()) ||
+    c.desc.toLowerCase().includes(slashQuery.toLowerCase())
+  );
+
+  const closeSlash = useCallback(() => {
+    setSlashOpen(false);
+    setSlashQuery("");
+    setSlashIndex(0);
+    slashRangeRef.current = null;
+  }, []);
+
+  const applySlashCommand = useCallback((cmd: typeof SLASH_COMMANDS[0]) => {
+    // Delete the slash + query text typed so far
+    const sel = window.getSelection();
+    if (sel && slashRangeRef.current) {
+      sel.removeAllRanges();
+      const r = slashRangeRef.current.cloneRange();
+      // Extend range back by (1 + slashQuery.length) chars to cover "/query"
+      r.setStart(r.endContainer, Math.max(0, (r.endOffset - 1 - slashQuery.length)));
+      r.deleteContents();
+      sel.addRange(r);
+    }
+    cmd.action(exec, editorRef);
+    setTimeout(() => handleInput(), 50);
+    closeSlash();
+  }, [exec, slashQuery, closeSlash, handleInput]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Slash palette navigation
+    if (slashOpen) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setSlashIndex(i => Math.min(i + 1, filteredSlashCmds.length - 1)); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setSlashIndex(i => Math.max(i - 1, 0)); return; }
+      if (e.key === "Enter") { e.preventDefault(); if (filteredSlashCmds[slashIndex]) applySlashCommand(filteredSlashCmds[slashIndex]); return; }
+      if (e.key === "Escape") { closeSlash(); return; }
+      if (e.key === "Backspace" && slashQuery === "") { closeSlash(); return; }
+      // Keep typing to filter
+      return;
+    }
+
     if (e.key === "Tab" && ghostText) { e.preventDefault(); acceptGhost(); return; }
     if (ghostText && !e.metaKey && !e.ctrlKey && e.key.length === 1) setGhostText(null);
+
+    // Open slash palette on "/"
+    if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const editorRect = editorRef.current?.getBoundingClientRect();
+        if (editorRect) {
+          const top = rect.bottom - editorRect.top + 4;
+          const left = Math.min(rect.left - editorRect.left, editorRect.width - 260);
+          setSlashPos({ top, left });
+          // Store range AFTER the "/" (we'll type it normally; detect on next keyup)
+          const savedRange = range.cloneRange();
+          savedRange.collapse(false);
+          slashRangeRef.current = savedRange;
+          setSlashOpen(true);
+          setSlashQuery("");
+          setSlashIndex(0);
+        }
+      }
+      return; // let "/" be typed naturally
+    }
+
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
     const key = e.key.toLowerCase();
@@ -366,7 +429,37 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     if (e.shiftKey && key === "9") { e.preventDefault(); exec("formatBlock", "blockquote"); return; }
     if (e.altKey && ["1", "2", "3"].includes(key)) { e.preventDefault(); exec("formatBlock", `h${key}`); return; }
     if (shortcuts[key]) { e.preventDefault(); shortcuts[key](); }
-  }, [exec, ghostText, acceptGhost]);
+  }, [exec, ghostText, acceptGhost, slashOpen, slashQuery, slashIndex, filteredSlashCmds, applySlashCommand, closeSlash]);
+
+  // Update slash query as user types after "/"
+  const handleInputWithSlash = useCallback(() => {
+    if (editorRef.current) {
+      onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
+    }
+    if (slashOpen) {
+      // Read what the user typed after the "/"
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && slashRangeRef.current) {
+        const currentRange = sel.getRangeAt(0);
+        try {
+          const textNode = currentRange.startContainer;
+          if (textNode.nodeType === Node.TEXT_NODE) {
+            const text = textNode.textContent || "";
+            const slashIdx = text.lastIndexOf("/");
+            if (slashIdx !== -1) {
+              const query = text.slice(slashIdx + 1);
+              setSlashQuery(query);
+              setSlashIndex(0);
+            } else {
+              closeSlash();
+            }
+          }
+        } catch {
+          closeSlash();
+        }
+      }
+    }
+  }, [doc.id, onUpdate, slashOpen, closeSlash]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
