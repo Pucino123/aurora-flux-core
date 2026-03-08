@@ -4,6 +4,7 @@ import ToolbarButton from "./ToolbarButton";
 import MiniAuraOrb from "./MiniAuraOrb";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useMonetization } from "@/context/MonetizationContext";
 
 interface AiToolsPanelProps {
   editorRef: React.RefObject<HTMLDivElement>;
@@ -27,6 +28,7 @@ const FLUX_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flux-ai`;
 const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentTitle = "", documentId = "" }: AiToolsPanelProps) => {
   const lm = lightMode;
   const [loading, setLoading] = useState<string | null>(null);
+  const { consumeSparks } = useMonetization();
 
   const getSelectedText = (): string => {
     const selection = window.getSelection();
@@ -38,6 +40,14 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
     if (!text) {
       toast.info("Select some text first to use AI tools");
       return;
+    }
+
+    const actionMeta = AI_ACTIONS.find(a => a.key === action);
+    const sparkCost = actionMeta?.spark ?? 1;
+
+    // Deduct sparks before calling API
+    if (!consumeSparks(sparkCost, `Document AI — ${action}`)) {
+      return; // Out of sparks modal shown
     }
 
     setLoading(action);
@@ -76,7 +86,6 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
     e.stopPropagation();
     e.preventDefault();
     const content = editorRef.current?.innerText?.trim() || "";
-    // Use aura:summon-with-doc so Aura opens with full document context injected
     window.dispatchEvent(new CustomEvent("aura:summon-with-doc", {
       detail: { content, title: documentTitle, docId: documentId, prompt: "" },
     }));
