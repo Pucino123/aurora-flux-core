@@ -215,12 +215,12 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
             <span className="flex-1 text-left">{t("council.nav")}</span>
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               {PERSONAS.map((p) => {
-                const expressions: Record<string, "smile" | "straight" | "frown" | "calm" | "wide"> = {
+                const expressions: Record<string, import("./council/BaymaxFace").BaymaxExpression> = {
                   strategist: "smile",
                   operator: "straight",
                   skeptic: "frown",
-                  advocate: "straight",
-                  growth: "wide",
+                  advocate: "analytical",
+                  growth: "wide-smile",
                 };
                 const isActive = filterPersona === p.key;
                 return (
@@ -231,7 +231,7 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                       style={{ boxShadow: isActive ? `0 0 0 1.5px ${p.color}60` : "none", borderRadius: "50%", padding: "1px" }}
                       title={t(p.name)}
                     >
-                      <BaymaxFace color={p.color} size={20} expression={expressions[p.key] || "straight"} />
+                      <BaymaxFace color={p.color} size={22} expression={expressions[p.key] || "straight"} />
                     </button>
                     {/* Tooltip */}
                     <div className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150 whitespace-nowrap">
