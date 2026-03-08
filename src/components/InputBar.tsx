@@ -258,7 +258,7 @@ const InputBar = ({ onSubmit, docked = false, onPlanSubmit }: InputBarProps) => 
           });
           if (goal) {
             toast.success(t("toast.savings_created"));
-            setActiveView("stream");
+            setActiveView("focus");
           }
         }
       } else if (category === "budget") {

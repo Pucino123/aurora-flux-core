@@ -19,7 +19,7 @@ const MobileNav = () => {
 
   const mainTabs = [
     { icon: Home, label: "Home", view: "focus" as const },
-    { icon: Layers, label: t("mob.stream"), view: "stream" as const },
+    { icon: ListTodo, label: "Tasks", view: "tasks" as const },
     { icon: Users, label: t("council.nav"), view: "council" as const },
     { icon: CalendarDays, label: "Calendar", view: "calendar" as const },
     { icon: Menu, label: "More", view: null as any },
