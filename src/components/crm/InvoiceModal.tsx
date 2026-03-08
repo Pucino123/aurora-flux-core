@@ -385,19 +385,56 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                       </div>
                     </div>
 
-                    {/* Payment Details Block */}
+                    {/* Payment Details Block — click any field to edit inline */}
                     {includeBankDetails && (
-                      <div className="mt-6 p-4 rounded-lg border border-gray-200 bg-gray-50">
-                        <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Payment Details</p>
+                      <div className="mt-6 p-4 rounded-lg border border-blue-200 bg-blue-50 group relative">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Payment Details</p>
+                          <span className="text-[9px] text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">Click any value to edit</span>
+                        </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
                           <span className="text-gray-400">Bank</span>
-                          <span className="text-gray-700 font-medium">{profile.bankName}</span>
+                          <input
+                            value={profile.bankName} onChange={e => setProfile(p => { const n = {...p, bankName: e.target.value}; saveProfile(n); return n; })}
+                            className="text-gray-700 font-medium bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none w-full transition-colors cursor-text"
+                          />
                           <span className="text-gray-400">Reg / Account</span>
-                          <span className="text-gray-700 font-medium">{profile.regNumber} – {profile.accountNumber}</span>
-                          <span className="text-gray-400">IBAN</span>
-                          <span className="text-gray-700 font-medium">{profile.iban}</span>
-                          <span className="text-gray-400">SWIFT</span>
-                          <span className="text-gray-700 font-medium">{profile.swift}</span>
+                          <div className="flex gap-1 items-center">
+                            <input
+                              value={profile.regNumber} onChange={e => setProfile(p => { const n = {...p, regNumber: e.target.value}; saveProfile(n); return n; })}
+                              className="text-gray-700 font-medium bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none w-14 transition-colors cursor-text"
+                            />
+                            <span className="text-gray-400">–</span>
+                            <input
+                              value={profile.accountNumber} onChange={e => setProfile(p => { const n = {...p, accountNumber: e.target.value}; saveProfile(n); return n; })}
+                              className="text-gray-700 font-medium bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none flex-1 transition-colors cursor-text"
+                            />
+                          </div>
+                          {profile.iban && <><span className="text-gray-400">IBAN</span>
+                          <input
+                            value={profile.iban} onChange={e => setProfile(p => { const n = {...p, iban: e.target.value}; saveProfile(n); return n; })}
+                            className="text-gray-700 font-medium bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none w-full transition-colors cursor-text"
+                          /></>}
+                          {profile.swift && <><span className="text-gray-400">SWIFT</span>
+                          <input
+                            value={profile.swift} onChange={e => setProfile(p => { const n = {...p, swift: e.target.value}; saveProfile(n); return n; })}
+                            className="text-gray-700 font-medium bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none w-full transition-colors cursor-text"
+                          /></>}
+                          {profile.routingNumber && <><span className="text-gray-400">Routing (US)</span>
+                          <input
+                            value={profile.routingNumber} onChange={e => setProfile(p => { const n = {...p, routingNumber: e.target.value}; saveProfile(n); return n; })}
+                            className="text-gray-700 font-medium bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none w-full transition-colors cursor-text"
+                          /></>}
+                          {profile.extraField1Label && <><span className="text-gray-400">{profile.extraField1Label}</span>
+                          <input
+                            value={profile.extraField1Value} onChange={e => setProfile(p => { const n = {...p, extraField1Value: e.target.value}; saveProfile(n); return n; })}
+                            className="text-gray-700 font-medium bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none w-full transition-colors cursor-text"
+                          /></>}
+                          {profile.extraField2Label && <><span className="text-gray-400">{profile.extraField2Label}</span>
+                          <input
+                            value={profile.extraField2Value} onChange={e => setProfile(p => { const n = {...p, extraField2Value: e.target.value}; saveProfile(n); return n; })}
+                            className="text-gray-700 font-medium bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none w-full transition-colors cursor-text"
+                          /></>}
                         </div>
                         <p className="text-[9px] text-gray-400 italic mt-2">Please pay within {profile.paymentTerms} days of invoice date.</p>
                       </div>

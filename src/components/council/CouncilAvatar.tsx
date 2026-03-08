@@ -81,11 +81,12 @@ const CouncilAvatar = ({
       barPath = `M ${leftEyeCX} ${barY} L ${rightEyeCX} ${barY}`;
       break;
     case "frown":
-      leftRotate  = 18;
-      rightRotate = -18;
-      leftEyeCX  = cx - baseSpread * 0.9;
-      rightEyeCX = cx + baseSpread * 0.9;
-      barPath = `M ${leftEyeCX} ${barY + S * 0.06} Q ${cx} ${barY - S * 0.02} ${rightEyeCX} ${barY + S * 0.06}`;
+      leftRotate  = 20;
+      rightRotate = -20;
+      leftEyeCX  = cx - baseSpread * 0.88;
+      rightEyeCX = cx + baseSpread * 0.88;
+      // Control point ABOVE endpoints in SVG coords (lower Y value) → mouth bows downward = frown
+      barPath = `M ${leftEyeCX} ${barY + S * 0.12} Q ${cx} ${barY + S * 0.04} ${rightEyeCX} ${barY + S * 0.12}`;
       break;
     case "straight":
     default:
