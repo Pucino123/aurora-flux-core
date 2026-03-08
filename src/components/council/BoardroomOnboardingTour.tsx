@@ -112,7 +112,7 @@ const BoardroomOnboardingTour: React.FC<Props> = ({ onDismiss }) => {
               boxShadow: `0 8px 32px ${current.iconColor}20`,
             }}
           >
-            <Icon size={28} style={{ color: current.iconColor }} />
+            <Icon size={28} color={current.iconColor} />
           </motion.div>
         </div>
 
