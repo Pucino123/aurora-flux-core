@@ -216,6 +216,7 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
   } = useFlux();
   const { user } = useAuth();
   const { openInWorkspace } = useWorkspace();
+  const unreadMessages = useUnreadMessages();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [iconSearch, setIconSearch] = useState("");
