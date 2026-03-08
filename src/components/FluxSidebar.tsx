@@ -1,4 +1,6 @@
 import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase } from "lucide-react";
+import { useState } from "react";
+import BillingModal from "./billing/BillingModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
