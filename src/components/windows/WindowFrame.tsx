@@ -432,7 +432,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
             layout={!isFloating}
             transition={{ type: "spring", stiffness: 340, damping: 34 }}
             className={`${layoutClasses} select-none`}
-            style={{ zIndex: effectiveZ, ...(isFloating ? { x: springX, y: springY, ...posStyle } : {}) }}
+            style={{ zIndex: effectiveZ, ...(isFloating ? { x: isDragging ? motionX : springX, y: isDragging ? motionY : springY, ...posStyle } : {}) }}
             onPointerDownCapture={() => bringToFront(win.id)}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
