@@ -116,6 +116,35 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     });
   }, []);
 
+  // ── Global keyboard shortcuts: Cmd+W = close, Cmd+M = minimize focused ────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes("MAC");
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if (!mod) return;
+      if (e.key === "w" || e.key === "W") {
+        setWindows(prev => {
+          const visible = prev.filter(w => !w.minimized);
+          if (!visible.length) return prev;
+          const top = visible.reduce((a, b) => (a.zIndex > b.zIndex ? a : b));
+          e.preventDefault();
+          return prev.filter(w => w.id !== top.id);
+        });
+      }
+      if (e.key === "m" || e.key === "M") {
+        setWindows(prev => {
+          const visible = prev.filter(w => !w.minimized);
+          if (!visible.length) return prev;
+          const top = visible.reduce((a, b) => (a.zIndex > b.zIndex ? a : b));
+          e.preventDefault();
+          return prev.map(w => w.id === top.id ? { ...w, minimized: true } : w);
+        });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <WindowManagerContext.Provider value={{
       windows, openWindow, closeWindow, setWindowLayout,
