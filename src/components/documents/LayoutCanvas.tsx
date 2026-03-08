@@ -1,18 +1,18 @@
 /**
  * LayoutCanvas — Framer Motion free-drag entity canvas for creative templates.
- * Entities: rect | circle | textBox — draggable, resizable, colour-customisable.
+ * Entities: rect | circle | textBox | triangle | line | star — draggable, resizable, colour-customisable.
  * Right-click context menu: Duplicate, Delete, Bring to Front, Send to Back.
  * Supports isCanvasMode to lock/unlock dragging for "Design" vs "Text" mode.
  */
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle, Copy, Paintbrush } from "lucide-react";
+import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle, Copy, Paintbrush, Minus, Star, Triangle } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface CanvasEntity {
   id: string;
-  type: "rect" | "circle" | "textBox";
+  type: "rect" | "circle" | "textBox" | "triangle" | "line" | "star";
   position: { x: number; y: number };
   size: { w: number; h: number };
   style: { fill: string; stroke: string; strokeWidth: number; borderRadius: number; opacity: number };
@@ -464,9 +464,12 @@ const AddToolbar: React.FC<AddToolbarProps> = ({ onAdd }) => (
   >
     <span className="text-[9px] text-white/30 uppercase tracking-wider mr-1">Add</span>
     {([
-      { type: "rect"    as const, icon: Square, label: "Rectangle" },
-      { type: "circle"  as const, icon: Circle, label: "Circle"    },
-      { type: "textBox" as const, icon: Type,   label: "Text"      },
+      { type: "rect"     as const, icon: Square,  label: "Rectangle" },
+      { type: "circle"   as const, icon: Circle,  label: "Circle"    },
+      { type: "textBox"  as const, icon: Type,    label: "Text"      },
+      { type: "triangle" as const, icon: Triangle as any, label: "Triangle" },
+      { type: "line"     as const, icon: Minus as any,    label: "Line"     },
+      { type: "star"     as const, icon: Star as any,     label: "Star"     },
     ]).map(({ type, icon: Icon, label }) => (
       <button
         key={type}
@@ -526,9 +529,12 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
     const cx = canvas ? (canvas.width  / 2 - 60) : 160;
     const cy = canvas ? (canvas.height / 2 - 40) : 200;
     const defaults: Partial<Record<CanvasEntity["type"], Partial<CanvasEntity>>> = {
-      rect:    { size: { w: 160, h: 80  }, style: { fill: "#6366f1", stroke: "#4f46e5", strokeWidth: 0, borderRadius: 8, opacity: 1 } },
-      circle:  { size: { w: 100, h: 100 }, style: { fill: "#22c55e", stroke: "#16a34a", strokeWidth: 0, borderRadius: 50, opacity: 1 } },
-      textBox: { size: { w: 180, h: 60  }, style: { fill: "transparent", stroke: "#ffffff", strokeWidth: 1, borderRadius: 4, opacity: 1 } },
+      rect:     { size: { w: 160, h: 80  }, style: { fill: "#6366f1", stroke: "#4f46e5", strokeWidth: 0, borderRadius: 8,  opacity: 1 } },
+      circle:   { size: { w: 100, h: 100 }, style: { fill: "#22c55e", stroke: "#16a34a", strokeWidth: 0, borderRadius: 50, opacity: 1 } },
+      textBox:  { size: { w: 180, h: 60  }, style: { fill: "transparent", stroke: "#ffffff", strokeWidth: 1, borderRadius: 4, opacity: 1 } },
+      triangle: { size: { w: 100, h: 100 }, style: { fill: "#f97316", stroke: "#ea580c", strokeWidth: 0, borderRadius: 0, opacity: 1 } },
+      line:     { size: { w: 160, h: 8   }, style: { fill: "#ffffff",  stroke: "#ffffff", strokeWidth: 2, borderRadius: 4, opacity: 1 } },
+      star:     { size: { w: 80,  h: 80  }, style: { fill: "#eab308",  stroke: "#ca8a04", strokeWidth: 0, borderRadius: 0, opacity: 1 } },
     };
     const entity: CanvasEntity = {
       id, type,

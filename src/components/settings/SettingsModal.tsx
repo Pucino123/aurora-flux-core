@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { setLanguage, getLanguage } from "@/lib/i18n";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -607,6 +608,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                             {t.label}
                           </button>
                         ))}
+                      </div>
+
+                      {/* Language selector */}
+                      <div className="mt-8">
+                        <h3 className="text-sm font-semibold text-foreground mb-1">Language</h3>
+                        <p className="text-xs text-muted-foreground mb-3">Select the interface language. The page will reload.</p>
+                        <div className="flex gap-3 max-w-xs">
+                          {([
+                            { id: "en", label: "🇬🇧 English" },
+                            { id: "da", label: "🇩🇰 Dansk" },
+                          ] as const).map(lang => (
+                            <button
+                              key={lang.id}
+                              onClick={() => setLanguage(lang.id)}
+                              className={`flex-1 py-3 rounded-2xl border transition-all text-xs font-medium ${
+                                getLanguage() === lang.id
+                                  ? "border-primary/60 bg-primary/10 text-foreground"
+                                  : "border-border/30 text-muted-foreground hover:border-border/60 hover:bg-secondary/40"
+                              }`}
+                            >
+                              {lang.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </motion.div>
                   )}

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import type { DbDocument } from "@/hooks/useDocuments";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FocusProvider, useFocusStore } from "@/context/FocusContext";
@@ -840,6 +841,8 @@ const FocusContent = () => {
   const { moveToTrash } = useTrash();
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null, moveToTrash);
   const { openWindow, closeWindow, windows, updateWindowPosition, focusedId } = useWindowManager();
+  // Extra docs opened from folders (not in desktopDocs since folder_id != null)
+  const [folderOpenedDocs, setFolderOpenedDocs] = useState<Record<string, DbDocument>>({});
 
   // Listen for document restore from trash — add its ID back to page 1 visibleDocIds
   useEffect(() => {
@@ -1516,6 +1519,8 @@ const FocusContent = () => {
               folderId={openFolderId}
               onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }}
               onOpenDocument={(doc) => {
+                // Store doc in folderOpenedDocs so window renderer can find it
+                setFolderOpenedDocs(prev => ({ ...prev, [doc.id]: doc }));
                 openWindow({
                   type: "document",
                   contentId: doc.id,
@@ -1553,7 +1558,7 @@ const FocusContent = () => {
         <div className="pointer-events-none w-full h-full">
           {windows.filter(w => !w.minimized).map((win) => {
               const winDoc = win.type === "document"
-                ? desktopDocs.find(d => d.id === win.contentId)
+                ? (desktopDocs.find(d => d.id === win.contentId) ?? folderOpenedDocs[win.contentId])
                 : null;
 
               // Widget content map

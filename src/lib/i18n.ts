@@ -1,12 +1,30 @@
-// Danish-first i18n — auto-detects user locale
-// Falls back to English for non-Danish users
+// English-first i18n — defaults to English, with optional Danish support
+// Users can override via the language selector (stored in localStorage)
 
-const userLang =
-  typeof navigator !== "undefined"
-    ? (navigator.languages?.[0] || navigator.language || "en")
-    : "en";
+const LANG_KEY = "flux-language";
 
-const isDanish = userLang.startsWith("da") || userLang === "da-DK";
+function getStoredLang(): string {
+  if (typeof localStorage !== "undefined") {
+    return localStorage.getItem(LANG_KEY) || "en";
+  }
+  return "en";
+}
+
+// Exported so the language selector can change it at runtime
+export function setLanguage(lang: "en" | "da") {
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(LANG_KEY, lang);
+    // Trigger a page refresh so the new language takes effect everywhere
+    window.location.reload();
+  }
+}
+
+export function getLanguage(): "en" | "da" {
+  return getStoredLang() as "en" | "da";
+}
+
+const currentLang = getStoredLang();
+const isDanish = currentLang === "da";
 
 const da: Record<string, string> = {
   // App
