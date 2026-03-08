@@ -53,6 +53,8 @@ import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
 import { useFocusMode } from "@/context/FocusModeContext";
 import { useTrash } from "@/context/TrashContext";
+import FocusControlBar from "./FocusControlBar";
+import FocusIntentionModal from "./FocusIntentionModal";
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
