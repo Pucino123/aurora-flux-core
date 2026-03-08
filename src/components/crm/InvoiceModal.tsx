@@ -22,6 +22,14 @@ const DEFAULT_PROFILE = {
   swift: "NDEADKKK",
   paymentTerms: "30",
   email: "billing@dashiii.io",
+  // Additional universal fields
+  routingNumber: "",
+  sortCode: "",
+  bsb: "",
+  extraField1Label: "",
+  extraField1Value: "",
+  extraField2Label: "",
+  extraField2Value: "",
 };
 
 type PaymentProfile = typeof DEFAULT_PROFILE;
