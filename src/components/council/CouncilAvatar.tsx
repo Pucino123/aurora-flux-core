@@ -85,8 +85,9 @@ const CouncilAvatar = ({
       rightRotate = -20;
       leftEyeCX  = cx - baseSpread * 0.88;
       rightEyeCX = cx + baseSpread * 0.88;
-      // True frown: endpoints high (large Y), control point low (small Y) → curve dips down in center
-      barPath = `M ${leftEyeCX} ${barY + S * 0.05} Q ${cx} ${barY + S * 0.16} ${rightEyeCX} ${barY + S * 0.05}`;
+      // True frown: endpoints sit ABOVE the control point so the curve bows downward
+      // endpoints at barY - S*0.02, control point at barY + S*0.14 → sad arc dipping down
+      barPath = `M ${leftEyeCX} ${barY - S * 0.02} Q ${cx} ${barY + S * 0.14} ${rightEyeCX} ${barY - S * 0.02}`;
       break;
     case "straight":
     default:
