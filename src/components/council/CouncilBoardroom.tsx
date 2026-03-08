@@ -897,6 +897,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const [personalitySliders, setPersonalitySliders] = useState<AllSliders>(DEFAULT_ALL_SLIDERS);
   // Shared session banner (viewing someone else's link)
   const [isSharedView, setIsSharedView] = useState(false);
+  const [sharedByName, setSharedByName] = useState<string | null>(null);
   // Council Digest modal (shown after saving)
   const [showDigest, setShowDigest] = useState(false);
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
@@ -1250,6 +1251,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
         setRevealedCount(4);
         revealedCountRef.current = 4;
         setIsSharedView(true);
+        if (payload.sharedBy) setSharedByName(payload.sharedBy);
         const clean = new URL(window.location.href);
         clean.searchParams.delete("boardroom");
         window.history.replaceState({}, "", clean.toString());
