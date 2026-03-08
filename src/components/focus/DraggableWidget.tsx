@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, GripHorizontal, Minus, Plus, Settings2 } from "lucide-react";
 import { useFocusStore } from "@/context/FocusContext";
+import { useWidgetClose } from "@/context/WidgetCloseContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { useResizable, ResizeDirection } from "@/hooks/useResizable";
