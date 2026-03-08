@@ -674,7 +674,7 @@ const TheCouncil = () => {
                             animate={{ opacity: 1, y: 0 }}
                             className="council-glass-card p-5"
                           >
-                            <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider mb-3">Konsensus</h3>
+                            <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider mb-3">Consensus</h3>
                             <div className="flex items-center gap-3 mb-3">
                               <motion.span
                                 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display"
