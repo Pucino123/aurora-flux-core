@@ -1,190 +1,299 @@
+/**
+ * OnboardingFlow — Professional minimalist redesign
+ * Swiss-style typography, line-art icons, slide-fade transitions.
+ */
 import { forwardRef, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles, ChevronRight } from "lucide-react";
+import { Cpu, Users, Calendar, Zap, CheckCircle2, ChevronRight, ArrowRight } from "lucide-react";
 import { useMonetization } from "@/context/MonetizationContext";
-
-const TOUR_STEPS = [
-  {
-    id: "pagination",
-    title: "Swipe and Organize",
-    body: "Click the dots or use Left/Right arrow keys to organize your tools across multiple pages — just like your phone.",
-    selector: '[data-tour="pagination-dots"]',
-  },
-  {
-    id: "split-view",
-    title: "True Multitasking",
-    body: "Drag any document into the center workspace to open it. Drag a second one to instantly snap into Split-View.",
-    selector: '[data-tour="workspace-nav"]',
-  },
-  {
-    id: "council",
-    title: "Meet The Council",
-    body: "Your advisors are ready. They can review your work in real-time and help you strategize from multiple perspectives.",
-    selector: '[data-tour="council-nav"]',
-  },
-];
 
 const SPARKS_REWARD = 50;
 
+const STEPS = [
+  {
+    id: "crm",
+    icon: Users,
+    color: "hsl(var(--aurora-violet))",
+    code: "SYS_CRM",
+    label: "Contact Intelligence",
+    body: "Manage deals, log interactions, and generate invoices directly from contact profiles.",
+  },
+  {
+    id: "calendar",
+    icon: Calendar,
+    color: "hsl(var(--aurora-blue))",
+    code: "SYS_CAL",
+    label: "Scheduling Engine",
+    body: "Link meetings to CRM contacts. Sync with Google Calendar for a unified timeline.",
+  },
+  {
+    id: "aura",
+    icon: Zap,
+    color: "#10b981",
+    code: "SYS_AURA",
+    label: "Agentic AI — Aura",
+    body: "Give Aura a command in natural language. She creates tasks, schedules events, and checks your invoices.",
+  },
+  {
+    id: "tasks",
+    icon: CheckCircle2,
+    color: "hsl(var(--primary))",
+    code: "SYS_TASK",
+    label: "Task Operations",
+    body: "Kanban, priority scoring, and deadline tracking across projects and folders.",
+  },
+];
+
+const ACCENTS = [
+  { label: "EMERALD_01", value: "#10b981" },
+  { label: "VIOLET_02",  value: "#8b5cf6" },
+  { label: "CYAN_03",    value: "#06b6d4" },
+  { label: "ROSE_04",    value: "#f43f5e" },
+];
+
+type Phase = "welcome" | "systems" | "accent" | "reward";
+
 const OnboardingFlow = forwardRef<HTMLDivElement>(function OnboardingFlow(_, ref) {
   const { addSparks } = useMonetization();
-  const [phase, setPhase] = useState<"welcome" | "tour" | "reward" | "done">("welcome");
-  const [step, setStep] = useState(0);
+  const [phase, setPhase] = useState<Phase>("welcome");
+  const [hoveredStep, setHoveredStep] = useState<string | null>(null);
+  const [selectedAccent, setSelectedAccent] = useState(ACCENTS[0]);
   const [sparkCount, setSparkCount] = useState(0);
-  const [done, setDone] = useState(() => !!localStorage.getItem("dashiii_onboarding_done_v1"));
+  const [done, setDone] = useState(() => !!localStorage.getItem("dashiii_onboarding_done_v2"));
   const counterRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (phase === "reward") {
       let count = 0;
       counterRef.current = setInterval(() => {
-        count += Math.ceil(SPARKS_REWARD / 30);
-        if (count >= SPARKS_REWARD) {
-          count = SPARKS_REWARD;
-          if (counterRef.current) clearInterval(counterRef.current);
-        }
+        count += Math.ceil(SPARKS_REWARD / 35);
+        if (count >= SPARKS_REWARD) { count = SPARKS_REWARD; clearInterval(counterRef.current!); }
         setSparkCount(count);
-      }, 50);
+      }, 40);
     }
     return () => { if (counterRef.current) clearInterval(counterRef.current); };
   }, [phase]);
 
   if (done) return null;
 
-  const skip = () => {
-    localStorage.setItem("dashiii_onboarding_done_v1", "1");
-    setDone(true);
-  };
+  const skip = () => { localStorage.setItem("dashiii_onboarding_done_v2", "1"); setDone(true); };
+  const finish = () => { addSparks(SPARKS_REWARD); localStorage.setItem("dashiii_onboarding_done_v2", "1"); setDone(true); };
 
-  const finish = () => {
-    addSparks(SPARKS_REWARD);
-    localStorage.setItem("dashiii_onboarding_done_v1", "1");
-    setDone(true);
+  const slideVariants = {
+    enter:  { opacity: 0, x: 24 },
+    center: { opacity: 1, x: 0 },
+    exit:   { opacity: 0, x: -24 },
   };
 
   return (
     <AnimatePresence>
       {!done && (
         <motion.div
-          key="onboarding-overlay"
+          key="onboarding"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          exit={{ opacity: 0, filter: "blur(8px)" }}
+          transition={{ duration: 0.4 }}
           className="fixed inset-0 z-[8000] flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(12px)" }}
+          style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(16px)" }}
         >
-          {/* Skip button */}
-          <button
-            onClick={skip}
-            className="absolute bottom-8 right-8 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Skip tour
-          </button>
-
-          {/* Welcome */}
-          {phase === "welcome" && (
-            <motion.div
-              initial={{ scale: 0.9, y: 24 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 24 }}
-              className="w-full max-w-md rounded-3xl p-10 text-center shadow-2xl"
-              style={{ background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))" }}
-            >
-              <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
-                <Sparkles size={28} className="text-primary" />
-              </div>
-              <h1 className="text-2xl font-bold text-foreground mb-3">Welcome to your new Workspace.</h1>
-              <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-                Dashiii is designed to help you think clearer, work faster, and make better decisions with your own personal AI advisory board.
-              </p>
-              <button
-                onClick={() => setPhase("tour")}
-                className="w-full py-3.5 rounded-2xl font-semibold text-base text-primary-foreground flex items-center justify-center gap-2 shadow-lg"
-                style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--aurora-violet)))" }}
-              >
-                Start the Tour <ArrowRight size={18} />
-              </button>
-            </motion.div>
+          {/* Skip */}
+          {phase !== "reward" && (
+            <button onClick={skip}
+              className="absolute top-6 right-6 text-[11px] tracking-wider uppercase font-medium text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+              Skip
+            </button>
           )}
 
-          {/* Tour */}
-          {phase === "tour" && (
-            <motion.div
-              key={`tour-${step}`}
-              initial={{ scale: 0.92, y: 16 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.92, y: 16 }}
-              className="w-full max-w-sm rounded-3xl p-8 shadow-2xl"
-              style={{ background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))" }}
-            >
-              <div className="flex items-center gap-2 mb-5">
-                {TOUR_STEPS.map((_, i) => (
-                  <div key={i} className={`h-1.5 rounded-full flex-1 transition-all ${i === step ? "bg-primary" : i < step ? "bg-primary/40" : "bg-border"}`} />
-                ))}
-              </div>
-              <div className="text-xs font-semibold text-primary mb-1">Step {step + 1} of {TOUR_STEPS.length}</div>
-              <h2 className="text-lg font-bold text-foreground mb-2">{TOUR_STEPS[step].title}</h2>
-              <p className="text-sm text-muted-foreground mb-7 leading-relaxed">{TOUR_STEPS[step].body}</p>
-              <div className="flex gap-3">
-                {step > 0 && (
-                  <button onClick={() => setStep((s) => s - 1)} className="flex-1 py-2.5 rounded-2xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground">
-                    Back
-                  </button>
-                )}
-                <button
-                  onClick={() => step < TOUR_STEPS.length - 1 ? setStep((s) => s + 1) : setPhase("reward")}
-                  className="flex-1 py-2.5 rounded-2xl bg-primary text-primary-foreground text-sm font-medium flex items-center justify-center gap-1.5"
+          <AnimatePresence mode="wait">
+
+            {/* ── WELCOME ── */}
+            {phase === "welcome" && (
+              <motion.div key="welcome" variants={slideVariants} initial="enter" animate="center" exit="exit"
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="w-full max-w-md"
+              >
+                <div
+                  className="rounded-3xl p-10 border border-white/10 shadow-2xl text-center"
+                  style={{ background: "hsl(var(--card)/0.85)", backdropFilter: "blur(40px)" }}
                 >
-                  {step < TOUR_STEPS.length - 1 ? "Next" : "Finish"} <ChevronRight size={14} />
-                </button>
-              </div>
-            </motion.div>
-          )}
+                  {/* Icon */}
+                  <div className="w-14 h-14 rounded-2xl border border-white/10 flex items-center justify-center mx-auto mb-8"
+                    style={{ background: "hsl(var(--primary)/0.08)" }}>
+                    <Cpu size={24} strokeWidth={1.5} className="text-primary" />
+                  </div>
 
-          {/* Reward */}
-          {phase === "reward" && (
-            <motion.div
-              initial={{ scale: 0.88, y: 24 }}
-              animate={{ scale: 1, y: 0 }}
-              className="w-full max-w-md rounded-3xl p-10 text-center shadow-2xl overflow-hidden relative"
-              style={{ background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))" }}
-            >
-              {/* confetti dots */}
-              {Array.from({ length: 18 }).map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 1, y: 0, x: 0, scale: 1 }}
-                  animate={{ opacity: 0, y: -120 + Math.random() * 80, x: (Math.random() - 0.5) * 160, scale: 0.5 }}
-                  transition={{ duration: 1.5, delay: i * 0.05, ease: "easeOut" }}
-                  className="absolute w-2 h-2 rounded-full pointer-events-none"
-                  style={{
-                    left: `${15 + (i % 9) * 10}%`,
-                    top: "30%",
-                    background: i % 3 === 0 ? "hsl(var(--primary))" : i % 3 === 1 ? "hsl(var(--aurora-violet))" : "#f5c842",
-                  }}
-                />
-              ))}
-              <div className="text-4xl mb-3">🎉</div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">You're ready to go.</h2>
-              <p className="text-sm text-muted-foreground mb-6">To get you started, we've credited your account with your first Sparks.</p>
-              <motion.div
-                className="text-5xl font-black text-foreground mb-2"
-                initial={{ scale: 0.5 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.2 }}
-              >
-                {sparkCount} ✨
+                  <p className="text-[10px] tracking-[0.2em] uppercase font-semibold text-muted-foreground/60 mb-3">DASHIII — WORKSPACE OS</p>
+                  <h1 className="text-2xl font-bold tracking-tight text-foreground mb-3 leading-tight">
+                    Your command centre<br />is ready.
+                  </h1>
+                  <p className="text-sm text-muted-foreground mb-10 leading-relaxed">
+                    AI-powered. Zero friction. Every tool you need, unified in one interface.
+                  </p>
+
+                  <button onClick={() => setPhase("systems")}
+                    className="w-full py-3.5 rounded-2xl text-sm font-semibold text-primary-foreground flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--aurora-violet)))" }}
+                  >
+                    Initialise Workspace <ArrowRight size={16} />
+                  </button>
+                </div>
               </motion.div>
-              <p className="text-xs text-muted-foreground mb-8">Use them to consult The Council or generate Smart Plans.</p>
-              <button
-                onClick={finish}
-                className="w-full py-3.5 rounded-2xl font-semibold text-primary-foreground"
-                style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--aurora-violet)))" }}
+            )}
+
+            {/* ── SYSTEMS ── */}
+            {phase === "systems" && (
+              <motion.div key="systems" variants={slideVariants} initial="enter" animate="center" exit="exit"
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="w-full max-w-lg"
               >
-                Enter Workspace
-              </button>
-            </motion.div>
-          )}
+                <div
+                  className="rounded-3xl p-8 border border-white/10 shadow-2xl"
+                  style={{ background: "hsl(var(--card)/0.85)", backdropFilter: "blur(40px)" }}
+                >
+                  <p className="text-[10px] tracking-[0.2em] uppercase font-semibold text-muted-foreground/60 mb-1">SYSTEM MODULES</p>
+                  <h2 className="text-lg font-bold tracking-tight text-foreground mb-6">Core capabilities loaded.</h2>
+
+                  <div className="grid grid-cols-2 gap-3 mb-8">
+                    {STEPS.map(step => {
+                      const Icon = step.icon;
+                      const isHovered = hoveredStep === step.id;
+                      return (
+                        <motion.div
+                          key={step.id}
+                          onMouseEnter={() => setHoveredStep(step.id)}
+                          onMouseLeave={() => setHoveredStep(null)}
+                          animate={{ borderColor: isHovered ? `${step.color}40` : "hsl(var(--border)/0.3)" }}
+                          className="p-4 rounded-2xl border cursor-default transition-colors"
+                          style={{
+                            background: isHovered ? `${step.color}06` : "hsl(var(--secondary)/0.3)",
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <Icon size={14} strokeWidth={1.5} style={{ color: step.color }} />
+                            <span className="text-[9px] tracking-[0.15em] uppercase font-mono text-muted-foreground/50">{step.code}</span>
+                          </div>
+                          <p className="text-xs font-semibold text-foreground mb-1 leading-tight">{step.label}</p>
+                          <AnimatePresence>
+                            {isHovered && (
+                              <motion.p
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="text-[10px] text-muted-foreground leading-relaxed"
+                              >
+                                {step.body}
+                              </motion.p>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+
+                  <button onClick={() => setPhase("accent")}
+                    className="w-full py-3 rounded-2xl text-sm font-semibold text-primary-foreground flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                    style={{ background: "hsl(var(--primary))" }}
+                  >
+                    Personalise Interface <ChevronRight size={15} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── ACCENT ── */}
+            {phase === "accent" && (
+              <motion.div key="accent" variants={slideVariants} initial="enter" animate="center" exit="exit"
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="w-full max-w-sm"
+              >
+                <div
+                  className="rounded-3xl p-8 border border-white/10 shadow-2xl"
+                  style={{ background: "hsl(var(--card)/0.85)", backdropFilter: "blur(40px)" }}
+                >
+                  <p className="text-[10px] tracking-[0.2em] uppercase font-semibold text-muted-foreground/60 mb-1">INTERFACE ACCENT</p>
+                  <h2 className="text-lg font-bold tracking-tight text-foreground mb-2">Select primary colour.</h2>
+                  <p className="text-xs text-muted-foreground mb-7">Applied to active states, buttons, and highlights.</p>
+
+                  <div className="grid grid-cols-2 gap-3 mb-8">
+                    {ACCENTS.map(a => (
+                      <button
+                        key={a.value}
+                        onClick={() => setSelectedAccent(a)}
+                        className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                          selectedAccent.value === a.value ? "border-white/20" : "border-white/5 hover:border-white/10"
+                        }`}
+                        style={{ background: selectedAccent.value === a.value ? `${a.value}12` : "hsl(var(--secondary)/0.4)" }}
+                      >
+                        <div className="w-5 h-5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: a.value }} />
+                        <span className="text-[10px] font-mono tracking-wider text-muted-foreground">{a.label}</span>
+                        {selectedAccent.value === a.value && (
+                          <CheckCircle2 size={12} className="ml-auto" style={{ color: a.value }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button onClick={() => setPhase("reward")}
+                    className="w-full py-3 rounded-2xl text-sm font-semibold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                    style={{ background: selectedAccent.value }}
+                  >
+                    Confirm Selection <ChevronRight size={15} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── REWARD ── */}
+            {phase === "reward" && (
+              <motion.div key="reward" variants={slideVariants} initial="enter" animate="center" exit="exit"
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="w-full max-w-sm"
+              >
+                <div
+                  className="rounded-3xl p-10 border border-white/10 shadow-2xl text-center relative overflow-hidden"
+                  style={{ background: "hsl(var(--card)/0.85)", backdropFilter: "blur(40px)" }}
+                >
+                  {/* Particle burst */}
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <motion.div key={i}
+                      initial={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+                      animate={{ opacity: 0, y: -80 + Math.random() * 60, x: (Math.random() - 0.5) * 120, scale: 0.4 }}
+                      transition={{ duration: 1.2, delay: i * 0.07, ease: "easeOut" }}
+                      className="absolute w-1.5 h-1.5 rounded-full pointer-events-none"
+                      style={{
+                        left: `${20 + (i % 6) * 12}%`,
+                        top: "25%",
+                        backgroundColor: i % 2 === 0 ? "#10b981" : "#8b5cf6",
+                      }}
+                    />
+                  ))}
+
+                  <p className="text-[10px] tracking-[0.2em] uppercase font-semibold text-muted-foreground/60 mb-2">INITIALISATION COMPLETE</p>
+                  <h2 className="text-xl font-bold tracking-tight text-foreground mb-2">Access granted.</h2>
+                  <p className="text-xs text-muted-foreground mb-6 leading-relaxed">Your workspace credit has been issued. Use Sparks to unlock AI features.</p>
+
+                  <motion.div
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 18, delay: 0.2 }}
+                    className="text-5xl font-black text-foreground mb-1"
+                  >
+                    {sparkCount} ✨
+                  </motion.div>
+                  <p className="text-[11px] text-muted-foreground mb-8">Sparks credited</p>
+
+                  <button onClick={finish}
+                    className="w-full py-3.5 rounded-2xl text-sm font-semibold text-primary-foreground flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                    style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--aurora-violet)))" }}
+                  >
+                    Enter Workspace <ArrowRight size={16} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>
