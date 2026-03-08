@@ -242,12 +242,17 @@ const CheckoutModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 };
 
 /* ─── Main View ─── */
+const ADMIN_EMAIL = "kevin.therkildsen@icloud.com";
+
 const CommunityBoardView = () => {
   const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const [slots, setSlots] = useState<Slot[]>(buildGrid([]));
   const [loading, setLoading] = useState(true);
   const [checkoutSlot, setCheckoutSlot] = useState<number | null>(null);
   const [setupSlot, setSetupSlot] = useState<number | null>(null);
+  const [adminUploadSlot, setAdminUploadSlot] = useState<number | null>(null);
+  const [adminUploading, setAdminUploading] = useState(false);
 
   const fetchSlots = useCallback(async () => {
     const { data, error } = await supabase.from("community_slots").select("*").order("slot_index", { ascending: true });

@@ -176,9 +176,15 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                   <h2 className="text-base font-bold text-foreground">Send Invoice to {contact.name}</h2>
                   <p className="text-xs text-muted-foreground">Billing {contact.company || contact.email}</p>
                 </div>
-                <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-secondary text-muted-foreground">
-                  <X size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowBankSettings(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/30 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                    <Settings2 size={12} /> Bank Info
+                  </button>
+                  <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-secondary text-muted-foreground">
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* Two-column body */}
