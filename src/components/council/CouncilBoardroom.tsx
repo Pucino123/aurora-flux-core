@@ -652,11 +652,11 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white/90 truncate">{persona.name}</p>
-            <p className="text-[10px] text-white/40">{persona.title}</p>
+            <p className="text-sm font-bold text-foreground truncate">{persona.name}</p>
+            <p className="text-[10px] text-muted-foreground">{persona.title}</p>
             {state === "revealed" && (
               <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-1 mt-1">
-                <div className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${color}20`, color }}>
+                <div className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${color}25`, color }}>
                   {response?.confidence ?? persona.ringPct}%
                 </div>
               </motion.div>
@@ -664,29 +664,29 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
           </div>
           <div className="flex gap-1 shrink-0">
             <div className="relative group">
-              <button className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+              <button className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                 <BarChart2 size={12} />
               </button>
-              <div className="absolute right-0 bottom-full mb-1 px-2 py-1.5 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-[9px] text-white/60 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
+              <div className="absolute right-0 bottom-full mb-1 px-2 py-1.5 rounded-xl bg-popover backdrop-blur-xl border border-border text-[9px] text-muted-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg">
                 {persona.stat}
               </div>
             </div>
             {state === "revealed" && !isExpanded && (
               <>
-                <button onClick={onExpand} title="1-on-1 Deep Dive" className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+                <button onClick={onExpand} title="1-on-1 Deep Dive (−1 ✨)" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <MessageSquare size={12} />
                 </button>
-                <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+                <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <Maximize2 size={11} />
                 </button>
               </>
             )}
             {isExpanded && (
               <>
-                <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+                <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <Maximize2 size={11} />
                 </button>
-                <button onClick={onCollapse} className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+                <button onClick={onCollapse} className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <X size={12} />
                 </button>
               </>
@@ -701,7 +701,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
               animate={{ scale: [1, 1.08, 1], opacity: [0.35, 0.6, 0.35] }}
               transition={{ duration: 2.8, repeat: Infinity }}
             >
-              {React.createElement(Icon as React.ComponentType<{ size?: number; style?: React.CSSProperties }>, { size: 22, style: { color: `${color}60` } })}
+              {React.createElement(Icon as React.ComponentType<{ size?: number; style?: React.CSSProperties }>, { size: 22, style: { color: `${color}90` } })}
             </motion.div>
           </div>
         )}
@@ -710,32 +710,32 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
 
         {state === "revealed" && response && (
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-            <div className="flex-1 overflow-y-auto council-hidden-scrollbar text-[11px] text-white/65 leading-relaxed space-y-2">
+            <div className="flex-1 overflow-y-auto council-hidden-scrollbar text-[11px] text-foreground/70 leading-relaxed space-y-2">
               {banterTarget && <BanterChip referencedName={banterTarget} color={banterTargetColor} />}
               <p>{renderBoldTerms(response.analysis, color, showTooltip, setShowTooltip)}</p>
-              <p className="font-bold text-white/80 mt-1">{response.question}</p>
+              <p className="font-bold text-foreground/85 mt-1">{response.question}</p>
             </div>
 
             {isExpanded && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                className="mt-3 border-t border-white/8 pt-3 flex flex-col gap-2"
+                className="mt-3 border-t border-border/40 pt-3 flex flex-col gap-2"
               >
-                <p className="text-[9px] text-white/30 uppercase tracking-widest mb-1">1-on-1 Deep Dive with {persona.name.split(" ")[0]}</p>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">1-on-1 Deep Dive with {persona.name.split(" ")[0]} (−1 ✨ / msg)</p>
                 <div className="max-h-[140px] overflow-y-auto council-hidden-scrollbar space-y-2">
                   {chatMessages.map((m, i) => (
                     <div
                       key={i}
                       className={`text-[10px] rounded-xl px-2.5 py-1.5 leading-snug ${
                         m.role === "user"
-                          ? "bg-white/10 text-white/80 ml-6"
-                          : "bg-white/5 text-white/60 mr-6"
+                          ? "bg-secondary text-foreground/85 ml-6"
+                          : "bg-card text-foreground/65 mr-6 border border-border/40"
                       }`}
                     >
                       {m.text}
                       {m.role === "ai" && i === chatMessages.length - 1 && chatLoading && (
-                        <span className="inline-block w-1 h-3 bg-white/40 animate-pulse ml-0.5 align-middle" />
+                        <span className="inline-block w-1 h-3 bg-foreground/40 animate-pulse ml-0.5 align-middle" />
                       )}
                     </div>
                   ))}
@@ -748,12 +748,12 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
                     onChange={e => setChatInput(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && sendChat()}
                     placeholder={`Ask ${persona.name.split(" ")[0]}…`}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] text-white placeholder:text-white/20 outline-none focus:border-white/20"
+                    className="flex-1 bg-secondary border border-border rounded-xl px-2.5 py-1.5 text-[10px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/40"
                   />
                   <button
                     onClick={sendChat}
                     disabled={chatLoading}
-                    className="w-7 h-7 flex items-center justify-center rounded-xl"
+                    className="w-7 h-7 flex items-center justify-center rounded-xl transition-colors"
                     style={{ background: `${color}30` }}
                   >
                     {chatLoading ? <Loader2 size={10} className="animate-spin" style={{ color }} /> : <Send size={10} style={{ color }} />}
