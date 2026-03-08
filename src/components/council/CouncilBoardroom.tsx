@@ -1523,13 +1523,12 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
               {!user && (
                 <a
                   href="/auth"
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-purple-200 transition-colors"
-                  style={{ background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.35)" }}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-accent-foreground transition-colors bg-accent/20 border border-accent/30 hover:bg-accent/30"
                 >
                   <Sparkles size={9} /> Sign up free
                 </a>
               )}
-              <button onClick={() => setIsSharedView(false)} className="w-5 h-5 flex items-center justify-center text-white/25 hover:text-white/50 transition-colors">
+              <button onClick={() => setIsSharedView(false)} className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
                 <X size={11} />
               </button>
             </div>
@@ -1544,14 +1543,13 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full self-start"
-            style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.15)" }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full self-start bg-primary/10 border border-primary/20"
           >
-            <Users size={10} className="text-cyan-400/70" />
-            <span className="text-[9px] text-cyan-400/70 font-medium">
+            <Users size={10} className="text-primary/70" />
+            <span className="text-[9px] text-primary/70 font-medium">
               {collaborators.map(c => (
                 <span key={c.userId} className="inline-flex items-center gap-1 mr-2">
-                  {c.isConsulting && <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />}
+                  {c.isConsulting && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
                   {c.displayName}
                 </span>
               ))}
