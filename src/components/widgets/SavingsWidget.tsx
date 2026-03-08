@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { pushNotification } from "@/components/NotificationBell";
 
 interface SavingsGoal {
   id: string;
