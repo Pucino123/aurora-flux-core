@@ -6,6 +6,7 @@ import { Top5TasksWidget, ProjectStatusWidget } from "@/components/widgets/Produ
 import SmartPlanWidget from "@/components/widgets/SmartPlanWidget";
 import GamificationCard from "@/components/GamificationCard";
 import BudgetWidget from "@/components/BudgetWidget";
+import CRMWidget from "./CRMWidget";
 import { useTeamChat } from "@/hooks/useTeamChat";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useRef, useCallback, useEffect } from "react";
