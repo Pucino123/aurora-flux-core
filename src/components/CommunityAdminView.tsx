@@ -155,6 +155,8 @@ const CommunityAdminView = () => {
 
   return (
     <div className="flex-1 overflow-y-auto min-h-screen" style={{ background: "radial-gradient(ellipse at top, #0f172a 0%, #020617 100%)" }}>
+      {/* Hidden thumbnail upload input */}
+      <input ref={thumbnailInputRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} />
       <SEO title="Community Admin" description="Manage community board submissions." />
       <div className="px-6 md:px-10 py-8 space-y-8 max-w-7xl mx-auto">
 
