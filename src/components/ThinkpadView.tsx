@@ -451,6 +451,7 @@ const TabBar = ({
   onAdd,
   onDelete,
   onRename,
+  isLight = false,
 }: {
   tracks: IdeaTrack[];
   activeId: string;
@@ -458,6 +459,7 @@ const TabBar = ({
   onAdd: () => void;
   onDelete: (id: string) => void;
   onRename: (id: string, name: string) => void;
+  isLight?: boolean;
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -476,7 +478,7 @@ const TabBar = ({
   return (
     <div
       className="flex items-center gap-1 px-3 pt-3 pb-0 overflow-x-auto scrollbar-none shrink-0"
-      style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+      style={{ borderBottom: isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid rgba(255,255,255,0.07)" }}
     >
       {tracks.map((track) => {
         const isActive = track.id === activeId;
@@ -486,9 +488,13 @@ const TabBar = ({
             onClick={() => onSelect(track.id)}
             className="group relative flex items-center gap-1.5 px-3 py-2 rounded-t-xl cursor-pointer shrink-0 transition-all duration-200"
             style={{
-              background: isActive ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.03)",
-              border: isActive ? "1px solid rgba(99,102,241,0.35)" : "1px solid rgba(255,255,255,0.06)",
-              borderBottom: isActive ? "1px solid transparent" : "1px solid rgba(255,255,255,0.06)",
+              background: isActive
+                ? isLight ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.15)"
+                : isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.03)",
+              border: isActive
+                ? "1px solid rgba(99,102,241,0.35)"
+                : isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.06)",
+              borderBottom: isActive ? "1px solid transparent" : undefined,
               marginBottom: isActive ? "-1px" : 0,
             }}
           >
@@ -500,11 +506,12 @@ const TabBar = ({
                   onBlur={commitEdit}
                   onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingId(null); }}
                   className="bg-transparent text-xs font-medium outline-none w-24"
-                  style={{ color: "rgba(255,255,255,0.9)" }}
+                  style={{ color: isLight ? "rgba(20,24,40,0.9)" : "rgba(255,255,255,0.9)" }}
                   autoFocus
                   onClick={(e) => e.stopPropagation()}
                 />
-                <button onClick={(e) => { e.stopPropagation(); commitEdit(); }} className="text-white/40 hover:text-white/80">
+                <button onClick={(e) => { e.stopPropagation(); commitEdit(); }}
+                  style={{ color: isLight ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)" }}>
                   <Check size={10} />
                 </button>
               </>
@@ -512,19 +519,20 @@ const TabBar = ({
               <>
                 <span
                   className="text-xs font-medium max-w-[120px] truncate"
-                  style={{ color: isActive ? "rgba(165,180,252,1)" : "rgba(255,255,255,0.45)" }}
+                  style={{ color: isActive
+                    ? isLight ? "rgba(79,70,229,1)" : "rgba(165,180,252,1)"
+                    : isLight ? "rgba(30,30,50,0.55)" : "rgba(255,255,255,0.45)"
+                  }}
                 >
                   {track.name}
                 </span>
-                {/* Edit on hover */}
                 <button
                   onClick={(e) => startEdit(track, e)}
                   className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
+                  style={{ color: isLight ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.5)" }}
                 >
                   <Pencil size={9} />
                 </button>
-                {/* Delete — only if more than 1 track */}
                 {tracks.length > 1 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onDelete(track.id); }}
@@ -543,8 +551,8 @@ const TabBar = ({
       {/* Add new track */}
       <button
         onClick={onAdd}
-        className="flex items-center gap-1 px-2.5 py-2 rounded-t-xl text-xs transition-all hover:bg-white/8 shrink-0"
-        style={{ color: "rgba(255,255,255,0.3)", border: "1px solid transparent" }}
+        className="flex items-center gap-1 px-2.5 py-2 rounded-t-xl text-xs transition-all shrink-0"
+        style={{ color: isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.3)", border: "1px solid transparent" }}
       >
         <Plus size={11} /> New Track
       </button>
