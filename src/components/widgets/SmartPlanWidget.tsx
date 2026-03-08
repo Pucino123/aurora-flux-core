@@ -337,6 +337,14 @@ const SmartPlanWidget = () => {
     }
   }, [user, blocks.length]);
 
+  // ── Delete block ────────────────────────────────────────────────────────
+  const handleDeleteBlock = useCallback(async (blockId: string) => {
+    setBlocks(prev => prev.filter(b => b.id !== blockId));
+    if (user) {
+      await supabase.from("schedule_blocks").delete().eq("id", blockId).eq("user_id", user.id);
+    }
+  }, [user]);
+
   // ── Optimize ────────────────────────────────────────────────────────────
   const optimize = async () => {
     setOptimizing(true);
@@ -404,7 +412,7 @@ const SmartPlanWidget = () => {
               <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                 <motion.div key="blocks" className="space-y-1.5">
                   {blocks.map((block, idx) => (
-                    <SortableBlock key={block.id} block={block} idx={idx} />
+                    <SortableBlock key={block.id} block={block} idx={idx} onDelete={handleDeleteBlock} />
                   ))}
                 </motion.div>
               </SortableContext>
