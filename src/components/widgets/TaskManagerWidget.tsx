@@ -265,7 +265,7 @@ const SwipeableTaskCard: React.FC<SwipeableTaskCardProps> = ({
 // ─── Main Widget ─────────────────────────────────────────────────────────────
 
 const TaskManagerWidget = () => {
-  const { tasks: fluxTasks, updateTask, createTask, createBlock, deleteTask } = useFlux();
+  const { tasks: fluxTasks, updateTask, createTask, createBlock } = useFlux();
   const today = format(new Date(), "yyyy-MM-dd");
 
   const [newTitle, setNewTitle] = useState("");
