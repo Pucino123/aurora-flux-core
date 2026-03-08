@@ -167,17 +167,13 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {trash.length > 0 && (
+                  {trash.length > 0 && !confirmEmpty && (
                     <button
-                      onClick={handleEmptyTrash}
-                      className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors border ${
-                        confirmEmpty
-                          ? "text-white bg-rose-600 border-rose-600 hover:bg-rose-700"
-                          : "text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20"
-                      }`}
+                      onClick={() => setConfirmEmpty(true)}
+                      className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors border text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20"
                     >
                       <Trash2 size={11} />
-                      {confirmEmpty ? "Confirm?" : "Empty Trash"}
+                      Empty Trash
                     </button>
                   )}
                   <button
@@ -188,6 +184,40 @@ const TrashModal = ({ open, onClose }: TrashModalProps) => {
                   </button>
                 </div>
               </div>
+
+              {/* Empty trash confirmation banner */}
+              <AnimatePresence>
+                {confirmEmpty && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden shrink-0"
+                    style={{ background: "hsl(0 72% 55% / 0.08)", borderBottom: "1px solid hsl(0 72% 55% / 0.2)" }}
+                  >
+                    <div className="flex items-center gap-3 px-5 py-3">
+                      <AlertTriangle size={14} className="text-rose-400 shrink-0" />
+                      <p className="text-[12px] text-foreground flex-1">
+                        Permanently delete all <strong>{trash.length}</strong> item{trash.length !== 1 ? "s" : ""}? This cannot be undone.
+                      </p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={cancelEmpty}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-muted-foreground hover:text-foreground bg-foreground/8 hover:bg-foreground/15 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleEmptyTrash}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-rose-600 hover:bg-rose-700 transition-colors"
+                        >
+                          Delete All
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Auto-delete setting */}
               <div className="px-5 py-3 border-b border-border/10 shrink-0 flex items-center gap-3">
