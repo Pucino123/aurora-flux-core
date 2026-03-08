@@ -856,16 +856,25 @@ const TheCouncil = () => {
                             {/* Header bar — clickable for profile modal */}
                             <div className="flex items-center gap-3 p-3 sm:p-4">
                               <motion.div
-                                whileHover={{ scale: 1.1 }}
+                                whileHover={{ scale: 1.12 }}
+                                whileTap={{ scale: 0.96 }}
                                 onClick={() => setProfilePersona(persona.personaKey)}
-                                className="cursor-pointer"
+                                className="cursor-pointer shrink-0"
+                                animate={speakingPersona === persona.personaKey ? { scale: [1, 1.08, 1] } : {}}
+                                transition={{ duration: 0.6, repeat: speakingPersona === persona.personaKey ? Infinity : 0 }}
                               >
-                                <CouncilAvatar
-                                  color={persona.color}
-                                  vote={persona.vote}
-                                  isSpeaking={speakingPersona === persona.personaKey}
-                                  size={isMobile ? 34 : 40}
-                                />
+                                {(() => {
+                                  const expressions: Record<string, "smile" | "straight" | "frown" | "calm" | "wide"> = {
+                                    strategist: "smile", operator: "straight", skeptic: "frown", advocate: "straight", growth: "wide",
+                                  };
+                                  return (
+                                    <BaymaxFace
+                                      color={persona.color}
+                                      size={isMobile ? 34 : 42}
+                                      expression={expressions[persona.personaKey] || "straight"}
+                                    />
+                                  );
+                                })()}
                               </motion.div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-0.5">
