@@ -270,11 +270,11 @@ const TheCouncil = () => {
       <SEO title="The Council" description="Get multi-perspective AI advisory on your ideas and decisions. Meet your AI Council." url="/" keywords="AI council, advisory board, decision making, AI advisors, brainstorming" />
       {/* Full-page gradient background */}
       <div className="council-hero-gradient relative min-h-screen overflow-hidden">
-        {/* Ambient blobs — slowed down */}
+        {/* Ambient blobs — dark OS palette */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[hsl(25_80%_75%/0.05)] blur-[120px] animate-aurora-slow-1" />
-          <div className="absolute top-[10%] right-[-15%] w-[50%] h-[50%] rounded-full bg-[hsl(330_70%_75%/0.04)] blur-[120px] animate-aurora-slow-2" />
-          <div className="absolute bottom-[-10%] left-[20%] w-[55%] h-[55%] rounded-full bg-[hsl(217_80%_75%/0.04)] blur-[120px] animate-aurora-slow-3" />
+          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[hsl(270_70%_40%/0.06)] blur-[130px] animate-aurora-slow-1" />
+          <div className="absolute top-[10%] right-[-15%] w-[50%] h-[50%] rounded-full bg-[hsl(217_80%_40%/0.05)] blur-[130px] animate-aurora-slow-2" />
+          <div className="absolute bottom-[-10%] left-[20%] w-[55%] h-[55%] rounded-full bg-[hsl(200_70%_35%/0.04)] blur-[130px] animate-aurora-slow-3" />
         </div>
 
         {/* Tab switcher */}
