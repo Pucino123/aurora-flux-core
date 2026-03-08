@@ -1,14 +1,27 @@
-import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, GripVertical, MoreHorizontal, Trash2, Edit2 } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { Plus, Trash2, Sparkles, Zap, GripVertical } from "lucide-react";
 import { useFlux } from "@/context/FluxContext";
 import { useTrash } from "@/context/TrashContext";
+import { toast } from "sonner";
 
 const COLUMNS = [
-  { key: "todo", label: "To Do", color: "hsl(var(--aurora-blue))" },
-  { key: "in-progress", label: "In Progress", color: "hsl(var(--aurora-violet))" },
-  { key: "done", label: "Done", color: "hsl(var(--aurora-pink))" },
+  { key: "todo",        label: "To Do",       color: "#3b82f6", glow: "rgba(59,130,246,0.3)"  },
+  { key: "in-progress", label: "In Progress",  color: "#8b5cf6", glow: "rgba(139,92,246,0.3)" },
+  { key: "done",        label: "Done",         color: "#10b981", glow: "rgba(16,185,129,0.3)" },
 ] as const;
+
+const PRIORITY_GLOW: Record<string, string> = {
+  high:   "rgba(239,68,68,0.55)",
+  medium: "rgba(251,191,36,0.45)",
+  low:    "rgba(96,165,250,0.45)",
+};
+
+const PRIORITY_COLORS: Record<string, { dot: string; badge: string; text: string }> = {
+  high:   { dot: "#ef4444", badge: "rgba(239,68,68,0.12)",  text: "#fca5a5" },
+  medium: { dot: "#f59e0b", badge: "rgba(245,158,11,0.12)", text: "#fcd34d" },
+  low:    { dot: "#3b82f6", badge: "rgba(59,130,246,0.12)", text: "#93c5fd" },
+};
 
 interface KanbanBoardProps {
   folderId?: string;
@@ -21,12 +34,20 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
   const tasks = propTasks || allTasks;
   const [newTaskCol, setNewTaskCol] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
+  const [isAIPrioritizing, setIsAIPrioritizing] = useState(false);
+  const [scanLine, setScanLine] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [overColumn, setOverColumn] = useState<string | null>(null);
 
-  const tasksByStatus = {
-    "todo": tasks.filter((t) => t.status === "todo" && !t.done),
+  const tasksByStatus = useMemo(() => ({
+    "todo":        tasks.filter((t) => t.status === "todo" && !t.done),
     "in-progress": tasks.filter((t) => t.status === "in-progress" && !t.done),
-    "done": tasks.filter((t) => t.done || t.status === "done"),
-  };
+    "done":        tasks.filter((t) => t.done || t.status === "done"),
+  }), [tasks]);
+
+  const totalTasks     = tasks.length;
+  const completedTasks = tasks.filter(t => t.done).length;
+  const progressPct    = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const handleAdd = async (status: string) => {
     if (!newTitle.trim()) return;
@@ -40,98 +61,317 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
     updateTask(taskId, { status: newStatus, done: isDone });
   };
 
+  // Drag handlers
+  const handleDragStart = (taskId: string) => setDraggedId(taskId);
+  const handleDragEnd   = () => { setDraggedId(null); setOverColumn(null); };
+
+  const handleColumnDragOver = (e: React.DragEvent, colKey: string) => {
+    e.preventDefault();
+    setOverColumn(colKey);
+  };
+  const handleColumnDrop = (e: React.DragEvent, colKey: string) => {
+    e.preventDefault();
+    if (draggedId) moveTask(draggedId, colKey);
+    setDraggedId(null);
+    setOverColumn(null);
+  };
+
+  // AI Prioritize animation
+  const handleAIPrioritize = useCallback(async () => {
+    if (isAIPrioritizing) return;
+    setIsAIPrioritizing(true);
+    setScanLine(true);
+
+    await new Promise(r => setTimeout(r, 900));
+    setScanLine(false);
+
+    // Sort: pinned first, then by priority score, then undone before done
+    const priorityScore: Record<string, number> = { high: 0, medium: 1, low: 2 };
+    const sortedTasks = [...tasks].sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      const pA = priorityScore[a.priority ?? "low"] ?? 2;
+      const pB = priorityScore[b.priority ?? "low"] ?? 2;
+      return pA - pB;
+    });
+
+    // Re-assign statuses optimally
+    sortedTasks.forEach((t, i) => {
+      const newStatus = t.done ? "done" : i < Math.ceil(sortedTasks.length * 0.4) ? "todo" : "in-progress";
+      if (t.status !== newStatus || t.done !== (newStatus === "done")) {
+        updateTask(t.id, { status: newStatus, done: newStatus === "done" });
+      }
+    });
+
+    await new Promise(r => setTimeout(r, 400));
+    setIsAIPrioritizing(false);
+    toast("✨ Aura has reorganized your day for maximum focus.", {
+      duration: 4000,
+      style: {
+        background: "rgba(15,10,40,.95)",
+        border: "1px solid rgba(139,92,246,.5)",
+        backdropFilter: "blur(20px)",
+        color: "#e2e8f0",
+        boxShadow: "0 8px 32px rgba(139,92,246,.35)",
+      },
+    });
+  }, [isAIPrioritizing, tasks, updateTask]);
+
   return (
-    <div className="flex-1 p-4 md:p-6 overflow-x-auto">
-      <h2 className="text-lg font-bold font-display mb-4">Kanban Board</h2>
-      <div className="flex gap-4 min-w-[720px]">
-        {COLUMNS.map((col) => (
-          <div key={col.key} className="flex-1 min-w-[220px]">
-            {/* Column header */}
-            <div className="flex items-center gap-2 mb-3 px-1">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: col.color }} />
-              <span className="text-sm font-semibold text-foreground">{col.label}</span>
-              <span className="text-xs text-muted-foreground ml-auto">
-                {tasksByStatus[col.key]?.length || 0}
-              </span>
-            </div>
+    <div
+      className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden relative"
+      style={{
+        background: "radial-gradient(ellipse at top, rgba(139,92,246,0.05) 0%, transparent 60%)",
+      }}
+    >
+      {/* Scan line animation */}
+      <AnimatePresence>
+        {scanLine && (
+          <motion.div
+            key="scan"
+            initial={{ top: 0, opacity: 0.9 }}
+            animate={{ top: "100%", opacity: 0 }}
+            transition={{ duration: 0.9, ease: "easeInOut" }}
+            className="absolute inset-x-0 z-50 pointer-events-none"
+            style={{
+              height: 2,
+              background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.9), rgba(99,102,241,0.9), transparent)",
+              boxShadow: "0 0 20px 6px rgba(139,92,246,0.5)",
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-            {/* Cards */}
-            <div className="space-y-2 min-h-[100px] p-2 rounded-xl bg-secondary/20 border border-border/30">
-              <AnimatePresence>
-                {tasksByStatus[col.key]?.map((task) => (
-                  <motion.div
-                    key={task.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border border-border/40 shadow-sm group"
-                  >
-                    <div className="flex items-start gap-2">
-                      <GripVertical size={14} className="text-muted-foreground/40 mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${task.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                          {task.title}
-                        </p>
-                        {task.priority && (
-                          <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                            task.priority === "high" ? "bg-destructive/10 text-destructive" :
-                            task.priority === "medium" ? "bg-amber-100 text-amber-700" :
-                            "bg-secondary text-muted-foreground"
-                          }`}>
-                            {task.priority}
-                          </span>
-                        )}
-                      </div>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                        {col.key !== "done" && (
-                          <button
-                            onClick={() => moveTask(task.id, col.key === "todo" ? "in-progress" : "done")}
-                            className="p-1 rounded hover:bg-secondary text-muted-foreground text-xs"
-                            title="Move forward"
-                          >
-                            →
-                          </button>
-                        )}
-                        <button
-                          onClick={() => { moveToTrash({ id: task.id, type: "task", title: task.title, originalData: task }); removeTask(task.id); }}
-                          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5 shrink-0">
+        <div>
+          <h2 className="text-base font-bold font-display text-foreground/90">Task Board</h2>
+          <p className="text-[10px] text-muted-foreground/40 mt-0.5">{completedTasks} of {totalTasks} completed</p>
+        </div>
 
-              {/* Add task */}
-              {newTaskCol === col.key ? (
-                <div className="p-2">
-                  <input
-                    autoFocus
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAdd(col.key);
-                      if (e.key === "Escape") { setNewTaskCol(null); setNewTitle(""); }
-                    }}
-                    onBlur={() => { if (!newTitle.trim()) { setNewTaskCol(null); setNewTitle(""); } }}
-                    placeholder="Task title..."
-                    className="w-full px-3 py-2 rounded-lg bg-background border border-border/50 text-xs outline-none focus:ring-1 focus:ring-primary/30"
-                  />
-                </div>
-              ) : (
-                <button
-                  onClick={() => setNewTaskCol(col.key)}
-                  className="w-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:bg-secondary/40 transition-colors"
-                >
-                  <Plus size={12} /> Add task
-                </button>
-              )}
-            </div>
+        {/* Progress bar */}
+        <div className="flex items-center gap-3">
+          <div className="w-32 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+            <motion.div
+              className="h-full rounded-full"
+              style={{
+                background: "linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6)",
+                boxShadow: "0 0 10px rgba(99,102,241,0.5)",
+              }}
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPct}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            />
           </div>
-        ))}
+          <span className="text-[10px] text-muted-foreground/40 font-medium w-7">{progressPct}%</span>
+
+          {/* AI Prioritize */}
+          <motion.button
+            onClick={handleAIPrioritize}
+            disabled={isAIPrioritizing}
+            animate={isAIPrioritizing ? {} : { boxShadow: ["0 0 0px rgba(139,92,246,0)", "0 0 12px rgba(139,92,246,0.5)", "0 0 0px rgba(139,92,246,0)"] }}
+            transition={{ duration: 2.2, repeat: Infinity }}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all"
+            style={{
+              background: "rgba(139,92,246,0.15)",
+              border: "1px solid rgba(139,92,246,0.35)",
+              color: "rgba(196,181,253,0.9)",
+            }}
+          >
+            {isAIPrioritizing
+              ? <Zap size={11} className="animate-pulse text-violet-400" />
+              : <Sparkles size={11} className="text-violet-400" />}
+            AI Prioritize
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Columns */}
+      <div className="flex gap-4 min-w-[720px] overflow-x-auto flex-1">
+        {COLUMNS.map((col) => {
+          const isOver = overColumn === col.key;
+          return (
+            <div
+              key={col.key}
+              className="flex-1 min-w-[220px] flex flex-col"
+              onDragOver={e => handleColumnDragOver(e, col.key)}
+              onDragLeave={() => setOverColumn(null)}
+              onDrop={e => handleColumnDrop(e, col.key)}
+            >
+              {/* Column header */}
+              <div className="flex items-center gap-2 mb-3 px-1 shrink-0">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: col.color, boxShadow: `0 0 8px ${col.glow}` }}
+                />
+                <span className="text-xs font-bold text-foreground/80">{col.label}</span>
+                <span
+                  className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ background: `${col.color}20`, color: col.color }}
+                >
+                  {tasksByStatus[col.key]?.length || 0}
+                </span>
+              </div>
+
+              {/* Cards container */}
+              <motion.div
+                animate={{ background: isOver ? `${col.color}10` : "rgba(255,255,255,0.02)" }}
+                transition={{ duration: 0.15 }}
+                className="flex-1 space-y-2 min-h-[120px] p-2 rounded-2xl border transition-all"
+                style={{
+                  borderColor: isOver ? `${col.color}40` : "rgba(255,255,255,0.05)",
+                }}
+              >
+                <AnimatePresence initial={false}>
+                  {tasksByStatus[col.key]?.map((task, i) => {
+                    const pc = PRIORITY_COLORS[task.priority ?? "low"];
+                    const isDragging = draggedId === task.id;
+
+                    return (
+                      <motion.div
+                        key={task.id}
+                        layout
+                        initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                        animate={{
+                          opacity: isDragging ? 0.5 : 1,
+                          y: 0,
+                          scale: isDragging ? 1.05 : 1,
+                          rotate: isDragging ? 1 : 0,
+                          transition: { delay: i * 0.04 },
+                        }}
+                        exit={{ opacity: 0, scale: 0.92, y: -6, transition: { duration: 0.2 } }}
+                        draggable
+                        onDragStart={e => {
+                          handleDragStart(task.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        onDragEnd={handleDragEnd}
+                        className="group relative rounded-xl p-3 cursor-grab active:cursor-grabbing border transition-all duration-200"
+                        style={{
+                          background: isDragging
+                            ? "rgba(255,255,255,0.08)"
+                            : "rgba(255,255,255,0.04)",
+                          borderColor: isDragging
+                            ? `${col.color}50`
+                            : "rgba(255,255,255,0.06)",
+                          boxShadow: isDragging
+                            ? `0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px ${col.color}30`
+                            : "0 2px 8px rgba(0,0,0,0.2)",
+                        }}
+                        onMouseEnter={e => {
+                          if (!isDragging) {
+                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.07)";
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.1)";
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!isDragging) {
+                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)";
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)";
+                          }
+                        }}
+                      >
+                        <div className="flex items-start gap-2">
+                          <GripVertical size={12} className="text-muted-foreground/20 mt-0.5 shrink-0 group-hover:text-muted-foreground/50 transition-colors" />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[12px] font-medium leading-snug ${task.done ? "line-through text-muted-foreground/30" : "text-foreground/85"}`}>
+                              {task.title}
+                            </p>
+
+                            {task.priority && pc && (
+                              <span
+                                className="inline-flex items-center gap-1 mt-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                                style={{ background: pc.badge, color: pc.text }}
+                              >
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                                  style={{ background: pc.dot, boxShadow: `0 0 5px ${PRIORITY_GLOW[task.priority]}` }}
+                                />
+                                {task.priority}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Hover actions */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-all duration-150 flex gap-0.5 shrink-0">
+                            {col.key !== "done" && (
+                              <button
+                                onClick={e => { e.stopPropagation(); moveTask(task.id, col.key === "todo" ? "in-progress" : "done"); }}
+                                className="w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold transition-colors"
+                                style={{ background: `${col.color}20`, color: col.color }}
+                                title="Move forward"
+                              >
+                                →
+                              </button>
+                            )}
+                            <button
+                              onClick={e => { e.stopPropagation(); moveToTrash({ id: task.id, type: "task", title: task.title, originalData: task }); removeTask(task.id); }}
+                              className="w-5 h-5 rounded-lg flex items-center justify-center transition-colors hover:bg-rose-500/20 text-muted-foreground/40 hover:text-rose-400"
+                            >
+                              <Trash2 size={9} />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
+                {/* Add task input */}
+                <AnimatePresence>
+                  {newTaskCol === col.key ? (
+                    <motion.div
+                      key="input"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 4 }}
+                      className="p-1.5"
+                    >
+                      <input
+                        autoFocus
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAdd(col.key);
+                          if (e.key === "Escape") { setNewTaskCol(null); setNewTitle(""); }
+                        }}
+                        onBlur={() => { if (!newTitle.trim()) { setNewTaskCol(null); setNewTitle(""); } }}
+                        placeholder="Task title…"
+                        className="w-full px-2.5 py-1.5 rounded-xl text-[11px] outline-none transition-all"
+                        style={{
+                          background: "rgba(255,255,255,0.06)",
+                          border: `1px solid ${col.color}50`,
+                          color: "rgba(255,255,255,0.8)",
+                          boxShadow: `0 0 0 2px ${col.color}20`,
+                        }}
+                      />
+                    </motion.div>
+                  ) : (
+                    <motion.button
+                      key="add-btn"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      onClick={() => setNewTaskCol(col.key)}
+                      className="w-full flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] transition-all"
+                      style={{ color: "rgba(255,255,255,0.2)" }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)";
+                        (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.2)";
+                        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                      }}
+                    >
+                      <Plus size={11} /> Add task
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
