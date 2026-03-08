@@ -56,6 +56,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const [sortMode, setSortMode] = useState<SortMode>("name");
   const [showSort, setShowSort] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showInlineTemplate, setShowInlineTemplate] = useState(false);
 
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
