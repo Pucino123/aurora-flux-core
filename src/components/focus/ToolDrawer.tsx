@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2, GripHorizontal, Palette, SlidersHorizontal, AppWindow } from "lucide-react";
+import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2, GripHorizontal, Palette, SlidersHorizontal, AppWindow, Trash2, Layers } from "lucide-react";
 import { useFocusStore, SystemMode } from "@/context/FocusContext";
 import { useWindowManager } from "@/context/WindowManagerContext";
+import { useTrash } from "@/context/TrashContext";
 import { AnimatePresence, motion } from "framer-motion";
 import FocusReportModal from "./FocusReportModal";
 import CollabMessagesModal from "./CollabMessagesModal";
+import MissionControl from "@/components/windows/MissionControl";
+import TrashModal from "@/components/TrashModal";
 import { getSuggestedWidgets } from "@/hooks/useWidgetIntelligence";
 import { useTeamChat } from "@/hooks/useTeamChat";
 import { Slider } from "@/components/ui/slider";
@@ -274,6 +277,7 @@ interface ToolDrawerProps {
 const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps = {}) => {
   const { activeWidgets, toggleWidget, systemMode, setSystemMode, resetDashboard } = useFocusStore();
   const { openWindow, windows, restoreWindow, closeWindow, bringToFront } = useWindowManager();
+  const { trash } = useTrash();
   const minimizedWindows = windows.filter(w => w.minimized);
 
   const effectiveWidgets = pageActiveWidgets ?? activeWidgets;
@@ -286,9 +290,40 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
   const [styleOpen, setStyleOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
+  const [missionControlOpen, setMissionControlOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
   const suggestions = useMemo(() => getSuggestedWidgets(effectiveWidgets as string[]), [effectiveWidgets]);
   const { unreadCount, markAsRead } = useTeamChat();
+
+  // ── Bounce on new minimized chip ──────────────────────────────────
+  const [bounceChipId, setBounceChipId] = useState<string | null>(null);
+  const prevMinimizedIds = useRef<Set<string>>(new Set(minimizedWindows.map(w => w.id)));
+  useEffect(() => {
+    const current = new Set(minimizedWindows.map(w => w.id));
+    for (const id of current) {
+      if (!prevMinimizedIds.current.has(id)) {
+        setBounceChipId(id);
+        setTimeout(() => setBounceChipId(null), 600);
+        break;
+      }
+    }
+    prevMinimizedIds.current = current;
+  }, [minimizedWindows]);
+
+  // ── Mission Control keyboard shortcut (⌘⇧M / F11) ────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if ((mod && e.shiftKey && (e.key === "m" || e.key === "M")) || e.key === "F11") {
+        e.preventDefault();
+        setMissionControlOpen(p => !p);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // ── Toolbar style ─────────────────────────────────────────────────
   const [toolbarStyle, setToolbarStyleState] = useState<ToolbarStyle>(loadToolbarStyle);
@@ -461,6 +496,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           {minimizedWindows.map(win => {
             const WinIcon = win.type === "document" ? FileText : AppWindow;
             const iconColor = win.type === "document" ? hexToRgba("#7dd3fc", 0.85) : hexToRgba("#a78bfa", 0.85);
+            const isNew = bounceChipId === win.id;
             const lastActive = win.lastActiveAt ? (() => {
               const diff = Date.now() - new Date(win.lastActiveAt).getTime();
               const mins = Math.floor(diff / 60000);
@@ -474,9 +510,15 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
               <motion.div
                 key={win.id}
                 initial={{ opacity: 0, scale: 0.5, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
+                animate={isNew
+                  ? { opacity: 1, scale: [0.5, 1.18, 0.92, 1.06, 1], y: [8, -8, 2, -4, 0] }
+                  : { opacity: 1, scale: 1, y: 0 }
+                }
                 exit={{ opacity: 0, scale: 0.5, y: 8 }}
-                transition={{ duration: 0.2, type: "spring", stiffness: 380, damping: 28 }}
+                transition={isNew
+                  ? { duration: 0.55, ease: "easeOut" }
+                  : { duration: 0.22, type: "spring", stiffness: 380, damping: 28 }
+                }
                 className="relative shrink-0 group"
                 onPointerDown={e => e.stopPropagation()}
               >
@@ -492,7 +534,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
                     <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.3)" }}>{lastActive}</span>
                   </div>
                   <span className="text-[9px] block mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>Click to restore</span>
-                  {/* Arrow */}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent" style={{ borderTopColor: "rgba(255,255,255,0.1)" }} />
                 </div>
 
@@ -565,6 +606,43 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
             />
           )}
         </AnimatePresence>
+
+        {/* Right-side separator */}
+        <div className="w-px h-5 mx-1" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.12) }} />
+
+        {/* Mission Control — all windows overview */}
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={() => setMissionControlOpen(true)}
+          title="Mission Control (⌘⇧M)"
+          className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all hover:bg-white/5 ${missionControlOpen ? "bg-white/15" : ""}`}
+          style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
+        >
+          <Layers size={14} />
+          {windows.length > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 flex items-center justify-center rounded-full text-[8px] font-bold px-0.5"
+              style={{ background: "rgba(0,122,255,0.85)", color: "#fff" }}>
+              {windows.length}
+            </span>
+          )}
+        </button>
+
+        {/* Trash */}
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={() => setTrashOpen(true)}
+          title="Recently Deleted"
+          className="relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all hover:bg-white/5"
+          style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
+        >
+          <Trash2 size={14} />
+          {trash.length > 0 && (
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 flex items-center justify-center rounded-full text-[8px] font-bold"
+              style={{ background: "rgba(239,68,68,0.85)", color: "#fff", boxShadow: "0 0 6px rgba(239,68,68,0.5)" }}>
+              {trash.length > 9 ? "9+" : trash.length}
+            </span>
+          )}
+        </button>
       </motion.div>
 
       {/* Backdrop */}
@@ -694,6 +772,8 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
 
       <FocusReportModal open={reportOpen} onOpenChange={setReportOpen} />
       <CollabMessagesModal open={collabOpen} onOpenChange={setCollabOpen} />
+      <MissionControl open={missionControlOpen} onClose={() => setMissionControlOpen(false)} />
+      <TrashModal open={trashOpen} onClose={() => setTrashOpen(false)} />
     </>
   );
 };
