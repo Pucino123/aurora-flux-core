@@ -822,7 +822,7 @@ const FocusContent = () => {
     setTimeout(() => setPillBouncing(false), 500);
   }, []);
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null);
-  const { openWindow, closeWindow, windows, updateWindowPosition } = useWindowManager();
+  const { openWindow, closeWindow, windows, updateWindowPosition, focusedId } = useWindowManager();
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
