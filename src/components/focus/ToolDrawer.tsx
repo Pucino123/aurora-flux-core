@@ -602,23 +602,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
         {/* Right-side separator */}
         <div className="w-px h-5 mx-1" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.12) }} />
 
-        {/* Mission Control — all windows overview */}
-        <button
-          onPointerDown={e => e.stopPropagation()}
-          onClick={() => setMissionControlOpen(true)}
-          title="Mission Control (⌘⇧M)"
-          className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all hover:bg-white/5 ${missionControlOpen ? "bg-white/15" : ""}`}
-          style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
-        >
-          <Layers size={14} />
-          {windows.length > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 flex items-center justify-center rounded-full text-[8px] font-bold px-0.5"
-              style={{ background: "rgba(0,122,255,0.85)", color: "#fff" }}>
-              {windows.length}
-            </span>
-          )}
-        </button>
-
         {/* Trash */}
         <button
           onPointerDown={e => e.stopPropagation()}
