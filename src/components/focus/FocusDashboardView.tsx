@@ -1723,16 +1723,16 @@ const FocusContent = () => {
       {/* Dot context menu (right-click / long-press) */}
       {dotMenu && (
         <>
-          <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); setDotBgPickerOpen(false); }} />
+          <div className="fixed inset-0 z-[10000]" onClick={() => { setDotMenu(null); setDeleteConfirmIdx(null); }} />
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             className="fixed z-[10001] rounded-xl py-1.5 overflow-hidden"
             style={{
-              left: Math.max(8, Math.min(dotMenu.x, window.innerWidth - (dotBgPickerOpen ? 288 : 208))),
+              left: Math.max(8, Math.min(dotMenu.x, window.innerWidth - 208)),
               bottom: window.innerHeight - dotMenu.y + 8,
-              minWidth: dotBgPickerOpen ? 280 : 200,
+              minWidth: 200,
               maxHeight: "70vh",
               overflowY: "auto",
               background: "rgba(10,8,20,0.94)", backdropFilter: "blur(24px)",
