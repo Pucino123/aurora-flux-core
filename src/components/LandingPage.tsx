@@ -162,7 +162,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
 
   return (
     <div ref={containerRef} className="min-h-screen relative overflow-x-hidden overflow-y-auto" style={{ fontFamily: "system-ui, sans-serif" }}>
-      {/* Background — dark mode: darker + desaturated like Apple */}
+      {/* Background */}
       <motion.div
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-700"
         style={{
@@ -172,7 +172,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
           transform: "scale(1.08)",
         }}
       />
-      {/* Dark overlay tint */}
       <div className="fixed inset-0 z-0 pointer-events-none transition-colors duration-700"
         style={{ background: isDark ? "rgba(10,10,14,0.55)" : "rgba(255,255,255,0.08)" }} />
 
@@ -250,9 +249,9 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         <FeatureMarquee isDark={isDark} />
       </section>
 
-      {/* ── CTA ── */}
+      {/* ── Mid CTA ── */}
       <section className="relative z-10 px-4 md:px-6 pb-20 md:pb-28">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           className="max-w-2xl mx-auto text-center rounded-3xl p-8 md:p-14 shadow-2xl transition-all duration-500"
           style={{
             background: isDark ? "rgba(28,28,32,0.70)" : "rgba(255,255,255,0.15)",
@@ -272,11 +271,9 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         </motion.div>
       </section>
 
-
       {/* ── Feature Section 1: The Council ── */}
       <section className="relative z-10 px-4 md:px-8 pb-28">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center min-h-[500px]">
-          {/* Text */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
             <div className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full mb-6 uppercase tracking-widest"
               style={{ background: "rgba(139,92,246,0.18)", border: "1px solid rgba(139,92,246,0.35)", color: "rgba(200,180,255,0.9)" }}>
@@ -302,7 +299,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
               ))}
             </ul>
           </motion.div>
-          {/* Visual mock */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.15 }}>
             <div className="rounded-3xl p-6 space-y-3" style={{ background: isDark ? "rgba(18,14,30,0.75)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(28px)", border: isDark ? "1.5px solid rgba(139,92,246,0.2)" : "1.5px solid rgba(255,255,255,0.25)" }}>
               <div className="flex items-center gap-3 mb-4">
@@ -329,7 +325,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       {/* ── Feature Section 2: Focus Mode ── */}
       <section className="relative z-10 px-4 md:px-8 pb-28">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center min-h-[500px]">
-          {/* Visual mock — left */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="order-2 md:order-1">
             <div className="rounded-3xl p-5 relative" style={{ background: isDark ? "rgba(14,20,18,0.8)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(28px)", border: isDark ? "1.5px solid rgba(52,211,153,0.2)" : "1.5px solid rgba(255,255,255,0.25)", minHeight: 320 }}>
               <div className="absolute inset-0 rounded-3xl opacity-30 pointer-events-none" style={{ backgroundImage: "radial-gradient(ellipse at 30% 60%, rgba(52,211,153,0.18) 0%, transparent 70%)" }} />
@@ -352,7 +347,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
               </div>
             </div>
           </motion.div>
-          {/* Text — right */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.15 }} className="order-1 md:order-2">
             <div className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full mb-6 uppercase tracking-widest"
               style={{ background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "rgba(134,239,172,0.9)" }}>
@@ -384,7 +378,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       {/* ── Feature Section 3: Smart Docs ── */}
       <section className="relative z-10 px-4 md:px-8 pb-28">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center min-h-[500px]">
-          {/* Text — left */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
             <div className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full mb-6 uppercase tracking-widest"
               style={{ background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", color: "rgba(253,224,71,0.9)" }}>
@@ -410,7 +403,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
               ))}
             </ul>
           </motion.div>
-          {/* Visual mock — right */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.15 }}>
             <div className="rounded-3xl overflow-hidden" style={{ background: isDark ? "rgba(18,16,10,0.8)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(28px)", border: isDark ? "1.5px solid rgba(251,191,36,0.2)" : "1.5px solid rgba(255,255,255,0.25)" }}>
               <div className="flex items-center gap-1.5 px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)" }}>
@@ -442,7 +434,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       {/* ── Feature Section 4: CRM & Finance ── */}
       <section className="relative z-10 px-4 md:px-8 pb-28">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center min-h-[500px]">
-          {/* Visual mock — left */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="order-2 md:order-1">
             <div className="rounded-3xl p-5 space-y-3" style={{ background: isDark ? "rgba(10,18,22,0.8)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(28px)", border: isDark ? "1.5px solid rgba(56,189,248,0.2)" : "1.5px solid rgba(255,255,255,0.25)" }}>
               <div className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Deal Pipeline</div>
@@ -455,7 +446,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
                 <div key={s.stage} className="flex items-center gap-3">
                   <div className="text-xs text-white/50 w-24 shrink-0">{s.stage}</div>
                   <div className="flex-1 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }}>
-                    <div className="h-2 rounded-full transition-all" style={{ background: s.color, width: s.w }} />
+                    <div className="h-2 rounded-full" style={{ background: s.color, width: s.w }} />
                   </div>
                   <div className="text-xs text-white/40 w-4 text-right">{s.count}</div>
                 </div>
@@ -475,7 +466,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
               </div>
             </div>
           </motion.div>
-          {/* Text — right */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.15 }} className="order-1 md:order-2">
             <div className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full mb-6 uppercase tracking-widest"
               style={{ background: "rgba(56,189,248,0.15)", border: "1px solid rgba(56,189,248,0.3)", color: "rgba(125,211,252,0.9)" }}>
@@ -507,7 +497,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       {/* ── Feature Section 5: AI Scheduler ── */}
       <section className="relative z-10 px-4 md:px-8 pb-28">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center min-h-[500px]">
-          {/* Text — left */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
             <div className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full mb-6 uppercase tracking-widest"
               style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", color: "rgba(196,181,253,0.9)" }}>
@@ -533,7 +522,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
               ))}
             </ul>
           </motion.div>
-          {/* Visual mock — right */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.15 }}>
             <div className="rounded-3xl p-5" style={{ background: isDark ? "rgba(14,10,22,0.8)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(28px)", border: isDark ? "1.5px solid rgba(167,139,250,0.2)" : "1.5px solid rgba(255,255,255,0.25)" }}>
               <div className="flex items-center justify-between mb-4">
@@ -563,7 +551,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       {/* ── Feature Section 6: Fitness & Habits ── */}
       <section className="relative z-10 px-4 md:px-8 pb-28">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center min-h-[500px]">
-          {/* Visual mock — left */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="order-2 md:order-1">
             <div className="rounded-3xl p-5 space-y-4" style={{ background: isDark ? "rgba(10,18,14,0.8)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(28px)", border: isDark ? "1.5px solid rgba(52,211,153,0.2)" : "1.5px solid rgba(255,255,255,0.25)" }}>
               <div className="grid grid-cols-3 gap-2">
@@ -605,7 +592,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
               </div>
             </div>
           </motion.div>
-          {/* Text — right */}
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.15 }} className="order-1 md:order-2">
             <div className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full mb-6 uppercase tracking-widest"
               style={{ background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "rgba(110,231,183,0.9)" }}>
@@ -661,99 +647,6 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
           style={{ background: "linear-gradient(135deg, rgba(100,60,200,0.35), rgba(60,140,240,0.35))", backdropFilter: "blur(32px)", border: "1.5px solid rgba(255,255,255,0.15)" }}>
           <div className="text-3xl mb-3">✨</div>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-            Ready to upgrade your workflow?
-          </h2>
-          <p className="text-base text-white/70 mb-8">Claim your first 50 Sparks ✨ today and start consulting The Council.</p>
-          <button onClick={handleCTA} className="inline-flex items-center gap-2 bg-white text-slate-800 font-bold px-10 py-4 rounded-full shadow-2xl hover:scale-[1.03] active:scale-[0.98] transition-all text-base">
-            Get Started for Free <ArrowRight size={16} />
-          </button>
-        </motion.div>
-      </section>
-
-      <footer className="relative z-10 text-center pb-10 text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>© 2025 Dashiii. Built for deep work.</footer>
-    </div>
-  );
-};
-
-export default LandingPage;
-            className="col-span-2 row-span-2 rounded-3xl p-7 flex flex-col justify-between overflow-hidden relative"
-            style={{ background: isDark ? "rgba(20,20,30,0.65)" : "rgba(255,255,255,0.15)", backdropFilter: "blur(24px)", border: isDark ? "1.5px solid rgba(255,255,255,0.10)" : "1.5px solid rgba(255,255,255,0.25)" }}>
-            <div className="flex gap-3 mb-4">
-              {["🔵","🟣","🔴","🟡"].map((e, i) => (
-                <div key={i} className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl" style={{ background: "rgba(255,255,255,0.12)" }}>{e}</div>
-              ))}
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white mb-2">Meet The Council.</h3>
-              <p className="text-sm" style={{ color: isDark ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.75)" }}>Don't make decisions alone. Get instant, multi-perspective feedback on your ideas.</p>
-            </div>
-          </motion.div>
-          {/* Split-View */}
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
-            className="col-span-2 rounded-3xl p-5 flex flex-col justify-between"
-            style={{ background: isDark ? "rgba(20,20,30,0.55)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", border: isDark ? "1.5px solid rgba(255,255,255,0.08)" : "1.5px solid rgba(255,255,255,0.22)" }}>
-            <div className="flex gap-2 mb-3 flex-1">
-              <div className="flex-1 rounded-xl bg-white/10 flex items-center justify-center text-xs text-white/60">Doc A</div>
-              <div className="w-px bg-white/20" />
-              <div className="flex-1 rounded-xl bg-white/10 flex items-center justify-center text-xs text-white/60">Doc B</div>
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white mb-1">True Multitasking.</h3>
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Drag and snap documents side-by-side in our native iPadOS-style workspace.</p>
-            </div>
-          </motion.div>
-          {/* iOS Dashboard */}
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.15 }}
-            className="col-span-1 rounded-3xl p-5 flex flex-col justify-between"
-            style={{ background: isDark ? "rgba(20,20,30,0.55)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", border: isDark ? "1.5px solid rgba(255,255,255,0.08)" : "1.5px solid rgba(255,255,255,0.22)" }}>
-            <div className="flex gap-1.5 justify-center mb-3">
-              {[0,1,2].map(i => <div key={i} className={`rounded-full transition-all ${i === 1 ? "w-5 h-2 bg-white" : "w-2 h-2 bg-white/30"}`} />)}
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white mb-1">Swipe & Organize.</h3>
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Organize tools across multiple pages with keyboard navigation.</p>
-            </div>
-          </motion.div>
-          {/* Sparks */}
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}
-            className="col-span-1 rounded-3xl p-5 flex flex-col justify-between"
-            style={{ background: isDark ? "rgba(20,20,30,0.55)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", border: isDark ? "1.5px solid rgba(255,255,255,0.08)" : "1.5px solid rgba(255,255,255,0.22)" }}>
-            <div className="text-3xl mb-2">✨</div>
-            <div>
-              <h3 className="text-base font-bold text-white mb-1">Fuel creativity.</h3>
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Pay only for the AI you use, or bring your own key.</p>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── Security Banner ── */}
-      <section className="relative z-10 px-4 md:px-6 pb-16">
-        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="max-w-4xl mx-auto rounded-3xl px-8 py-6 flex flex-col md:flex-row items-center gap-6"
-          style={{ background: isDark ? "rgba(10,10,14,0.8)" : "rgba(20,20,40,0.7)", backdropFilter: "blur(24px)", border: "1.5px solid rgba(255,255,255,0.08)" }}>
-          <div className="text-4xl shrink-0">🔒</div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-white mb-1">Enterprise-Grade Privacy.</h3>
-            <p className="text-sm text-white/50 mb-3">Your data is cryptographically isolated. Not even we can read your notes.</p>
-            <div className="flex flex-wrap gap-4">
-              {["Row-Level Security (RLS) Database", "BYOK (Bring Your Own Key) Support", "Strict Prompt-Injection Defenses"].map(f => (
-                <span key={f} className="flex items-center gap-1.5 text-xs text-white/70">
-                  <span className="text-green-400">✓</span> {f}
-                </span>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ── Pricing Teaser & Final CTA ── */}
-      <section className="relative z-10 px-4 md:px-6 pb-24">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="max-w-2xl mx-auto rounded-3xl p-10 text-center shadow-2xl"
-          style={{ background: "linear-gradient(135deg, rgba(100,60,200,0.35), rgba(60,140,240,0.35))", backdropFilter: "blur(32px)", border: "1.5px solid rgba(255,255,255,0.15)" }}>
-          <div className="text-3xl mb-3">✨</div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-3" style={{ fontFamily: "Georgia, serif" }}>
             Ready to upgrade your workflow?
           </h2>
           <p className="text-base text-white/70 mb-8">Claim your first 50 Sparks ✨ today and start consulting The Council.</p>
