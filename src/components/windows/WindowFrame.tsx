@@ -125,13 +125,15 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     });
   }, []);
 
-  // ── Spring position ───────────────────────────────────────────────────────
+  // ── Direct position (no spring during drag — pixel-perfect tracking) ────────
   const rawX = useRef(win.position.x);
   const rawY = useRef(win.position.y);
   const motionX = useMotionValue(win.position.x);
   const motionY = useMotionValue(win.position.y);
+  // Spring only used for programmatic moves (restore, snap), not live drag
   const springX = useSpring(motionX, DRAG_SPRING);
   const springY = useSpring(motionY, DRAG_SPRING);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (isFloating) {
@@ -193,6 +195,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     if ((e.target as HTMLElement).closest("button,[role='button'],[data-radix-collection-item]")) return;
     e.preventDefault();
     dragging.current = true;
+    setIsDragging(true);
     offset.current = { x: e.clientX - rawX.current, y: e.clientY - rawY.current };
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   }, [isFloating]);
@@ -220,6 +223,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const handleHeaderPointerUp = useCallback((_e: React.PointerEvent) => {
     if (!dragging.current) return;
     dragging.current = false;
+    setIsDragging(false);
     setGuides([]);
     if (snapZone) setWindowLayout(win.id, snapZone === "left" ? "split-left" : "split-right");
     else updateWindowPosition(win.id, rawX.current, rawY.current);
@@ -428,7 +432,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
             layout={!isFloating}
             transition={{ type: "spring", stiffness: 340, damping: 34 }}
             className={`${layoutClasses} select-none`}
-            style={{ zIndex: effectiveZ, ...(isFloating ? { x: springX, y: springY, ...posStyle } : {}) }}
+            style={{ zIndex: effectiveZ, ...(isFloating ? { x: isDragging ? motionX : springX, y: isDragging ? motionY : springY, ...posStyle } : {}) }}
             onPointerDownCapture={() => bringToFront(win.id)}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
