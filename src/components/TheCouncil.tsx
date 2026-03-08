@@ -771,7 +771,7 @@ const TheCouncil = () => {
                                   <>
                                     {renderGroup(positives, "▲", "text-[hsl(150_60%_45%)]", "Positive")}
                                     {renderGroup(negatives, "▼", "text-destructive", "Negative")}
-                                    {renderGroup(neutrals, "◆", "text-foreground/40", "Neutrale")}
+                                    {renderGroup(neutrals, "◆", "text-foreground/40", "Neutral")}
                                   </>
                                 );
                               })()}
