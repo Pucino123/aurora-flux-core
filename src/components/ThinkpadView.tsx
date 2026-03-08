@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash2, Save, Lightbulb, Zap, Target, Rocket,
   Code, Database, Star, Heart, Brain, LayoutTemplate, X, Pencil, Check, Sun, Moon,
-  ZoomIn, ZoomOut, Bookmark, Lock, Unlock
+  ZoomIn, ZoomOut, Bookmark, Lock, Unlock, Maximize2
 } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
