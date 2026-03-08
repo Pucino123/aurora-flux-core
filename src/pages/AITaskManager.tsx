@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import SEO from "@/components/SEO";
 import { useFlux } from "@/context/FluxContext";
+import { useTrash } from "@/context/TrashContext";
 import { format, isToday, isTomorrow, isPast, parseISO } from "date-fns";
 import {
   Check, Plus, Trash2, ArrowUpRight, Sparkles, Loader2,
@@ -375,6 +376,16 @@ const DroppableColumn = ({
 /* ── Main ── */
 const AITaskManager = () => {
   const { tasks, updateTask, createTask, removeTask } = useFlux();
+  const { moveToTrash } = useTrash();
+
+  // Soft-delete: move to trash first, then permanently remove from DB
+  const softRemoveTask = useCallback(async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      moveToTrash({ id: task.id, type: "task", title: task.title, originalData: task });
+    }
+    await removeTask(id);
+  }, [tasks, removeTask, moveToTrash]);
   const { members } = useTeamChat();
   const [newTitle, setNewTitle] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -622,7 +633,7 @@ const AITaskManager = () => {
   const sharedProps = {
     editingId, editValue, expandedId, colTitles,
     setEditingId, setEditValue, setExpandedId,
-    onToggle: handleToggle, onRemove: removeTask, onUpdate: updateTask, onUndone: handleUndone,
+    onToggle: handleToggle, onRemove: softRemoveTask, onUpdate: updateTask, onUndone: handleUndone,
     onRenameCol: handleRenameCol, onDeleteCol: handleDeleteCol,
     onAddTask: handleAddTaskToColumn,
     teamMembers: members,
