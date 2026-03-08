@@ -562,6 +562,9 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
           <ContextMenuSeparator />
 
           {/* Window management */}
+          <ContextMenuItem onClick={() => { setIsRenaming(true); setRenameValue(win.title); }} className="flex items-center gap-2.5 text-xs">
+            <Pencil size={13} /> Rename
+          </ContextMenuItem>
           <ContextMenuItem onClick={() => duplicateWindow(win.id)} className="flex items-center gap-2.5 text-xs">
             <Copy size={13} /> Duplicate
           </ContextMenuItem>
@@ -569,6 +572,39 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
             <Minus size={13} /> Minimize
             <span className="ml-auto text-foreground/30">⌘M</span>
           </ContextMenuItem>
+
+          {/* Move to folder (documents only) */}
+          {win.type === "document" && (
+            <ContextMenuSub>
+              <ContextMenuSubTrigger
+                className="flex items-center gap-2.5 text-xs"
+                onPointerEnter={loadFolders}
+              >
+                <FolderOpen size={13} /> Move to Folder…
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent style={{ zIndex: 11000 }} className="min-w-[180px]">
+                <ContextMenuItem
+                  onClick={() => moveToFolder(null)}
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                >
+                  No folder (root)
+                </ContextMenuItem>
+                {folders.map(f => (
+                  <ContextMenuItem
+                    key={f.id}
+                    onClick={() => moveToFolder(f.id)}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <span className="mr-0.5">{f.icon || "📁"}</span>
+                    <span className="truncate max-w-[140px]">{f.title}</span>
+                  </ContextMenuItem>
+                ))}
+                {folders.length === 0 && (
+                  <ContextMenuItem disabled className="text-xs text-muted-foreground">No folders found</ContextMenuItem>
+                )}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          )}
 
           <ContextMenuSeparator />
 
