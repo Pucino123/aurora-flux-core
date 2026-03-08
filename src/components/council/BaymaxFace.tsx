@@ -114,8 +114,8 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
       <defs>
         <radialGradient id={gradId} cx="42%" cy="38%" r="60%">
           <stop offset="0%"   stopColor="#ffffff" stopOpacity="1" />
-          <stop offset="65%"  stopColor="#f0f0f2" stopOpacity="1" />
-          <stop offset="100%" stopColor={color}   stopOpacity="0.18" />
+          <stop offset="50%"  stopColor="#f5f5f7" stopOpacity="1" />
+          <stop offset="100%" stopColor={color}   stopOpacity="0.25" />
         </radialGradient>
         <filter id={glowId} x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation={S * 0.08} result="blur" />
