@@ -41,9 +41,10 @@ const ExpandedFolderOverlay = ({
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [draggingOutId, setDraggingOutId] = useState<string | null>(null);
+  const [showTemplateChooser, setShowTemplateChooser] = useState(false);
 
   const folder = findFolderNode(folderId);
-  const { documents, loading, createDocument, refetch } = useDocuments(folderId, moveToTrash);
+  const { documents, loading, createDocument, updateDocument, refetch } = useDocuments(folderId, moveToTrash);
 
   const commitRename = useCallback(() => {
     if (renameValue.trim() && folder && renameValue.trim() !== folder.title) {
