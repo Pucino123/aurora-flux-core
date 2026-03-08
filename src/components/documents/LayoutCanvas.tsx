@@ -1,10 +1,11 @@
 /**
  * LayoutCanvas — Framer Motion free-drag entity canvas for creative templates.
  * Entities: rect | circle | textBox — draggable, resizable, colour-customisable.
+ * Right-click context menu: Duplicate, Delete, Bring to Front, Send to Back.
  */
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle } from "lucide-react";
+import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle, Copy } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,17 +37,116 @@ const PALETTE = [
 
 function clamp(v: number, min: number, max: number) { return Math.max(min, Math.min(max, v)); }
 
+// ── Right-click Context Menu ──────────────────────────────────────────────────
+
+interface ContextMenuProps {
+  x: number;
+  y: number;
+  entityId: string;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
+  onBringFront: (id: string) => void;
+  onSendBack: (id: string) => void;
+  onClose: () => void;
+}
+
+const ContextMenu: React.FC<ContextMenuProps> = ({
+  x, y, entityId, onDuplicate, onDelete, onBringFront, onSendBack, onClose,
+}) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  const items: { label: string; icon: React.ReactNode; action: () => void; danger?: boolean }[] = [
+    {
+      label: "Duplicate",
+      icon: <Copy size={10} />,
+      action: () => { onDuplicate(entityId); onClose(); },
+    },
+    {
+      label: "Bring to Front",
+      icon: <ArrowUp size={10} />,
+      action: () => { onBringFront(entityId); onClose(); },
+    },
+    {
+      label: "Send to Back",
+      icon: <ArrowDown size={10} />,
+      action: () => { onSendBack(entityId); onClose(); },
+    },
+    {
+      label: "Delete",
+      icon: <Trash2 size={10} />,
+      action: () => { onDelete(entityId); onClose(); },
+      danger: true,
+    },
+  ];
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.88, y: -6 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.88, y: -6 }}
+      transition={{ duration: 0.12 }}
+      className="fixed z-[99999] rounded-xl overflow-hidden flex flex-col py-1"
+      style={{
+        left: x,
+        top: y,
+        minWidth: 160,
+        background: "rgba(10,6,28,0.98)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        backdropFilter: "blur(28px)",
+        boxShadow: "0 16px 48px rgba(0,0,0,0.8), 0 0 0 0.5px rgba(255,255,255,0.05)",
+      }}
+      onContextMenu={e => e.preventDefault()}
+    >
+      {items.map((item, i) => (
+        <React.Fragment key={item.label}>
+          {i === items.length - 1 && (
+            <div className="mx-2 my-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+          )}
+          <button
+            onClick={item.action}
+            className="flex items-center gap-2.5 px-3 py-1.5 text-[11px] font-medium transition-colors text-left w-full"
+            style={{
+              color: item.danger ? "rgba(248,113,113,0.85)" : "rgba(255,255,255,0.7)",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = item.danger
+                ? "rgba(239,68,68,0.12)"
+                : "rgba(255,255,255,0.08)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+            }}
+          >
+            <span className="opacity-70">{item.icon}</span>
+            {item.label}
+          </button>
+        </React.Fragment>
+      ))}
+    </motion.div>
+  );
+};
+
 // ── Style Toolbar ─────────────────────────────────────────────────────────────
 
 interface StyleToolbarProps {
   entity: CanvasEntity;
   onUpdate: (id: string, patch: Partial<CanvasEntity>) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onBringFront: (id: string) => void;
   onSendBack: (id: string) => void;
 }
 
-const StyleToolbar: React.FC<StyleToolbarProps> = ({ entity, onUpdate, onDelete, onBringFront, onSendBack }) => {
+const StyleToolbar: React.FC<StyleToolbarProps> = ({ entity, onUpdate, onDelete, onDuplicate, onBringFront, onSendBack }) => {
   const [tab, setTab] = useState<"fill" | "stroke">("fill");
 
   const setStyle = (patch: Partial<CanvasEntity["style"]>) =>
@@ -58,7 +158,6 @@ const StyleToolbar: React.FC<StyleToolbarProps> = ({ entity, onUpdate, onDelete,
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 6, scale: 0.96 }}
       transition={{ duration: 0.14 }}
-      // Fixed position so it's always visible regardless of entity location on canvas
       className="fixed z-[9999] rounded-xl flex flex-col gap-2 p-2.5 shadow-2xl"
       style={{
         top: 80,
@@ -154,6 +253,13 @@ const StyleToolbar: React.FC<StyleToolbarProps> = ({ entity, onUpdate, onDelete,
       {/* Action row */}
       <div className="flex items-center gap-1 border-t border-white/[0.07] pt-1.5 mt-0.5">
         <button
+          onClick={() => onDuplicate(entity.id)}
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] text-white/40 hover:text-white/70 hover:bg-white/8 transition-all"
+          title="Duplicate"
+        >
+          <Copy size={8} /> Copy
+        </button>
+        <button
           onClick={() => onBringFront(entity.id)}
           className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] text-white/40 hover:text-white/70 hover:bg-white/8 transition-all"
           title="Bring to Front"
@@ -190,14 +296,14 @@ interface EntityNodeProps {
   onDragEnd: (id: string, x: number, y: number) => void;
   onResizeEnd: (id: string, dw: number, dh: number) => void;
   onContentChange: (id: string, content: string) => void;
+  onContextMenu: (e: React.MouseEvent, id: string) => void;
 }
 
 const EntityNode: React.FC<EntityNodeProps> = ({
-  entity, isSelected, canvasRef, onSelect, onDragEnd, onResizeEnd, onContentChange,
+  entity, isSelected, canvasRef, onSelect, onDragEnd, onResizeEnd, onContentChange, onContextMenu,
 }) => {
   const { type, position, size, style, content, zIndex } = entity;
   const resizeStart = useRef<{ mx: number; my: number; w: number; h: number } | null>(null);
-  // Track whether the pointer moved (drag) vs just clicked
   const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
   const didDrag = useRef(false);
 
@@ -220,19 +326,19 @@ const EntityNode: React.FC<EntityNodeProps> = ({
   };
 
   const shapeStyle: React.CSSProperties = {
-    width:         size.w,
-    height:        size.h,
-    background:    style.fill === "transparent" ? "transparent" : style.fill,
-    border:        style.strokeWidth > 0 ? `${style.strokeWidth}px solid ${style.stroke}` : "none",
-    borderRadius:  type === "circle" ? "50%" : `${style.borderRadius}px`,
-    opacity:       style.opacity,
-    outline:       isSelected ? "2.5px solid rgba(99,102,241,0.9)" : "none",
-    outlineOffset: 3,
-    boxShadow:     isSelected ? "0 0 0 5px rgba(99,102,241,0.18), 0 8px 24px rgba(0,0,0,0.3)" : undefined,
-    overflow:      "hidden",
-    display:       "flex",
-    alignItems:    "center",
-    justifyContent:"center",
+    width:          size.w,
+    height:         size.h,
+    background:     style.fill === "transparent" ? "transparent" : style.fill,
+    border:         style.strokeWidth > 0 ? `${style.strokeWidth}px solid ${style.stroke}` : "none",
+    borderRadius:   type === "circle" ? "50%" : `${style.borderRadius}px`,
+    opacity:        style.opacity,
+    outline:        isSelected ? "2.5px solid rgba(99,102,241,0.9)" : "none",
+    outlineOffset:  3,
+    boxShadow:      isSelected ? "0 0 0 5px rgba(99,102,241,0.18), 0 8px 24px rgba(0,0,0,0.3)" : undefined,
+    overflow:       "hidden",
+    display:        "flex",
+    alignItems:     "center",
+    justifyContent: "center",
   };
 
   return (
@@ -263,6 +369,11 @@ const EntityNode: React.FC<EntityNodeProps> = ({
           onSelect(entity.id);
         }
         pointerDownPos.current = null;
+      }}
+      onContextMenu={e => {
+        e.preventDefault();
+        e.stopPropagation();
+        onContextMenu(e, entity.id);
       }}
       className="absolute cursor-move touch-none"
       style={{ zIndex, position: "absolute", left: position.x, top: position.y, willChange: "transform" }}
@@ -329,6 +440,7 @@ const AddToolbar: React.FC<AddToolbarProps> = ({ onAdd }) => (
 const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMode = false }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entityId: string } | null>(null);
 
   const selected = entities.find(e => e.id === selectedId) ?? null;
 
@@ -376,19 +488,44 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
     setSelectedId(id);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = useCallback((id: string) => {
     onChange(entities.filter(e => e.id !== id));
     setSelectedId(null);
-  };
+  }, [entities, onChange]);
 
-  const handleBringFront = (id: string) => {
+  const handleDuplicate = useCallback((id: string) => {
+    const entity = entities.find(e => e.id === id);
+    if (!entity) return;
+    const newEntity: CanvasEntity = {
+      ...entity,
+      id: crypto.randomUUID(),
+      position: { x: entity.position.x + 20, y: entity.position.y + 20 },
+      zIndex: Math.max(...entities.map(e => e.zIndex), 0) + 1,
+    };
+    onChange([...entities, newEntity]);
+    setSelectedId(newEntity.id);
+  }, [entities, onChange]);
+
+  const handleBringFront = useCallback((id: string) => {
     const maxZ = Math.max(...entities.map(e => e.zIndex), 0);
     update(id, { zIndex: maxZ + 1 });
-  };
+  }, [entities, update]);
 
-  const handleSendBack = (id: string) => {
+  const handleSendBack = useCallback((id: string) => {
     const minZ = Math.min(...entities.map(e => e.zIndex), 1);
     update(id, { zIndex: Math.max(1, minZ - 1) });
+  }, [entities, update]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, entityId: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, entityId });
+    setSelectedId(entityId);
+  }, []);
+
+  // Dismiss context menu on canvas right-click
+  const handleCanvasContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu(null);
   };
 
   return (
@@ -396,7 +533,8 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
       ref={canvasRef}
       className="relative w-full"
       style={{ minHeight: "29.7cm", background: lightMode ? "#ffffff" : "hsl(var(--card))" }}
-      onClick={() => setSelectedId(null)}
+      onClick={() => { setSelectedId(null); setContextMenu(null); }}
+      onContextMenu={handleCanvasContextMenu}
     >
       {/* Add toolbar */}
       <AddToolbar onAdd={handleAdd} />
@@ -412,6 +550,7 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
           onDragEnd={handleDragEnd}
           onResizeEnd={handleResizeEnd}
           onContentChange={handleContentChange}
+          onContextMenu={handleContextMenu}
         />
       ))}
 
@@ -422,8 +561,26 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
             entity={selected}
             onUpdate={update}
             onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
             onBringFront={handleBringFront}
             onSendBack={handleSendBack}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Right-click context menu */}
+      <AnimatePresence>
+        {contextMenu && (
+          <ContextMenu
+            key="ctx-menu"
+            x={contextMenu.x}
+            y={contextMenu.y}
+            entityId={contextMenu.entityId}
+            onDuplicate={handleDuplicate}
+            onDelete={handleDelete}
+            onBringFront={handleBringFront}
+            onSendBack={handleSendBack}
+            onClose={() => setContextMenu(null)}
           />
         )}
       </AnimatePresence>
@@ -433,6 +590,7 @@ const LayoutCanvas: React.FC<LayoutCanvasProps> = ({ entities, onChange, lightMo
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
           <p className="text-[13px] text-muted-foreground/30 font-medium">Layout Canvas</p>
           <p className="text-[11px] text-muted-foreground/20">Use the toolbar above to add shapes and text boxes</p>
+          <p className="text-[10px] text-muted-foreground/15 mt-1">Right-click any element for quick actions</p>
         </div>
       )}
     </div>

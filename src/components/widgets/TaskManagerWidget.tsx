@@ -250,11 +250,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
             className={`shrink-0 mt-0.5 transition-all duration-150 z-10 ${
               isFlagged
                 ? "text-amber-400 opacity-100 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)]"
-                : "text-white/30 opacity-0 group-hover/row:opacity-100 hover:!text-amber-400"
+                : "text-white/50 opacity-0 group-hover/row:opacity-100 hover:!text-amber-400 hover:!opacity-100"
             }`}
             title={isFlagged ? "Unflag task" : "Flag task"}
           >
-            <Flag size={11} fill={isFlagged ? "currentColor" : "none"} strokeWidth={isFlagged ? 0 : 1.5} />
+            <Flag size={12} fill={isFlagged ? "currentColor" : "none"} strokeWidth={isFlagged ? 0 : 1.8} />
           </button>
         )}
 
@@ -263,17 +263,17 @@ const TaskCard: React.FC<TaskCardProps> = ({
           <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0 z-10">
             <button
               onClick={e => { e.stopPropagation(); onStartEdit(task.id, task.title); }}
-              className="mt-0.5 p-0.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              className="mt-0.5 p-1 rounded-lg text-white/50 hover:text-white hover:bg-white/15 transition-all"
               title="Edit task"
             >
-              <Pencil size={11} />
+              <Pencil size={12} />
             </button>
             <button
               onClick={e => { e.stopPropagation(); onSetQuickMenu(quickMenuId === task.id ? null : task.id); }}
-              className="mt-0.5 p-0.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              className="mt-0.5 p-1 rounded-lg text-white/50 hover:text-white hover:bg-white/15 transition-all"
               title="More options"
             >
-              <MoreHorizontal size={11} />
+              <MoreHorizontal size={12} />
             </button>
           </div>
         )}
