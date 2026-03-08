@@ -123,6 +123,13 @@ const FocusStatsWidget = () => {
   const [prevStreak, setPrevStreak] = useState(0);
   const [streakBump, setStreakBump] = useState(false);
 
+  // Weekly goal state (persisted in localStorage)
+  const [weeklyGoalHrs, setWeeklyGoalHrs] = useState<number>(() => {
+    try { return Number(localStorage.getItem("flux-weekly-goal-hrs") ?? 20); } catch { return 20; }
+  });
+  const [editingWeeklyGoal, setEditingWeeklyGoal] = useState(false);
+  const [weeklyGoalInput, setWeeklyGoalInput] = useState("");
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Load all sessions from DB ────────────────────────────────────────────
