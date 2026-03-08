@@ -44,6 +44,7 @@ interface GoogleEvent {
 
 const FullCalendarView = () => {
   const { tasks, scheduleBlocks, createBlock, updateTask, updateBlock } = useFlux();
+  const [pageLight, setPageLight] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("month");

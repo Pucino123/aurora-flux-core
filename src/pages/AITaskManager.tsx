@@ -397,6 +397,7 @@ const AITaskManager = () => {
   const [filterPriority, setFilterPriority] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overColumn, setOverColumn] = useState<string | null>(null);
+  const [pageLight, setPageLight] = useState(false);
 
   // Dynamic columns support
   const [customColumns, setCustomColumns] = useState<Array<{ id: string; title: string; accent: string; emptyMsg: string }>>([]);
