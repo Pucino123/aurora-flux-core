@@ -63,6 +63,20 @@ function sortByDeadline(goals: SavingsGoal[]): SavingsGoal[] {
   });
 }
 
+// ── Milestone definitions ──────────────────────────────────────────────────
+const MILESTONES = [
+  { pct: 25,  label: "Quarter way",  badge: "🥉", color: "text-amber-300  bg-amber-400/15  border-amber-400/25"  },
+  { pct: 50,  label: "Halfway!",     badge: "🥈", color: "text-blue-300   bg-blue-400/15   border-blue-400/25"   },
+  { pct: 75,  label: "Almost there", badge: "🥇", color: "text-violet-300 bg-violet-400/15 border-violet-400/25" },
+  { pct: 100, label: "Goal reached", badge: "🏆", color: "text-emerald-300 bg-emerald-400/15 border-emerald-400/25" },
+];
+
+/** Returns the highest milestone threshold that has been crossed */
+function topMilestone(pct: number) {
+  const crossed = MILESTONES.filter(m => pct >= m.pct);
+  return crossed.length > 0 ? crossed[crossed.length - 1] : null;
+}
+
 // ── Inline name editor ──────────────────────────────────────────────────────
 function GoalNameEditor({
   goal,
@@ -103,6 +117,68 @@ function GoalNameEditor({
     >
       {goal.name}
     </p>
+  );
+}
+
+// ── Milestone badges strip ──────────────────────────────────────────────────
+function MilestoneBadges({ pct, goalId }: { pct: number; goalId: string }) {
+  const seenKey = `flux-milestone-seen-${goalId}`;
+  const [seenPct, setSeenPct] = useState<number>(() => {
+    try { return Number(localStorage.getItem(seenKey) ?? -1); } catch { return -1; }
+  });
+  const [justUnlocked, setJustUnlocked] = useState<typeof MILESTONES[0] | null>(null);
+
+  // Detect newly crossed milestone
+  useEffect(() => {
+    const crossed = MILESTONES.filter(m => pct >= m.pct);
+    if (crossed.length === 0) return;
+    const highest = crossed[crossed.length - 1];
+    if (highest.pct > seenPct) {
+      setSeenPct(highest.pct);
+      setJustUnlocked(highest);
+      localStorage.setItem(seenKey, String(highest.pct));
+      setTimeout(() => setJustUnlocked(null), 2500);
+    }
+  }, [pct, seenPct, seenKey]);
+
+  const crossedMilestones = MILESTONES.filter(m => pct >= m.pct);
+
+  return (
+    <>
+      {/* Animated "just unlocked" banner */}
+      <AnimatePresence>
+        {justUnlocked && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -4 }}
+            transition={{ type: "spring", stiffness: 350, damping: 22 }}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-full border text-[9px] font-semibold w-fit mb-1 ${justUnlocked.color}`}
+          >
+            <span>{justUnlocked.badge}</span>
+            <span>{justUnlocked.label}!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Static badges row */}
+      {crossedMilestones.length > 0 && !justUnlocked && (
+        <div className="flex items-center gap-1 mb-1 flex-wrap">
+          {crossedMilestones.map((m, i) => (
+            <motion.span
+              key={m.pct}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20, delay: i * 0.04 }}
+              title={m.label}
+              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border text-[8px] font-medium ${m.color}`}
+            >
+              {m.badge} {m.pct}%
+            </motion.span>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -426,6 +502,9 @@ const SavingsWidget = () => {
                       </button>
                     </div>
                   </div>
+
+                  {/* Milestone badges */}
+                  <MilestoneBadges pct={pct} goalId={goal.id} />
 
                   {/* Deadline badge */}
                   {badge && (

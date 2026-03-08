@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Flame, TrendingUp, BarChart3, Play, Pause, Square, Target, Pencil, Check } from "lucide-react";
+import { Flame, TrendingUp, BarChart3, Play, Pause, Square, Pencil, History } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DraggableWidget from "./DraggableWidget";
 import FocusReportModal from "./FocusReportModal";
@@ -50,16 +50,27 @@ export function logFocusMinutes(minutes: number) {
 const DAILY_GOAL_MIN = 300; // 5 h
 const POMODORO_SECS = 25 * 60;
 
-/** Returns Mon-Sun dates for the current week */
-function getWeekDates() {
+/** Returns Mon-Sun dates for the week offset from current week (0 = this week, -1 = last, etc.) */
+function getWeekDates(weekOffset = 0) {
   const now = new Date();
-  const day = now.getDay(); // 0=Sun
+  const day = now.getDay();
   const mondayOffset = day === 0 ? -6 : 1 - day;
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
-    d.setDate(d.getDate() + mondayOffset + i);
+    d.setDate(d.getDate() + mondayOffset + i + weekOffset * 7);
     return d.toISOString().slice(0, 10);
   });
+}
+
+/** Returns label for week like "Mar 3–9" */
+function weekLabel(weekOffset: number): string {
+  const dates = getWeekDates(weekOffset);
+  const start = new Date(dates[0]);
+  const end   = new Date(dates[6]);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  if (weekOffset === 0) return "This Week";
+  if (weekOffset === -1) return "Last Week";
+  return `${start.toLocaleDateString("en-US", opts)}–${end.toLocaleDateString("en-US", { day: "numeric" })}`;
 }
 
 /** Compute consecutive-day streak backwards from today */
@@ -106,6 +117,54 @@ function ConfettiBurst() {
   );
 }
 
+// ── 4-week sparkline ───────────────────────────────────────────────────────
+function WeeklyHistorySparkline({ dailyLog }: { dailyLog: Record<string, number> }) {
+  // Build 4 weeks of data (current + 3 prior)
+  const weeks = [-3, -2, -1, 0].map(offset => {
+    const dates = getWeekDates(offset);
+    const total = dates.reduce((sum, d) => sum + (dailyLog[d] ?? 0), 0);
+    const hrs   = +(total / 60).toFixed(1);
+    return { label: weekLabel(offset), hrs, offset };
+  });
+
+  const maxHrs = Math.max(...weeks.map(w => w.hrs), 0.1);
+  const SPARKLINE_H = 32; // px height for bars
+
+  return (
+    <div className="shrink-0">
+      <p className="text-[7px] text-white/15 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+        <History size={7} className="text-white/20" /> 4-Week History
+      </p>
+      <div className="flex items-end gap-1.5">
+        {weeks.map((w, i) => {
+          const barH = Math.max((w.hrs / maxHrs) * SPARKLINE_H, w.hrs > 0 ? 3 : 1);
+          const isCurrent = w.offset === 0;
+          return (
+            <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+              <span className={`text-[7px] font-medium leading-none ${isCurrent ? "text-violet-300" : "text-white/35"}`}>
+                {w.hrs > 0 ? `${w.hrs}h` : ""}
+              </span>
+              <motion.div
+                className={`w-full rounded-t-sm ${isCurrent ? "bg-violet-400/80" : "bg-white/20"}`}
+                title={`${w.label}: ${w.hrs}h`}
+                initial={{ height: 0 }}
+                animate={{ height: `${barH}px` }}
+                transition={{ duration: 0.5, delay: i * 0.07, ease: "easeOut" }}
+              />
+              <span
+                className={`text-[6px] leading-none text-center ${isCurrent ? "text-violet-300" : "text-white/20"}`}
+                style={{ fontSize: "6px" }}
+              >
+                {i === 3 ? "Now" : i === 2 ? "-1w" : i === 1 ? "-2w" : "-3w"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 const FocusStatsWidget = () => {
   const { user } = useAuth();
@@ -120,7 +179,6 @@ const FocusStatsWidget = () => {
   const [dailyLog, setDailyLog] = useState<Record<string, number>>({});
   const [totalSessions, setTotalSessions] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [prevStreak, setPrevStreak] = useState(0);
   const [streakBump, setStreakBump] = useState(false);
 
   // Weekly goal state (persisted in localStorage)
@@ -135,7 +193,6 @@ const FocusStatsWidget = () => {
   // ── Load all sessions from DB ────────────────────────────────────────────
   const loadDbSessions = useCallback(async () => {
     if (!user) {
-      // Fall back to local storage
       const local = loadLocalStats();
       setDailyLog(local.dailyLog);
       setTotalSessions(local.totalSessions);
@@ -159,7 +216,6 @@ const FocusStatsWidget = () => {
     setTotalSessions(data.length);
     setStreak(prev => {
       if (newStreak > prev) {
-        setPrevStreak(prev);
         setStreakBump(true);
         setTimeout(() => setStreakBump(false), 1200);
       }
@@ -172,7 +228,6 @@ const FocusStatsWidget = () => {
     setTimeout(() => setRingAnim(true), 300);
   }, [loadDbSessions]);
 
-  // ── Listen for local log events (e.g. when not logged in) ────────────────
   useEffect(() => {
     const handler = () => loadDbSessions();
     window.addEventListener("focus-stats-updated", handler);
@@ -187,7 +242,6 @@ const FocusStatsWidget = () => {
       session_date: getToday(),
       minutes,
     });
-    // Optimistically check if crossing 100%
     const currentMin = (dailyLog[getToday()] ?? 0) + minutes;
     const newPct = Math.min((currentMin / DAILY_GOAL_MIN) * 100, 100);
     if (newPct >= 100 && prevDailyPctRef.current < 100) {
@@ -234,9 +288,9 @@ const FocusStatsWidget = () => {
   const todayMin = dailyLog[today] ?? 0;
   const dailyPct = Math.min((todayMin / DAILY_GOAL_MIN) * 100, 100);
 
-  // Weekly bar chart – real DB data, no mock values
+  // Weekly bar chart – real DB data
   const WEEK_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(0);
   const weekData = weekDates.map((date, i) => ({
     label: WEEK_LABELS[i],
     minutes: dailyLog[date] ?? 0,
@@ -274,8 +328,8 @@ const FocusStatsWidget = () => {
 
   return (
     <>
-      <DraggableWidget id="stats" title="Focus Stats" defaultPosition={{ x: 60, y: 320 }} defaultSize={{ w: 340, h: 440 }}>
-        <div className="h-full flex flex-col gap-3 overflow-hidden">
+      <DraggableWidget id="stats" title="Focus Stats" defaultPosition={{ x: 60, y: 320 }} defaultSize={{ w: 340, h: 520 }}>
+        <div className="h-full flex flex-col gap-2.5 overflow-y-auto council-hidden-scrollbar">
 
           {/* Header */}
           <div className="shrink-0 text-center">
@@ -337,12 +391,10 @@ const FocusStatsWidget = () => {
                 </AnimatePresence>
                 <p className="text-[8px] text-white/30 mt-0.5">/ 5h goal</p>
               </div>
-              {/* Confetti burst on goal reached */}
               <AnimatePresence>
                 {goalReached && <ConfettiBurst />}
               </AnimatePresence>
             </div>
-            {/* Goal reached banner */}
             <AnimatePresence>
               {goalReached && (
                 <motion.div
@@ -360,7 +412,6 @@ const FocusStatsWidget = () => {
 
           {/* Stats badges */}
           <div className="flex gap-2 shrink-0">
-            {/* Streak badge with bump animation */}
             <div className="flex-1 flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/8 overflow-hidden relative">
               <div className="w-6 h-6 rounded-lg bg-orange-400/20 flex items-center justify-center shrink-0">
                 <Flame size={12} className="text-orange-400" />
@@ -394,7 +445,6 @@ const FocusStatsWidget = () => {
               )}
             </div>
 
-            {/* Sessions badge */}
             <div className="flex-1 flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/8">
               <div className="w-6 h-6 rounded-lg bg-violet-400/20 flex items-center justify-center shrink-0">
                 <TrendingUp size={12} className="text-violet-400" />
@@ -444,10 +494,9 @@ const FocusStatsWidget = () => {
           </div>
 
           {/* Weekly goal section */}
-          <div className="flex-1 flex flex-col justify-end gap-1.5">
+          <div className="shrink-0 flex flex-col gap-1.5">
             {/* Weekly goal header + ring */}
             <div className="flex items-center gap-2">
-              {/* Mini ring */}
               <div className="relative w-10 h-10 shrink-0">
                 <svg className="w-10 h-10 -rotate-90" viewBox="0 0 40 40">
                   <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3.5" />
@@ -468,16 +517,11 @@ const FocusStatsWidget = () => {
                 </div>
               </div>
 
-              {/* Labels */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1 mb-0.5">
                   <span className="text-[8px] text-white/20 uppercase tracking-wider">This Week</span>
                   {weeklyGoalMet && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="text-[8px] text-emerald-300"
-                    >
+                    <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-[8px] text-emerald-300">
                       🎯
                     </motion.span>
                   )}
@@ -513,7 +557,7 @@ const FocusStatsWidget = () => {
               </div>
             </div>
 
-            {/* Bar chart */}
+            {/* This-week daily bar chart */}
             <p className="text-[7px] text-white/15 uppercase tracking-wider">Daily breakdown</p>
             <div className="flex items-end justify-between gap-1 h-10">
               {weekData.map((d, i) => (
@@ -529,6 +573,9 @@ const FocusStatsWidget = () => {
                 </div>
               ))}
             </div>
+
+            {/* 4-week history sparkline */}
+            <WeeklyHistorySparkline dailyLog={dailyLog} />
           </div>
 
           <button
