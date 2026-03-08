@@ -224,7 +224,7 @@ const DraggableWidget = ({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [id, isBuildMode, updateWidgetPosition]);
+  }, [id, isBuildMode, isDragging, updateWidgetPosition]);
 
   // Compute styled background
   const hasCustomBg = !!widgetStyle.backgroundColor;
