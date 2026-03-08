@@ -758,16 +758,24 @@ const SavingsWidget = () => {
                     />
                   </div>
 
-                  {/* Savings forecast */}
-                  {(() => {
+                  {/* Savings forecast line + sparkline */}
+                  {!done && goal.deadline && (() => {
                     const forecast = savingsForecast(goal.current, goal.target, goal.deadline);
-                    if (!forecast || done) return null;
                     return (
-                      <p className="flex items-center gap-1 text-[9px] text-white/30 mb-2">
-                        <TrendingUp size={8} className="text-violet-300/50 shrink-0" />
-                        <span className="text-violet-300/70 font-medium">{forecast}/mo</span>
-                        <span>needed to reach goal</span>
-                      </p>
+                      <>
+                        {forecast && (
+                          <p className="flex items-center gap-1 text-[9px] text-white/30 mb-1">
+                            <TrendingUp size={8} className="text-violet-300/50 shrink-0" />
+                            <span className="text-violet-300/70 font-medium">{forecast}/mo</span>
+                            <span>needed to reach goal</span>
+                          </p>
+                        )}
+                        <ForecastSparkline
+                          current={goal.current}
+                          target={goal.target}
+                          deadline={goal.deadline}
+                        />
+                      </>
                     );
                   })()}
 
