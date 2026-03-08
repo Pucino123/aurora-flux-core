@@ -895,7 +895,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const [showExport, setShowExport] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
   const [floatingEmojis, setFloatingEmojis] = useState<Record<string, string[]>>({
-    elena: [], helen: [], anton: [], margot: [],
+    strategist: [], operator: [], skeptic: [], advocate: [],
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [savedIdeaId, setSavedIdeaId] = useState<string | null>(null);
