@@ -266,6 +266,7 @@ const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState,
       <motion.div
         ref={folderRef}
         data-folder-id={folder.id}
+        layoutId={layoutId}
         initial={{ opacity: 0, scale: 0.88, y: 10 }}
         animate={flyingOff
           ? { x: flyingOff.dir * (window.innerWidth * 0.6), opacity: 0, scale: 0.7, rotate: flyingOff.dir * 12 }
