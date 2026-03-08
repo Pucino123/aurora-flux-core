@@ -1091,7 +1091,14 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     setIdea("");
     setCardStates({ strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" });
     setResponses({ strategist: null, operator: null, skeptic: null, advocate: null });
-...
+    setActionPlan(DEFAULT_ACTION_PLAN);
+    setRevealedCount(0);
+    revealedCountRef.current = 0;
+    setExpandedCard(null);
+    setFullscreenPersona(null);
+    setSavedIdeaId(null);
+    setSaveState("idle");
+    setIsSharedView(false);
     setFloatingEmojis({ strategist: [], operator: [], skeptic: [], advocate: [] });
     sessionIdRef.current = resetSessionId();
     // Reset personality sliders to per-advisor defaults
