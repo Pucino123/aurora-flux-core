@@ -622,7 +622,7 @@ const TheCouncil = () => {
                             className="flex items-center gap-2 text-[11px] text-foreground/50 hover:text-foreground/80 transition-colors"
                           >
                             {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                            {showAdvanced ? "Skjul avancerede værktøjer" : "Avancerede værktøjer"}
+                            {showAdvanced ? "Hide advanced tools" : "Advanced tools"}
                           </button>
                           <AnimatePresence>
                             {showAdvanced && (
