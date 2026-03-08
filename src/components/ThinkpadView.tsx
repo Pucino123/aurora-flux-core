@@ -168,7 +168,7 @@ const IdeaCanvas = ({
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [markedNodes, setMarkedNodes] = useState<Set<string>>(new Set());
-  const { screenToFlowPosition, zoomIn, zoomOut, setCenter, getNode } = useReactFlow();
+  const { screenToFlowPosition, zoomIn, zoomOut, setCenter, fitView } = useReactFlow();
   const nodeIdRef = useRef(200);
 
   // Sync when track changes
