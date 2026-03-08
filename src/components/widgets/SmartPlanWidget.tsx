@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check, CalendarDays, LayoutList, Calendar as CalendarIcon, Zap } from "lucide-react";
+import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check, CalendarDays, LayoutList, Calendar as CalendarIcon, Zap, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, isToday, isTomorrow, differenceInDays, parseISO, startOfDay } from "date-fns";
 import {
@@ -362,6 +362,10 @@ const SmartPlanWidget = () => {
   const [showAdd, setShowAdd]       = useState(false);
   /** false = Today only, true = All upcoming (grouped by date) */
   const [showAll, setShowAll]       = useState(false);
+  /** Daily summary AI popover */
+  const [summaryOpen, setSummaryOpen]     = useState(false);
+  const [summary, setSummary]             = useState<string>("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   const today = format(new Date(), "EEEE, MMM d");
 
@@ -530,6 +534,25 @@ const SmartPlanWidget = () => {
     });
   }, [handleAddBlock]);
 
+  // ── Daily Summary ────────────────────────────────────────────────────────
+  const fetchDailySummary = useCallback(async () => {
+    const todayBlks = blocks.filter(b => b.scheduledDate === TODAY);
+    if (todayBlks.length === 0) { setSummary("No blocks scheduled for today yet!"); setSummaryOpen(true); return; }
+    setSummaryLoading(true);
+    setSummaryOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("flux-ai", {
+        body: { type: "daily-summary", blocks: todayBlks },
+      });
+      if (error || !data?.summary) throw new Error("No summary");
+      setSummary(data.summary);
+    } catch {
+      setSummary("Couldn't generate summary right now. Check back later!");
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [blocks]);
+
   // ── Delete block ────────────────────────────────────────────────────────
   const handleDeleteBlock = useCallback(async (blockId: string) => {
     setBlocks(prev => prev.filter(b => b.id !== blockId));
@@ -605,6 +628,54 @@ const SmartPlanWidget = () => {
         >
           <Zap size={9} /> Focus Block
         </button>
+        {/* 📋 Daily Summary AI button */}
+        <Popover open={summaryOpen} onOpenChange={setSummaryOpen}>
+          <PopoverTrigger asChild>
+            <button
+              onClick={fetchDailySummary}
+              title="AI summary of today's blocks"
+              className="flex items-center gap-1 px-2 py-1 rounded-full bg-violet-500/15 border border-violet-400/20 text-[10px] text-violet-300 hover:bg-violet-500/30 hover:border-violet-400/40 transition-all"
+            >
+              <FileText size={9} /> Daily Summary
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-72 p-3 z-50 bg-[hsl(var(--card))] border border-border/30 shadow-xl rounded-2xl"
+            align="start"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                <Sparkles size={11} className="text-violet-400" /> Today's Summary
+              </p>
+              <button onClick={() => setSummaryOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                <X size={11} />
+              </button>
+            </div>
+            <AnimatePresence mode="wait">
+              {summaryLoading ? (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 py-4 justify-center"
+                >
+                  <Loader2 size={14} className="animate-spin text-violet-400" />
+                  <span className="text-[11px] text-muted-foreground">Summarizing your day…</span>
+                </motion.div>
+              ) : (
+                <motion.p
+                  key="summary"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-[12px] text-foreground/80 leading-relaxed"
+                >
+                  {summary}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Today vs Scheduled toggle + date header */}

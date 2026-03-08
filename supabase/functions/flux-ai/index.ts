@@ -1266,11 +1266,46 @@ The idea to analyze: "${idea}"`;
   });
 }
 
+// ── Daily Summary handler ──────────────────────────────────────────────────
+async function handleDailySummary(blocks: any[], apiKey: string) {
+  const systemPrompt = `You are a concise productivity coach. Summarize today's schedule in 3-5 sentences.
+Focus on: total focus/work time, meeting count, break time, and 1 key insight about the day's structure.
+Be motivating and specific. End with a brief tip for staying on track.
+Keep it under 80 words total. No bullet points — flowing prose only.`;
+
+  const blockList = blocks.map(b => `${b.time}-${b.endTime}: [${b.type}] ${b.title}`).join("\n");
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Today's schedule:\n${blockList}\n\nWrite a brief daily summary.` },
+      ],
+    }),
+  });
+
+  const errResp = handleAIError(response);
+  if (errResp) return errResp;
+  if (!response.ok) throw new Error("AI gateway error");
+
+  const data = await response.json();
+  const summary = data.choices?.[0]?.message?.content ?? "No summary available.";
+  return new Response(JSON.stringify({ summary }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, messages, context, action, text, question, mode, persona_key, sender_name, prompt, idea, personality_sliders } = await req.json();
+    const { type, messages, context, action, text, question, mode, persona_key, sender_name, prompt, idea, personality_sliders, blocks } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -1284,6 +1319,7 @@ serve(async (req) => {
     if (type === "document-chat") return await handleDocumentChat(messages, context, LOVABLE_API_KEY);
     if (type === "document-tools") return await handleDocumentTools(action, text, LOVABLE_API_KEY);
     if (type === "message-to-action") return await handleMessageToAction(text || "", sender_name || "Someone", LOVABLE_API_KEY);
+    if (type === "daily-summary") return await handleDailySummary(blocks ?? [], LOVABLE_API_KEY);
     return await handleChat(Array.isArray(messages) ? messages : [], LOVABLE_API_KEY);
   } catch (e) {
     console.error("flux-ai error:", e);

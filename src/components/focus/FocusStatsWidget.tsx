@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Flame, TrendingUp, BarChart3, Play, Pause, Square, Pencil, History, Trophy, User } from "lucide-react";
+import { Flame, TrendingUp, BarChart3, Play, Pause, Square, Pencil, History, Trophy, User, Share2, Download, Copy, Check as CheckIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DraggableWidget from "./DraggableWidget";
 import FocusReportModal from "./FocusReportModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import html2canvas from "html2canvas";
 
 // ── Local fallback helpers ─────────────────────────────────────────────────
 const STATS_KEY = "flux-focus-stats";
@@ -164,8 +165,11 @@ function WeeklyHistorySparkline({ dailyLog }: { dailyLog: Record<string, number>
   );
 }
 
-// ── 3-month streak heatmap ─────────────────────────────────────────────────
-function StreakHeatmap({ dailyLog }: { dailyLog: Record<string, number> }) {
+// ── 3-month streak heatmap with Share button ───────────────────────────────
+function StreakHeatmap({ dailyLog, streak }: { dailyLog: Record<string, number>; streak: number }) {
+  const heatmapRef = useRef<HTMLDivElement>(null);
+  const [shareState, setShareState] = useState<"idle" | "capturing" | "copied">("idle");
+
   const days = Array.from({ length: 91 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (90 - i));
@@ -207,44 +211,154 @@ function StreakHeatmap({ dailyLog }: { dailyLog: Record<string, number> }) {
     });
   });
 
+  const totalDaysActive = days.filter(d => (dailyLog[d] ?? 0) > 0).length;
+
+  // ── Share / Download heatmap as PNG ──────────────────────────────────────
+  const handleShare = async () => {
+    if (!heatmapRef.current) return;
+    setShareState("capturing");
+    try {
+      // Build a styled snapshot element
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = [
+        "position:fixed", "left:-9999px", "top:-9999px",
+        "padding:24px 28px", "border-radius:16px",
+        "background:linear-gradient(135deg,#1e1230 0%,#120d22 100%)",
+        "font-family:system-ui,sans-serif",
+        "display:inline-block",
+        "min-width:320px",
+      ].join(";");
+
+      // Title row
+      const titleRow = document.createElement("div");
+      titleRow.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;";
+      titleRow.innerHTML = `
+        <div>
+          <p style="color:#a78bfa;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin:0 0 2px;">Focus Streak</p>
+          <p style="color:rgba(255,255,255,0.9);font-size:20px;font-weight:800;margin:0;">${streak} day streak 🔥</p>
+        </div>
+        <div style="text-align:right;">
+          <p style="color:rgba(255,255,255,0.4);font-size:10px;margin:0 0 2px;">Active days</p>
+          <p style="color:#a78bfa;font-size:18px;font-weight:700;margin:0;">${totalDaysActive}</p>
+        </div>
+      `;
+      wrapper.appendChild(titleRow);
+
+      // Clone the heatmap grid
+      const cloned = heatmapRef.current.cloneNode(true) as HTMLElement;
+      cloned.style.overflow = "visible";
+      wrapper.appendChild(cloned);
+
+      // Footer
+      const footer = document.createElement("p");
+      footer.style.cssText = "color:rgba(255,255,255,0.2);font-size:9px;text-align:center;margin:12px 0 0;letter-spacing:0.06em;";
+      footer.textContent = `Flux · ${new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
+      wrapper.appendChild(footer);
+
+      document.body.appendChild(wrapper);
+
+      const canvas = await html2canvas(wrapper, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      document.body.removeChild(wrapper);
+
+      // Try clipboard first, fallback to download
+      canvas.toBlob(async blob => {
+        if (!blob) return;
+        try {
+          if (navigator.clipboard && (navigator.clipboard as any).write) {
+            await (navigator.clipboard as any).write([
+              new ClipboardItem({ "image/png": blob }),
+            ]);
+            setShareState("copied");
+          } else {
+            throw new Error("no clipboard write");
+          }
+        } catch {
+          // fallback: download
+          const url = URL.createObjectURL(blob);
+          const a   = document.createElement("a");
+          a.href    = url;
+          a.download = `focus-streak-${today}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+          setShareState("copied");
+        }
+        setTimeout(() => setShareState("idle"), 2500);
+      }, "image/png");
+    } catch (err) {
+      console.error("Share error:", err);
+      setShareState("idle");
+    }
+  };
+
   return (
     <div className="shrink-0">
-      <p className="text-[7px] text-white/15 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-        <History size={7} className="text-white/20" /> 3-Month Activity
-      </p>
-      <div className="relative flex gap-[2px] mb-0.5 h-3">
-        {weeks.map((_, wi) => {
-          const ml = monthLabels.find(m => m.col === wi);
-          return (
-            <div key={wi} className="flex-none" style={{ width: 8 }}>
-              {ml && <span className="text-white/20 absolute" style={{ fontSize: "6px" }}>{ml.label}</span>}
+      {/* Header row with Share button */}
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-[7px] text-white/15 uppercase tracking-wider flex items-center gap-1">
+          <History size={7} className="text-white/20" /> 3-Month Activity
+        </p>
+        <button
+          onClick={handleShare}
+          disabled={shareState === "capturing"}
+          title={shareState === "copied" ? "Copied to clipboard!" : "Share heatmap as PNG"}
+          className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-medium transition-all ${
+            shareState === "copied"
+              ? "bg-emerald-500/25 text-emerald-300 border border-emerald-400/30"
+              : shareState === "capturing"
+              ? "bg-white/5 text-white/20 border border-white/10 cursor-wait"
+              : "bg-white/5 text-white/25 border border-white/10 hover:bg-violet-500/20 hover:text-violet-300 hover:border-violet-400/30"
+          }`}
+        >
+          {shareState === "copied"
+            ? <><CheckIcon size={7} /> Copied!</>
+            : shareState === "capturing"
+            ? <>Capturing…</>
+            : <><Share2 size={7} /> Share</>
+          }
+        </button>
+      </div>
+
+      {/* Grid ref for capture */}
+      <div ref={heatmapRef}>
+        <div className="relative flex gap-[2px] mb-0.5 h-3">
+          {weeks.map((_, wi) => {
+            const ml = monthLabels.find(m => m.col === wi);
+            return (
+              <div key={wi} className="flex-none" style={{ width: 8 }}>
+                {ml && <span className="text-white/20 absolute" style={{ fontSize: "6px" }}>{ml.label}</span>}
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex gap-[2px]">
+          {weeks.map((week, wi) => (
+            <div key={wi} className="flex flex-col gap-[2px]">
+              {week.map((d, di) => (
+                <motion.div
+                  key={di}
+                  className={`rounded-[1px] ${cellColor(d)}`}
+                  style={{ width: 8, height: 8 }}
+                  title={d ? `${d}: ${dailyLog[d] ?? 0} min` : undefined}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: (wi * 7 + di) * 0.002, duration: 0.15 }}
+                />
+              ))}
             </div>
-          );
-        })}
-      </div>
-      <div className="flex gap-[2px]">
-        {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-[2px]">
-            {week.map((d, di) => (
-              <motion.div
-                key={di}
-                className={`rounded-[1px] ${cellColor(d)}`}
-                style={{ width: 8, height: 8 }}
-                title={d ? `${d}: ${dailyLog[d] ?? 0} min` : undefined}
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: (wi * 7 + di) * 0.002, duration: 0.15 }}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-1 mt-1">
-        <span className="text-white/15" style={{ fontSize: "6px" }}>Less</span>
-        {["bg-white/[0.04]", "bg-violet-400/25", "bg-violet-400/55", "bg-violet-400/90"].map((c, i) => (
-          <div key={i} className={`rounded-[1px] ${c}`} style={{ width: 8, height: 8 }} />
-        ))}
-        <span className="text-white/15" style={{ fontSize: "6px" }}>More</span>
+          ))}
+        </div>
+        <div className="flex items-center gap-1 mt-1">
+          <span className="text-white/15" style={{ fontSize: "6px" }}>Less</span>
+          {["bg-white/[0.04]", "bg-violet-400/25", "bg-violet-400/55", "bg-violet-400/90"].map((c, i) => (
+            <div key={i} className={`rounded-[1px] ${c}`} style={{ width: 8, height: 8 }} />
+          ))}
+          <span className="text-white/15" style={{ fontSize: "6px" }}>More</span>
+        </div>
       </div>
     </div>
   );
@@ -272,7 +386,6 @@ function LeaderboardPanel({
   });
   const [editingName, setEditingName]   = useState(false);
   const [nameInput, setNameInput]       = useState("");
-  const syncedRef                       = useRef(false);
 
   const thisWeek = currentWeekStart();
 
@@ -306,7 +419,7 @@ function LeaderboardPanel({
     loadBoard();
   }, [loadBoard]);
 
-  // Sync score when minutes change (debounced, once per mount until changed)
+  // Sync score when minutes change (debounced)
   useEffect(() => {
     if (!user || weeklyTotalMin <= 0) return;
     const t = setTimeout(() => {
@@ -325,7 +438,6 @@ function LeaderboardPanel({
   };
 
   const myEntry = entries.find(e => e.user_id === user?.id);
-  const myRank  = entries.findIndex(e => e.user_id === user?.id) + 1;
   const maxMin  = Math.max(...entries.map(e => e.weekly_minutes), 1);
 
   const RANK_MEDALS = ["🥇", "🥈", "🥉", "4", "5"];
@@ -409,7 +521,6 @@ function LeaderboardPanel({
                   isMe ? "bg-violet-500/15 border border-violet-400/25" : "bg-white/4"
                 }`}
               >
-                {/* Background bar */}
                 <div
                   className={`absolute left-0 top-0 bottom-0 rounded-lg opacity-20 ${
                     i === 0 ? "bg-amber-400" : isMe ? "bg-violet-400" : "bg-white/10"
@@ -434,7 +545,7 @@ function LeaderboardPanel({
       )}
 
       {/* My rank if not in top 5 */}
-      {user && myRank === 0 && username && weeklyTotalMin > 0 && (
+      {user && !myEntry && username && weeklyTotalMin > 0 && (
         <p className="text-[8px] text-white/25 text-center">
           You're not on the board yet —{" "}
           <button onClick={() => syncScore(username, weeklyTotalMin)} className="text-violet-300/60 hover:text-violet-300 transition-colors underline">
@@ -904,8 +1015,8 @@ const FocusStatsWidget = () => {
                     {/* 4-week history sparkline */}
                     <WeeklyHistorySparkline dailyLog={dailyLog} />
 
-                    {/* 3-month heatmap */}
-                    <StreakHeatmap dailyLog={dailyLog} />
+                    {/* 3-month heatmap with share button */}
+                    <StreakHeatmap dailyLog={dailyLog} streak={streak} />
                   </div>
 
                   <button
