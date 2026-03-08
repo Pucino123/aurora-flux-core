@@ -202,42 +202,44 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
   };
 
   // Bold key terms in text
-  const renderBoldTerms = (text: string): React.ReactNode[] => {
+  const renderBoldTerms = (text: string): React.ReactNode => {
     const terms = ["insurance", "depreciation", "brand", "positioning", "market", "eco", "revenue", "burn rate", "churn", "moat", "unit economics", "row 14", "LTV"];
-    let parts: React.ReactNode[] = [text];
-    terms.forEach(term => {
-      parts = parts.flatMap((part) => {
-        if (typeof part !== "string") return [part];
-        const regex = new RegExp(`(${term})`, "gi");
-        const split = part.split(regex);
-        return split.map((s, i) =>
-          regex.test(s)
-            ? <span
-                key={`${term}-${i}`}
-                className="font-semibold cursor-pointer relative"
-                style={{ color }}
-                onMouseEnter={() => setShowTooltip(term)}
-                onMouseLeave={() => setShowTooltip(null)}
-              >
-                {s}
-                <AnimatePresence>
-                  {showTooltip === term && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 4, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 4, scale: 0.9 }}
-                      className="absolute bottom-full left-0 mb-1 px-2 py-1 rounded-lg text-[9px] text-white/70 bg-black/80 backdrop-blur-sm border border-white/10 whitespace-nowrap z-50"
-                    >
-                      💡 Click to highlight this metric
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </span>
-            : s
-        );
-      });
-    });
-    return parts;
+    const segments: React.ReactNode[] = [];
+    let remaining = text;
+    let keyIdx = 0;
+    while (remaining.length > 0) {
+      let earliestIdx = -1;
+      let earliestTerm = "";
+      for (const term of terms) {
+        const idx = remaining.toLowerCase().indexOf(term.toLowerCase());
+        if (idx !== -1 && (earliestIdx === -1 || idx < earliestIdx)) {
+          earliestIdx = idx;
+          earliestTerm = term;
+        }
+      }
+      if (earliestIdx === -1) { segments.push(remaining); break; }
+      if (earliestIdx > 0) segments.push(remaining.slice(0, earliestIdx));
+      const matchedText = remaining.slice(earliestIdx, earliestIdx + earliestTerm.length);
+      const captured = earliestTerm;
+      segments.push(
+        <span
+          key={keyIdx++}
+          className="font-semibold cursor-pointer relative inline-block"
+          style={{ color } as React.CSSProperties}
+          onMouseEnter={() => setShowTooltip(captured)}
+          onMouseLeave={() => setShowTooltip(null)}
+        >
+          {matchedText}
+          {showTooltip === captured && (
+            <span className="absolute bottom-full left-0 mb-1 px-2 py-1 rounded-lg text-[9px] text-white/70 bg-black/80 backdrop-blur-sm border border-white/10 whitespace-nowrap z-50 pointer-events-none font-normal" style={{} as React.CSSProperties}>
+              💡 Click to highlight this metric
+            </span>
+          )}
+        </span>
+      );
+      remaining = remaining.slice(earliestIdx + earliestTerm.length);
+    }
+    return <>{segments}</>;
   };
 
   return (
