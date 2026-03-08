@@ -613,19 +613,19 @@ const FocusContent = () => {
             >
               <div className="pointer-events-auto w-full h-full">
             <AnimatePresence>
-              {activeWidgets.includes("clock") && !clockEditorOpen && <ClockWidget key="clock" onOpenEditor={() => setClockEditorOpen(true)} />}
-              {activeWidgets.includes("timer") && <FocusTimer key="timer" />}
-              {activeWidgets.includes("music") && <MusicWidget key="music" />}
-              {activeWidgets.includes("planner") && <TodaysPlanWidget key="planner" />}
-              {activeWidgets.includes("notes") && <NotesWidget key="notes" />}
-              {activeWidgets.includes("crm") && <FocusCRMWidget key="crm" />}
-              {activeWidgets.includes("stats") && <FocusStatsWidget key="stats" />}
-              {activeWidgets.includes("scratchpad") && <ScratchpadWidget key="scratchpad" />}
-              {activeWidgets.includes("quote") && <QuoteOfDay key="quote" />}
-              {activeWidgets.includes("breathing") && <BreathingWidget key="breathing" />}
-              {activeWidgets.includes("council") && <FocusCouncilWidget key="council" />}
-              {activeWidgets.includes("aura") && <AuraWidget key="aura" />}
-              {activeWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
+              {pageActiveWidgets.includes("clock") && !clockEditorOpen && <ClockWidget key="clock" onOpenEditor={() => setClockEditorOpen(true)} />}
+              {pageActiveWidgets.includes("timer") && <FocusTimer key="timer" />}
+              {pageActiveWidgets.includes("music") && <MusicWidget key="music" />}
+              {pageActiveWidgets.includes("planner") && <TodaysPlanWidget key="planner" />}
+              {pageActiveWidgets.includes("notes") && <NotesWidget key="notes" />}
+              {pageActiveWidgets.includes("crm") && <FocusCRMWidget key="crm" />}
+              {pageActiveWidgets.includes("stats") && <FocusStatsWidget key="stats" />}
+              {pageActiveWidgets.includes("scratchpad") && <ScratchpadWidget key="scratchpad" />}
+              {pageActiveWidgets.includes("quote") && <QuoteOfDay key="quote" />}
+              {pageActiveWidgets.includes("breathing") && <BreathingWidget key="breathing" />}
+              {pageActiveWidgets.includes("council") && <FocusCouncilWidget key="council" />}
+              {pageActiveWidgets.includes("aura") && <AuraWidget key="aura" />}
+              {pageActiveWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
               {/* Aura-spawned image widgets */}
               {auraImages.map(img => (
                 <AuraImageWidget
@@ -636,14 +636,13 @@ const FocusContent = () => {
                   onRemove={(id) => setAuraImages(prev => prev.filter(i => i.id !== id))}
                 />
               ))}
-              {activeWidgets.includes("budget-preview") && <FocusBudgetWidget key="budget-preview" />}
-              {activeWidgets.includes("savings-ring") && <FocusSavingsWidget key="savings-ring" />}
-              {activeWidgets.includes("weekly-workout") && <FocusWorkoutWidget key="weekly-workout" />}
-              {activeWidgets.includes("project-status") && <FocusProjectStatusWidget key="project-status" />}
-              {activeWidgets.includes("top-tasks") && <FocusTopTasksWidget key="top-tasks" />}
-              {activeWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
-              {activeWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
-              {/* Chat widget removed for clean desktop */}
+              {pageActiveWidgets.includes("budget-preview") && <FocusBudgetWidget key="budget-preview" />}
+              {pageActiveWidgets.includes("savings-ring") && <FocusSavingsWidget key="savings-ring" />}
+              {pageActiveWidgets.includes("weekly-workout") && <FocusWorkoutWidget key="weekly-workout" />}
+              {pageActiveWidgets.includes("project-status") && <FocusProjectStatusWidget key="project-status" />}
+              {pageActiveWidgets.includes("top-tasks") && <FocusTopTasksWidget key="top-tasks" />}
+              {pageActiveWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
+              {pageActiveWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
             </AnimatePresence>
               </div>
             </motion.div>
