@@ -225,35 +225,46 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
                           if (!isDragging) { el.style.background = "rgba(255,255,255,0.04)"; el.style.borderColor = "rgba(255,255,255,0.06)"; }
                         }}
                       >
-                        <div className="flex items-start gap-2">
-                          <GripVertical size={12} className="text-muted-foreground/20 mt-0.5 shrink-0 group-hover:text-muted-foreground/50 transition-colors" />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-[12px] font-medium leading-snug ${task.done ? "line-through text-muted-foreground/30" : "text-foreground/85"}`}>
-                              {task.title}
-                            </p>
-                            {task.priority && pc && (
-                              <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
-                                style={{ background: pc.badge, color: pc.text }}>
-                                <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                                  style={{ background: pc.dot, boxShadow: `0 0 5px ${PRIORITY_GLOW[task.priority]}` }} />
-                                {task.priority}
-                              </span>
-                            )}
-                          </div>
-                          {/* Hover actions */}
-                          <div className="opacity-0 group-hover:opacity-100 transition-all duration-150 flex gap-0.5 shrink-0">
-                            {col.key !== "done" && (
+                        {/* Native drag wrapper */}
+                        <div
+                          className="p-3 cursor-grab active:cursor-grabbing"
+                          draggable
+                          onDragStart={(e: React.DragEvent<HTMLDivElement>) => {
+                            setDraggedId(task.id);
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onDragEnd={() => { setDraggedId(null); setOverColumn(null); }}
+                        >
+                          <div className="flex items-start gap-2">
+                            <GripVertical size={12} className="text-muted-foreground/20 mt-0.5 shrink-0 group-hover:text-muted-foreground/50 transition-colors" />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[12px] font-medium leading-snug ${task.done ? "line-through text-muted-foreground/30" : "text-foreground/85"}`}>
+                                {task.title}
+                              </p>
+                              {task.priority && pc && (
+                                <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                                  style={{ background: pc.badge, color: pc.text }}>
+                                  <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                                    style={{ background: pc.dot, boxShadow: `0 0 5px ${PRIORITY_GLOW[task.priority]}` }} />
+                                  {task.priority}
+                                </span>
+                              )}
+                            </div>
+                            {/* Hover actions */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-all duration-150 flex gap-0.5 shrink-0">
+                              {col.key !== "done" && (
+                                <button
+                                  onClick={e => { e.stopPropagation(); moveTask(task.id, col.key === "todo" ? "in-progress" : "done"); }}
+                                  className="w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold transition-colors"
+                                  style={{ background: `${col.color}20`, color: col.color }}
+                                  title="Move forward"
+                                >→</button>
+                              )}
                               <button
-                                onClick={e => { e.stopPropagation(); moveTask(task.id, col.key === "todo" ? "in-progress" : "done"); }}
-                                className="w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold transition-colors"
-                                style={{ background: `${col.color}20`, color: col.color }}
-                                title="Move forward"
-                              >→</button>
-                            )}
-                            <button
-                              onClick={e => { e.stopPropagation(); moveToTrash({ id: task.id, type: "task", title: task.title, originalData: task }); removeTask(task.id); }}
-                              className="w-5 h-5 rounded-lg flex items-center justify-center transition-colors hover:bg-rose-500/20 text-muted-foreground/40 hover:text-rose-400"
-                            ><Trash2 size={9} /></button>
+                                onClick={e => { e.stopPropagation(); moveToTrash({ id: task.id, type: "task", title: task.title, originalData: task }); removeTask(task.id); }}
+                                className="w-5 h-5 rounded-lg flex items-center justify-center transition-colors hover:bg-rose-500/20 text-muted-foreground/40 hover:text-rose-400"
+                              ><Trash2 size={9} /></button>
+                            </div>
                           </div>
                         </div>
                       </motion.div>
