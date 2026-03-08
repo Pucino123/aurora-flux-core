@@ -902,6 +902,58 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     PERSONAS.reduce((a, p) => a + (responses[p.key]?.confidence ?? p.ringPct), 0) / PERSONAS.length
   );
 
+  // ── Realtime presence: join/leave channel ──
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel("boardroom-presence", {
+      config: { presence: { key: user.id } },
+    });
+    realtimeChannelRef.current = channel;
+
+    const displayName = user.email?.split("@")[0] || "Anonymous";
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState<{ displayName: string; isConsulting: boolean }>();
+        const colabs = Object.entries(state)
+          .filter(([uid]) => uid !== user.id)
+          .map(([uid, presenceArr]) => {
+            const latest = (presenceArr as any[])[0] || {};
+            return { userId: uid, displayName: latest.displayName || uid.slice(0,6), isConsulting: !!latest.isConsulting };
+          });
+        setCollaborators(colabs);
+      })
+      .on("broadcast", { event: "boardroom-consult" }, ({ payload }) => {
+        // Another team member consulted the board — show their results live
+        if (payload?.userId !== user.id && payload?.responses) {
+          const restored: Record<string, BoardroomPersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+          (payload.responses as { key: string; analysis: string; question: string; confidence: number }[]).forEach(r => {
+            if (r.key) restored[r.key] = { analysis: r.analysis, question: r.question, confidence: r.confidence };
+          });
+          setResponses(restored);
+          setCardStates({ elena: "revealed", helen: "revealed", anton: "revealed", margot: "revealed" });
+          setRevealedCount(4);
+          revealedCountRef.current = 4;
+          if (payload.idea) setIdea(payload.idea);
+          if (payload.actionPlan) setActionPlan(payload.actionPlan);
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ displayName, isConsulting: false });
+        }
+      });
+
+    return () => {
+      channel.unsubscribe();
+      realtimeChannelRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+  const avgRing = Math.round(
+    PERSONAS.reduce((a, p) => a + (responses[p.key]?.confidence ?? p.ringPct), 0) / PERSONAS.length
+  );
+
   const getConsensusLabel = () => {
     if (avgRing >= 70) return { label: "Strong Consensus — Proceed", color: "#34d399" };
     if (avgRing >= 40) return { label: "Mixed Opinions — Proceed with Caution", color: "#fbbf24" };
