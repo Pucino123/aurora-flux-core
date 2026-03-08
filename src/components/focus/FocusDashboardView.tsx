@@ -1394,8 +1394,6 @@ const FocusDashboardView = () => (
 );
 
 export default FocusDashboardView;
-        {/* Build mode: settings gear */}
-        <AnimatePresence>
           {systemMode === "build" && (
             <motion.button
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
