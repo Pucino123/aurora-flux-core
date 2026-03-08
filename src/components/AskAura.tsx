@@ -29,7 +29,7 @@ const AskAura = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Build workspace context summary for system prompt
+  // Build workspace context summary for Aura's system prompt
   const workspaceContext = useCallback(() => {
     const pendingTasks = tasks.filter(t => !t.done).slice(0, 10);
     const recentWorkouts = workouts.slice(0, 5);
@@ -71,14 +71,60 @@ const AskAura = () => {
         }),
       });
 
-      if (!resp.ok) {
+      if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${resp.status}`);
       }
 
-      const data = await resp.json();
-      const reply = data.choices?.[0]?.message?.content || data.reply || "I couldn't get a response. Please try again.";
-      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      // SSE streaming parse
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuf = "";
+      let assembled = "";
+      let streamDone = false;
+
+      // Prime the assistant message slot
+      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuf += decoder.decode(value, { stream: true });
+
+        let nl: number;
+        while ((nl = textBuf.indexOf("\n")) !== -1) {
+          let line = textBuf.slice(0, nl);
+          textBuf = textBuf.slice(nl + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const raw = line.slice(6).trim();
+          if (raw === "[DONE]") { streamDone = true; break; }
+          try {
+            const parsed = JSON.parse(raw);
+            const delta = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (delta) {
+              assembled += delta;
+              const snap = assembled;
+              setMessages(prev => {
+                const copy = [...prev];
+                const last = copy[copy.length - 1];
+                if (last?.role === "assistant") copy[copy.length - 1] = { ...last, content: snap };
+                return copy;
+              });
+            }
+          } catch { /* partial chunk, wait */ }
+        }
+      }
+
+      // If nothing was streamed (tool calls only), show a fallback
+      if (!assembled) {
+        setMessages(prev => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last?.role === "assistant" && !last.content) copy[copy.length - 1] = { ...last, content: "Done ✓" };
+          return copy;
+        });
+      }
     } catch (e: any) {
       setMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${e.message || "Something went wrong."}` }]);
     } finally {
