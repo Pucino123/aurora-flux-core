@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { DbDocument } from "@/hooks/useDocuments";
 import DocumentAiChat from "./DocumentAiChat";
 import WordsToolbar from "./toolbar/WordsToolbar";
