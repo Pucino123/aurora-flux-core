@@ -176,6 +176,7 @@ const TheCouncil = () => {
 
   const handleSubmit = async () => {
     if (!input.trim() || loading || !user) return;
+    if (!consumeSparks(5, "Council AI consult")) return;
     setLoading(true);
     setResponses([]);
     setConsensusScore(null);
