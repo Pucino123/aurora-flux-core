@@ -1,9 +1,10 @@
+import React, { forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Trash2, RotateCcw, AlertTriangle, FileText, CheckSquare, Users, Clock } from "lucide-react";
 import { useTrash, TrashItem, AutoDeleteDays } from "@/context/TrashContext";
 import { useFlux } from "@/context/FluxContext";
-import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { parseISO, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,9 +34,10 @@ const AUTO_DELETE_OPTIONS: { label: string; value: AutoDeleteDays }[] = [
   { label: "Never", value: null },
 ];
 
-function TrashRow({ item, onRestore, onDelete }: { item: TrashItem; onRestore: () => void; onDelete: () => void }) {
-  return (
+const TrashRow = forwardRef<HTMLDivElement, { item: TrashItem; onRestore: () => void; onDelete: () => void }>(
+  ({ item, onRestore, onDelete }, ref) => (
     <motion.div
+      ref={ref as React.Ref<HTMLDivElement>}
       layout
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
@@ -70,8 +72,8 @@ function TrashRow({ item, onRestore, onDelete }: { item: TrashItem; onRestore: (
         </button>
       </div>
     </motion.div>
-  );
-}
+  )
+);
 
 const TrashModal = ({ open, onClose }: TrashModalProps) => {
   const { trash, restoreItem, permanentlyDelete, emptyTrash, autoDeleteDays, setAutoDeleteDays } = useTrash();
