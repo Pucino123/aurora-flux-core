@@ -684,6 +684,34 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
 
   const isDark = previewTheme === "dark";
 
+  // Derived theme tokens for full-modal sync
+  const modalBg = isDark ? "rgba(10,8,24,0.97)" : "rgba(250,250,252,0.98)";
+  const modalBorder = isDark ? "rgba(255,255,255,0.09)" : "rgba(0,0,0,0.08)";
+  const titleBarBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)";
+  const titleBarBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
+  const titleColor = isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)";
+  const toggleBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  const toggleBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const toggleActiveBg = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)";
+  const toggleActiveColor = isDark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.85)";
+  const toggleInactiveColor = isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.3)";
+  const hintColor = isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.2)";
+  const sidebarBg = isDark ? "rgba(255,255,255,0.015)" : "rgba(0,0,0,0.025)";
+  const sidebarBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
+  const catLabelColor = isDark ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.3)";
+  const catActiveBg = "rgba(59,130,246,0.85)";
+  const catInactiveColor = isDark ? "rgba(255,255,255,0.48)" : "rgba(0,0,0,0.5)";
+  const catHoverBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)";
+  const emptyColor = isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)";
+  const labelColor = isDark ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.75)";
+  const labelSelectedColor = isDark ? "rgba(147,197,253,1)" : "rgba(37,99,235,1)";
+  const subtitleColor = isDark ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.3)";
+  const actionBarBg = isDark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.025)";
+  const cancelBg = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)";
+  const cancelColor = isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.55)";
+  const cancelBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
+  const cancelHoverBg = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.09)";
+
   return createPortal(
     <AnimatePresence>
       {/* Backdrop */}
@@ -692,7 +720,7 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         className="fixed inset-0 z-[9980]"
-        style={{ background: "rgba(2,2,10,0.7)", backdropFilter: "blur(8px)" }}
+        style={{ background: isDark ? "rgba(2,2,10,0.7)" : "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)" }}
         onClick={onClose}
       />
 
@@ -711,16 +739,19 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
           className="pointer-events-auto flex flex-col rounded-2xl shadow-2xl overflow-hidden outline-none"
           style={{
             width: 900, height: 600,
-            background: "rgba(10,8,24,0.97)",
+            background: modalBg,
             backdropFilter: "blur(48px)",
-            border: "1px solid rgba(255,255,255,0.09)",
-            boxShadow: "0 40px 120px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.05)",
+            border: `1px solid ${modalBorder}`,
+            boxShadow: isDark
+              ? "0 40px 120px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.05)"
+              : "0 40px 120px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.04)",
           }}
           onClick={e => e.stopPropagation()}
+          onKeyDown={handleKeyDown}
         >
           {/* ── Title bar ───────────────────────────────────────────────── */}
           <div className="flex items-center gap-2 px-5 shrink-0"
-            style={{ height: 44, background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            style={{ height: 44, background: titleBarBg, borderBottom: `1px solid ${titleBarBorder}` }}>
             {/* Traffic lights */}
             <button onClick={onClose} className="group flex items-center justify-center"
               style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.25)" }}>
@@ -730,21 +761,21 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
             <div style={{ width: 13, height: 13, borderRadius: "50%", background: "#28c840", border: "0.5px solid rgba(0,0,0,0.2)" }} />
 
             {/* Title — centered */}
-            <span className="flex-1 text-center text-[13px] font-medium select-none" style={{ color: "rgba(255,255,255,0.45)", marginLeft: -8 }}>
+            <span className="flex-1 text-center text-[13px] font-medium select-none" style={{ color: titleColor, marginLeft: -8 }}>
               Choose a Template
             </span>
 
             {/* ── Light / Dark preview toggle ─────────────────────────── */}
-            <div className="flex items-center rounded-lg p-0.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="flex items-center rounded-lg p-0.5" style={{ background: toggleBg, border: `1px solid ${toggleBorder}` }}>
               {([["light", Sun, "Light"], ["dark", Moon, "Dark"]] as const).map(([val, Icon, label]) => (
                 <button
                   key={val}
                   onClick={() => setPreviewTheme(val)}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200"
                   style={{
-                    background: previewTheme === val ? "rgba(255,255,255,0.12)" : "transparent",
-                    color: previewTheme === val ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)",
-                    boxShadow: previewTheme === val ? "0 1px 3px rgba(0,0,0,0.4)" : "none",
+                    background: previewTheme === val ? toggleActiveBg : "transparent",
+                    color: previewTheme === val ? toggleActiveColor : toggleInactiveColor,
+                    boxShadow: previewTheme === val ? "0 1px 3px rgba(0,0,0,0.15)" : "none",
                   }}
                 >
                   <Icon size={11} />
@@ -754,7 +785,7 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
             </div>
 
             {/* Keyboard hint */}
-            <span className="text-[9px] select-none ml-1" style={{ color: "rgba(255,255,255,0.18)" }}>
+            <span className="text-[9px] select-none ml-1" style={{ color: hintColor }}>
               ↑↓←→ · Tab · ↵
             </span>
           </div>
@@ -763,8 +794,8 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
           <div className="flex flex-1 min-h-0">
             {/* Sidebar */}
             <div className="flex flex-col gap-0.5 py-4 px-2 overflow-y-auto shrink-0"
-              style={{ width: 192, background: "rgba(255,255,255,0.015)", borderRight: "1px solid rgba(255,255,255,0.07)" }}>
-              <p className="text-[9px] font-semibold uppercase tracking-widest px-3 mb-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>
+              style={{ width: 192, background: sidebarBg, borderRight: `1px solid ${sidebarBorder}` }}>
+              <p className="text-[9px] font-semibold uppercase tracking-widest px-3 mb-1.5" style={{ color: catLabelColor }}>
                 Categories
               </p>
               {CATEGORIES.map(cat => (
@@ -773,10 +804,10 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
                   onClick={() => handleCategoryChange(cat)}
                   className="w-full text-left px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-150"
                   style={{
-                    background: selectedCategory === cat ? "rgba(59,130,246,0.85)" : "transparent",
-                    color: selectedCategory === cat ? "#fff" : "rgba(255,255,255,0.48)",
+                    background: selectedCategory === cat ? catActiveBg : "transparent",
+                    color: selectedCategory === cat ? "#fff" : catInactiveColor,
                   }}
-                  onMouseEnter={e => { if (selectedCategory !== cat) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
+                  onMouseEnter={e => { if (selectedCategory !== cat) (e.currentTarget as HTMLElement).style.background = catHoverBg; }}
                   onMouseLeave={e => { if (selectedCategory !== cat) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                 >
                   {cat}
@@ -787,7 +818,7 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
             {/* Template grid */}
             <div className="flex-1 overflow-y-auto px-8 py-6">
               {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: "rgba(255,255,255,0.2)" }}>
+                <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: emptyColor }}>
                   <AlignLeft size={32} />
                   <p className="text-sm">No templates in this category yet</p>
                 </div>
@@ -814,7 +845,7 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
                               ? "0 0 0 3px rgba(59,130,246,1), 0 8px 32px rgba(59,130,246,0.3)"
                               : isDark
                                 ? "0 4px 16px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5)"
-                                : "0 4px 16px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.25)",
+                                : "0 4px 16px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.1)",
                             transform: isSelected ? "scale(1.05)" : "scale(1)",
                           }}
                         >
@@ -823,10 +854,10 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
                         {/* Label */}
                         <div className="text-center">
                           <p className="text-[12px] font-semibold transition-colors"
-                            style={{ color: isSelected ? "rgba(147,197,253,1)" : "rgba(255,255,255,0.8)" }}>
+                            style={{ color: isSelected ? labelSelectedColor : labelColor }}>
                             {template.title}
                           </p>
-                          <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.28)" }}>
+                          <p className="text-[10px] mt-0.5" style={{ color: subtitleColor }}>
                             {template.subtitle}
                           </p>
                         </div>
@@ -840,15 +871,15 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
 
           {/* ── Action bar ───────────────────────────────────────────────── */}
           <div className="flex items-center justify-between px-6 shrink-0"
-            style={{ height: 64, background: "rgba(255,255,255,0.025)", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="text-[11px]" style={{ color: "rgba(255,255,255,0.28)" }}>
+            style={{ height: 64, background: actionBarBg, borderTop: `1px solid ${titleBarBorder}` }}>
+            <div className="text-[11px]" style={{ color: subtitleColor }}>
               {selectedTemplate && (
                 <span>
-                  <span className="font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>{selectedTemplate.title}</span>
+                  <span className="font-medium" style={{ color: isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.6)" }}>{selectedTemplate.title}</span>
                   {" · "}
                   {selectedTemplate.type === "text" ? "Word Document" : "Spreadsheet"}
                   {" · "}
-                  <span style={{ color: isDark ? "#93c5fd" : "#7dd3fc" }}>
+                  <span style={{ color: "#3b82f6" }}>
                     {previewTheme === "dark" ? "Dark" : "Light"} preview
                   </span>
                 </span>
@@ -858,9 +889,9 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
               <button
                 onClick={onClose}
                 className="px-4 py-2 rounded-lg text-[13px] font-medium transition-all"
-                style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+                style={{ background: cancelBg, color: cancelColor, border: `1px solid ${cancelBorder}` }}
+                onMouseEnter={e => (e.currentTarget.style.background = cancelHoverBg)}
+                onMouseLeave={e => (e.currentTarget.style.background = cancelBg)}
               >
                 Cancel
               </button>
