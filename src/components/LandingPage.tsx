@@ -9,7 +9,7 @@ import {
   MessageCircle, Globe, Layers, GitBranch, HeartPulse, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import cherryBg from "@/assets/bg-cherry-blossom.jpg";
+import gradientBg from "@/assets/bg-gradient.png";
 
 interface LandingPageProps {
   onEnter: (text: string) => void;
