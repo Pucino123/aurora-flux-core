@@ -1,14 +1,14 @@
-import Dashboard from "./Dashboard";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import FluxSidebar from "./FluxSidebar";
 import GridDashboard from "./GridDashboard";
 import Scheduler from "./Scheduler";
-import InputBar from "./InputBar";
 import MobileNav from "./MobileNav";
 import Canvas from "./Canvas";
 import TheCouncil from "./TheCouncil";
 import FocusDashboardView from "./focus/FocusDashboardView";
 import FullCalendarView from "../pages/FullCalendarView";
 import AITaskManager from "../pages/AITaskManager";
-import CalendarView from "./CalendarView";
 import AnalyticsView from "./AnalyticsView";
 import ProjectsOverview from "./ProjectsOverview";
 import DocumentsView from "./DocumentsView";
