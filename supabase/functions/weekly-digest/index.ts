@@ -282,7 +282,7 @@ serve(async (req) => {
           body: JSON.stringify({
             from: FROM_EMAIL,
             to: user.email,
-            subject: `✨ Your weekly Flux digest — ${weekLabel}`,
+            subject: `✨ Your weekly Dashiii digest — ${weekLabel}`,
             html,
           }),
         });
