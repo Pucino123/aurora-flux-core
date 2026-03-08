@@ -160,7 +160,7 @@ const FitnessTracker = ({ folderId }: FitnessTrackerProps) => {
             </button>
           </div>
           {/* Capturable heatmap area */}
-          <div ref={heatmapRef} className="p-3 rounded-xl" style={{ background: "hsl(var(--card))" }}>
+          <div ref={heatmapRef} className="p-3 rounded-xl bg-card">
             <div className="flex items-center gap-2 mb-2">
               <Flame size={14} className="text-orange-400" />
               <span className="text-xs font-semibold text-foreground">{folder?.title || "Fitness"} — {stats.streak} day streak 🔥</span>
