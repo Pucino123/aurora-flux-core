@@ -64,6 +64,7 @@ interface FocusState {
   desktopFolderIconStrokeOpacities: Record<string, number>;
   desktopFolderCustomIcons: Record<string, string>;
   desktopFolderBgColors: Record<string, string>;
+  desktopFolderTitleGaps: Record<string, number>; // px gap between icon and label
   // Document customization (mirrors folder pattern)
   desktopDocPositions: Record<string, { x: number; y: number }>;
   desktopDocOpacities: Record<string, number>;
@@ -71,6 +72,7 @@ interface FocusState {
   desktopDocBgColors: Record<string, string>;
   desktopDocCustomIcons: Record<string, string>;
   desktopDocIconColors: Record<string, string>;
+  desktopDocTitleGaps: Record<string, number>; // px gap between icon and label
 }
 
 const DEFAULT_STATE: FocusState = {
