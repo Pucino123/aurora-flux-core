@@ -385,6 +385,14 @@ const SmartPlanWidget = () => {
     }
   }, [user]);
 
+  // ── Rename block ─────────────────────────────────────────────────────────
+  const handleRenameBlock = useCallback(async (blockId: string, newTitle: string) => {
+    setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, title: newTitle } : b));
+    if (user) {
+      await supabase.from("schedule_blocks").update({ title: newTitle }).eq("id", blockId).eq("user_id", user.id);
+    }
+  }, [user]);
+
   // ── Optimize ────────────────────────────────────────────────────────────
   const optimize = async () => {
     setOptimizing(true);
