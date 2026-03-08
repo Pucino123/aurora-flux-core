@@ -160,22 +160,22 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="flex-1 flex flex-col h-full min-h-screen"
           >
-            {effectiveView === "focus"       && <FocusDashboardView />}
-            {effectiveView === "calendar"    && <FullCalendarView />}
-            {effectiveView === "tasks"       && <AITaskManager />}
-            {effectiveView === "analytics"   && <AnalyticsView />}
-            {effectiveView === "projects"    && <ProjectsOverview />}
-            {effectiveView === "documents"   && <DocumentsView />}
-            {effectiveView === "settings"    && <SettingsView />}
-            {effectiveView === "council"     && <TheCouncil />}
-            {effectiveView === "canvas"      && <Canvas />}
-            {effectiveView === "stream"      && <GridDashboard />}
-            {effectiveView === "multitask"   && <MultitaskingView />}
-            {effectiveView === "community"   && <CommunityBoardView />}
+            {effectiveView === "focus"                       && <FocusDashboardView />}
+            {effectiveView === "calendar"                    && <FullCalendarView />}
+            {effectiveView === "tasks"                       && <AITaskManager />}
+            {effectiveView === "analytics"                   && <AnalyticsView />}
+            {effectiveView === "projects"                    && <ProjectsOverview />}
+            {effectiveView === "documents"                   && <DocumentsView />}
+            {effectiveView === "settings"                    && <SettingsView />}
+            {effectiveView === "council"                     && <TheCouncil />}
+            {effectiveView === "canvas"                      && <Canvas />}
+            {effectiveView === "stream"                      && <GridDashboard />}
+            {(effectiveView as string) === "multitask"       && <MultitaskingView />}
+            {(effectiveView as string) === "community"       && <CommunityBoardView />}
             {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
             {(effectiveView as string) === "crm"             && <CRMPage />}
             {(effectiveView as string) === "inbox"           && <CommHub />}
-            {effectiveView === "billing"     && <BillingView />}
+            {effectiveView === "billing"                     && <BillingView />}
             {!VIEWS_WITHOUT_SCHEDULER.includes(effectiveView as string) && <Scheduler />}
           </motion.div>
         </AnimatePresence>
