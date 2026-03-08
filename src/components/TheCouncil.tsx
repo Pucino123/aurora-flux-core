@@ -28,6 +28,7 @@ import ProactiveIntelligence from "./council/ProactiveIntelligence";
 import CouncilBoardroom from "./council/CouncilBoardroom";
 import BoardroomIdeasHistory from "./council/BoardroomIdeasHistory";
 import BoardroomAnalytics from "./council/BoardroomAnalytics";
+import BoardroomComparison from "./council/BoardroomComparison";
 
 // ── Types ──
 
@@ -301,18 +302,32 @@ const TheCouncil = () => {
           <div className="relative z-10 px-4 md:px-8 pb-8 pt-4 max-w-5xl mx-auto" style={{ minHeight: "calc(100vh - 80px)" }}>
             <CouncilBoardroom onRestoreIdea={() => {}} />
             {user && (
-              <div className="mt-6 rounded-2xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,0.02)" }}>
-                <BoardroomIdeasHistory
-                  userId={user.id}
-                  onRestoreIdea={(idea) => {
-                    const restore = (window as any).__boardroomRestore;
-                    if (typeof restore === "function") {
-                      restore(idea);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }
-                  }}
-                />
-              </div>
+              <>
+                <div className="mt-6 rounded-2xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <BoardroomIdeasHistory
+                    userId={user.id}
+                    onRestoreIdea={(idea) => {
+                      const restore = (window as any).__boardroomRestore;
+                      if (typeof restore === "function") {
+                        restore(idea);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                  />
+                </div>
+                <div className="mt-4 rounded-2xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <BoardroomComparison
+                    userId={user.id}
+                    onRestoreIdea={(idea) => {
+                      const restore = (window as any).__boardroomRestore;
+                      if (typeof restore === "function") {
+                        restore(idea);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                  />
+                </div>
+              </>
             )}
           </div>
         )}
@@ -326,7 +341,16 @@ const TheCouncil = () => {
               </h2>
               <p className="text-[10px] text-white/30 mt-0.5">Insights across all your saved boardroom sessions</p>
             </div>
-            <BoardroomAnalytics userId={user.id} />
+            <BoardroomAnalytics
+              userId={user.id}
+              onRestoreIdea={(idea) => {
+                setActiveTab("boardroom");
+                setTimeout(() => {
+                  const restore = (window as any).__boardroomRestore;
+                  if (typeof restore === "function") restore(idea);
+                }, 200);
+              }}
+            />
           </div>
         )}
 

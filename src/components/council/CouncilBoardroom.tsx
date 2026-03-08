@@ -1041,7 +1041,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     }
   }, [onRestoreIdea, handleRestore]);
 
-  // ── New Session: reset everything ──
+  // ── New Session: reset everything including personality sliders ──
   const handleNewSession = useCallback(() => {
     setIdea("");
     setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
@@ -1053,8 +1053,12 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
     setFullscreenPersona(null);
     setSavedIdeaId(null);
     setSaveState("idle");
+    setIsSharedView(false);
     setFloatingEmojis({ elena: [], helen: [], anton: [], margot: [] });
     sessionIdRef.current = resetSessionId();
+    // Reset personality sliders to per-advisor defaults
+    setPersonalitySliders(DEFAULT_ALL_SLIDERS);
+    toast("New session started — advisor personalities reset to defaults.", { duration: 2500 });
   }, []);
 
   // ── PDF Export — styled summary card using jsPDF ──
