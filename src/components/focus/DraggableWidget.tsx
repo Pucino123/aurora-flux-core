@@ -400,8 +400,10 @@ const DraggableWidget = ({
                   {isBuildMode && (
                     <>
                       <button
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={() => {
+                        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                        onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (openStyleEditor) openStyleEditor(id);
                           setShowOpacity(false);
                           setShowFontSize(false);
@@ -413,8 +415,9 @@ const DraggableWidget = ({
                         <Settings2 size={14} />
                       </button>
                       <button
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={() => toggleWidget(id)}
+                        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                        onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                        onClick={(e) => { e.stopPropagation(); toggleWidget(id); }}
                         className="p-1 rounded-lg transition-colors bg-white/10 hover:bg-red-500/30"
                         style={{ color: iconColor }}
                         title="Remove widget"
