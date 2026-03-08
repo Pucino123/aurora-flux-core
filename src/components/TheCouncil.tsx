@@ -462,7 +462,7 @@ const TheCouncil = () => {
                         disabled={loading}
                       />
 
-                      {/* Submit */}
+                       {/* Submit */}
                       <motion.button
                         onClick={handleSubmit}
                         disabled={loading || !input.trim()}
@@ -471,7 +471,7 @@ const TheCouncil = () => {
                         className="w-full mt-4 flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-40 transition-all shadow-lg council-submit-btn"
                       >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                        {t("council.submit") || "Indsend til Rådet"}
+                        {t("council.submit") || "Consult the Board"} <span className="opacity-70 font-normal">−5 ✨</span>
                       </motion.button>
                     </div>
                   </motion.div>
