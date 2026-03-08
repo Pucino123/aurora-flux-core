@@ -1,18 +1,18 @@
 /**
  * LayoutCanvas — Framer Motion free-drag entity canvas for creative templates.
- * Entities: rect | circle | textBox — draggable, resizable, colour-customisable.
+ * Entities: rect | circle | textBox | triangle | line | star — draggable, resizable, colour-customisable.
  * Right-click context menu: Duplicate, Delete, Bring to Front, Send to Back.
  * Supports isCanvasMode to lock/unlock dragging for "Design" vs "Text" mode.
  */
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle, Copy, Paintbrush } from "lucide-react";
+import { Trash2, ArrowUp, ArrowDown, Type, Square, Circle, Copy, Paintbrush, Minus, Star, Triangle } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface CanvasEntity {
   id: string;
-  type: "rect" | "circle" | "textBox";
+  type: "rect" | "circle" | "textBox" | "triangle" | "line" | "star";
   position: { x: number; y: number };
   size: { w: number; h: number };
   style: { fill: string; stroke: string; strokeWidth: number; borderRadius: number; opacity: number };
