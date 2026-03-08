@@ -29,6 +29,22 @@ const OVERFLOW_WIDGETS = [
   { id: "aura",       label: "Aura",    icon: Sparkles },
 ];
 
+const WINDOW_TYPE_ICONS: Record<string, typeof FileText> = {
+  document: FileText,
+  widget: Sparkles,
+};
+
+function timeAgo(dateStr?: string): string {
+  if (!dateStr) return "just now";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
 const WidgetToggleBar = () => {
   const { activeWidgets, toggleWidget, resetDashboard, widgetMinimalMode, setWidgetMinimalMode } = useFocusStore();
   const { windows, bringToFront, restoreWindow, closeWindow, focusedId } = useWindowManager();
