@@ -103,17 +103,14 @@ const Index = () => {
   };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+    // Cmd+K or Cmd+/ → global search palette
+    if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "/")) {
       e.preventDefault();
-      setCmdOpen((prev) => !prev);
+      setSearchOpen((prev) => !prev);
     }
     if ((e.metaKey || e.ctrlKey) && e.key === "?") {
       e.preventDefault();
       setShortcutsOpen((prev) => !prev);
-    }
-    if ((e.metaKey || e.ctrlKey) && e.key === "/") {
-      e.preventDefault();
-      setSearchOpen((prev) => !prev);
     }
   }, []);
 

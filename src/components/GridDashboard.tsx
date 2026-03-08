@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { ResponsiveGridLayout, useContainerWidth } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings2, Plus, X, GripVertical, Pin, StickyNote, Pencil } from "lucide-react";
+import { Settings2, Plus, X, GripVertical, Pin, StickyNote, Pencil, GripHorizontal } from "lucide-react";
 import { useFlux } from "@/context/FluxContext";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { t } from "@/lib/i18n";
@@ -127,7 +127,7 @@ const DEFAULT_PAGES: Page[] = [
 ];
 
 /* ─── Page Grid (renders one page of widgets) ─── */
-const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue, setRenamingWidget, setRenameValue, commitRename, config }: {
+const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue, setRenamingWidget, setRenameValue, commitRename, config, onWidgetDragStart, draggingWidgetId }: {
   page: Page;
   editMode: boolean;
   onRemoveWidget: (pageId: string, widgetId: string) => void;
@@ -137,6 +137,8 @@ const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue,
   setRenameValue: (v: string) => void;
   commitRename: () => void;
   config: any;
+  onWidgetDragStart: (widgetId: string, fromPageId: string) => void;
+  draggingWidgetId: string | null;
 }) => {
   const { width, containerRef } = useContainerWidth({ initialWidth: 1200 });
   const layouts = makeLayouts(page.widgets);
@@ -165,8 +167,22 @@ const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue,
             {page.widgets.map((widgetId) => {
               const cfg = WIDGET_REGISTRY.find((w) => w.id === widgetId);
               if (!cfg) return null;
+              const isDragging = draggingWidgetId === widgetId;
               return (
-                <div key={widgetId} className={`flux-card relative overflow-hidden group ${editMode ? "ring-1 ring-primary/20" : ""}`}>
+                <div
+                  key={widgetId}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/flux-widget", widgetId);
+                    e.dataTransfer.setData("application/flux-from-page", page.id);
+                    e.dataTransfer.effectAllowed = "move";
+                    onWidgetDragStart(widgetId, page.id);
+                  }}
+                  onDragEnd={() => onWidgetDragStart("", "")}
+                  className={`flux-card relative overflow-hidden group cursor-grab active:cursor-grabbing transition-all duration-150 ${
+                    editMode ? "ring-1 ring-primary/20" : ""
+                  } ${isDragging ? "scale-105 shadow-2xl ring-2 ring-primary/40 opacity-80" : ""}`}
+                >
                   {!editMode && (
                     <button
                       onClick={() => onRemoveWidget(page.id, widgetId)}
@@ -174,6 +190,14 @@ const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue,
                     >
                       <X size={11} />
                     </button>
+                  )}
+                  {/* Cross-page drag hint — shown on hover when not in edit mode */}
+                  {!editMode && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      <span className="text-[9px] text-muted-foreground/60 bg-background/60 px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+                        drag to move page
+                      </span>
+                    </div>
                   )}
                   {editMode && (
                     <div className="absolute top-1 left-1 right-1 z-10 flex items-center justify-between">
@@ -203,10 +227,18 @@ const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue,
           </ResponsiveGridLayout>
         </div>
       ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flux-card text-center py-16">
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="flux-card text-center py-16"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            // handled by parent via dot drop
+          }}
+        >
           <Pin size={32} className="mx-auto mb-4 text-muted-foreground/30" />
           <h3 className="font-semibold font-display mb-2">Empty page</h3>
-          <p className="text-sm text-muted-foreground">Add widgets to this page using the controls above.</p>
+          <p className="text-sm text-muted-foreground">Drag a widget here or add one using the controls above.</p>
         </motion.div>
       )}
     </div>
@@ -220,6 +252,11 @@ const GridDashboard = () => {
   const [showWidgetPicker, setShowWidgetPicker] = useState(false);
   const [renamingWidget, setRenamingWidget] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+
+  // Cross-page drag state
+  const [draggingWidgetId, setDraggingWidgetId] = useState<string | null>(null);
+  const [draggingFromPageId, setDraggingFromPageId] = useState<string | null>(null);
+  const [hoverDotIdx, setHoverDotIdx] = useState<number | null>(null);
 
   const { goals, tasks, updateTask, updateGoal, findFolderNode } = useFlux();
 
@@ -279,6 +316,9 @@ const GridDashboard = () => {
     }
     setRenamingWidget(null);
   };
+
+  const handleSetRenamingWidget = useCallback((id: string | null) => setRenamingWidget(id), []);
+  const handleSetRenameValue = useCallback((v: string) => setRenameValue(v), []);
 
   const addStickyNote = () => {
     const color = STICKY_COLORS[stickyNotes.length % STICKY_COLORS.length].key;
@@ -364,10 +404,12 @@ const GridDashboard = () => {
               onRemoveWidget={removeWidgetFromPage}
               renamingWidget={renamingWidget}
               renameValue={renameValue}
-              setRenamingWidget={setRenamingWidget}
-              setRenameValue={setRenameValue}
+              setRenamingWidget={handleSetRenamingWidget}
+              setRenameValue={handleSetRenameValue}
               commitRename={commitRename}
               config={config}
+              onWidgetDragStart={(wId, pId) => { setDraggingWidgetId(wId || null); setDraggingFromPageId(pId || null); }}
+              draggingWidgetId={draggingWidgetId}
             />
           </motion.div>
         </AnimatePresence>
@@ -431,21 +473,51 @@ const GridDashboard = () => {
 
       {/* ─── Pagination Dots + Add Page ─── */}
       <div className="flex items-center justify-center gap-2 mt-5 pb-2" data-tour="pagination-dots">
-        <div className="flex items-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-sm" style={{ background: "hsl(var(--card)/0.6)", border: "1px solid hsl(var(--border)/0.4)" }}>
-          {pages.map((_, idx) => (
+        <div
+          className="flex items-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-sm"
+          style={{ background: "hsl(var(--card)/0.6)", border: "1px solid hsl(var(--border)/0.4)" }}
+        >
+          {pages.map((p, idx) => (
             <button
               key={idx}
               onClick={() => goToPage(idx, idx > currentPage ? 1 : -1)}
-              onDragOver={() => {
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                setHoverDotIdx(idx);
                 if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
                 hoverDotTimer.current = setTimeout(() => goToPage(idx, idx > currentPage ? 1 : -1), 500);
               }}
-              onDragLeave={() => { if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current); }}
+              onDragLeave={() => {
+                setHoverDotIdx(null);
+                if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setHoverDotIdx(null);
+                if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
+                const wId = e.dataTransfer.getData("application/flux-widget");
+                const fromPId = e.dataTransfer.getData("application/flux-from-page");
+                if (!wId || !fromPId || fromPId === p.id) return;
+                // Move widget: remove from source page, add to target page
+                const next = pages.map((pg) => {
+                  if (pg.id === fromPId) return { ...pg, widgets: pg.widgets.filter(w => w !== wId) };
+                  if (pg.id === p.id) return { ...pg, widgets: [...pg.widgets.filter(w => w !== wId), wId] };
+                  return pg;
+                });
+                updatePages(next);
+                goToPage(idx, idx > currentPage ? 1 : -1);
+                toast.success(`Moved widget to ${p.name}`);
+                setDraggingWidgetId(null);
+                setDraggingFromPageId(null);
+              }}
               aria-label={`Go to page ${idx + 1}`}
               className={`transition-all duration-300 rounded-full ${
                 idx === currentPage
                   ? "w-5 h-2 bg-primary"
-                  : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
+                  : hoverDotIdx === idx && draggingWidgetId
+                    ? "w-4 h-3 bg-primary/60 scale-125"
+                    : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
               }`}
             />
           ))}
@@ -458,6 +530,20 @@ const GridDashboard = () => {
           <Plus size={14} />
         </button>
       </div>
+
+      {/* ─── Drag hint bar ─── */}
+      <AnimatePresence>
+        {draggingWidgetId && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium shadow-lg"
+            style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
+          >
+            <GripHorizontal size={12} />
+            Hover a page dot for 0.5s to move here
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
