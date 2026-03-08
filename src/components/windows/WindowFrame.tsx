@@ -33,12 +33,12 @@ const DEFAULT_H = 620;
 // Snappier spring — much less lag on float drag
 const DRAG_SPRING = { stiffness: 520, damping: 36, mass: 0.45 };
 
-// Layout pill indicator color
-const LAYOUT_PILL_COLORS: Record<WindowLayout, string> = {
-  floating:    "bg-emerald-500",
-  fullscreen:  "bg-blue-400",
-  "split-left":  "bg-violet-400",
-  "split-right": "bg-violet-400",
+// Layout pill indicator color (uses CSS vars via inline style so no hardcoded Tailwind colors)
+const LAYOUT_PILL_BG: Record<WindowLayout, string> = {
+  floating:    "hsl(142 71% 45%)",
+  fullscreen:  "hsl(217 91% 60%)",
+  "split-left":  "hsl(270 76% 65%)",
+  "split-right": "hsl(270 76% 65%)",
 };
 
 const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
