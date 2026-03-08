@@ -139,6 +139,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
           <MultitaskingView />
         ) : (effectiveView as string) === "community" ? (
           <CommunityBoardView />
+        ) : (effectiveView as string) === "community-admin" ? (
+          <CommunityAdminView />
         ) : (effectiveView as string) === "billing" ? (
           <BillingView />
         ) : (
