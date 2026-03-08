@@ -221,8 +221,8 @@ const NotificationBell = () => {
   }, []);
 
   useEffect(() => {
-    window.addEventListener("flux-notifications-updated", refresh);
-    return () => window.removeEventListener("flux-notifications-updated", refresh);
+    window.addEventListener("dashiii-notifications-updated", refresh);
+    return () => window.removeEventListener("dashiii-notifications-updated", refresh);
   }, [refresh]);
 
   // Watch for overdue tasks and push new notifications
