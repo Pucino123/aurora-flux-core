@@ -1619,6 +1619,72 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
         )}
       </AnimatePresence>
 
+      {/* Council Digest modal */}
+      <AnimatePresence>
+        {showDigest && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xl"
+            onClick={() => setShowDigest(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.93, opacity: 0, y: 20 }}
+              transition={{ duration: 0.25 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-lg rounded-3xl overflow-hidden border"
+              style={{ background: "linear-gradient(135deg, rgba(10,8,20,0.98), rgba(20,12,40,0.98))", borderColor: "rgba(139,92,246,0.3)", boxShadow: "0 0 60px rgba(139,92,246,0.2)" }}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center gap-2">
+                  <FileText size={13} className="text-purple-400/70" />
+                  <p className="text-[11px] font-semibold text-white/60 uppercase tracking-widest">Council Digest</p>
+                </div>
+                <button onClick={() => setShowDigest(false)} className="w-6 h-6 flex items-center justify-center text-white/30 hover:text-white transition-colors">
+                  <X size={12} />
+                </button>
+              </div>
+              <div className="p-5 space-y-3">
+                <p className="text-[10px] text-white/35">Copy this digest to paste into email, Notion, Slack, or anywhere you need a formatted summary.</p>
+                <pre
+                  className="w-full p-4 rounded-2xl text-[10px] leading-relaxed text-white/60 overflow-auto max-h-60 font-mono"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", whiteSpace: "pre-wrap" }}
+                >
+                  {digestText}
+                </pre>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(digestText); toast.success("Digest copied to clipboard!"); }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-purple-200 transition-colors"
+                    style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.3)" }}
+                  >
+                    <Copy size={11} /> Copy Digest
+                  </button>
+                  <button
+                    onClick={() => { handleExportPDF(); setShowDigest(false); }}
+                    disabled={isExportingPDF}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white/40 hover:text-white/70 transition-colors"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    {isExportingPDF ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+                    PDF
+                  </button>
+                  <button
+                    onClick={() => setShowDigest(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs text-white/25 hover:text-white/50 transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Fullscreen persona modal */}
       <AnimatePresence>
         {fullscreenP && fullscreenR && (
