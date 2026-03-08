@@ -306,7 +306,12 @@ const IdeaCanvas = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-2 px-3 py-2 rounded-full"
-          style={{ background: "rgba(15,18,30,0.92)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}
+          style={{
+            background: isLight ? "rgba(255,255,255,0.92)" : "rgba(15,18,30,0.92)",
+            backdropFilter: "blur(24px)",
+            border: isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid rgba(255,255,255,0.1)",
+            boxShadow: isLight ? "0 8px 40px rgba(0,0,0,0.15)" : "0 8px 40px rgba(0,0,0,0.5)",
+          }}
         >
           {/* Add node */}
           <motion.button
