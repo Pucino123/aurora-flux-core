@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Sparkles, Zap, GripVertical } from "lucide-react";
+import { Plus, Trash2, Sparkles, Zap, GripVertical, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useFlux } from "@/context/FluxContext";
 import { useTrash } from "@/context/TrashContext";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ interface KanbanBoardProps {
 const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
   const { tasks: allTasks, createTask, updateTask, removeTask } = useFlux();
   const { moveToTrash } = useTrash();
+  const { theme, setTheme } = useTheme();
   const tasks = propTasks || allTasks;
 
   const [newTaskCol, setNewTaskCol]       = useState<string | null>(null);
@@ -145,6 +147,15 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
             />
           </div>
           <span className="text-[10px] text-muted-foreground/40 font-medium w-7">{progressPct}%</span>
+
+          {/* Dark/Light toggle */}
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-1.5 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+          >
+            {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+          </button>
 
           {/* AI Prioritize button */}
           <motion.button
