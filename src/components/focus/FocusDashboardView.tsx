@@ -513,6 +513,9 @@ const FocusContent = () => {
       if (e.key === "Escape" && showMissionControl) {
         setShowMissionControl(false);
       }
+      if (e.key === "Escape" && showThumbGrid) {
+        setShowThumbGrid(false);
+      }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
