@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck, Clock, CheckCircle, X, ExternalLink, Loader2,
   RefreshCw, Users, TrendingUp, Activity, AlertTriangle, Trash2,
-  Search, MoreHorizontal, Shield, Ban, Cpu
+  Search, MoreHorizontal, Shield, Ban, Cpu, ImagePlus
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,6 +63,9 @@ const CommunityAdminView = () => {
   const [tab, setTab] = useState<"pending" | "approved" | "all">("pending");
   const [adminTab, setAdminTab] = useState<AdminTab>("overview");
   const [reports, setReports] = useState<{ id: number; project: string; reason: string; user: string }[]>([]);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetId = useRef<string | null>(null);
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   const fetchSlots = useCallback(async () => {
@@ -115,6 +118,28 @@ const CommunityAdminView = () => {
     else { toast.success("Slot cleared."); fetchSlots(); }
   };
 
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const slotId = uploadTargetId.current;
+    if (!file || !slotId) return;
+    setUploadingId(slotId);
+    const ext = file.name.split(".").pop();
+    const path = `community/${slotId}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("document-images").upload(path, file, { upsert: true });
+    if (uploadError) { toast.error("Upload failed"); setUploadingId(null); return; }
+    const { data: { publicUrl } } = supabase.storage.from("document-images").getPublicUrl(path);
+    const { error: updateError } = await supabase.from("community_slots").update({ thumbnail_url: publicUrl }).eq("id", slotId);
+    if (updateError) toast.error("Failed to save thumbnail");
+    else { toast.success("Thumbnail updated!"); fetchSlots(); }
+    setUploadingId(null);
+    if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+  };
+
+  const triggerThumbnailUpload = (slotId: string) => {
+    uploadTargetId.current = slotId;
+    thumbnailInputRef.current?.click();
+  };
+
   const pendingSlots = slots.filter((s) => s.status === "pending");
   const approvedSlots = slots.filter((s) => s.status === "approved");
   const visibleSlots = tab === "pending" ? pendingSlots : tab === "approved" ? approvedSlots : slots;
@@ -130,6 +155,8 @@ const CommunityAdminView = () => {
 
   return (
     <div className="flex-1 overflow-y-auto min-h-screen" style={{ background: "radial-gradient(ellipse at top, #0f172a 0%, #020617 100%)" }}>
+      {/* Hidden thumbnail upload input */}
+      <input ref={thumbnailInputRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} />
       <SEO title="Community Admin" description="Manage community board submissions." />
       <div className="px-6 md:px-10 py-8 space-y-8 max-w-7xl mx-auto">
 
@@ -318,8 +345,26 @@ const CommunityAdminView = () => {
                     <tr key={slot.id} className="transition-colors hover:bg-white/[0.03]" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shrink-0" style={{ background: "rgba(99,102,241,0.2)" }}>
-                            {slot.thumbnailUrl ? <img src={slot.thumbnailUrl} className="w-full h-full object-cover" alt="" /> : <span className="text-[11px] font-bold text-indigo-400">{slot.projectName?.[0] ?? "?"}</span>}
+                          <div className="relative group/thumb w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shrink-0 cursor-pointer" style={{ background: "rgba(99,102,241,0.2)" }}
+                            onClick={() => triggerThumbnailUpload(slot.id)}
+                            title="Click to change thumbnail">
+                            {uploadingId === slot.id ? (
+                              <Loader2 size={12} className="animate-spin text-white/50" />
+                            ) : slot.thumbnailUrl ? (
+                              <>
+                                <img src={slot.thumbnailUrl} className="w-full h-full object-cover" alt="" />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ImagePlus size={10} className="text-white" />
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[11px] font-bold text-indigo-400 group-hover/thumb:opacity-0 transition-opacity">{slot.projectName?.[0] ?? "?"}</span>
+                                <div className="absolute inset-0 bg-indigo-500/30 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ImagePlus size={10} className="text-white" />
+                                </div>
+                              </>
+                            )}
                           </div>
                           <span className="text-white/80 font-medium text-xs">{slot.projectName || "—"}</span>
                         </div>

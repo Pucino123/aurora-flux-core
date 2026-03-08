@@ -677,17 +677,16 @@
 
 /* ── Apple macOS-style Sidebar ── */
 .sidebar-apple {
-  background: rgba(246, 246, 246, 0.82);
+  background: hsl(var(--sidebar-background) / 0.88);
   backdrop-filter: saturate(180%) blur(40px);
   -webkit-backdrop-filter: saturate(180%) blur(40px);
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  border-right: 1px solid hsl(var(--sidebar-border) / 0.8);
 }
 .dark .sidebar-apple {
-  /* macOS dark sidebar: very dark translucent vibrancy */
-  background: rgba(18, 18, 18, 0.84);
+  background: hsl(var(--sidebar-background) / 0.88);
   backdrop-filter: saturate(180%) blur(40px);
   -webkit-backdrop-filter: saturate(180%) blur(40px);
-  border-right: 1px solid rgba(255, 255, 255, 0.055);
+  border-right: 1px solid hsl(var(--sidebar-border) / 0.7);
 }
 
 .sidebar-item {

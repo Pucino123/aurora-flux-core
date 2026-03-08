@@ -120,7 +120,7 @@ const GoogleCalendarSync = ({ onSynced }: Props) => {
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-secondary/60 text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/30 transition-all"
         >
           <Calendar size={12} className="text-primary" />
-          <span>Connect Google Calendar</span>
+          <span>Connect Calendars</span>
         </button>
       )}
     </div>
