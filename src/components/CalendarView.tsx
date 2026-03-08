@@ -181,7 +181,7 @@ const DroppableSlot: React.FC<{
     <div
       ref={setNodeRef}
       onClick={onSlotClick}
-      className={`relative border-t border-white/5 transition-colors cursor-pointer group ${todaySlot ? "bg-primary/[0.02]" : ""} ${isOver ? "bg-primary/10" : "hover:bg-secondary/15"} ${className || ""}`}
+      className={`relative border-t border-border/20 transition-colors cursor-pointer group ${todaySlot ? "bg-primary/[0.02]" : ""} ${isOver ? "bg-primary/10" : "hover:bg-secondary/15"} ${className || ""}`}
       style={style}
     >
       {isOver && (
