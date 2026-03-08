@@ -192,8 +192,8 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
                       return (
                         <button
                           key={id}
-                          onClick={() => toggleWidget(id)}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-medium text-white/50 hover:text-white hover:bg-white/10 border border-white/10 transition-all"
+          onClick={() => toggleWidget(id)}
+                           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-medium text-white/50 hover:text-white hover:bg-white/10 border border-white/10 transition-all"
                         >
                           <Icon size={14} />
                           <span>{tool.label}</span>
