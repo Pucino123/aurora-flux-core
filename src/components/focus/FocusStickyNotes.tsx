@@ -2,7 +2,6 @@ import React, { useRef, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Plus, Users, Loader2 } from "lucide-react";
 
-import { useFocusStore } from "@/context/FocusContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
