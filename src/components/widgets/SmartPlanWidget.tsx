@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check, CalendarDays } from "lucide-react";
+import { Sparkles, Clock, GripVertical, Plus, Loader2, X, Check, CalendarDays, LayoutList, Calendar as CalendarIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, isToday, isTomorrow, differenceInDays, parseISO } from "date-fns";
+import { format, isToday, isTomorrow, differenceInDays, parseISO, startOfDay } from "date-fns";
 import {
   DndContext,
   closestCenter,
@@ -59,28 +59,55 @@ const TYPE_STYLE: Record<BlockType, { bg: string; dot: string; text: string }> =
 
 /** Human-friendly label for a future scheduled date */
 function dateBadgeLabel(dateStr: string): string | null {
-  if (dateStr === TODAY) return null; // same day — no badge needed
+  if (dateStr === TODAY) return null;
   try {
     const d = parseISO(dateStr);
     if (isToday(d)) return null;
     if (isTomorrow(d)) return "Tomorrow";
     const days = differenceInDays(d, new Date());
-    if (days < 0) return null; // past
-    if (days <= 6) return format(d, "EEEE"); // e.g. "Friday"
+    if (days < 0) return null;
+    if (days <= 6) return format(d, "EEEE");
     return format(d, "MMM d");
   } catch {
     return null;
   }
 }
 
+/** Group blocks by date, returning sorted date keys */
+function groupByDate(blocks: ScheduleBlock[]): { date: string; blocks: ScheduleBlock[] }[] {
+  const map: Record<string, ScheduleBlock[]> = {};
+  blocks.forEach(b => {
+    if (!map[b.scheduledDate]) map[b.scheduledDate] = [];
+    map[b.scheduledDate].push(b);
+  });
+  return Object.keys(map)
+    .sort()
+    .map(date => ({ date, blocks: map[date] }));
+}
+
+/** Human-friendly date group header */
+function groupHeader(dateStr: string): string {
+  try {
+    const d = parseISO(dateStr);
+    if (isToday(d)) return "Today";
+    if (isTomorrow(d)) return "Tomorrow";
+    const days = differenceInDays(d, startOfDay(new Date()));
+    if (days > 0 && days <= 6) return format(d, "EEEE");
+    return format(d, "EEEE, MMM d");
+  } catch {
+    return dateStr;
+  }
+}
+
 // ── Sortable row ───────────────────────────────────────────────────────────
 function SortableBlock({
-  block, idx, onDelete, onRename,
+  block, idx, onDelete, onRename, showDateBadge,
 }: {
   block: ScheduleBlock;
   idx: number;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => Promise<void>;
+  showDateBadge?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: block.id });
@@ -110,7 +137,7 @@ function SortableBlock({
     zIndex: isDragging ? 50 : "auto" as const,
   };
   const ts = TYPE_STYLE[block.isAI ? "ai" : block.type];
-  const dateBadge = dateBadgeLabel(block.scheduledDate);
+  const dateBadge = showDateBadge ? dateBadgeLabel(block.scheduledDate) : null;
 
   return (
     <motion.div
@@ -232,7 +259,6 @@ function AddBlockModal({ onClose, onAdd }: AddBlockModalProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-2.5">
-        {/* Title */}
         <input
           autoFocus
           value={title}
@@ -241,9 +267,7 @@ function AddBlockModal({ onClose, onAdd }: AddBlockModalProps) {
           className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-[11px] text-white/80 placeholder:text-white/25 outline-none focus:border-violet-400/50 transition-colors"
         />
 
-        {/* Date + Time row */}
         <div className="flex gap-2">
-          {/* Date picker */}
           <div className="flex-1">
             <p className="text-[9px] text-white/30 mb-1 uppercase tracking-wider">Date</p>
             <Popover open={dateOpen} onOpenChange={setDateOpen}>
@@ -290,7 +314,6 @@ function AddBlockModal({ onClose, onAdd }: AddBlockModalProps) {
           </div>
         </div>
 
-        {/* Type selector */}
         <div>
           <p className="text-[9px] text-white/30 mb-1.5 uppercase tracking-wider">Type</p>
           <div className="flex gap-1.5 flex-wrap">
@@ -308,7 +331,6 @@ function AddBlockModal({ onClose, onAdd }: AddBlockModalProps) {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-2 pt-0.5">
           <button
             type="button"
@@ -338,6 +360,8 @@ const SmartPlanWidget = () => {
   const [input, setInput]           = useState("");
   const [optimizing, setOptimizing] = useState(false);
   const [showAdd, setShowAdd]       = useState(false);
+  /** false = Today only, true = All upcoming (grouped by date) */
+  const [showAll, setShowAll]       = useState(false);
 
   const today = format(new Date(), "EEEE, MMM d");
 
@@ -487,6 +511,11 @@ const SmartPlanWidget = () => {
     setOptimizing(false);
   };
 
+  // ── Derived: filtered/grouped blocks ─────────────────────────────────
+  const todayBlocks      = blocks.filter(b => b.scheduledDate === TODAY);
+  const groupedBlocks    = groupByDate(blocks);
+  const futureGroupCount = groupedBlocks.filter(g => g.date !== TODAY).length;
+
   return (
     <div className="h-full flex flex-col gap-2 overflow-hidden relative">
       {/* AI input */}
@@ -520,10 +549,45 @@ const SmartPlanWidget = () => {
         ))}
       </div>
 
-      {/* Date header */}
-      <div className="flex items-center gap-2 shrink-0">
-        <Clock size={11} className="text-white/30" />
-        <span className="text-[10px] text-white/30">{today}</span>
+      {/* Today vs Scheduled toggle + date header */}
+      <div className="flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <Clock size={11} className="text-white/30" />
+          <span className="text-[10px] text-white/30">{today}</span>
+        </div>
+        {/* Toggle */}
+        <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-white/5 border border-white/10">
+          <button
+            onClick={() => setShowAll(false)}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-medium transition-all",
+              !showAll
+                ? "bg-violet-500/30 text-violet-300 border border-violet-400/30"
+                : "text-white/30 hover:text-white/60"
+            )}
+          >
+            <LayoutList size={9} /> Today
+          </button>
+          <button
+            onClick={() => setShowAll(true)}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-medium transition-all",
+              showAll
+                ? "bg-violet-500/30 text-violet-300 border border-violet-400/30"
+                : "text-white/30 hover:text-white/60"
+            )}
+          >
+            <CalendarIcon size={9} /> Scheduled
+            {futureGroupCount > 0 && (
+              <span className={cn(
+                "ml-0.5 px-1 py-0 rounded-full text-[7px] font-bold",
+                showAll ? "bg-violet-400/30 text-violet-200" : "bg-white/10 text-white/40"
+              )}>
+                {blocks.filter(b => b.scheduledDate !== TODAY).length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Timeline */}
@@ -541,22 +605,76 @@ const SmartPlanWidget = () => {
                 </div>
               ))}
             </motion.div>
-          ) : (
+          ) : !showAll ? (
+            /* ── TODAY VIEW ── */
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                <motion.div key="blocks" className="space-y-1.5">
-                  {blocks.map((block, idx) => (
+              <SortableContext items={todayBlocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                <motion.div key="today-blocks" className="space-y-1.5">
+                  {todayBlocks.length === 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="py-8 text-center text-[11px] text-white/20"
+                    >
+                      No blocks scheduled for today
+                    </motion.div>
+                  ) : todayBlocks.map((block, idx) => (
                     <SortableBlock
                       key={block.id}
                       block={block}
                       idx={idx}
                       onDelete={handleDeleteBlock}
                       onRename={handleRenameBlock}
+                      showDateBadge={false}
                     />
                   ))}
                 </motion.div>
               </SortableContext>
             </DndContext>
+          ) : (
+            /* ── SCHEDULED VIEW (grouped by date) ── */
+            <motion.div key="all-blocks" className="space-y-3">
+              {groupedBlocks.map(group => (
+                <div key={group.date}>
+                  {/* Date group header */}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className={cn(
+                      "text-[9px] font-semibold uppercase tracking-wider",
+                      group.date === TODAY ? "text-violet-300" : "text-white/40"
+                    )}>
+                      {groupHeader(group.date)}
+                    </span>
+                    <div className="flex-1 h-px bg-white/6" />
+                    <span className="text-[8px] text-white/20">{group.blocks.length} blocks</span>
+                  </div>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={group.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-1.5">
+                        {group.blocks.map((block, idx) => (
+                          <SortableBlock
+                            key={block.id}
+                            block={block}
+                            idx={idx}
+                            onDelete={handleDeleteBlock}
+                            onRename={handleRenameBlock}
+                            showDateBadge={false}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                </div>
+              ))}
+              {blocks.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="py-8 text-center text-[11px] text-white/20"
+                >
+                  No upcoming blocks
+                </motion.div>
+              )}
+            </motion.div>
           )}
         </AnimatePresence>
 
