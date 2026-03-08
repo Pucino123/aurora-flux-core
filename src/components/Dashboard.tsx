@@ -193,8 +193,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       {/* Focus Mode Control Bar — global, visible on all views */}
       <FocusControlBar />
 
-      {/* CommHub floating chat — hidden on focus dashboard */}
-      {effectiveView !== "focus" && <CommHub />}
+      {/* CommHub floating chat — hidden on focus dashboard and during focus mode */}
+      {effectiveView !== "focus" && !isFocusModeActive && <CommHub />}
 
       {/* Control Center */}
       <ControlCenter open={controlCenterOpen} onClose={() => setControlCenterOpen(false)} />
