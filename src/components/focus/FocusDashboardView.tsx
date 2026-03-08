@@ -1488,7 +1488,7 @@ const FocusContent = () => {
 
       {/* ── iPadOS Window Manager Layer — separate stacking context above desktop icons ── */}
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 150 }}>
-        <div className="pointer-events-auto w-full h-full">
+        <div className="pointer-events-none w-full h-full">
           {windows.filter(w => !w.minimized).map((win) => {
               const winDoc = win.type === "document"
                 ? desktopDocs.find(d => d.id === win.contentId)
