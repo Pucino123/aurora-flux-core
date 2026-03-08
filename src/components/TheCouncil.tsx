@@ -27,6 +27,7 @@ import VoteTooltip from "./council/VoteTooltip";
 import ProactiveIntelligence from "./council/ProactiveIntelligence";
 import CouncilBoardroom from "./council/CouncilBoardroom";
 import BoardroomIdeasHistory from "./council/BoardroomIdeasHistory";
+import BoardroomAnalytics from "./council/BoardroomAnalytics";
 
 // ── Types ──
 
@@ -85,7 +86,7 @@ const TheCouncil = () => {
   const { user } = useAuth();
   const { filterPersona } = useFlux();
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<"council" | "boardroom">("council");
+  const [activeTab, setActiveTab] = useState<"council" | "boardroom" | "analytics">("council");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<PersonaResponse[]>([]);
