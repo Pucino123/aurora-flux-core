@@ -331,13 +331,14 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
 
             {/* Layout mode indicator pill — shows current layout with color */}
             <span
-              className={`inline-flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide opacity-70 ${layoutPillColor} text-black/80`}
+              className="inline-flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide opacity-80"
+              style={{ background: layoutPillBg, color: "rgba(0,0,0,0.75)" }}
               title={`Layout: ${win.layout}`}
             >
               {win.layout === "floating"     && "float"}
               {win.layout === "fullscreen"   && "full"}
-              {win.layout === "split-left"   && "⬤ left"}
-              {win.layout === "split-right"  && "right ⬤"}
+              {win.layout === "split-left"   && "◀ left"}
+              {win.layout === "split-right"  && "right ▶"}
             </span>
           </div>
 
