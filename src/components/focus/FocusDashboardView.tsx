@@ -749,9 +749,9 @@ const FocusContent = () => {
           const startPos = groupDragStartPositions.current[id];
           if (!startPos) return;
           if (folderTree.some(f => f.id === id)) {
-            updateDesktopFolderPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
+            updatePageFolderPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
           } else {
-            updateDesktopDocPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
+            updatePageDocPosition(id, { x: Math.max(0, startPos.x + dx), y: Math.max(0, startPos.y + dy) });
           }
         });
         // Update drag badge position
