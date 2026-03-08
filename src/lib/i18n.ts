@@ -569,8 +569,8 @@ const en: Record<string, string> = {
   "widget.no_pinned": "No pinned note",
 
   // The Council
-  "council.title": "The Council",
-  "council.nav": "The Council",
+  "council.title": "Council",
+  "council.nav": "Council",
   "council.desc": "Submit an idea or decision and let five strategic perspectives analyze it.",
   "council.placeholder": "Describe your idea, strategy, or decision...",
   "council.strategist": "The Strategist",
