@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Plus, Minus, Check, Sparkles, Trash2, Loader2 } from "lucide-react";
+import { Plus, Minus, Check, Sparkles, Trash2, Loader2, CalendarDays } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { format, differenceInDays, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 interface SavingsGoal {
   id: string;
@@ -10,6 +14,7 @@ interface SavingsGoal {
   current: number;
   target: number;
   emoji: string;
+  deadline?: string | null; // ISO date string YYYY-MM-DD
 }
 
 const EMOJI_LIST = ["💰", "🎯", "✈️", "🏠", "⚡", "🛡️", "🗾", "🚀", "🎓", "🌿"];
@@ -39,6 +44,16 @@ const getGradient = (pct: number) => {
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 
+/** Returns a human-readable countdown or null */
+function deadlineBadge(deadline: string | null | undefined): { label: string; urgent: boolean } | null {
+  if (!deadline) return null;
+  const days = differenceInDays(parseISO(deadline), new Date());
+  if (days < 0) return { label: "Overdue", urgent: true };
+  if (days === 0) return { label: "Due today", urgent: true };
+  if (days === 1) return { label: "1 day left", urgent: true };
+  return { label: `${days} days left`, urgent: days <= 7 };
+}
+
 const SavingsWidget = () => {
   const { user } = useAuth();
   const [goals, setGoals]         = useState<SavingsGoal[]>([]);
@@ -49,6 +64,8 @@ const SavingsWidget = () => {
   const [adding, setAdding]         = useState(false);
   const [newName, setNewName]       = useState("");
   const [newTarget, setNewTarget]   = useState("");
+  const [newDeadline, setNewDeadline] = useState<Date | undefined>(undefined);
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
   const [pulseId, setPulseId]       = useState<string | null>(null);
   const [saving, setSaving]         = useState(false);
 
@@ -58,7 +75,7 @@ const SavingsWidget = () => {
     setLoading(true);
     const { data } = await supabase
       .from("goals")
-      .select("id, title, current_amount, target_amount")
+      .select("id, title, current_amount, target_amount, deadline")
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
 
@@ -78,6 +95,7 @@ const SavingsWidget = () => {
         current: Number(r.current_amount ?? 0),
         target: Number(r.target_amount ?? 0),
         emoji: pickEmoji(r.title),
+        deadline: (r as any).deadline ?? null,
       })));
     } else {
       setGoals(data.map(r => ({
@@ -86,6 +104,7 @@ const SavingsWidget = () => {
         current: Number(r.current_amount ?? 0),
         target: Number(r.target_amount ?? 0),
         emoji: pickEmoji(r.title),
+        deadline: r.deadline ?? null,
       })));
     }
     setLoading(false);
@@ -129,6 +148,7 @@ const SavingsWidget = () => {
     if (isNaN(target) || target <= 0) return;
     setSaving(true);
     const emoji = pickEmoji(newName);
+    const deadlineStr = newDeadline ? format(newDeadline, "yyyy-MM-dd") : null;
 
     if (user) {
       const { data } = await supabase.from("goals").insert({
@@ -137,14 +157,29 @@ const SavingsWidget = () => {
         current_amount: 0,
         target_amount: target,
         pinned: false,
+        deadline: deadlineStr,
       }).select().single();
       if (data) {
-        setGoals(prev => [...prev, { id: data.id, name: data.title, current: 0, target, emoji }]);
+        setGoals(prev => [...prev, {
+          id: data.id,
+          name: data.title,
+          current: 0,
+          target,
+          emoji,
+          deadline: (data as any).deadline ?? null,
+        }]);
       }
     } else {
-      setGoals(prev => [...prev, { id: Date.now().toString(), name: newName.trim(), current: 0, target, emoji }]);
+      setGoals(prev => [...prev, {
+        id: Date.now().toString(),
+        name: newName.trim(),
+        current: 0,
+        target,
+        emoji,
+        deadline: deadlineStr,
+      }]);
     }
-    setNewName(""); setNewTarget(""); setAdding(false); setSaving(false);
+    setNewName(""); setNewTarget(""); setNewDeadline(undefined); setAdding(false); setSaving(false);
   };
 
   // ── Delete goal ─────────────────────────────────────────────────────────
@@ -180,30 +215,65 @@ const SavingsWidget = () => {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden shrink-0"
           >
-            <div className="flex gap-2 p-2 rounded-xl bg-white/5 border border-white/10">
-              <input
-                autoFocus
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && addGoal()}
-                placeholder="Goal name"
-                className="flex-1 bg-transparent text-[11px] text-white/80 placeholder:text-white/30 outline-none"
-              />
-              <input
-                value={newTarget}
-                onChange={e => setNewTarget(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && addGoal()}
-                placeholder="Target $"
-                type="number"
-                className="w-20 bg-transparent text-[11px] text-white/80 placeholder:text-white/30 outline-none text-right"
-              />
-              <button
-                onClick={addGoal}
-                disabled={saving}
-                className="text-emerald-400 hover:text-emerald-300 transition-colors shrink-0"
-              >
-                {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />}
-              </button>
+            <div className="flex flex-col gap-2 p-2 rounded-xl bg-white/5 border border-white/10">
+              {/* Name + target row */}
+              <div className="flex gap-2 items-center">
+                <input
+                  autoFocus
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && addGoal()}
+                  placeholder="Goal name"
+                  className="flex-1 bg-transparent text-[11px] text-white/80 placeholder:text-white/30 outline-none"
+                />
+                <input
+                  value={newTarget}
+                  onChange={e => setNewTarget(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && addGoal()}
+                  placeholder="Target $"
+                  type="number"
+                  className="w-20 bg-transparent text-[11px] text-white/80 placeholder:text-white/30 outline-none text-right"
+                />
+                <button
+                  onClick={addGoal}
+                  disabled={saving}
+                  className="text-emerald-400 hover:text-emerald-300 transition-colors shrink-0"
+                >
+                  {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />}
+                </button>
+              </div>
+              {/* Deadline picker row */}
+              <div className="flex items-center gap-2">
+                <CalendarDays size={11} className="text-white/30 shrink-0" />
+                <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+                  <PopoverTrigger asChild>
+                    <button className={cn(
+                      "text-[10px] transition-colors",
+                      newDeadline ? "text-violet-300 hover:text-violet-200" : "text-white/30 hover:text-white/60"
+                    )}>
+                      {newDeadline ? format(newDeadline, "MMM d, yyyy") : "Set deadline (optional)"}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newDeadline}
+                      onSelect={d => { setNewDeadline(d); setDeadlineOpen(false); }}
+                      disabled={date => date < new Date()}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {newDeadline && (
+                  <button
+                    onClick={() => setNewDeadline(undefined)}
+                    className="text-[9px] text-white/20 hover:text-rose-400 transition-colors ml-auto"
+                  >
+                    clear
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -230,6 +300,7 @@ const SavingsWidget = () => {
               const pct = goal.target > 0 ? Math.min((goal.current / goal.target) * 100, 100) : 0;
               const done = pct >= 100;
               const gradClass = getGradient(pct);
+              const badge = deadlineBadge(goal.deadline);
 
               return (
                 <motion.div
@@ -248,7 +319,7 @@ const SavingsWidget = () => {
                   }`}
                 >
                   {/* Top row */}
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       <span className="text-base leading-none">{goal.emoji}</span>
                       <div>
@@ -275,6 +346,21 @@ const SavingsWidget = () => {
                       </button>
                     </div>
                   </div>
+
+                  {/* Deadline badge */}
+                  {badge && (
+                    <div className="mb-1.5">
+                      <span className={cn(
+                        "inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full",
+                        badge.urgent
+                          ? "bg-rose-400/15 text-rose-300 border border-rose-400/20"
+                          : "bg-white/8 text-white/40 border border-white/10"
+                      )}>
+                        <CalendarDays size={8} />
+                        {badge.label}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Progress bar */}
                   <div className="h-1.5 rounded-full bg-white/8 overflow-hidden mb-2">
