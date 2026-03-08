@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SlidersHorizontal, Focus } from "lucide-react";
 import FluxSidebar from "./FluxSidebar";
-import GridDashboard from "./GridDashboard";
 import Scheduler from "./Scheduler";
 import MobileNav from "./MobileNav";
 import Canvas from "./Canvas";
