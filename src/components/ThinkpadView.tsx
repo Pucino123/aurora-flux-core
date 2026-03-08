@@ -306,7 +306,12 @@ const IdeaCanvas = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-2 px-3 py-2 rounded-full"
-          style={{ background: "rgba(15,18,30,0.92)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}
+          style={{
+            background: isLight ? "rgba(255,255,255,0.92)" : "rgba(15,18,30,0.92)",
+            backdropFilter: "blur(24px)",
+            border: isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid rgba(255,255,255,0.1)",
+            boxShadow: isLight ? "0 8px 40px rgba(0,0,0,0.15)" : "0 8px 40px rgba(0,0,0,0.5)",
+          }}
         >
           {/* Add node */}
           <motion.button
@@ -328,7 +333,7 @@ const IdeaCanvas = ({
             whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
             title="Zoom in"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+            style={{ background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)", border: isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)", color: isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)" }}
           >
             <ZoomIn size={15} />
           </motion.button>
@@ -339,7 +344,7 @@ const IdeaCanvas = ({
             whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
             title="Zoom out"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+            style={{ background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)", border: isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)", color: isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)" }}
           >
             <ZoomOut size={15} />
           </motion.button>
@@ -350,12 +355,12 @@ const IdeaCanvas = ({
             whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
             title="Fit all nodes in view"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+            style={{ background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)", border: isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)", color: isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)" }}
           >
             <Maximize2 size={14} />
           </motion.button>
 
-          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+          <div style={{ width: 1, height: 24, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)" }} />
 
           {/* Mark / bookmark */}
           <motion.button
@@ -364,9 +369,9 @@ const IdeaCanvas = ({
             title={markedNodes.size > 0 ? `${markedNodes.size} marked — click to go there` : "Mark selected nodes"}
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all relative"
             style={{
-              background: markedNodes.size > 0 ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.06)",
-              border: markedNodes.size > 0 ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(255,255,255,0.1)",
-              color: markedNodes.size > 0 ? "#60a5fa" : "rgba(255,255,255,0.7)"
+              background: markedNodes.size > 0 ? "rgba(59,130,246,0.25)" : isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
+              border: markedNodes.size > 0 ? "1px solid rgba(59,130,246,0.5)" : isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)",
+              color: markedNodes.size > 0 ? "#60a5fa" : isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)"
             }}
           >
             <Bookmark size={15} fill={markedNodes.size > 0 ? "#60a5fa" : "none"} />
@@ -386,13 +391,13 @@ const IdeaCanvas = ({
               whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }}
               title="Jump to marked node"
               className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all"
-              style={{ background: "rgba(59,130,246,0.2)", border: "1px solid rgba(59,130,246,0.4)", color: "#93c5fd" }}
+              style={{ background: "rgba(59,130,246,0.2)", border: "1px solid rgba(59,130,246,0.4)", color: isLight ? "#2563eb" : "#93c5fd" }}
             >
               Go to mark
             </motion.button>
           )}
 
-          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+          <div style={{ width: 1, height: 24, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)" }} />
 
           {/* Lock / unlock */}
           <motion.button
@@ -401,15 +406,15 @@ const IdeaCanvas = ({
             title={isLocked ? "Unlock canvas" : "Lock canvas (disable drag)"}
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
             style={{
-              background: isLocked ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.06)",
-              border: isLocked ? "1px solid rgba(234,179,8,0.5)" : "1px solid rgba(255,255,255,0.1)",
-              color: isLocked ? "#fbbf24" : "rgba(255,255,255,0.7)"
+              background: isLocked ? "rgba(234,179,8,0.2)" : isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
+              border: isLocked ? "1px solid rgba(234,179,8,0.5)" : isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)",
+              color: isLocked ? "#d97706" : isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)"
             }}
           >
             {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
           </motion.button>
 
-          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+          <div style={{ width: 1, height: 24, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)" }} />
 
           {/* Save */}
           <motion.button
@@ -417,7 +422,7 @@ const IdeaCanvas = ({
             whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
             title="Save track"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "rgba(74,222,128,0.85)" }}
+            style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: isLight ? "#16a34a" : "rgba(74,222,128,0.85)" }}
           >
             <Save size={15} />
           </motion.button>
@@ -446,6 +451,7 @@ const TabBar = ({
   onAdd,
   onDelete,
   onRename,
+  isLight = false,
 }: {
   tracks: IdeaTrack[];
   activeId: string;
@@ -453,6 +459,7 @@ const TabBar = ({
   onAdd: () => void;
   onDelete: (id: string) => void;
   onRename: (id: string, name: string) => void;
+  isLight?: boolean;
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -471,7 +478,7 @@ const TabBar = ({
   return (
     <div
       className="flex items-center gap-1 px-3 pt-3 pb-0 overflow-x-auto scrollbar-none shrink-0"
-      style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+      style={{ borderBottom: isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid rgba(255,255,255,0.07)" }}
     >
       {tracks.map((track) => {
         const isActive = track.id === activeId;
@@ -481,9 +488,13 @@ const TabBar = ({
             onClick={() => onSelect(track.id)}
             className="group relative flex items-center gap-1.5 px-3 py-2 rounded-t-xl cursor-pointer shrink-0 transition-all duration-200"
             style={{
-              background: isActive ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.03)",
-              border: isActive ? "1px solid rgba(99,102,241,0.35)" : "1px solid rgba(255,255,255,0.06)",
-              borderBottom: isActive ? "1px solid transparent" : "1px solid rgba(255,255,255,0.06)",
+              background: isActive
+                ? isLight ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.15)"
+                : isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.03)",
+              border: isActive
+                ? "1px solid rgba(99,102,241,0.35)"
+                : isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.06)",
+              borderBottom: isActive ? "1px solid transparent" : undefined,
               marginBottom: isActive ? "-1px" : 0,
             }}
           >
@@ -495,11 +506,12 @@ const TabBar = ({
                   onBlur={commitEdit}
                   onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingId(null); }}
                   className="bg-transparent text-xs font-medium outline-none w-24"
-                  style={{ color: "rgba(255,255,255,0.9)" }}
+                  style={{ color: isLight ? "rgba(20,24,40,0.9)" : "rgba(255,255,255,0.9)" }}
                   autoFocus
                   onClick={(e) => e.stopPropagation()}
                 />
-                <button onClick={(e) => { e.stopPropagation(); commitEdit(); }} className="text-white/40 hover:text-white/80">
+                <button onClick={(e) => { e.stopPropagation(); commitEdit(); }}
+                  style={{ color: isLight ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)" }}>
                   <Check size={10} />
                 </button>
               </>
@@ -507,19 +519,20 @@ const TabBar = ({
               <>
                 <span
                   className="text-xs font-medium max-w-[120px] truncate"
-                  style={{ color: isActive ? "rgba(165,180,252,1)" : "rgba(255,255,255,0.45)" }}
+                  style={{ color: isActive
+                    ? isLight ? "rgba(79,70,229,1)" : "rgba(165,180,252,1)"
+                    : isLight ? "rgba(30,30,50,0.55)" : "rgba(255,255,255,0.45)"
+                  }}
                 >
                   {track.name}
                 </span>
-                {/* Edit on hover */}
                 <button
                   onClick={(e) => startEdit(track, e)}
                   className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
+                  style={{ color: isLight ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.5)" }}
                 >
                   <Pencil size={9} />
                 </button>
-                {/* Delete — only if more than 1 track */}
                 {tracks.length > 1 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onDelete(track.id); }}
@@ -538,8 +551,8 @@ const TabBar = ({
       {/* Add new track */}
       <button
         onClick={onAdd}
-        className="flex items-center gap-1 px-2.5 py-2 rounded-t-xl text-xs transition-all hover:bg-white/8 shrink-0"
-        style={{ color: "rgba(255,255,255,0.3)", border: "1px solid transparent" }}
+        className="flex items-center gap-1 px-2.5 py-2 rounded-t-xl text-xs transition-all shrink-0"
+        style={{ color: isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.3)", border: "1px solid transparent" }}
       >
         <Plus size={11} /> New Track
       </button>
@@ -612,6 +625,7 @@ const IdeapadView = () => {
             onAdd={addTrack}
             onDelete={deleteTrack}
             onRename={renameTrack}
+            isLight={pageLight}
           />
         </div>
         {/* Theme toggle */}
