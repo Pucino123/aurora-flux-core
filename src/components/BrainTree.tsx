@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { t } from "@/lib/i18n";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { FOLDER_ICONS } from "./CreateFolderModal";
+import { MOCK_EMAILS } from "./inbox/MockEmailData";
+import { isToday, parseISO } from "date-fns";
 
 const FOLDER_COLORS = [
   { name: "Blue", value: "hsl(var(--aurora-blue))" },
