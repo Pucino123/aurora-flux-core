@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, Trash2, Pencil, X, Check, Building2, DollarSign, User, Receipt, Sparkles, Loader2, CheckSquare, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+
 import { useCRM, CRMDeal, Stage } from "@/context/CRMContext";
 import { useFlux } from "@/context/FluxContext";
 import { toast } from "sonner";

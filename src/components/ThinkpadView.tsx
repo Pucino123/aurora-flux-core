@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
-import { useTheme } from "next-themes";
 
 /* ─── Types ─── */
 interface IdeaTrack {
