@@ -35,10 +35,9 @@ const AUTO_DELETE_OPTIONS: { label: string; value: AutoDeleteDays }[] = [
 ];
 
 const TrashRow = forwardRef<HTMLDivElement, { item: TrashItem; onRestore: () => void; onDelete: () => void }>(
-  function TrashRow({ item, onRestore, onDelete }, ref) {
-  return (
+  ({ item, onRestore, onDelete }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as React.Ref<HTMLDivElement>}
       layout
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
@@ -73,8 +72,8 @@ const TrashRow = forwardRef<HTMLDivElement, { item: TrashItem; onRestore: () => 
         </button>
       </div>
     </motion.div>
-  );
-}
+  )
+);
 
 const TrashModal = ({ open, onClose }: TrashModalProps) => {
   const { trash, restoreItem, permanentlyDelete, emptyTrash, autoDeleteDays, setAutoDeleteDays } = useTrash();
