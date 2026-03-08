@@ -7,7 +7,6 @@ import { useFocusMode } from "@/context/FocusModeContext";
 import { AnimatePresence, motion } from "framer-motion";
 import FocusReportModal from "./FocusReportModal";
 import CollabMessagesModal from "./CollabMessagesModal";
-import MissionControl from "@/components/windows/MissionControl";
 import TrashModal from "@/components/TrashModal";
 import { getSuggestedWidgets } from "@/hooks/useWidgetIntelligence";
 import { useTeamChat } from "@/hooks/useTeamChat";
