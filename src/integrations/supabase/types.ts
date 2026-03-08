@@ -41,6 +41,48 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_events: {
+        Row: {
+          color: string | null
+          created_at: string
+          crm_contact_id: string | null
+          date: string
+          end_time: string | null
+          id: string
+          start_time: string | null
+          title: string
+          type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          crm_contact_id?: string | null
+          date: string
+          end_time?: string | null
+          id?: string
+          start_time?: string | null
+          title?: string
+          type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          crm_contact_id?: string | null
+          date?: string
+          end_time?: string | null
+          id?: string
+          start_time?: string | null
+          title?: string
+          type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       community_slots: {
         Row: {
           created_at: string | null
