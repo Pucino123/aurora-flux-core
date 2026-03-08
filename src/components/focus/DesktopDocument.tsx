@@ -266,7 +266,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
             </span>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {contextMenu && createPortal(
         <>
