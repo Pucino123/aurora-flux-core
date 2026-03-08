@@ -1174,11 +1174,15 @@ const FocusContent = () => {
         }}
       />
 
-      {/* ── iOS-style Dashboard Pagination ── draggable pill (drag only in build mode) */}
+      {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
+      {/* IMPORTANT: pillRef wraps ONLY the pill row so getBoundingClientRect() always reflects
+          the pill's exact visual position regardless of build/focus mode. All floating UI
+          (label, build controls, settings panel, hover cards) is positioned absolutely
+          above via bottom: calc(100% + Npx) so it never affects the wrapper's own size. */}
       {paginationSettings.showPagination && (
         <motion.div
           ref={pillRef}
-          className="fixed z-[9999] flex flex-col items-center gap-1.5"
+          className="fixed z-[9999] group flex items-center gap-2.5 px-4 py-2 rounded-full select-none"
           animate={pillBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
           transition={pillBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
           style={
@@ -1188,12 +1192,26 @@ const FocusContent = () => {
                   top: pillPos.y,
                   transform: "none",
                   cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
+                  background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
+                  backdropFilter: "blur(24px)",
+                  WebkitBackdropFilter: "blur(24px)",
+                  border: systemMode === "build" ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
+                  boxShadow: isDraggingPill
+                    ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
+                    : "0 8px 32px rgba(0,0,0,0.55)",
                 }
               : {
                   left: "50%",
                   bottom: "88px",
                   transform: "translateX(-50%)",
                   cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
+                  background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
+                  backdropFilter: "blur(24px)",
+                  WebkitBackdropFilter: "blur(24px)",
+                  border: systemMode === "build" ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
+                  boxShadow: isDraggingPill
+                    ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
+                    : "0 8px 32px rgba(0,0,0,0.55)",
                 }
           }
           onPointerDown={handlePillPointerDown}
@@ -1201,35 +1219,73 @@ const FocusContent = () => {
           onPointerUp={handlePillPointerUp}
           onPointerLeave={handlePillPointerUp}
         >
-          {/* Build mode controls */}
-          <AnimatePresence>
-            {systemMode === "build" && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                className="flex items-center gap-1.5 mb-0.5"
-              >
-                <button
-                  onClick={() => setShowPillSettings(v => !v)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all pointer-events-auto"
-                  style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}
-                  onPointerDown={e => e.stopPropagation()}
-                >
-                  ⚙ Customize
-                </button>
-                <button
-                  onClick={() => { setPillPos(null); }}
-                  className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] transition-all pointer-events-auto"
-                  style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  onPointerDown={e => e.stopPropagation()}
-                  title="Reset pill position"
-                >
-                  ⌖
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* ── ALL floating content above the pill — absolutely positioned, never in flow ── */}
+          <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 pointer-events-none" style={{ width: "max-content" }}>
 
-          {/* Build-mode settings panel */}
+            {/* Build mode controls */}
+            <AnimatePresence>
+              {systemMode === "build" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                  className="flex items-center gap-1.5 pointer-events-auto"
+                >
+                  <button
+                    onClick={() => setShowPillSettings(v => !v)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all"
+                    style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}
+                    onPointerDown={e => e.stopPropagation()}
+                  >
+                    ⚙ Customize
+                  </button>
+                  <button
+                    onClick={() => setPillPos(null)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] transition-all"
+                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    onPointerDown={e => e.stopPropagation()}
+                    title="Reset pill position"
+                  >
+                    ⌖
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Page label */}
+            {paginationSettings.showLabel && (
+              <div className="flex items-center h-5 pointer-events-auto" onPointerDown={e => e.stopPropagation()}>
+                {dashboardPages.map((page, i) => {
+                  if (i !== activePageIndex) return null;
+                  if (editingLabelIdx === i) {
+                    return (
+                      <input
+                        key={page.id}
+                        ref={labelInputRef}
+                        value={editingLabelValue}
+                        onChange={e => setEditingLabelValue(e.target.value)}
+                        onBlur={commitLabelEdit}
+                        onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
+                        className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 text-white w-28"
+                        maxLength={20}
+                        autoFocus
+                      />
+                    );
+                  }
+                  return (
+                    <span
+                      key={page.id}
+                      className="text-[11px] font-medium text-white/70 cursor-default select-none"
+                      onDoubleClick={() => startLabelEdit(i)}
+                      title="Double-click to rename"
+                    >
+                      {page.label || "Home"}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Build-mode settings panel — absolute above pill */}
           <AnimatePresence>
             {showPillSettings && systemMode === "build" && (
               <motion.div
@@ -1237,12 +1293,11 @@ const FocusContent = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.95 }}
                 transition={{ duration: 0.18 }}
-                className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 px-4 py-3 rounded-2xl flex flex-col gap-3 min-w-[220px] pointer-events-auto"
+                className="absolute bottom-[calc(100%+52px)] left-1/2 -translate-x-1/2 px-4 py-3 rounded-2xl flex flex-col gap-3 min-w-[220px] pointer-events-auto"
                 style={{ background: "rgba(10,8,20,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.7)" }}
                 onPointerDown={e => e.stopPropagation()}
               >
                 <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Pagination Style</p>
-                {/* Show label toggle */}
                 <label className="flex items-center justify-between gap-3 cursor-pointer">
                   <span className="text-[11px] text-white/70">Show page label</span>
                   <button
@@ -1252,7 +1307,6 @@ const FocusContent = () => {
                     <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${paginationSettings.showLabel ? "left-[18px]" : "left-0.5"}`} />
                   </button>
                 </label>
-                {/* Hide pagination entirely */}
                 <label className="flex items-center justify-between gap-3 cursor-pointer">
                   <span className="text-[11px] text-white/70">Show pagination</span>
                   <button
@@ -1262,7 +1316,6 @@ const FocusContent = () => {
                     <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${paginationSettings.showPagination ? "left-[18px]" : "left-0.5"}`} />
                   </button>
                 </label>
-                {/* Opacity slider */}
                 <label className="flex items-center justify-between gap-3">
                   <span className="text-[11px] text-white/70">Pill opacity</span>
                   <input
@@ -1280,180 +1333,94 @@ const FocusContent = () => {
             )}
           </AnimatePresence>
 
-          {/* Page label */}
-          {paginationSettings.showLabel && (
-            <div className="flex items-center h-5" onPointerDown={e => e.stopPropagation()}>
-              {dashboardPages.map((page, i) => {
-                if (i !== activePageIndex) return null;
-                if (editingLabelIdx === i) {
-                  return (
-                    <input
-                      key={page.id}
-                      ref={labelInputRef}
-                      value={editingLabelValue}
-                      onChange={e => setEditingLabelValue(e.target.value)}
-                      onBlur={commitLabelEdit}
-                      onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
-                      className="text-[11px] font-medium text-center outline-none bg-transparent border-b border-white/40 text-white w-28 pointer-events-auto"
-                      maxLength={20}
-                      autoFocus
-                    />
-                  );
-                }
-                return (
-                  <span
-                    key={page.id}
-                    className="text-[11px] font-medium text-white/70 cursor-default select-none pointer-events-auto"
-                    onDoubleClick={() => startLabelEdit(i)}
-                    title="Double-click to rename"
-                  >
-                    {page.label || "Home"}
-                  </span>
-                );
-              })}
-            </div>
-          )}
+          {/* ← → keyboard hint — Focus mode only, group-hover */}
+          <AnimatePresence>
+            {systemMode !== "build" && hoverDotIdx === null && dashboardPages.length > 1 && (
+              <motion.div
+                key="key-hint"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 0, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              >
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: "rgba(10,8,20,0.85)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
+                  <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">←</span>
+                  <span className="text-[9px] text-white/30">navigate</span>
+                  <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">→</span>
+                </div>
+                <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.85)", borderRight: "1px solid rgba(255,255,255,0.1)", borderBottom: "1px solid rgba(255,255,255,0.1)" }} />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Pill: dots + reorder + hover preview + plus */}
-          <div
-            className="group flex items-center gap-2.5 px-4 py-2 rounded-full select-none relative"
-            style={{
-              background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              border: systemMode === "build" ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
-              boxShadow: isDraggingPill
-                ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
-                : "0 8px 32px rgba(0,0,0,0.55)",
-            }}
-          >
-            {/* ← → keyboard hint — only in focus mode, visible on group hover when no dot hovered */}
-            <AnimatePresence>
-              {systemMode !== "build" && hoverDotIdx === null && dashboardPages.length > 1 && (
-                <motion.div
-                  key="key-hint"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 0, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                >
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: "rgba(10,8,20,0.85)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
-                    <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">←</span>
-                    <span className="text-[9px] text-white/30">navigate</span>
-                    <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">→</span>
-                  </div>
-                  <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.85)", borderRight: "1px solid rgba(255,255,255,0.1)", borderBottom: "1px solid rgba(255,255,255,0.1)" }} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {/* Build mode drag hint — shows on pill hover */}
-            <AnimatePresence>
-              {systemMode === "build" && !isDraggingPill && hoverDotIdx === null && (
-                <motion.div
-                  key="build-drag-hint"
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 0, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
-                >
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: "rgba(10,8,20,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
-                    <span className="text-[10px] text-white/40">✥ drag pill</span>
-                    <span className="text-[9px] text-white/20">·</span>
-                    <span className="text-[10px] text-white/40">grab dot to reorder</span>
-                  </div>
-                  <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.88)", borderRight: "1px solid rgba(255,255,255,0.15)", borderBottom: "1px solid rgba(255,255,255,0.15)" }} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {hoverDotIdx !== null && hoverDotIdx !== activePageIndex && (
-                <motion.div
-                  key={`preview-${hoverDotIdx}`}
-                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 6, scale: 0.95 }}
-                  transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 pointer-events-none z-10"
-                >
-                  {/* Thumbnail card */}
-                  <div
-                    className="rounded-2xl overflow-hidden"
-                    style={{
-                      background: "rgba(10,8,20,0.92)",
-                      backdropFilter: "blur(20px)",
-                      border: "1px solid rgba(255,255,255,0.14)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.65)",
-                      width: 160,
-                    }}
-                  >
-                    {/* Mini canvas preview — real screenshot if available, else emoji grid */}
-                    <div className="relative w-full overflow-hidden" style={{ height: 90 }}>
-                      {pageThumbnails[dashboardPages[hoverDotIdx]?.id] ? (
-                        <img
-                          src={pageThumbnails[dashboardPages[hoverDotIdx].id]}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <>
-                          <div className="absolute inset-0" style={{
-                            background: dashboardPages[hoverDotIdx]?.background ? "rgba(30,20,60,0.8)" : "rgba(20,15,40,0.7)",
-                          }} />
-                          <div className="absolute inset-0" style={{
-                            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
-                            backgroundSize: "14px 14px",
-                          }} />
-                          {(() => {
-                            const widgets = dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets;
-                            const WIDGET_COLORS: Record<string, string> = {
-                              clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa",
-                              notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c",
-                              quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc",
-                              routine: "#4ade80",
-                            };
-                            const WIDGET_LABELS: Record<string, string> = {
-                              clock: "🕐", timer: "⏱", music: "🎵", planner: "📋",
-                              notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️",
-                              quote: "💬", breathing: "🫁", council: "🤝", aura: "✨",
-                              routine: "🔄",
-                            };
-                            const cols = 4; const cellW = 34; const cellH = 22; const gap = 4; const padX = 8; const padY = 8;
-                            return widgets.slice(0, 8).map((w, wi) => {
-                              const col = wi % cols; const row = Math.floor(wi / cols);
-                              const x = padX + col * (cellW + gap); const y = padY + row * (cellH + gap);
-                              const color = WIDGET_COLORS[w] || "#6b7280";
-                              return (
-                                <div key={w} className="absolute flex items-center justify-center rounded"
-                                  style={{ left: x, top: y, width: cellW, height: cellH, background: `${color}22`, border: `1px solid ${color}44` }}>
-                                  <span style={{ fontSize: 10 }}>{WIDGET_LABELS[w] || "□"}</span>
-                                </div>
-                              );
-                            });
-                          })()}
-                        </>
-                      )}
-                    </div>
-                    {/* Label row */}
-                    <div className="px-3 py-2 flex items-center justify-between gap-2">
-                      <p className="text-[11px] font-semibold text-white/85 truncate">
-                        {dashboardPages[hoverDotIdx]?.label || `Page ${hoverDotIdx + 1}`}
-                      </p>
-                      <span className="text-[9px] text-white/35 flex-shrink-0">
-                        {(dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets).length}w
-                        {(dashboardPages[hoverDotIdx]?.stickyNotes?.length ?? 0) > 0
-                          ? ` · ${dashboardPages[hoverDotIdx].stickyNotes!.length}📌` : ""}
-                      </span>
-                    </div>
-                  </div>
-                  {/* Arrow */}
-                  <div className="w-2.5 h-2.5 mx-auto -mt-[1px] rotate-45 rounded-sm"
-                    style={{ background: "rgba(10,8,20,0.92)", borderRight: "1px solid rgba(255,255,255,0.14)", borderBottom: "1px solid rgba(255,255,255,0.14)" }} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* Build mode drag hint — group-hover */}
+          <AnimatePresence>
+            {systemMode === "build" && !isDraggingPill && hoverDotIdx === null && (
+              <motion.div
+                key="build-drag-hint"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 0, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+              >
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: "rgba(10,8,20,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
+                  <span className="text-[10px] text-white/40">✥ drag pill</span>
+                  <span className="text-[9px] text-white/20">·</span>
+                  <span className="text-[10px] text-white/40">grab dot to reorder</span>
+                </div>
+                <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.88)", borderRight: "1px solid rgba(255,255,255,0.15)", borderBottom: "1px solid rgba(255,255,255,0.15)" }} />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {dashboardPages.map((page, i) => (
+          {/* Dot hover page thumbnail preview */}
+          <AnimatePresence>
+            {hoverDotIdx !== null && hoverDotIdx !== activePageIndex && (
+              <motion.div
+                key={`preview-${hoverDotIdx}`}
+                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 pointer-events-none z-10"
+              >
+                <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10,8,20,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.14)", boxShadow: "0 8px 32px rgba(0,0,0,0.65)", width: 160 }}>
+                  <div className="relative w-full overflow-hidden" style={{ height: 90 }}>
+                    {pageThumbnails[dashboardPages[hoverDotIdx]?.id] ? (
+                      <img src={pageThumbnails[dashboardPages[hoverDotIdx].id]} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <>
+                        <div className="absolute inset-0" style={{ background: dashboardPages[hoverDotIdx]?.background ? "rgba(30,20,60,0.8)" : "rgba(20,15,40,0.7)" }} />
+                        <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)", backgroundSize: "14px 14px" }} />
+                        {(() => {
+                          const widgets = dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets;
+                          const WC: Record<string, string> = { clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa", notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c", quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc", routine: "#4ade80" };
+                          const WL: Record<string, string> = { clock: "🕐", timer: "⏱", music: "🎵", planner: "📋", notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️", quote: "💬", breathing: "🫁", council: "🤝", aura: "✨", routine: "🔄" };
+                          return widgets.slice(0, 8).map((w, wi) => {
+                            const col = wi % 4; const row = Math.floor(wi / 4);
+                            const x = 8 + col * 38; const y = 8 + row * 26;
+                            const color = WC[w] || "#6b7280";
+                            return <div key={w} className="absolute flex items-center justify-center rounded" style={{ left: x, top: y, width: 34, height: 22, background: `${color}22`, border: `1px solid ${color}44` }}><span style={{ fontSize: 10 }}>{WL[w] || "□"}</span></div>;
+                          });
+                        })()}
+                      </>
+                    )}
+                  </div>
+                  <div className="px-3 py-2 flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold text-white/85 truncate">{dashboardPages[hoverDotIdx]?.label || `Page ${hoverDotIdx + 1}`}</p>
+                    <span className="text-[9px] text-white/35 flex-shrink-0">
+                      {(dashboardPages[hoverDotIdx]?.activeWidgets ?? activeWidgets).length}w
+                      {(dashboardPages[hoverDotIdx]?.stickyNotes?.length ?? 0) > 0 ? ` · ${dashboardPages[hoverDotIdx].stickyNotes!.length}📌` : ""}
+                    </span>
+                  </div>
+                </div>
+                <div className="w-2.5 h-2.5 mx-auto -mt-[1px] rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.92)", borderRight: "1px solid rgba(255,255,255,0.14)", borderBottom: "1px solid rgba(255,255,255,0.14)" }} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Dots */}
+          {dashboardPages.map((page, i) => (
               <button
                 key={page.id}
                 onClick={() => { if (draggingDotIdx === null) goToPage(i); }}
