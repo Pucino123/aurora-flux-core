@@ -277,6 +277,7 @@ interface ToolDrawerProps {
 const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps = {}) => {
   const { activeWidgets, toggleWidget, systemMode, setSystemMode, resetDashboard } = useFocusStore();
   const { openWindow, windows, restoreWindow, closeWindow, bringToFront } = useWindowManager();
+  const { trash } = useTrash();
   const minimizedWindows = windows.filter(w => w.minimized);
 
   const effectiveWidgets = pageActiveWidgets ?? activeWidgets;
@@ -289,9 +290,40 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
   const [styleOpen, setStyleOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
+  const [missionControlOpen, setMissionControlOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
   const suggestions = useMemo(() => getSuggestedWidgets(effectiveWidgets as string[]), [effectiveWidgets]);
   const { unreadCount, markAsRead } = useTeamChat();
+
+  // ── Bounce on new minimized chip ──────────────────────────────────
+  const [bounceChipId, setBounceChipId] = useState<string | null>(null);
+  const prevMinimizedIds = useRef<Set<string>>(new Set(minimizedWindows.map(w => w.id)));
+  useEffect(() => {
+    const current = new Set(minimizedWindows.map(w => w.id));
+    for (const id of current) {
+      if (!prevMinimizedIds.current.has(id)) {
+        setBounceChipId(id);
+        setTimeout(() => setBounceChipId(null), 600);
+        break;
+      }
+    }
+    prevMinimizedIds.current = current;
+  }, [minimizedWindows]);
+
+  // ── Mission Control keyboard shortcut (⌘⇧M / F11) ────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if ((mod && e.shiftKey && (e.key === "m" || e.key === "M")) || e.key === "F11") {
+        e.preventDefault();
+        setMissionControlOpen(p => !p);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // ── Toolbar style ─────────────────────────────────────────────────
   const [toolbarStyle, setToolbarStyleState] = useState<ToolbarStyle>(loadToolbarStyle);
