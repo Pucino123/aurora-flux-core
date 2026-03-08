@@ -142,10 +142,11 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     const handler = (e: CustomEvent) => {
       const { html, append } = e.detail || {};
       if (!html || !editorRef.current) return;
+      const safe = sanitize(html);
       if (append) {
-        editorRef.current.innerHTML += html;
+        editorRef.current.innerHTML += safe;
       } else {
-        editorRef.current.innerHTML = html;
+        editorRef.current.innerHTML = safe;
       }
       onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
     };
