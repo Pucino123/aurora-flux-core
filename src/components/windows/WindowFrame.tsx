@@ -1,9 +1,10 @@
 import React, { useMemo, useRef, useEffect, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
-import { X, MoreHorizontal, Maximize2, PanelLeft, PanelRight, Square, Minus } from "lucide-react";
+import {
+  X, MoreHorizontal, Maximize2, PanelLeft, PanelRight, Square, Minus,
+} from "lucide-react";
 import { useWindowManager, AppWindow, WindowLayout } from "@/context/WindowManagerContext";
-import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +16,7 @@ import {
 interface WindowFrameProps {
   window: AppWindow;
   children: React.ReactNode;
+  focused?: boolean;
 }
 
 const LAYOUT_OPTIONS: { label: string; value: WindowLayout; icon: React.ReactNode }[] = [
@@ -30,18 +32,27 @@ const MIN_H = 240;
 const DEFAULT_W = 820;
 const DEFAULT_H = 620;
 
-// Snappier spring — much less lag on float drag
-const DRAG_SPRING = { stiffness: 520, damping: 36, mass: 0.45 };
+// Snappy spring — near-instant on float drag, tiny settle
+const DRAG_SPRING = { stiffness: 900, damping: 50, mass: 0.3 };
 
-// Layout pill indicator color (uses CSS vars via inline style so no hardcoded Tailwind colors)
+// Layout pill colors via inline style (no hardcoded Tailwind classes)
 const LAYOUT_PILL_BG: Record<WindowLayout, string> = {
-  floating:    "hsl(142 71% 45%)",
-  fullscreen:  "hsl(217 91% 60%)",
-  "split-left":  "hsl(270 76% 65%)",
-  "split-right": "hsl(270 76% 65%)",
+  floating:     "hsl(142 71% 45%)",
+  fullscreen:   "hsl(217 91% 60%)",
+  "split-left": "hsl(270 76% 65%)",
+  "split-right":"hsl(270 76% 65%)",
+};
+const LAYOUT_LABEL: Record<WindowLayout, string> = {
+  floating:     "float",
+  fullscreen:   "full",
+  "split-left": "◀ left",
+  "split-right":"right ▶",
 };
 
-const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
+// Dead zone width (px) on left side of header for traffic-light buttons — no drag here
+const DEAD_ZONE_LEFT = 110;
+
+const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProps) => {
   const {
     closeWindow, setWindowLayout, updateWindowPosition,
     updateWindowSize, bringToFront, minimizeWindow,
@@ -49,12 +60,12 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
 
   const isFloating = win.layout === "floating";
 
-  // Track previous layout so toggling fullscreen restores to it
+  // Track previous layout so toggling fullscreen restores it
   const prevLayoutRef = useRef<WindowLayout>(win.layout);
   // Remember exact position/size before going fullscreen
   const preFullscreenState = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
-  // ── Spring-based position — snappier config ───────────────────────────────
+  // ── Spring-based position — near-instant response ─────────────────────────
   const rawX = useRef(win.position.x);
   const rawY = useRef(win.position.y);
   const motionX = useMotionValue(win.position.x);
@@ -62,7 +73,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
   const springX = useSpring(motionX, DRAG_SPRING);
   const springY = useSpring(motionY, DRAG_SPRING);
 
-  // Sync spring origin when position changes externally
+  // Sync when position changes externally
   useEffect(() => {
     if (isFloating) {
       motionX.set(win.position.x);
@@ -80,16 +91,11 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
   // ── Size state ─────────────────────────────────────────────────────────────
   const [size, setSize] = useState({ w: win.size?.w ?? DEFAULT_W, h: win.size?.h ?? DEFAULT_H });
   const resizing = useRef<string | null>(null);
-  const resizeStart = useRef({ mouseX: 0, mouseY: 0, w: 0, h: 0 });
+  const resizeStart = useRef({ mouseX: 0, mouseY: 0, w: 0, h: 0, x: 0, y: 0 });
 
-  // ── Fullscreen toggle helpers ──────────────────────────────────────────────
+  // ── Fullscreen helpers ─────────────────────────────────────────────────────
   const enterFullscreen = useCallback(() => {
-    preFullscreenState.current = {
-      x: rawX.current,
-      y: rawY.current,
-      w: size.w,
-      h: size.h,
-    };
+    preFullscreenState.current = { x: rawX.current, y: rawY.current, w: size.w, h: size.h };
     prevLayoutRef.current = win.layout;
     setWindowLayout(win.id, "fullscreen");
   }, [win.id, win.layout, setWindowLayout, size]);
@@ -99,7 +105,6 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     const restoreLayout = prevLayoutRef.current === "fullscreen" ? "floating" : prevLayoutRef.current;
     setWindowLayout(win.id, restoreLayout);
     if (prev && restoreLayout === "floating") {
-      // Restore exact position & size after layout change settles
       requestAnimationFrame(() => {
         motionX.set(prev.x);
         motionY.set(prev.y);
@@ -123,17 +128,20 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     toggleFullscreen();
   }, [toggleFullscreen]);
 
-  // ── DRAG handlers ─────────────────────────────────────────────────────────
-  const handlePillPointerDown = useCallback((e: React.PointerEvent) => {
+  // ── DRAG — entire header, dead zone on left for traffic lights ────────────
+  const handleHeaderPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!isFloating) return;
+    // Dead zone: left DEAD_ZONE_LEFT px is reserved for traffic-light buttons
+    if (e.nativeEvent.offsetX < DEAD_ZONE_LEFT) return;
+    // Ignore clicks on any button or the dropdown pill
+    if ((e.target as HTMLElement).closest("button,[role='button']")) return;
     e.preventDefault();
-    e.stopPropagation();
     dragging.current = true;
     offset.current = { x: e.clientX - rawX.current, y: e.clientY - rawY.current };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   }, [isFloating]);
 
-  const handlePillPointerMove = useCallback((e: React.PointerEvent) => {
+  const handleHeaderPointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragging.current) return;
     const nx = e.clientX - offset.current.x;
     const ny = Math.max(0, e.clientY - offset.current.y);
@@ -146,7 +154,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     else setSnapZone(null);
   }, [motionX, motionY]);
 
-  const handlePillPointerUp = useCallback((_e: React.PointerEvent) => {
+  const handleHeaderPointerUp = useCallback((_e: React.PointerEvent) => {
     if (!dragging.current) return;
     dragging.current = false;
     if (snapZone) {
@@ -157,16 +165,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     setSnapZone(null);
   }, [win.id, updateWindowPosition, setWindowLayout, snapZone]);
 
-  // ── RESIZE handlers ────────────────────────────────────────────────────────
-  const handleResizePointerDown = useCallback((e: React.PointerEvent, dir: string) => {
-    if (!isFloating) return;
-    e.stopPropagation();
-    e.preventDefault();
-    resizing.current = dir;
-    resizeStart.current = { mouseX: e.clientX, mouseY: e.clientY, w: size.w, h: size.h };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [isFloating, size]);
-
+  // ── RESIZE — instant setSize, no spring ───────────────────────────────────
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       if (!resizing.current) return;
@@ -177,6 +176,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
       let nw = w, nh = h;
       if (resizing.current.includes("e")) nw = Math.max(MIN_W, w + dx);
       if (resizing.current.includes("s")) nh = Math.max(MIN_H, h + dy);
+      // Directly set — no spring lag
       setSize({ w: nw, h: nh });
     };
     const onUp = (e: PointerEvent) => {
@@ -198,31 +198,47 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
     };
   }, [win.id, updateWindowSize]);
 
+  const handleResizePointerDown = useCallback((e: React.PointerEvent, dir: string) => {
+    if (!isFloating) return;
+    e.stopPropagation();
+    e.preventDefault();
+    resizing.current = dir;
+    resizeStart.current = {
+      mouseX: e.clientX, mouseY: e.clientY,
+      w: size.w, h: size.h,
+      x: rawX.current, y: rawY.current,
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [isFloating, size]);
+
   // ── Layout classes ─────────────────────────────────────────────────────────
   const layoutClasses = useMemo(() => {
-    const base = "absolute rounded-2xl shadow-2xl bg-card/90 backdrop-blur-2xl border border-border/20 overflow-hidden flex flex-col";
+    const base = "absolute rounded-2xl shadow-2xl bg-card/90 backdrop-blur-2xl border overflow-hidden flex flex-col transition-[box-shadow]";
+    const focusRing = focused
+      ? "border-primary/60 shadow-[0_0_0_2px_hsl(var(--primary)/0.35),0_8px_32px_rgba(0,0,0,0.5)]"
+      : "border-border/20 shadow-2xl";
     switch (win.layout) {
-      case "floating":    return base;
-      case "fullscreen":  return `${base} inset-4`;
-      case "split-left":  return `${base} top-4 left-4 bottom-4 w-[calc(50%-1.25rem)]`;
-      case "split-right": return `${base} top-4 right-4 bottom-4 w-[calc(50%-1.25rem)]`;
-      default:            return base;
+      case "floating":    return `${base} ${focusRing}`;
+      case "fullscreen":  return `${base} ${focusRing} inset-4`;
+      case "split-left":  return `${base} ${focusRing} top-4 left-4 bottom-4 w-[calc(50%-1.25rem)]`;
+      case "split-right": return `${base} ${focusRing} top-4 right-4 bottom-4 w-[calc(50%-1.25rem)]`;
+      default:            return `${base} ${focusRing}`;
     }
-  }, [win.layout]);
+  }, [win.layout, focused]);
 
   const posStyle = useMemo<React.CSSProperties>(() => {
     if (win.layout !== "floating") return {};
     return { width: size.w, height: size.h };
   }, [win.layout, size.w, size.h]);
 
-  // ── Minimized: ghost div that flies toward dock ────────────────────────────
+  // ── Minimized ghost — positioned higher so it clears the dock ─────────────
   if (win.minimized) {
     return (
       <motion.div
         layoutId={`window-${win.id}`}
         className="absolute rounded-2xl bg-card/90 backdrop-blur-2xl border border-border/20 overflow-hidden pointer-events-none"
         initial={false}
-        animate={{ opacity: 0, scale: 0.12, y: "85vh" }}
+        animate={{ opacity: 0, scale: 0.12, y: "72vh" }}
         transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.7 }}
         style={{
           zIndex: win.zIndex,
@@ -236,6 +252,8 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
   }
 
   const layoutPillBg = LAYOUT_PILL_BG[win.layout];
+  const layoutLabel  = LAYOUT_LABEL[win.layout];
+  const isDraggableHeader = isFloating;
 
   return (
     <>
@@ -246,9 +264,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
             {snapZone === "left" && (
               <motion.div
                 key="snap-left"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.15 }}
                 className="h-full rounded-2xl m-3"
                 style={{
@@ -262,9 +278,7 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
             {snapZone === "right" && (
               <motion.div
                 key="snap-right"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.15 }}
                 className="h-full rounded-2xl m-3 ml-auto"
                 style={{
@@ -295,13 +309,19 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.94 }}
       >
-        {/* ── Header ────────────────────────────────────────────────────────── */}
+        {/* ── Header — full-width drag (dead zone on left) ──────────────────── */}
         <div
-          className="relative flex items-center px-3 py-2 border-b border-border/20 shrink-0 h-9"
+          className={`relative flex items-center px-3 py-2 border-b border-border/20 shrink-0 h-9 ${isDraggableHeader ? "cursor-grab active:cursor-grabbing" : ""}`}
+          onPointerDown={handleHeaderPointerDown}
+          onPointerMove={handleHeaderPointerMove}
+          onPointerUp={handleHeaderPointerUp}
           onDoubleClick={handleHeaderDoubleClick}
         >
-          {/* Traffic-light + layout indicator */}
-          <div className="flex items-center gap-1.5 z-[62]">
+          {/* Traffic-light cluster + layout switcher — click only, NOT draggable */}
+          <div
+            className="flex items-center gap-1.5 z-[62] shrink-0"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             {/* Red — close */}
             <button
               onClick={() => closeWindow(win.id)}
@@ -329,52 +349,24 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
               <Maximize2 size={7} className="opacity-0 group-hover:opacity-100 text-emerald-900" />
             </button>
 
-            {/* Layout mode indicator pill — shows current layout with color */}
-            <span
-              className="inline-flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide opacity-80"
-              style={{ background: layoutPillBg, color: "rgba(0,0,0,0.75)" }}
-              title={`Layout: ${win.layout}`}
-            >
-              {win.layout === "floating"     && "float"}
-              {win.layout === "fullscreen"   && "full"}
-              {win.layout === "split-left"   && "◀ left"}
-              {win.layout === "split-right"  && "right ▶"}
-            </span>
-          </div>
-
-          {/* Title */}
-          <span
-            className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[40%] pointer-events-none select-none"
-            title="Double-click to toggle fullscreen"
-          >
-            {win.title}
-          </span>
-
-          {/* ── Drag pill + layout menu ───────────────────────────────────── */}
-          <div
-            className={`absolute left-1/2 -translate-x-1/2 top-1 flex items-center justify-center w-10 h-[18px] bg-foreground/8 hover:bg-foreground/15 rounded-full transition-colors z-[60] ${isFloating ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
-            onPointerDown={handlePillPointerDown}
-            onPointerMove={handlePillPointerMove}
-            onPointerUp={handlePillPointerUp}
-          >
+            {/* Layout switcher — replaces the old floating pill, now a dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="flex items-center justify-center w-full h-full rounded-full"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
+                  className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
+                  style={{ background: layoutPillBg, color: "rgba(0,0,0,0.75)" }}
+                  title="Change layout"
                 >
-                  <MoreHorizontal size={11} className="text-foreground/40" />
+                  {layoutLabel}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" sideOffset={8} className="z-[9999] min-w-[160px]">
+              <DropdownMenuContent align="start" sideOffset={8} className="z-[9999] min-w-[160px]">
                 {LAYOUT_OPTIONS.map((opt) => (
                   <DropdownMenuItem
                     key={opt.value}
                     onClick={() => {
                       if (opt.value === "fullscreen" && win.layout !== "fullscreen") enterFullscreen();
                       else if (opt.value !== "fullscreen" && win.layout === "fullscreen") {
-                        // restore then switch
                         prevLayoutRef.current = opt.value;
                         exitFullscreen();
                       } else {
@@ -396,11 +388,22 @@ const WindowFrame = ({ window: win, children }: WindowFrameProps) => {
                   onClick={() => closeWindow(win.id)}
                   className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive"
                 >
-                  <X size={13} /> Close Window <span className="ml-auto text-foreground/30">⌘W</span>
+                  <X size={13} /> Close <span className="ml-auto text-foreground/30">⌘W</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          {/* Title */}
+          <span
+            className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[36%] pointer-events-none select-none"
+            title="Double-click to toggle fullscreen"
+          >
+            {win.title}
+          </span>
+
+          {/* ── Centre pill — just a visual drag hint, no longer the only drag area */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-[11px] w-8 h-1 rounded-full bg-foreground/15 pointer-events-none" />
         </div>
 
         {/* ── Content ──────────────────────────────────────────────────────── */}
