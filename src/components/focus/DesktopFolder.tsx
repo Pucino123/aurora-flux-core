@@ -58,6 +58,8 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   const updateCustomIcon = focusStore.updateDesktopFolderCustomIcon;
   const bgColors = focusStore.desktopFolderBgColors ?? {};
   const updateBgColor = focusStore.updateDesktopFolderBgColor;
+  const titleGaps = focusStore.desktopFolderTitleGaps ?? {};
+  const updateTitleGap = focusStore.updateDesktopFolderTitleGap;
   const systemMode = focusStore.systemMode ?? "focus";
 
   const pos = positionOverride ?? desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };

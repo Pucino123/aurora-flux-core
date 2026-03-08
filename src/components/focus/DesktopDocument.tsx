@@ -68,6 +68,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const bgColor = store.desktopDocBgColors[doc.id] ?? "";
   const customIconUrl = store.desktopDocCustomIcons[doc.id] ?? "";
   const iconColor = store.desktopDocIconColors[doc.id] ?? "";
+  const titleGap = store.desktopDocTitleGaps?.[doc.id] ?? 2;
 
   const isSpreadsheet = doc.type === "spreadsheet";
   const dragging = useRef(false);
