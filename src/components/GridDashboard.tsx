@@ -507,8 +507,13 @@ const GridDashboard = () => {
       <div className="shrink-0 flex items-center justify-center gap-2 py-3 border-t border-border/20" data-tour="pagination-dots"
         style={{ background: "hsl(var(--background)/0.7)", backdropFilter: "blur(12px)" }}>
         <div
-          className="flex items-center gap-1.5 px-3 py-2 rounded-full"
-          style={{ background: "hsl(var(--card)/0.7)", border: "1px solid hsl(var(--border)/0.4)" }}
+          className="flex items-center gap-2 px-4 py-2 rounded-full shadow-lg"
+          style={{
+            background: "hsl(var(--card)/0.85)",
+            border: "1.5px solid hsl(var(--border)/0.5)",
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08)"
+          }}
         >
           {pages.map((p, idx) => (
             <button
@@ -547,10 +552,10 @@ const GridDashboard = () => {
               title={p.name}
               className={`transition-all duration-300 rounded-full ${
                 idx === currentPage
-                  ? "w-5 h-2 bg-primary"
+                  ? "w-6 h-2.5 bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.7)]"
                   : hoverDotIdx === idx && draggingWidgetId
                     ? "w-4 h-3 bg-primary/60 scale-125"
-                    : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
+                    : "w-2.5 h-2.5 bg-foreground/25 hover:bg-foreground/50"
               }`}
             />
           ))}
