@@ -96,46 +96,39 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       if (task) createdTasks.push(task);
     }
     const startHour = new Date().getHours() + 1;
-    const todayTasks = createdTasks.filter((_, i) => i < 3);
-    for (let i = 0; i < todayTasks.length; i++) {
-      const hour = startHour + i;
-      if (hour < 22) await createBlock({ title: todayTasks[i].title, time: `${String(hour).padStart(2, "0")}:00`, duration: "45m", type: "deep", scheduled_date: today, task_id: todayTasks[i].id });
+    for (let i = 0; i < Math.min(createdTasks.length, 3); i++) {
+      const task = createdTasks[i];
+      await createBlock({
+        title: task.title,
+        time: `${String(startHour + i).padStart(2, "0")}:00`,
+        duration: "60 min",
+        type: "focus",
+        task_id: task.id,
+      });
     }
-    setActiveView("canvas");
     setActiveFolder(folder.id);
-    toast.success(`"${folderName}" created with ${createdTasks.length} tasks`);
+    setActiveView("focus");
+    toast.success(`Plan created: ${createdTasks.length} tasks in "${folderName}"`);
   }, [createTask, createFolder, createBlock, setActiveFolder, setActiveView]);
 
-  const handleCreateFolder = useCallback(async (data: { title: string; color: string | null; icon: string; subfolders: string[] }) => {
-    const parent = await createFolder({ title: data.title, type: "project", color: data.color, icon: data.icon });
-    if (parent && data.subfolders.length > 0) {
-      for (const sub of data.subfolders) {
-        const subIcon = suggestIcon(sub);
-        await createFolder({ title: sub, type: "project", parent_id: parent.id, color: data.color, icon: subIcon });
-      }
+  const handleCreateFolder = useCallback(async (data: { title: string; color: string | null; icon: string; subfolders?: string[] }) => {
+    const folder = await createFolder({ title: data.title, type: "project", color: data.color, icon: data.icon });
+    if (folder) {
+      setActiveFolder(folder.id);
+      setShowCreateModal(false);
     }
-    toast.success(t("brain.folder_created"));
-  }, [createFolder]);
+  }, [createFolder, setActiveFolder]);
 
   const effectiveView = billingOpen ? "billing" : activeView;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}
+    <motion.div
       className="relative z-10 flex min-h-screen w-full">
 
-      {/* Sidebar — hidden in Focus Mode */}
-      <motion.div
-        className="hidden md:block"
-        animate={{
-          opacity: isFocusModeActive ? 0 : 1,
-          x: isFocusModeActive ? -20 : 0,
-          pointerEvents: isFocusModeActive ? "none" : "auto",
-        }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-        style={{ pointerEvents: isFocusModeActive ? "none" : undefined }}
-      >
+      {/* Sidebar — smoothly collapses in Focus Mode */}
+      <div className="hidden md:block shrink-0">
         <FluxSidebar visible={sidebarVisible && !isFocusModeActive} onToggle={onToggleSidebar} onRequestCreateFolder={() => setShowCreateModal(true)} />
-      </motion.div>
+      </div>
 
       {/* Center stage */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-[64px] md:pb-0 overflow-hidden">
@@ -149,15 +142,16 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             whileTap={{ scale: 0.94 }}
             className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all duration-200 ${
               controlCenterOpen
-                ? "bg-primary/20 border-primary/40 text-primary shadow-[0_0_12px_hsl(var(--primary)/0.3)]"
-                : "bg-background/60 border-border/30 text-muted-foreground hover:text-foreground hover:bg-background/80 backdrop-blur-md"
+                ? "bg-primary/15 border-primary/40 text-primary"
+                : "bg-background/40 backdrop-blur-md border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60"
             }`}
           >
-            <SlidersHorizontal size={15} />
+            <SlidersHorizontal size={14} />
           </motion.button>
         </div>
 
-        <AnimatePresence mode="wait" initial={false}>
+        {/* View switcher */}
+        <AnimatePresence mode="wait">
           <motion.div
             key={effectiveView}
             initial={{ opacity: 0, y: 12 }}
@@ -166,86 +160,35 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="flex-1 flex flex-col h-full min-h-screen"
           >
-            {effectiveView === "focus" || effectiveView === "stream" ? (
-              <FocusDashboardView />
-            ) : effectiveView === "council" ? (
-              <TheCouncil />
-            ) : effectiveView === "calendar" ? (
-              <FullCalendarView />
-            ) : effectiveView === "tasks" ? (
-              <AITaskManager />
-            ) : effectiveView === "analytics" ? (
-              <AnalyticsView />
-            ) : effectiveView === "projects" ? (
-              <ProjectsOverview />
-            ) : effectiveView === "documents" ? (
-              <DocumentsView />
-            ) : effectiveView === "settings" ? (
-              <SettingsView />
-            ) : (effectiveView as string) === "multitask" ? (
-              <MultitaskingView />
-            ) : (effectiveView as string) === "community" ? (
-              <CommunityBoardView />
-            ) : (effectiveView as string) === "community-admin" ? (
-              <CommunityAdminView />
-            ) : (effectiveView as string) === "billing" ? (
-              <BillingView />
-            ) : (effectiveView as string) === "crm" ? (
-              <CRMPage />
-            ) : (
-              <Canvas />
-            )}
+            {effectiveView === "focus"                       && <FocusDashboardView />}
+            {effectiveView === "calendar"                    && <FullCalendarView />}
+            {effectiveView === "tasks"                       && <AITaskManager />}
+            {effectiveView === "analytics"                   && <AnalyticsView />}
+            {effectiveView === "projects"                    && <ProjectsOverview />}
+            {effectiveView === "documents"                   && <DocumentsView />}
+            {effectiveView === "settings"                    && <SettingsView />}
+            {effectiveView === "council"                     && <TheCouncil />}
+            {effectiveView === "canvas"                      && <Canvas />}
+            {effectiveView === "stream"                      && <GridDashboard />}
+            {(effectiveView as string) === "multitask"       && <MultitaskingView />}
+            {(effectiveView as string) === "community"       && <CommunityBoardView />}
+            {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
+            {(effectiveView as string) === "crm"             && <CRMPage />}
+            {(effectiveView as string) === "inbox"           && <CommHub />}
+            {effectiveView === "billing"                     && <BillingView />}
+            {!VIEWS_WITHOUT_SCHEDULER.includes(effectiveView as string) && <Scheduler />}
           </motion.div>
         </AnimatePresence>
+
+        {/* Mobile nav */}
+        <MobileNav />
       </div>
-
-      {/* Right scheduler */}
-      {!VIEWS_WITHOUT_SCHEDULER.includes(effectiveView) && (
-        <div className="hidden lg:block">
-          <motion.aside initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
-            className="w-[300px] min-w-[300px] glass-panel border-l border-white/30">
-            <Scheduler />
-          </motion.aside>
-        </div>
-      )}
-
-      <MobileNav />
-      {effectiveView !== "focus" && effectiveView !== "stream" && <CommHub />}
 
       {/* Global Modals */}
       <UpgradeModal />
       <OutOfSparksModal />
       <OnboardingFlow />
       <CreateFolderModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onCreate={handleCreateFolder} />
-
-      {/* Focus Mode exit button — floats at top when active */}
-      <AnimatePresence>
-        {isFocusModeActive && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ type: "spring", stiffness: 500, damping: 36 }}
-            className="fixed top-3 left-1/2 -translate-x-1/2 z-[9480] flex items-center gap-2 px-4 py-2 rounded-full"
-            style={{
-              background: "hsl(270 76% 65% / 0.15)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid hsl(270 76% 65% / 0.35)",
-              boxShadow: "0 4px 24px hsl(270 76% 65% / 0.2)",
-            }}
-          >
-            <Focus size={13} className="text-violet-400" />
-            <span className="text-xs font-medium text-violet-300">Focus Mode</span>
-            <button
-              onClick={disableFocusMode}
-              className="ml-2 text-[11px] text-violet-400/70 hover:text-violet-200 transition-colors border-l border-violet-500/30 pl-2"
-            >
-              Exit
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Control Center */}
       <ControlCenter open={controlCenterOpen} onClose={() => setControlCenterOpen(false)} />

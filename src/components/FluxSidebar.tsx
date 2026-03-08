@@ -1,7 +1,7 @@
 import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase, Settings } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import BrainTree from "./BrainTree";
 import NotificationBell from "./NotificationBell";
@@ -100,191 +100,199 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
 
   return (
     <>
+      {/* Floating re-open trigger when sidebar is hidden */}
       {!visible && (
-        <button onClick={onToggle} className="fixed top-4 left-4 z-50 p-2 rounded-lg glass-panel-hover">
+        <motion.button
+          onClick={onToggle}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -8 }}
+          transition={{ duration: 0.2 }}
+          className="fixed top-4 left-4 z-50 p-2 rounded-lg glass-panel-hover"
+        >
           <PanelLeft size={18} className="text-muted-foreground" />
-        </button>
+        </motion.button>
       )}
 
-      <AnimatePresence>
-        {visible && (
-          <motion.aside
-            initial={{ x: -260, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -260, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="w-[260px] min-w-[260px] h-screen sidebar-apple flex flex-col py-3 z-30"
+      {/* Sidebar — width animates smoothly to 0 when hidden */}
+      <motion.aside
+        animate={{
+          width: visible ? 260 : 0,
+          opacity: visible ? 1 : 0,
+          x: visible ? 0 : -20,
+        }}
+        transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+        style={{ overflow: "hidden", minWidth: 0 }}
+        className="h-screen sidebar-apple flex flex-col py-3 z-30 shrink-0"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 mb-2">
+          <h1 className="text-base font-semibold text-foreground">{t("app.name")}</h1>
+          <div className="flex items-center gap-0.5">
+            <NotificationBell />
+            <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="p-1.5 rounded-lg hover:bg-foreground/[0.04] transition-colors duration-150 text-muted-foreground" title="Toggle theme">
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button onClick={onToggle} className="p-1.5 rounded-lg hover:bg-foreground/[0.04] transition-colors duration-150 text-muted-foreground">
+              <PanelLeftClose size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Sparks pill — low-balance warning when < 5 */}
+        <div className="px-3 mb-2">
+          <button
+            onClick={openBilling}
+            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-colors ${
+              sparksBalance < 5
+                ? "bg-destructive/8 border-destructive/40 hover:bg-destructive/12 animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]"
+                : "bg-primary/8 border-primary/15 hover:bg-primary/12"
+            }`}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 mb-2">
-              <h1 className="text-base font-semibold text-foreground">{t("app.name")}</h1>
-              <div className="flex items-center gap-0.5">
-                <NotificationBell />
-                <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="p-1.5 rounded-lg hover:bg-foreground/[0.04] transition-colors duration-150 text-muted-foreground" title="Toggle theme">
-                  {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-                </button>
-                <button onClick={onToggle} className="p-1.5 rounded-lg hover:bg-foreground/[0.04] transition-colors duration-150 text-muted-foreground">
-                  <PanelLeftClose size={15} />
-                </button>
-              </div>
-            </div>
+            <Zap size={12} className={`shrink-0 ${sparksBalance < 5 ? "text-destructive" : "text-primary"}`} />
+            <span className={`text-xs font-semibold flex-1 text-left ${sparksBalance < 5 ? "text-destructive" : "text-primary"}`}>
+              {sparksBalance < 5 ? `⚠ Only ${sparksBalance} Sparks left!` : `${sparksBalance} Sparks ✨`}
+            </span>
+            <CreditCard size={11} className="text-muted-foreground" />
+          </button>
+        </div>
 
-            {/* Sparks pill — low-balance warning when < 5 */}
-            <div className="px-3 mb-2">
-              <button
-                onClick={openBilling}
-                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-colors ${
-                  sparksBalance < 5
-                    ? "bg-destructive/8 border-destructive/40 hover:bg-destructive/12 animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]"
-                    : "bg-primary/8 border-primary/15 hover:bg-primary/12"
-                }`}
-              >
-                <Zap size={12} className={`shrink-0 ${sparksBalance < 5 ? "text-destructive" : "text-primary"}`} />
-                <span className={`text-xs font-semibold flex-1 text-left ${sparksBalance < 5 ? "text-destructive" : "text-primary"}`}>
-                  {sparksBalance < 5 ? `⚠ Only ${sparksBalance} Sparks left!` : `${sparksBalance} Sparks ✨`}
-                </span>
-                <CreditCard size={11} className="text-muted-foreground" />
-              </button>
-            </div>
+        {/* Nav links */}
+        <div className="px-2 space-y-0.5">
+          <button
+            onClick={() => nav("focus")}
+            className={`sidebar-item w-full ${isHomeActive ? "sidebar-item-active" : ""}`}
+          >
+            <Home size={18} className="shrink-0" />
+            <span>{t("sidebar.home")}</span>
+          </button>
 
-            {/* Nav links */}
-            <div className="px-2 space-y-0.5">
-              <button
-                onClick={() => nav("focus")}
-                className={`sidebar-item w-full ${isHomeActive ? "sidebar-item-active" : ""}`}
-              >
-                <Home size={18} className="shrink-0" />
-                <span>{t("sidebar.home")}</span>
-              </button>
+          <button
+            onClick={() => nav("calendar")}
+            className={`sidebar-item w-full ${activeView === "calendar" ? "sidebar-item-active" : ""}`}
+          >
+            <CalendarDays size={18} className="shrink-0" />
+            <span>Calendar</span>
+          </button>
 
-              <button
-                onClick={() => nav("calendar")}
-                className={`sidebar-item w-full ${activeView === "calendar" ? "sidebar-item-active" : ""}`}
-              >
-                <CalendarDays size={18} className="shrink-0" />
-                <span>Calendar</span>
-              </button>
+          <button
+            onClick={() => nav("tasks")}
+            className={`sidebar-item w-full ${activeView === "tasks" ? "sidebar-item-active" : ""}`}
+          >
+            <ListTodo size={18} className="shrink-0" />
+            <span>Tasks</span>
+          </button>
 
-              <button
-                onClick={() => nav("tasks")}
-                className={`sidebar-item w-full ${activeView === "tasks" ? "sidebar-item-active" : ""}`}
-              >
-                <ListTodo size={18} className="shrink-0" />
-                <span>Tasks</span>
-              </button>
+          {/* CRM */}
+          <button
+            onClick={() => nav("crm")}
+            className={`sidebar-item w-full ${activeView === ("crm" as any) ? "sidebar-item-active" : ""}`}
+          >
+            <Briefcase size={18} className="shrink-0" />
+            <span>CRM</span>
+          </button>
 
-              {/* CRM */}
-              <button
-                onClick={() => nav("crm")}
-                className={`sidebar-item w-full ${activeView === ("crm" as any) ? "sidebar-item-active" : ""}`}
-              >
-                <Briefcase size={18} className="shrink-0" />
-                <span>CRM</span>
-              </button>
-
-              {/* Council */}
-              <button
-                onClick={() => { nav("council"); setFilterPersona(null); }}
-                className={`sidebar-item w-full ${activeView === "council" ? "sidebar-item-active" : ""}`}
-                data-tour="council-nav"
-              >
-                <Users size={18} className="shrink-0" />
-                <span className="flex-1 text-left">{t("council.nav")}</span>
-                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  {PERSONAS.map((p) => {
-                    const initials = t(p.name).slice(0, 2).toUpperCase();
-                    const isActive = filterPersona === p.key;
-                    return (
-                      <div key={p.key} className="relative group/avatar">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); nav("council"); setFilterPersona(isActive ? null : p.key); }}
-                          className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-200 ${isActive ? "scale-115" : "opacity-50 hover:opacity-90 hover:scale-105"}`}
-                          style={{
-                            backgroundColor: p.color,
-                            color: "#fff",
-                            boxShadow: isActive ? `0 0 0 2.5px ${p.color}80, 0 0 8px ${p.color}60` : "none",
-                          }}
-                        >
-                          {initials}
-                        </button>
-                        {/* Tooltip */}
-                        <div className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150 whitespace-nowrap">
-                          <div className="rounded-lg px-2.5 py-1.5 text-center shadow-xl"
-                            style={{ background: "rgba(12,10,20,0.88)", backdropFilter: "blur(16px)", border: `1px solid ${p.color}40` }}>
-                            <div className="text-[11px] font-semibold text-white leading-tight">{t(p.name)}</div>
-                            <div className="text-[9px] mt-0.5" style={{ color: p.color }}>{p.subtitle}</div>
-                          </div>
-                          {/* Arrow */}
-                          <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(12,10,20,0.88)", border: `0 0 1px 1px ${p.color}40` }} />
-                        </div>
+          {/* Council */}
+          <button
+            onClick={() => { nav("council"); setFilterPersona(null); }}
+            className={`sidebar-item w-full ${activeView === "council" ? "sidebar-item-active" : ""}`}
+            data-tour="council-nav"
+          >
+            <Users size={18} className="shrink-0" />
+            <span className="flex-1 text-left">{t("council.nav")}</span>
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              {PERSONAS.map((p) => {
+                const initials = t(p.name).slice(0, 2).toUpperCase();
+                const isActive = filterPersona === p.key;
+                return (
+                  <div key={p.key} className="relative group/avatar">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); nav("council"); setFilterPersona(isActive ? null : p.key); }}
+                      className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-200 ${isActive ? "scale-115" : "opacity-50 hover:opacity-90 hover:scale-105"}`}
+                      style={{
+                        backgroundColor: p.color,
+                        color: "#fff",
+                        boxShadow: isActive ? `0 0 0 2.5px ${p.color}80, 0 0 8px ${p.color}60` : "none",
+                      }}
+                    >
+                      {initials}
+                    </button>
+                    {/* Tooltip */}
+                    <div className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150 whitespace-nowrap">
+                      <div className="rounded-lg px-2.5 py-1.5 text-center shadow-xl"
+                        style={{ background: "rgba(12,10,20,0.88)", backdropFilter: "blur(16px)", border: `1px solid ${p.color}40` }}>
+                        <div className="text-[11px] font-semibold text-white leading-tight">{t(p.name)}</div>
+                        <div className="text-[9px] mt-0.5" style={{ color: p.color }}>{p.subtitle}</div>
                       </div>
-                    );
-                  })}
-                </div>
-              </button>
-
-              {/* Workspace (Split-View) */}
-              <button
-                onClick={() => nav("multitask")}
-                className={`sidebar-item w-full ${activeView === ("multitask" as any) ? "sidebar-item-active" : ""}`}
-                data-tour="workspace-nav"
-              >
-                <Layers size={18} className="shrink-0" />
-                <span>Workspace</span>
-              </button>
-
-              {/* Community Board */}
-              <button
-                onClick={() => nav("community")}
-                className={`sidebar-item w-full ${activeView === ("community" as any) ? "sidebar-item-active" : ""}`}
-              >
-                <Grid size={18} className="shrink-0" />
-                <span>Community Board</span>
-              </button>
-
-              {/* Community Admin — admin only */}
-              {isAdmin && (
-                <button
-                  onClick={() => nav("community-admin")}
-                  className={`sidebar-item w-full ${activeView === ("community-admin" as any) ? "sidebar-item-active" : ""}`}
-                >
-                  <ShieldCheck size={18} className="shrink-0" />
-                  <span>Community Admin</span>
-                </button>
-              )}
+                      {/* Arrow */}
+                      <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(12,10,20,0.88)", border: `0 0 1px 1px ${p.color}40` }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          </button>
 
-            <div className="sidebar-separator" />
+          {/* Workspace (Split-View) */}
+          <button
+            onClick={() => nav("multitask")}
+            className={`sidebar-item w-full ${activeView === ("multitask" as any) ? "sidebar-item-active" : ""}`}
+            data-tour="workspace-nav"
+          >
+            <Layers size={18} className="shrink-0" />
+            <span>Workspace</span>
+          </button>
 
-            {/* Folder tree */}
-            <nav className="flex-1 overflow-y-auto min-h-0 px-2">
-              <BrainTree onRequestCreateFolder={onRequestCreateFolder} />
-            </nav>
+          {/* Community Board */}
+          <button
+            onClick={() => nav("community")}
+            className={`sidebar-item w-full ${activeView === ("community" as any) ? "sidebar-item-active" : ""}`}
+          >
+            <Grid size={18} className="shrink-0" />
+            <span>Community Board</span>
+          </button>
 
-            <div className="sidebar-separator" />
+          {/* Community Admin — admin only */}
+          {isAdmin && (
+            <button
+              onClick={() => nav("community-admin")}
+              className={`sidebar-item w-full ${activeView === ("community-admin" as any) ? "sidebar-item-active" : ""}`}
+            >
+              <ShieldCheck size={18} className="shrink-0" />
+              <span>Community Admin</span>
+            </button>
+          )}
+        </div>
 
-            {/* Billing */}
-            <div className="px-2 pb-1 space-y-0.5">
-              <button
-                onClick={openBilling}
-                className={`sidebar-item w-full ${(activeView as string) === "billing" ? "sidebar-item-active" : ""}`}
-              >
-                <CreditCard size={16} className="shrink-0" />
-                <span>Billing & Plans</span>
-              </button>
-              <button
-                onClick={() => window.dispatchEvent(new Event("open-settings"))}
-                className="sidebar-item w-full"
-              >
-                <Settings size={16} className="shrink-0" />
-                <span>Settings</span>
-              </button>
-            </div>
+        <div className="sidebar-separator" />
 
-            <UserSection />
-          </motion.aside>
-        )}
-      </AnimatePresence>
+        {/* Folder tree */}
+        <nav className="flex-1 overflow-y-auto min-h-0 px-2">
+          <BrainTree onRequestCreateFolder={onRequestCreateFolder} />
+        </nav>
+
+        <div className="sidebar-separator" />
+
+        {/* Billing */}
+        <div className="px-2 pb-1 space-y-0.5">
+          <button
+            onClick={openBilling}
+            className={`sidebar-item w-full ${(activeView as string) === "billing" ? "sidebar-item-active" : ""}`}
+          >
+            <CreditCard size={16} className="shrink-0" />
+            <span>Billing & Plans</span>
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new Event("open-settings"))}
+            className="sidebar-item w-full"
+          >
+            <Settings size={16} className="shrink-0" />
+            <span>Settings</span>
+          </button>
+        </div>
+
+        <UserSection />
+      </motion.aside>
     </>
   );
 };
