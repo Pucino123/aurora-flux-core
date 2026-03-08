@@ -79,8 +79,8 @@ const BaymaxFace: React.FC<BaymaxFaceProps> = ({
       rightRotate = -20;
       leftEyeCX  = cx - baseSpread * 0.88;
       rightEyeCX = cx + baseSpread * 0.88;
-      // Frown: endpoints low, control point well above → arc sweeps upward = sad mouth
-      barPath = `M ${leftEyeCX} ${barY + S * 0.12} Q ${cx} ${barY - S * 0.08} ${rightEyeCX} ${barY + S * 0.12}`;
+      // Frown in SVG: endpoints at eye-level, control point BELOW → arc sags down = sad drooping mouth
+      barPath = `M ${leftEyeCX} ${barY} Q ${cx} ${barY + S * 0.18} ${rightEyeCX} ${barY}`;
       break;
     }
     case "straight":
