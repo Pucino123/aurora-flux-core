@@ -229,7 +229,7 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
                     const isDragging = draggedId === task.id;
 
                     return (
-                      <motion.div
+                    <motion.div
                         key={task.id}
                         layout
                         initial={{ opacity: 0, y: 12, scale: 0.96 }}
@@ -241,13 +241,9 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
                           transition: { delay: i * 0.04 },
                         }}
                         exit={{ opacity: 0, scale: 0.92, y: -6, transition: { duration: 0.2 } }}
-                        draggable
-                        onDragStart={(e: React.DragEvent) => {
-                          handleDragStart(task.id);
-                          e.dataTransfer.effectAllowed = "move";
-                        }}
-                        onDragEnd={handleDragEnd}
-                        className="group relative rounded-xl p-3 cursor-grab active:cursor-grabbing border transition-all duration-200"
+                        className="group relative rounded-xl p-3 cursor-grab active:cursor-grabbing border transition-all duration-200 [&>*]:pointer-events-auto"
+                        // Use a wrapper div below for native HTML5 drag
+                      >
                         style={{
                           background: isDragging
                             ? "rgba(255,255,255,0.08)"
