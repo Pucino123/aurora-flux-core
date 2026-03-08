@@ -52,7 +52,7 @@ const BG_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange }: DesktopDocumentProps) => {
+const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage }: DesktopDocumentProps) => {
   const { user } = useAuth();
   const store = useFocusStore();
   const { folders, createBlock } = useFlux();
