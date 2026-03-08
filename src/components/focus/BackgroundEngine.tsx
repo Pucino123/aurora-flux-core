@@ -337,11 +337,13 @@ const BackgroundEngine = ({
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => { setMousePos({ x: e.clientX, y: e.clientY }); onMouseMove?.(e); }, [onMouseMove]);
 
-  const isCustom = currentBackground.startsWith("custom-");
-  const isCustomGrad = currentBackground.startsWith("custom-grad-");
+  const isSolid = currentBackground.startsWith("solid:");
+  const solidColor = isSolid ? currentBackground.slice(6) : null;
+  const isCustom = !isSolid && currentBackground.startsWith("custom-");
+  const isCustomGrad = !isSolid && currentBackground.startsWith("custom-grad-");
   const customGrad = isCustomGrad ? customGrads.find(g => g.id === currentBackground) : null;
   const customBg = isCustom && !isCustomGrad ? customBgs.find(b => b.id === currentBackground) : null;
-  const builtinBg = !isCustom ? BACKGROUNDS.find(b => b.id === currentBackground) || BACKGROUNDS[0] : null;
+  const builtinBg = !isCustom && !isSolid ? BACKGROUNDS.find(b => b.id === currentBackground) || BACKGROUNDS[0] : null;
 
   const filteredBgs = selectedCategory === "Custom" ? [] : selectedCategory ? BACKGROUNDS.filter(b => b.category === selectedCategory) : BACKGROUNDS;
 
