@@ -1740,18 +1740,6 @@ const FocusContent = () => {
             </button>
             {/* Divider */}
             <div className="w-px h-4 bg-white/20" />
-            {/* Thumbnail grid button */}
-            <button
-              onClick={() => setShowThumbGrid(v => !v)}
-              onPointerDown={e => e.stopPropagation()}
-              className="flex items-center justify-center transition-colors duration-150"
-              style={{ color: showThumbGrid ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.4)" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
-              onMouseLeave={e => (e.currentTarget.style.color = showThumbGrid ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.4)")}
-              title="All pages overview"
-            >
-              <LayoutGrid size={13} strokeWidth={2} />
-            </button>
         </motion.div>
       )}
 
@@ -1915,116 +1903,6 @@ const FocusContent = () => {
           </motion.div>
         </>
       )}
-
-      {/* ── Thumbnail Grid Overlay (⊞ button in pill) ── */}
-      <AnimatePresence>
-        {showThumbGrid && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              className="fixed inset-0 z-[9990]"
-              style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" }}
-              onClick={() => setShowThumbGrid(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.94 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 14, scale: 0.96 }}
-              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="fixed z-[9991] bottom-32 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4"
-              style={{ maxWidth: "min(95vw, 800px)", width: "max-content" }}
-            >
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">All Pages</p>
-              <div className="flex flex-wrap justify-center gap-3 px-4">
-                {dashboardPages.map((page, i) => {
-                  const isActive = i === activePageIndex;
-                  const thumb = pageThumbnails[page.id];
-                  const widgets = page.activeWidgets ?? activeWidgets;
-                  const WC: Record<string, string> = { clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa", notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c", quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc", routine: "#4ade80" };
-                  const WL: Record<string, string> = { clock: "🕐", timer: "⏱", music: "🎵", planner: "📋", notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️", quote: "💬", breathing: "🫁", council: "🤝", aura: "✨", routine: "🔄" };
-                  const fCount = (page.visibleFolderIds?.length ?? 0) + (page.pinnedFolderIds?.length ?? 0);
-                  const dCount = (page.visibleDocIds?.length ?? 0) + (page.pinnedDocIds?.length ?? 0);
-                  return (
-                    <motion.button
-                      key={page.id}
-                      onClick={() => { goToPage(i); setShowThumbGrid(false); }}
-                      initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.18, delay: i * 0.03 }}
-                      whileHover={{ scale: 1.06, y: -3 }}
-                      whileTap={{ scale: 0.97 }}
-                      className="flex flex-col items-center gap-1.5 group"
-                    >
-                      <div
-                        className="relative rounded-2xl overflow-hidden"
-                        style={{
-                          width: 140, height: 88,
-                          border: isActive ? "2px solid rgba(255,255,255,0.75)" : "2px solid rgba(255,255,255,0.1)",
-                          boxShadow: isActive
-                            ? "0 0 0 3px rgba(255,255,255,0.12), 0 12px 40px rgba(0,0,0,0.65)"
-                            : "0 6px 24px rgba(0,0,0,0.45)",
-                        }}
-                      >
-                        {thumb ? (
-                          <img src={thumb} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <>
-                            <div className="absolute inset-0" style={{ background: page.background ? "rgba(30,20,60,0.85)" : "rgba(20,15,40,0.8)" }} />
-                            <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "11px 11px" }} />
-                            <div className="absolute inset-0 p-1.5 grid grid-cols-4 gap-0.5 content-start">
-                              {widgets.slice(0, 8).map((w) => (
-                                <div key={w} className="flex items-center justify-center rounded" style={{ height: 18, background: `${WC[w] || "#6b7280"}1e`, border: `1px solid ${WC[w] || "#6b7280"}33` }}>
-                                  <span style={{ fontSize: 8 }}>{WL[w] || "□"}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                        {isActive && <div className="absolute inset-0 rounded-xl ring-2 ring-white/50" />}
-                      </div>
-                      <div className="text-center">
-                        <p className="text-[11px] font-semibold text-white/80 group-hover:text-white transition-colors leading-tight">{page.label || `Page ${i + 1}`}</p>
-                        <p className="text-[9px] text-white/30">
-                          {widgets.length}w
-                          {fCount > 0 ? ` · ${fCount}📁` : ""}
-                          {dCount > 0 ? ` · ${dCount}📄` : ""}
-                        </p>
-                      </div>
-                      {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/60" />}
-                    </motion.button>
-                  );
-                })}
-                {/* Add page tile */}
-                <motion.button
-                  onClick={() => { addPage(); setShowThumbGrid(false); }}
-                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.18, delay: dashboardPages.length * 0.03 }}
-                  whileHover={{ scale: 1.06, y: -3 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex flex-col items-center gap-1.5 group"
-                >
-                  <div
-                    className="flex items-center justify-center rounded-2xl"
-                    style={{
-                      width: 140, height: 88,
-                      border: "2px dashed rgba(255,255,255,0.15)",
-                      background: "rgba(255,255,255,0.03)",
-                    }}
-                  >
-                    <Plus size={24} className="text-white/25 group-hover:text-white/60 transition-colors" strokeWidth={1.5} />
-                  </div>
-                  <p className="text-[11px] text-white/35 group-hover:text-white/60 transition-colors">New page</p>
-                </motion.button>
-              </div>
-              <button onClick={() => setShowThumbGrid(false)} className="text-[10px] text-white/25 hover:text-white/50 transition-colors mt-1">
-                Click anywhere to close · Esc to dismiss
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
       {/* ── Keyboard Shortcuts Cheat Sheet (Cmd+?) ── */}
       <AnimatePresence>
