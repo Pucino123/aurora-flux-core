@@ -966,6 +966,13 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Show onboarding tour for first-time users
+  useEffect(() => {
+    if (localStorage.getItem("boardroom_tour_done")) return;
+    const timer = setTimeout(() => setShowTour(true), 600);
+    return () => clearTimeout(timer);
+  }, []);
+
   const getConsensusLabel = () => {
     if (avgRing >= 70) return { label: "Strong Consensus — Proceed", color: "#34d399" };
     if (avgRing >= 40) return { label: "Mixed Opinions — Proceed with Caution", color: "#fbbf24" };
