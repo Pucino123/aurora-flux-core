@@ -25,6 +25,8 @@ interface DesktopFolderProps {
   allPages?: { id: string; label: string; index: number }[];
   currentPageIndex?: number;
   onMoveToPage?: (folderId: string, targetPageIndex: number) => void;
+  isPinned?: boolean;
+  onTogglePin?: (folderId: string) => void;
 }
 
 const FOLDER_COLORS = [

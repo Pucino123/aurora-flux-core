@@ -28,6 +28,8 @@ interface DesktopDocumentProps {
   allPages?: { id: string; label: string; index: number }[];
   currentPageIndex?: number;
   onMoveToPage?: (docId: string, targetPageIndex: number) => void;
+  isPinned?: boolean;
+  onTogglePin?: (docId: string) => void;
 }
 
 const ICON_COLORS = [
