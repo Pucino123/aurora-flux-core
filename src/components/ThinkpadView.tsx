@@ -283,12 +283,12 @@ const IdeaCanvas = ({
             onMouseDown={(e) => e.stopPropagation()}
           />
         )}
-        <Background color="rgba(255,255,255,0.06)" gap={28} size={1} />
+        <Background color={isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)"} gap={28} size={1} />
         {/* Hide default Controls — we use our own toolbar */}
         <MiniMap
-          style={{ background: "rgba(15,18,30,0.95)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: "14px", cursor: "pointer" }}
+          style={{ background: isLight ? "rgba(240,242,250,0.95)" : "rgba(15,18,30,0.95)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: "14px", cursor: "pointer" }}
           nodeColor={(n) => markedNodes.has(n.id) ? "#3b82f6" : (ICONS.find((i) => i.key === (n.data as IdeaNodeData).iconKey)?.color ?? "#6366f1")}
-          maskColor="rgba(0,0,0,0.5)"
+          maskColor={isLight ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"}
           pannable
           zoomable
         />
