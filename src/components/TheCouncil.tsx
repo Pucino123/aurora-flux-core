@@ -856,7 +856,7 @@ const TheCouncil = () => {
             </AnimatePresence>
           </div>
         )}
-        </> {/* end activeTab === "council" */}
+        </>
       </div>
 
       {/* Persona Profile Modal */}
