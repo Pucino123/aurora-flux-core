@@ -1740,18 +1740,6 @@ const FocusContent = () => {
             </button>
             {/* Divider */}
             <div className="w-px h-4 bg-white/20" />
-            {/* Thumbnail grid button */}
-            <button
-              onClick={() => setShowThumbGrid(v => !v)}
-              onPointerDown={e => e.stopPropagation()}
-              className="flex items-center justify-center transition-colors duration-150"
-              style={{ color: showThumbGrid ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.4)" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,1)")}
-              onMouseLeave={e => (e.currentTarget.style.color = showThumbGrid ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.4)")}
-              title="All pages overview"
-            >
-              <LayoutGrid size={13} strokeWidth={2} />
-            </button>
         </motion.div>
       )}
 
