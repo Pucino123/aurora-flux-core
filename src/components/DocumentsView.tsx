@@ -6,9 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import DocumentView from "./documents/DocumentView";
 import { useFlux } from "@/context/FluxContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { useTrash } from "@/context/TrashContext";
 
 const DocumentsView = () => {
-  const { documents, createDocument, updateDocument, removeDocument, loading } = useDocuments();
+  const { moveToTrash } = useTrash();
+  const { documents, createDocument, updateDocument, removeDocument, loading } = useDocuments(undefined, moveToTrash);
   const { pendingDocumentId, setPendingDocumentId, setActiveView } = useFlux();
   const { openInWorkspace } = useWorkspace();
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
