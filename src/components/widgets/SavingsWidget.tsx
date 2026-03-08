@@ -279,6 +279,41 @@ const SavingsWidget = () => {
         )}
       </AnimatePresence>
 
+      {/* Overall progress overview */}
+      {!loading && goals.length > 0 && (() => {
+        const totalCurrent = goals.reduce((s, g) => s + g.current, 0);
+        const totalTarget  = goals.reduce((s, g) => s + g.target, 0);
+        const overallPct   = totalTarget > 0 ? Math.min((totalCurrent / totalTarget) * 100, 100) : 0;
+        const isGreat      = overallPct >= 80;
+        return (
+          <div className="shrink-0 px-1">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] text-white/30 uppercase tracking-wider">Overall</span>
+              <div className="flex items-center gap-1.5">
+                {isGreat && (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-[9px] text-emerald-300 font-medium"
+                  >
+                    ✨ Great progress!
+                  </motion.span>
+                )}
+                <span className="text-[10px] font-bold text-white/60">{Math.round(overallPct)}%</span>
+              </div>
+            </div>
+            <div className="h-1 rounded-full bg-white/8 overflow-hidden">
+              <motion.div
+                className={`h-full rounded-full bg-gradient-to-r ${isGreat ? "from-emerald-400 to-teal-300" : "from-violet-400 to-blue-400"}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${overallPct}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Loading skeleton */}
       {loading ? (
         <div className="flex-1 space-y-2">
