@@ -775,6 +775,7 @@
 #root,
 body > div,
 [data-widget-id],
+[data-canvas-root],
 nav, aside, header,
 .focus-canvas,
 .dashboard-canvas {
