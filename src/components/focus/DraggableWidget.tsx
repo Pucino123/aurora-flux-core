@@ -139,6 +139,9 @@ const DraggableWidget = ({
   };
 
   const dragging = useRef(false);
+  const dragCancelled = useRef(false); // set true when drag started on text/editable
+  const dragStartPos = useRef({ x: 0, y: 0 }); // for threshold detection
+  const DRAG_THRESHOLD = 6; // px — must move this far before drag activates
   const offset = useRef({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [showOpacity, setShowOpacity] = useState(false);
@@ -157,10 +160,26 @@ const DraggableWidget = ({
   posRef.current = pos;
 
   const onPointerDownDrag = useCallback((e: React.PointerEvent) => {
+    // Don't initiate drag if the event target is inside a text-editable element
+    const target = e.target as HTMLElement;
+    const isTextEditable =
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable ||
+      !!target.closest("[contenteditable='true']") ||
+      !!target.closest("input, textarea, select");
+    if (isTextEditable) return;
+
+    // Don't start a drag if the user is currently selecting text inside the widget
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) return;
+
     e.stopPropagation();
-    dragging.current = true;
-    setIsDragging(true);
+    dragCancelled.current = false;
+    dragging.current = true; // tentative — confirmed after threshold
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
     offset.current = { x: e.clientX - posRef.current.x, y: e.clientY - posRef.current.y };
+    // Don't set isDragging yet — wait for threshold
   }, []);
 
   const { onPointerDownResize } = useResizable({
@@ -173,23 +192,28 @@ const DraggableWidget = ({
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
-      if (dragging.current) {
-        e.preventDefault();
-        const nx = e.clientX - offset.current.x;
-        const ny = e.clientY - offset.current.y;
-        updateWidgetPosition(id, { x: nx, y: ny });
-      }
+      if (!dragging.current || dragCancelled.current) return;
+      const dx = e.clientX - dragStartPos.current.x;
+      const dy = e.clientY - dragStartPos.current.y;
+      // Only activate drag after exceeding threshold
+      if (!isDragging && Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
+      e.preventDefault();
+      if (!isDragging) setIsDragging(true);
+      const nx = e.clientX - offset.current.x;
+      const ny = e.clientY - offset.current.y;
+      updateWidgetPosition(id, { x: nx, y: ny });
     };
 
     const onUp = () => {
       if (dragging.current) {
-        if (isBuildMode) {
+        if (isDragging && isBuildMode) {
           updateWidgetPosition(id, {
             x: Math.round(posRef.current.x / GRID) * GRID,
             y: Math.round(posRef.current.y / GRID) * GRID,
           });
         }
         dragging.current = false;
+        dragCancelled.current = false;
         setIsDragging(false);
       }
     };
@@ -200,7 +224,7 @@ const DraggableWidget = ({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [id, isBuildMode, updateWidgetPosition]);
+  }, [id, isBuildMode, isDragging, updateWidgetPosition]);
 
   // Compute styled background
   const hasCustomBg = !!widgetStyle.backgroundColor;
