@@ -863,6 +863,7 @@ const FocusContent = () => {
   }, [refetchDesktopDocs]);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
+  const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showDocPicker, setShowDocPicker] = useState(false);
