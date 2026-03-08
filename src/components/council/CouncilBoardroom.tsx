@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, BarChart2, Send, Loader2, Share2, X, MessageSquare, TrendingUp, AlertTriangle, Lightbulb, Star
+  Sparkles, BarChart2, Send, Loader2, Share2, X, MessageSquare, TrendingUp, AlertTriangle, Lightbulb, Star, Reply
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -76,30 +76,42 @@ const PERSONAS: Persona[] = [
   },
 ];
 
-const MOCK_RESPONSES: Record<string, { analysis: string; question: string }> = {
+const MOCK_RESPONSES: Record<string, { analysis: string; question: string; confidence: number }> = {
   elena: {
     analysis: "The logistics check out — foot traffic analysis shows strong potential in urban eco-districts. Your supply chain for fair-trade sourcing is viable at scale. However, I'd recommend piloting with a pop-up before committing to a lease. Focus on unit economics first: your target of 200 cups/day at $6 average means $1,200/day revenue, which is achievable.",
     question: "**Have you modeled your break-even point at different occupancy rates?**",
+    confidence: 85,
   },
   helen: {
     analysis: "I have to build on Elena's optimism here — the positioning opportunity is real. 'Eco-friendly coffee' is becoming mainstream, which is both an opportunity and a threat. You need a differentiated brand story beyond just the eco angle. Think about rituals, community, and the emotional journey. I'd advise against the term 'eco-friendly' — it's overused. Instead, lead with *radical transparency*.",
     question: "**What is the one sentence that will make a customer choose you over a $6 Starbucks oat latte?**",
+    confidence: 60,
   },
   anton: {
-    analysis: "Let me be the one to say what no one wants to hear. You've calculated the monthly loan, but you've completely left out insurance, staff churn, and depreciation on equipment. That's a massive hidden cost structure. Also, the eco-premium market is increasingly competitive — Blank Street, Bluestone Lane, and a dozen VC-funded chains are targeting the exact same customer. What's your moat?",
+    analysis: "Let me be the one to say what no one wants to hear. You've calculated the monthly loan, but you've completely left out insurance, staff churn, and depreciation on equipment. That's a massive hidden cost structure. Also, the eco-premium market is increasingly competitive. What's your moat? I disagree with Elena's rosy unit economics — those numbers assume near-full occupancy.",
     question: "**Have you calculated your 12-month burn rate assuming 40% below projected revenue?**",
+    confidence: 30,
   },
   margot: {
-    analysis: "This idea has genuine transformative potential — and I love that. An eco-coffee shop is not just a business, it's a community node. If you design it right, this becomes a gathering point for sustainable entrepreneurs, creators, and advocates. Pair it with a monthly speaker series, a zero-waste workshop program, and a membership model. The long-term brand equity here is enormous.",
+    analysis: "This idea has genuine transformative potential — and I love that. Building on Helen's branding insight: an eco-coffee shop is not just a business, it's a community node. If you design it right, this becomes a gathering point for sustainable entrepreneurs, creators, and advocates. The long-term brand equity here is enormous, far beyond what Anton's skepticism accounts for.",
     question: "**What if this wasn't just a café, but the headquarters of a local sustainability movement?**",
+    confidence: 95,
   },
 };
 
-const ACTION_PLAN = [
+const DEFAULT_ACTION_PLAN = [
   "Launch a weekend pop-up to validate unit economics before signing a lease — target 150+ cups served as your green light signal.",
   "Build a transparent sourcing story and brand identity around 'radical sustainability' rather than generic eco labels.",
   "Model a 12-month burn rate with a conservative 60% revenue scenario and ensure 18 months of runway before launch.",
 ];
+
+// Reaction emoji pools per persona sentiment
+const REACTION_POOLS: Record<string, string[]> = {
+  positive: ["👏", "💡", "📈", "✅", "🎯"],
+  neutral:  ["🤔", "💬", "🔍", "📝", "💭"],
+  negative: ["⚠️", "🚨", "❓", "🔴", "👀"],
+  visionary: ["✨", "🚀", "💫", "🌟", "🔮"],
+};
 
 // ── Confidence Ring ──
 
@@ -127,12 +139,12 @@ const ConfidenceRing: React.FC<{ pct: number; color: string; animate: boolean; s
 
 // ── Floating Emoji Reaction ──
 
-const FloatingEmoji: React.FC<{ emoji: string }> = ({ emoji }) => (
+const FloatingEmoji: React.FC<{ emoji: string; key?: number }> = ({ emoji }) => (
   <motion.div
-    initial={{ opacity: 0, y: 0, x: Math.random() * 20 - 10 }}
-    animate={{ opacity: [0, 1, 0], y: -30 }}
-    transition={{ duration: 1.5, ease: "easeOut" }}
-    className="absolute bottom-4 right-4 text-base pointer-events-none z-10"
+    initial={{ opacity: 0, y: 0, x: Math.random() * 30 - 15, scale: 0.6 }}
+    animate={{ opacity: [0, 1, 1, 0], y: -45, scale: [0.6, 1.2, 1, 0.8] }}
+    transition={{ duration: 2, ease: "easeOut" }}
+    className="absolute bottom-6 right-4 text-base pointer-events-none z-20"
   >
     {emoji}
   </motion.div>
@@ -153,16 +165,31 @@ const TypingDots = () => (
   </div>
 );
 
+// ── Banter Chip ──
+
+const BanterChip: React.FC<{ referencedName: string; color: string }> = ({ referencedName, color }) => (
+  <motion.span
+    initial={{ opacity: 0, scale: 0.8 }}
+    animate={{ opacity: 1, scale: 1 }}
+    className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full mr-1"
+    style={{ background: `${color}20`, color, border: `1px solid ${color}30` }}
+  >
+    <Reply size={7} />
+    replying to {referencedName.split(" ")[0]}
+  </motion.span>
+);
+
 // ── Persona Card ──
 
 interface PersonaCardProps {
   persona: Persona;
   state: "idle" | "typing" | "revealed";
-  response: { analysis: string; question: string } | null;
+  response: { analysis: string; question: string; confidence: number } | null;
   isExpanded: boolean;
+  anyExpanded: boolean;
   onExpand: () => void;
   onCollapse: () => void;
-  showReaction: boolean;
+  floatingEmojis: string[];
 }
 
 const SENTIMENT_COLORS = {
@@ -172,38 +199,53 @@ const SENTIMENT_COLORS = {
   visionary: "#22d3ee",
 };
 
+const PERSONA_NAMES = ["Elena", "Helen", "Anton", "Margot"];
+
 const PersonaCard: React.FC<PersonaCardProps> = ({
-  persona, state, response, isExpanded, onExpand, onCollapse, showReaction,
+  persona, state, response, isExpanded, anyExpanded, onExpand, onCollapse, floatingEmojis,
 }) => {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const Icon = persona.icon;
   const color = SENTIMENT_COLORS[persona.sentiment];
-  const reactions = ["💡", "👏", "🤔", "✨"];
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const sendChat = async () => {
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || chatLoading) return;
     const msg = chatInput.trim();
     setChatInput("");
     setChatMessages(prev => [...prev, { role: "user", text: msg }]);
     setChatLoading(true);
     try {
       const { data } = await supabase.functions.invoke("flux-ai", {
-        body: { type: "council", messages: [{ role: "user", content: `You are ${persona.name}, ${persona.title}. Respond in character: ${msg}` }] },
+        body: {
+          type: "council-quick",
+          question: msg,
+          mode: "deep-dive",
+          persona_key: persona.key,
+        },
       });
-      const reply = data?.personas?.[0]?.analysis || `As ${persona.title}, I think this deserves deeper analysis. Let me share my perspective...`;
+      const reply = data?.reply || `As ${persona.title}, I believe this deserves deeper analysis. The key here is strategic alignment with core objectives.`;
       setChatMessages(prev => [...prev, { role: "ai", text: reply }]);
     } catch {
-      setChatMessages(prev => [...prev, { role: "ai", text: `Great question. As ${persona.title}, I believe the key factor here is strategic alignment with your core objectives.` }]);
+      setChatMessages(prev => [...prev, { role: "ai", text: `Great question. As ${persona.title}, I believe the key factor here is strategic alignment.` }]);
     }
     setChatLoading(false);
   };
 
+  // Detect which persona this response banters with
+  const banterTarget = response ? PERSONA_NAMES.find(n => n !== persona.name.split(" ")[0] && response.analysis.includes(n)) : null;
+  const banterTargetColor = banterTarget ? SENTIMENT_COLORS[PERSONAS.find(p => p.name.startsWith(banterTarget))?.sentiment || "positive"] : "#fff";
+
   // Bold key terms in text
   const renderBoldTerms = (text: string): React.ReactNode => {
-    const terms = ["insurance", "depreciation", "brand", "positioning", "market", "eco", "revenue", "burn rate", "churn", "moat", "unit economics", "row 14", "LTV"];
+    const terms = ["insurance", "depreciation", "brand", "positioning", "market", "eco", "revenue", "burn rate", "churn", "moat", "unit economics", "LTV", "occupancy", "supply chain", "transparency", "community"];
     const segments: React.ReactNode[] = [];
     let remaining = text;
     let keyIdx = 0;
@@ -225,14 +267,14 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
         <span
           key={keyIdx++}
           className="font-semibold cursor-pointer relative inline-block"
-          style={{ color } as React.CSSProperties}
+          style={{ color }}
           onMouseEnter={() => setShowTooltip(captured)}
           onMouseLeave={() => setShowTooltip(null)}
         >
           {matchedText}
           {showTooltip === captured && (
-            <span className="absolute bottom-full left-0 mb-1 px-2 py-1 rounded-lg text-[9px] text-white/70 bg-black/80 backdrop-blur-sm border border-white/10 whitespace-nowrap z-50 pointer-events-none font-normal" style={{} as React.CSSProperties}>
-              💡 Click to highlight this metric
+            <span className="absolute bottom-full left-0 mb-1 px-2 py-1 rounded-lg text-[9px] text-white/70 bg-black/80 backdrop-blur-sm border border-white/10 whitespace-nowrap z-50 pointer-events-none font-normal">
+              💡 Key metric
             </span>
           )}
         </span>
@@ -242,25 +284,29 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
     return <>{segments}</>;
   };
 
+  // When not expanded and another card is expanded, collapse this card visually
+  const isCollapsed = anyExpanded && !isExpanded;
+
   return (
     <motion.div
       layout
       animate={{
-        flex: isExpanded ? 3 : 1,
+        flex: isExpanded ? 7 : 1,
+        opacity: isCollapsed ? 0.5 : 1,
         boxShadow: state !== "idle" ? `0 0 30px ${persona.glow}, 0 0 60px ${persona.glow}` : `0 0 12px rgba(0,0,0,0.3)`,
       }}
-      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+      transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
       className="relative rounded-3xl border overflow-hidden backdrop-blur-xl min-w-0"
       style={{
         background: "rgba(255,255,255,0.04)",
         borderColor: state !== "idle" ? persona.glowBorder : "rgba(255,255,255,0.1)",
       }}
     >
-      {/* Idle breathing animation */}
+      {/* Idle breathing */}
       {state === "idle" && (
         <motion.div
           className="absolute inset-0 rounded-3xl pointer-events-none"
-          animate={{ opacity: [0.03, 0.06, 0.03] }}
+          animate={{ opacity: [0.03, 0.07, 0.03] }}
           transition={{ duration: 3, repeat: Infinity }}
           style={{ background: `radial-gradient(circle at 50% 30%, ${color}, transparent 70%)` }}
         />
@@ -269,9 +315,8 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
       <div className="p-4 flex flex-col h-full">
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
-          {/* Avatar with confidence ring */}
           <div className="relative w-14 h-14 shrink-0">
-            <ConfidenceRing pct={persona.ringPct} color={color} animate={state === "revealed"} size={56} />
+            <ConfidenceRing pct={response?.confidence ?? persona.ringPct} color={color} animate={state === "revealed"} size={56} />
             <div
               className="absolute inset-[6px] rounded-full flex items-center justify-center text-[12px] font-bold"
               style={{ background: `linear-gradient(135deg, ${color}25, ${color}10)`, border: `1px solid ${color}30` }}
@@ -283,19 +328,14 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
             <p className="text-sm font-bold text-white/90 truncate">{persona.name}</p>
             <p className="text-[10px] text-white/40">{persona.title}</p>
             {state === "revealed" && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-1 mt-1"
-              >
+              <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-1 mt-1">
                 <div className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${color}20`, color }}>
-                  {persona.ringPct}%
+                  {response?.confidence ?? persona.ringPct}%
                 </div>
               </motion.div>
             )}
           </div>
           <div className="flex gap-1 shrink-0">
-            {/* Stat tooltip */}
             <div className="relative group">
               <button className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
                 <BarChart2 size={12} />
@@ -305,7 +345,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
               </div>
             </div>
             {state === "revealed" && !isExpanded && (
-              <button onClick={onExpand} className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
+              <button onClick={onExpand} title="1-on-1 Deep Dive" className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors">
                 <MessageSquare size={12} />
               </button>
             )}
@@ -321,10 +361,10 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
         {state === "idle" && (
           <div className="flex-1 flex items-center justify-center">
             <motion.div
-              animate={{ scale: [1, 1.06, 1], opacity: [0.4, 0.6, 0.4] }}
-              transition={{ duration: 2.5, repeat: Infinity }}
+              animate={{ scale: [1, 1.08, 1], opacity: [0.35, 0.6, 0.35] }}
+              transition={{ duration: 2.8, repeat: Infinity }}
             >
-              {React.createElement(Icon as React.ComponentType<{ size?: number; style?: React.CSSProperties }>, { size: 20, style: { color: `${color}60` } })}
+              {React.createElement(Icon as React.ComponentType<{ size?: number; style?: React.CSSProperties }>, { size: 22, style: { color: `${color}60` } })}
             </motion.div>
           </div>
         )}
@@ -332,36 +372,52 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
         {state === "typing" && <TypingDots />}
 
         {state === "revealed" && response && (
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto council-hidden-scrollbar text-[11px] text-white/65 leading-relaxed space-y-2">
+              {banterTarget && <BanterChip referencedName={banterTarget} color={banterTargetColor} />}
               <p>{renderBoldTerms(response.analysis)}</p>
-              <p className="font-bold text-white/80">{response.question}</p>
+              <p className="font-bold text-white/80 mt-1">{response.question}</p>
             </div>
-            {/* 1-on-1 chat */}
+
+            {/* 1-on-1 deep dive chat */}
             {isExpanded && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 className="mt-3 border-t border-white/8 pt-3 flex flex-col gap-2"
               >
-                <div className="max-h-[120px] overflow-y-auto council-hidden-scrollbar space-y-2">
+                <p className="text-[9px] text-white/30 uppercase tracking-widest mb-1">1-on-1 Deep Dive with {persona.name.split(" ")[0]}</p>
+                <div className="max-h-[140px] overflow-y-auto council-hidden-scrollbar space-y-2">
                   {chatMessages.map((m, i) => (
-                    <div key={i} className={`text-[10px] rounded-xl px-2.5 py-1.5 ${m.role === "user" ? "bg-white/10 text-white/80 self-end ml-6" : "bg-white/5 text-white/60 mr-6"}`}>
+                    <div
+                      key={i}
+                      className={`text-[10px] rounded-xl px-2.5 py-1.5 leading-snug ${
+                        m.role === "user"
+                          ? "bg-white/10 text-white/80 ml-6"
+                          : "bg-white/5 text-white/60 mr-6"
+                      }`}
+                    >
                       {m.text}
                     </div>
                   ))}
                   {chatLoading && <TypingDots />}
+                  <div ref={chatEndRef} />
                 </div>
                 <div className="flex gap-1">
                   <input
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && sendChat()}
-                    placeholder={`Ask ${persona.name.split(" ")[0]}...`}
+                    placeholder={`Ask ${persona.name.split(" ")[0]}…`}
                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] text-white placeholder:text-white/20 outline-none focus:border-white/20"
                   />
-                  <button onClick={sendChat} className="w-7 h-7 flex items-center justify-center rounded-xl" style={{ background: `${color}30` }}>
-                    <Send size={11} style={{ color }} />
+                  <button
+                    onClick={sendChat}
+                    disabled={chatLoading}
+                    className="w-7 h-7 flex items-center justify-center rounded-xl"
+                    style={{ background: `${color}30` }}
+                  >
+                    {chatLoading ? <Loader2 size={10} className="animate-spin" style={{ color }} /> : <Send size={10} style={{ color }} />}
                   </button>
                 </div>
               </motion.div>
@@ -370,17 +426,19 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
         )}
       </div>
 
-      {/* Floating reaction */}
-      {showReaction && state === "typing" && (
-        <FloatingEmoji emoji={reactions[Math.floor(Math.random() * reactions.length)]} />
-      )}
+      {/* Floating emoji reactions — shown on idle/non-active cards while another is typing */}
+      <AnimatePresence>
+        {floatingEmojis.map((emoji, idx) => (
+          <FloatingEmoji key={idx} emoji={emoji} />
+        ))}
+      </AnimatePresence>
     </motion.div>
   );
 };
 
 // ── Export Verdict Modal ──
 
-const ExportModal: React.FC<{ avgRing: number; idea: string; onClose: () => void }> = ({ avgRing, idea, onClose }) => (
+const ExportModal: React.FC<{ avgRing: number; idea: string; responses: Record<string, { confidence: number } | null>; onClose: () => void }> = ({ avgRing, idea, responses, onClose }) => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
@@ -401,7 +459,6 @@ const ExportModal: React.FC<{ avgRing: number; idea: string; onClose: () => void
           <p className="text-xs text-white/30 uppercase tracking-widest mb-1">The Council — Verdict</p>
           <p className="text-sm font-semibold text-white/80 line-clamp-2">{idea || "Your idea"}</p>
         </div>
-        {/* 4 avatars */}
         <div className="grid grid-cols-4 gap-2 mb-5">
           {PERSONAS.map(p => (
             <div key={p.key} className="flex flex-col items-center gap-1.5">
@@ -412,17 +469,23 @@ const ExportModal: React.FC<{ avgRing: number; idea: string; onClose: () => void
                 <span style={{ color: SENTIMENT_COLORS[p.sentiment] }}>{p.initials}</span>
               </div>
               <p className="text-[8px] text-white/40 text-center leading-tight">{p.name.split(" ")[0]}</p>
+              <p className="text-[9px] font-bold" style={{ color: SENTIMENT_COLORS[p.sentiment] }}>
+                {responses[p.key]?.confidence ?? p.ringPct}%
+              </p>
             </div>
           ))}
         </div>
-        {/* Consensus */}
         <div className="text-center mb-5">
           <p className="text-3xl font-bold text-white">{avgRing}%</p>
           <p className="text-xs text-white/40 mt-0.5">Consensus Score</p>
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => { navigator.clipboard.writeText(`The Council Verdict\n\nIdea: ${idea}\nConsensus Score: ${avgRing}%\n\nPersonas: ${PERSONAS.map(p => `${p.name} (${p.ringPct}% confidence)`).join(", ")}`); }}
+            onClick={() => {
+              navigator.clipboard.writeText(
+                `The Council Verdict\n\nIdea: ${idea}\nConsensus Score: ${avgRing}%\n\n${PERSONAS.map(p => `${p.name} (${responses[p.key]?.confidence ?? p.ringPct}% confidence)`).join("\n")}`
+              );
+            }}
             className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white bg-white/10 hover:bg-white/15 transition-colors"
           >
             Copy Summary
@@ -440,23 +503,37 @@ const ExportModal: React.FC<{ avgRing: number; idea: string; onClose: () => void
 
 type CardState = "idle" | "typing" | "revealed";
 
+interface PersonaResponse {
+  analysis: string;
+  question: string;
+  confidence: number;
+}
+
 const CouncilBoardroom: React.FC = () => {
   const [idea, setIdea] = useState("");
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({
     elena: "idle", helen: "idle", anton: "idle", margot: "idle",
   });
-  const [responses, setResponses] = useState<Record<string, { analysis: string; question: string } | null>>({
+  const [responses, setResponses] = useState<Record<string, PersonaResponse | null>>({
     elena: null, helen: null, anton: null, margot: null,
   });
+  const [actionPlan, setActionPlan] = useState<string[]>(DEFAULT_ACTION_PLAN);
   const [isConsulting, setIsConsulting] = useState(false);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
-  const [reactions, setReactions] = useState<Record<string, boolean>>({});
+  // floatingEmojis: per-card array of emoji strings to show
+  const [floatingEmojis, setFloatingEmojis] = useState<Record<string, string[]>>({
+    elena: [], helen: [], anton: [], margot: [],
+  });
+  const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
+  const currentTypingKeyRef = useRef<string | null>(null);
 
   const allRevealed = revealedCount === 4;
-  const avgRing = Math.round(PERSONAS.reduce((a, p) => a + p.ringPct, 0) / PERSONAS.length);
+  const avgRing = Math.round(
+    PERSONAS.reduce((a, p) => a + (responses[p.key]?.confidence ?? p.ringPct), 0) / PERSONAS.length
+  );
 
   const getConsensusLabel = () => {
     if (avgRing >= 70) return { label: "Strong Consensus — Proceed", color: "#34d399" };
@@ -464,32 +541,83 @@ const CouncilBoardroom: React.FC = () => {
     return { label: "Divided — Further Analysis Required", color: "#f87171" };
   };
 
+  // Spawn floating emojis on cards that aren't typing
+  const startFloatingEmojis = useCallback((typingKey: string) => {
+    if (emojiTimerRef.current) clearInterval(emojiTimerRef.current);
+    emojiTimerRef.current = setInterval(() => {
+      const reactingPersonas = PERSONAS.filter(p => p.key !== typingKey);
+      const randomPersona = reactingPersonas[Math.floor(Math.random() * reactingPersonas.length)];
+      const pool = REACTION_POOLS[randomPersona.sentiment];
+      const emoji = pool[Math.floor(Math.random() * pool.length)];
+      setFloatingEmojis(prev => ({
+        ...prev,
+        [randomPersona.key]: [emoji],
+      }));
+      // Clear after 2s
+      setTimeout(() => {
+        setFloatingEmojis(prev => ({ ...prev, [randomPersona.key]: [] }));
+      }, 2000);
+    }, 1400);
+  }, []);
+
+  const stopFloatingEmojis = useCallback(() => {
+    if (emojiTimerRef.current) {
+      clearInterval(emojiTimerRef.current);
+      emojiTimerRef.current = null;
+    }
+    setFloatingEmojis({ elena: [], helen: [], anton: [], margot: [] });
+  }, []);
+
+  useEffect(() => {
+    return () => { if (emojiTimerRef.current) clearInterval(emojiTimerRef.current); };
+  }, []);
+
+  const revealPersonaSequence = useCallback(async (aiPersonas: Record<string, PersonaResponse | null>) => {
+    for (let i = 0; i < PERSONAS.length; i++) {
+      const p = PERSONAS[i];
+      currentTypingKeyRef.current = p.key;
+      startFloatingEmojis(p.key);
+      setCardStates(prev => ({ ...prev, [p.key]: "typing" }));
+      // Simulate typing delay (1.5s min, based on persona delay)
+      await new Promise(r => setTimeout(r, 1500 + p.delay * 0.3));
+      const res = aiPersonas[p.key] || MOCK_RESPONSES[p.key];
+      setCardStates(prev => ({ ...prev, [p.key]: "revealed" }));
+      setResponses(prev => ({ ...prev, [p.key]: res }));
+      revealedCountRef.current += 1;
+      setRevealedCount(revealedCountRef.current);
+    }
+    stopFloatingEmojis();
+    currentTypingKeyRef.current = null;
+  }, [startFloatingEmojis, stopFloatingEmojis]);
+
   const handleConsult = async () => {
     if (isConsulting) return;
     setIsConsulting(true);
     setRevealedCount(0);
     revealedCountRef.current = 0;
     setExpandedCard(null);
-    // Reset all to typing
-    setCardStates({ elena: "typing", helen: "typing", anton: "typing", margot: "typing" });
+    setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
     setResponses({ elena: null, helen: null, anton: null, margot: null });
 
-    // Sequentially reveal each persona
-    for (let i = 0; i < PERSONAS.length; i++) {
-      const p = PERSONAS[i];
-      // Show floating reactions on other cards
-      setReactions(prev => {
-        const nr = { ...prev };
-        PERSONAS.forEach(op => { if (op.key !== p.key) nr[op.key] = true; });
-        return nr;
+    // Try real AI, fallback to mock
+    let aiPersonas: Record<string, PersonaResponse | null> = { elena: null, helen: null, anton: null, margot: null };
+    try {
+      const { data, error } = await supabase.functions.invoke("flux-ai", {
+        body: { type: "boardroom-consult", idea: idea || "Should I start a new business?" },
       });
-      await new Promise(r => setTimeout(r, p.delay + 800));
-      setCardStates(prev => ({ ...prev, [p.key]: "revealed" }));
-      setResponses(prev => ({ ...prev, [p.key]: MOCK_RESPONSES[p.key] }));
-      revealedCountRef.current += 1;
-      setRevealedCount(revealedCountRef.current);
-      setReactions(prev => ({ ...prev, [p.key]: false }));
+      if (!error && data?.personas && Array.isArray(data.personas)) {
+        data.personas.forEach((p: { key: string; analysis: string; question: string; confidence: number }) => {
+          if (p.key) aiPersonas[p.key] = { analysis: p.analysis, question: p.question, confidence: p.confidence };
+        });
+        if (data.action_plan && Array.isArray(data.action_plan)) {
+          setActionPlan(data.action_plan);
+        }
+      }
+    } catch {
+      // fallback to mock — already null
     }
+
+    await revealPersonaSequence(aiPersonas);
     setIsConsulting(false);
   };
 
@@ -560,20 +688,40 @@ const CouncilBoardroom: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* 2×2 grid */}
-      <div className="flex-1 grid grid-cols-2 gap-3 min-h-0">
-        {PERSONAS.map(persona => (
-          <PersonaCard
-            key={persona.key}
-            persona={persona}
-            state={cardStates[persona.key]}
-            response={responses[persona.key]}
-            isExpanded={expandedCard === persona.key}
-            onExpand={() => setExpandedCard(persona.key)}
-            onCollapse={() => setExpandedCard(null)}
-            showReaction={reactions[persona.key] || false}
-          />
-        ))}
+      {/* 2×2 grid with flex for expand */}
+      <div className="flex-1 flex gap-3 min-h-0">
+        {/* Left column */}
+        <div className="flex-1 flex flex-col gap-3 min-h-0 min-w-0">
+          {[PERSONAS[0], PERSONAS[2]].map(persona => (
+            <PersonaCard
+              key={persona.key}
+              persona={persona}
+              state={cardStates[persona.key]}
+              response={responses[persona.key]}
+              isExpanded={expandedCard === persona.key}
+              anyExpanded={expandedCard !== null}
+              onExpand={() => setExpandedCard(persona.key)}
+              onCollapse={() => setExpandedCard(null)}
+              floatingEmojis={floatingEmojis[persona.key]}
+            />
+          ))}
+        </div>
+        {/* Right column */}
+        <div className="flex-1 flex flex-col gap-3 min-h-0 min-w-0">
+          {[PERSONAS[1], PERSONAS[3]].map(persona => (
+            <PersonaCard
+              key={persona.key}
+              persona={persona}
+              state={cardStates[persona.key]}
+              response={responses[persona.key]}
+              isExpanded={expandedCard === persona.key}
+              anyExpanded={expandedCard !== null}
+              onExpand={() => setExpandedCard(persona.key)}
+              onCollapse={() => setExpandedCard(null)}
+              floatingEmojis={floatingEmojis[persona.key]}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Action plan */}
@@ -590,7 +738,7 @@ const CouncilBoardroom: React.FC = () => {
               ✦ Council's Recommended Action Plan
             </h3>
             <ol className="space-y-2">
-              {ACTION_PLAN.map((step, i) => (
+              {actionPlan.map((step, i) => (
                 <motion.li
                   key={i}
                   initial={{ opacity: 0, x: -8 }}
@@ -612,7 +760,7 @@ const CouncilBoardroom: React.FC = () => {
       {/* Export modal */}
       <AnimatePresence>
         {showExport && (
-          <ExportModal avgRing={avgRing} idea={idea} onClose={() => setShowExport(false)} />
+          <ExportModal avgRing={avgRing} idea={idea} responses={responses} onClose={() => setShowExport(false)} />
         )}
       </AnimatePresence>
     </div>

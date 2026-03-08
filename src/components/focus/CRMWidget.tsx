@@ -1,6 +1,17 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, GripVertical, ChevronDown, ChevronRight, Phone, Mail, StickyNote, X } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+  useDroppable,
+  useDraggable,
+} from "@dnd-kit/core";
 import DraggableWidget from "./DraggableWidget";
 
 type Stage = "leads" | "contacted" | "proposal" | "closed";
@@ -38,29 +49,35 @@ const getInitials = (name: string) =>
 const formatValue = (v: number) =>
   v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`;
 
-interface DealCardProps {
+// ── Draggable Deal Card ──
+
+interface DealCardCoreProps {
   deal: Deal;
-  stages: Stage[];
   onStageChange: (id: string, stage: Stage) => void;
+  isDragging?: boolean;
+  overlay?: boolean;
 }
 
-const DealCard: React.FC<DealCardProps> = ({ deal, stages, onStageChange }) => {
+const DealCardCore: React.FC<DealCardCoreProps> = ({ deal, onStageChange, isDragging, overlay }) => {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [showActions, setShowActions] = useState(false);
 
   return (
     <div className="relative">
       <motion.div
-        layout
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-2 px-2 py-2 rounded-xl bg-white/5 border border-white/8 hover:bg-white/8 transition-colors group cursor-pointer"
-        onClick={() => setPopoverOpen(!popoverOpen)}
+        layout={!overlay}
+        initial={overlay ? undefined : { opacity: 0, y: 6 }}
+        animate={{ opacity: isDragging ? 0.4 : 1, y: 0, scale: overlay ? 1.04 : 1 }}
+        className={`flex items-center gap-2 px-2 py-2 rounded-xl border transition-colors group cursor-grab active:cursor-grabbing ${
+          overlay
+            ? "bg-white/20 border-white/25 shadow-xl"
+            : "bg-white/5 border-white/8 hover:bg-white/8"
+        }`}
+        onClick={overlay ? undefined : () => setPopoverOpen(!popoverOpen)}
         onMouseEnter={() => setShowActions(true)}
         onMouseLeave={() => { setShowActions(false); }}
       >
-        <GripVertical size={10} className="text-white/15 shrink-0" />
-        {/* Avatar */}
+        <GripVertical size={10} className="text-white/25 shrink-0" />
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
           style={{ background: `linear-gradient(135deg, ${STAGE_CONFIG[deal.stage].dot}40, ${STAGE_CONFIG[deal.stage].dot}20)`, border: `1px solid ${STAGE_CONFIG[deal.stage].dot}30` }}
@@ -76,7 +93,7 @@ const DealCard: React.FC<DealCardProps> = ({ deal, stages, onStageChange }) => {
         </span>
         {/* Quick actions on hover */}
         <AnimatePresence>
-          {showActions && (
+          {showActions && !overlay && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -93,9 +110,10 @@ const DealCard: React.FC<DealCardProps> = ({ deal, stages, onStageChange }) => {
           )}
         </AnimatePresence>
       </motion.div>
+
       {/* Stage change popover */}
       <AnimatePresence>
-        {popoverOpen && (
+        {popoverOpen && !overlay && (
           <motion.div
             initial={{ opacity: 0, y: -4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -126,10 +144,108 @@ const DealCard: React.FC<DealCardProps> = ({ deal, stages, onStageChange }) => {
   );
 };
 
+// ── DnD wrappers ──
+
+const DraggableDeal: React.FC<{ deal: Deal; onStageChange: (id: string, stage: Stage) => void; isDragging: boolean }> = ({ deal, onStageChange, isDragging }) => {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: deal.id });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50, position: "relative" } : undefined}
+    >
+      <DealCardCore deal={deal} onStageChange={onStageChange} isDragging={isDragging} />
+    </div>
+  );
+};
+
+const DroppableStage: React.FC<{
+  stage: Stage;
+  isOpen: boolean;
+  stageDeals: Deal[];
+  total: { count: number; value: number };
+  isOver: boolean;
+  onToggle: () => void;
+  onStageChange: (id: string, stage: Stage) => void;
+  activeDealId: string | null;
+}> = ({ stage, isOpen, stageDeals, total, isOver, onToggle, onStageChange, activeDealId }) => {
+  const { setNodeRef } = useDroppable({ id: stage });
+  const cfg = STAGE_CONFIG[stage];
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-xl border overflow-hidden transition-colors ${isOver ? "border-white/25" : "border-white/8"}`}
+      style={isOver ? { boxShadow: `0 0 0 2px ${cfg.dot}40` } : undefined}
+    >
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-white/5"
+        style={{ background: cfg.color }}
+      >
+        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cfg.dot }} />
+        <span className="text-[11px] font-semibold flex-1 text-left" style={{ color: cfg.textColor }}>
+          {cfg.label}
+        </span>
+        <span className="text-[10px] font-medium text-white/40 mr-1">
+          {total.count} · {formatValue(total.value)}
+        </span>
+        {isOpen ? <ChevronDown size={11} className="text-white/30" /> : <ChevronRight size={11} className="text-white/30" />}
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className={`p-2 space-y-1.5 min-h-[36px] transition-colors ${isOver ? "bg-white/3" : ""}`}>
+              {stageDeals.length === 0 && !isOver ? (
+                <p className="text-[9px] text-white/20 text-center py-2">
+                  {activeDealId ? "Drop here" : "No deals in this stage"}
+                </p>
+              ) : (
+                stageDeals.map(deal => (
+                  <DraggableDeal
+                    key={deal.id}
+                    deal={deal}
+                    onStageChange={onStageChange}
+                    isDragging={deal.id === activeDealId}
+                  />
+                ))
+              )}
+              {isOver && stageDeals.length === 0 && (
+                <div
+                  className="h-9 rounded-xl border-2 border-dashed flex items-center justify-center text-[9px] font-medium"
+                  style={{ borderColor: `${cfg.dot}50`, color: cfg.textColor }}
+                >
+                  Drop here
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ── Main CRM content ──
+
 const CRMWidgetContent = () => {
   const [deals, setDeals] = useState<Deal[]>(INITIAL_DEALS);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<Stage>>(new Set(["leads", "contacted", "proposal", "closed"]));
+  const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  const [overStage, setOverStage] = useState<Stage | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
 
   const filtered = useMemo(() =>
     search ? deals.filter(d =>
@@ -167,81 +283,82 @@ const CRMWidgetContent = () => {
     setDeals(prev => [{ id: `d-${Date.now()}`, name, company, value, stage: "leads" }, ...prev]);
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDealId(event.active.id as string);
+  };
+
+  const handleDragOver = (event: { over: { id: string } | null }) => {
+    if (event.over && STAGE_ORDER.includes(event.over.id as Stage)) {
+      setOverStage(event.over.id as Stage);
+    } else {
+      setOverStage(null);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDealId(null);
+    setOverStage(null);
+    if (!over) return;
+    const targetStage = over.id as Stage;
+    if (!STAGE_ORDER.includes(targetStage)) return;
+    const deal = deals.find(d => d.id === active.id);
+    if (!deal || deal.stage === targetStage) return;
+    setDeals(prev => prev.map(d => d.id === active.id ? { ...d, stage: targetStage } : d));
+    // Auto-expand the target stage
+    setExpanded(prev => new Set([...prev, targetStage]));
+  };
+
+  const activeDeal = activeDealId ? deals.find(d => d.id === activeDealId) : null;
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 pt-2 pb-2 shrink-0">
-        <div className="flex items-center gap-1.5 flex-1 px-2 py-1.5 rounded-lg bg-white/5 border border-white/8">
-          <Search size={10} className="text-white/30 shrink-0" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search pipeline..."
-            className="flex-1 bg-transparent text-[10px] text-white/70 outline-none placeholder:text-white/25"
-          />
-          {search && <button onClick={() => setSearch("")}><X size={9} className="text-white/30" /></button>}
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver as any} onDragEnd={handleDragEnd}>
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center gap-2 px-3 pt-2 pb-2 shrink-0">
+          <div className="flex items-center gap-1.5 flex-1 px-2 py-1.5 rounded-lg bg-white/5 border border-white/8">
+            <Search size={10} className="text-white/30 shrink-0" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search pipeline..."
+              className="flex-1 bg-transparent text-[10px] text-white/70 outline-none placeholder:text-white/25"
+            />
+            {search && <button onClick={() => setSearch("")}><X size={9} className="text-white/30" /></button>}
+          </div>
+          <button
+            onClick={addDeal}
+            className="w-7 h-7 rounded-lg bg-white/8 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center transition-colors shrink-0"
+          >
+            <Plus size={12} />
+          </button>
         </div>
-        <button
-          onClick={addDeal}
-          className="w-7 h-7 rounded-lg bg-white/8 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center transition-colors shrink-0"
-        >
-          <Plus size={12} />
-        </button>
+
+        {/* Pipeline Stages */}
+        <div className="flex-1 overflow-y-auto council-hidden-scrollbar px-3 pb-3 space-y-2">
+          {STAGE_ORDER.map(stage => (
+            <DroppableStage
+              key={stage}
+              stage={stage}
+              isOpen={expanded.has(stage)}
+              stageDeals={filtered.filter(d => d.stage === stage)}
+              total={stageTotals[stage]}
+              isOver={overStage === stage}
+              onToggle={() => toggleStage(stage)}
+              onStageChange={handleStageChange}
+              activeDealId={activeDealId}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Pipeline Stages */}
-      <div className="flex-1 overflow-y-auto council-hidden-scrollbar px-3 pb-3 space-y-2">
-        {STAGE_ORDER.map(stage => {
-          const cfg = STAGE_CONFIG[stage];
-          const isOpen = expanded.has(stage);
-          const stageDeals = filtered.filter(d => d.stage === stage);
-          const total = stageTotals[stage];
-
-          return (
-            <div key={stage} className="rounded-xl border border-white/8 overflow-hidden">
-              {/* Stage header */}
-              <button
-                onClick={() => toggleStage(stage)}
-                className="w-full flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-white/5"
-                style={{ background: cfg.color }}
-              >
-                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cfg.dot }} />
-                <span className="text-[11px] font-semibold flex-1 text-left" style={{ color: cfg.textColor }}>
-                  {cfg.label}
-                </span>
-                <span className="text-[10px] font-medium text-white/40 mr-1">
-                  {total.count} · {formatValue(total.value)}
-                </span>
-                {isOpen ? <ChevronDown size={11} className="text-white/30" /> : <ChevronRight size={11} className="text-white/30" />}
-              </button>
-
-              {/* Deal cards */}
-              <AnimatePresence initial={false}>
-                {isOpen && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: "auto" }}
-                    exit={{ height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="p-2 space-y-1.5">
-                      {stageDeals.length === 0 ? (
-                        <p className="text-[9px] text-white/20 text-center py-2">No deals in this stage</p>
-                      ) : (
-                        stageDeals.map(deal => (
-                          <DealCard key={deal.id} deal={deal} stages={STAGE_ORDER} onStageChange={handleStageChange} />
-                        ))
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+      {/* Drag overlay */}
+      <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
+        {activeDeal && (
+          <DealCardCore deal={activeDeal} onStageChange={() => {}} overlay />
+        )}
+      </DragOverlay>
+    </DndContext>
   );
 };
 
