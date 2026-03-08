@@ -271,6 +271,20 @@ const CommunityBoardView = () => {
 
   useEffect(() => {
     fetchSlots();
+
+    // Realtime: re-fetch on any change so all users see live updates
+    const channel = supabase
+      .channel("community_slots_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "community_slots" },
+        () => fetchSlots()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchSlots]);
 
   /* ── Pending queue (only user's own + admin) ── */
