@@ -1610,7 +1610,7 @@ const FocusContent = () => {
       {/* Canvas right-click context menu */}
       {contextMenu && (
         <>
-          <div className="fixed inset-0 z-[90]" onClick={() => { setContextMenu(null); setShowDocPicker(false); }} />
+          <div className="fixed inset-0 z-[90]" onClick={() => setContextMenu(null)} />
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
