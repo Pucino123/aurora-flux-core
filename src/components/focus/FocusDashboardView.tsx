@@ -312,12 +312,17 @@ const FocusContent = () => {
     if ((e.target as HTMLElement).closest('button, input')) return; // don't drag on interactive children
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
+    // Always use the pill's actual rendered bounding rect as the source of truth
     const rect = pillRef.current?.getBoundingClientRect();
-    const currentX = pillPos?.x ?? (window.innerWidth / 2 - (rect?.width ?? 200) / 2);
-    const currentY = pillPos?.y ?? (window.innerHeight - 88 - (rect?.height ?? 44));
+    if (!rect) return;
+    // Use actual rendered top-left from DOM — this is always correct regardless of CSS positioning
+    const currentX = rect.left;
+    const currentY = rect.top;
     pillDragOrigin.current = { mx: e.clientX, my: e.clientY, px: currentX, py: currentY };
+    // Immediately lock to absolute position so there's no jump
+    setPillPos({ x: currentX, y: currentY });
     setIsDraggingPill(true);
-  }, [pillPos]);
+  }, []);
 
   const handlePillPointerMove = useCallback((e: React.PointerEvent) => {
     if (!pillDragOrigin.current) return;
@@ -326,8 +331,8 @@ const FocusContent = () => {
     const rect = pillRef.current?.getBoundingClientRect();
     const w = rect?.width ?? 200;
     const h = rect?.height ?? 44;
-    const nx = Math.max(0, Math.min(window.innerWidth - w, pillDragOrigin.current.px + dx));
-    const ny = Math.max(0, Math.min(window.innerHeight - h, pillDragOrigin.current.py + dy));
+    const nx = Math.max(8, Math.min(window.innerWidth - w - 8, pillDragOrigin.current.px + dx));
+    const ny = Math.max(8, Math.min(window.innerHeight - h - 8, pillDragOrigin.current.py + dy));
     setPillPos({ x: nx, y: ny });
   }, []);
 
