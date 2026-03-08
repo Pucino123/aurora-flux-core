@@ -402,10 +402,13 @@ const TheCouncil = () => {
                 >
                   {/* Avatars */}
                   <div className="flex justify-center items-end gap-1 sm:gap-2 mb-[-18px] sm:mb-[-22px] relative z-20">
-                    {PERSONAS.map((p, i) => {
+                   {PERSONAS.map((p, i) => {
                       const isCenter = i === 2;
                       const baseSize = isMobile ? 38 : 52;
                       const size = isCenter ? baseSize + (isMobile ? 12 : 16) : baseSize;
+                      const expressions: Record<string, "smile" | "straight" | "frown" | "calm" | "wide"> = {
+                        strategist: "smile", operator: "straight", skeptic: "frown", advocate: "straight", growth: "wide",
+                      };
                       return (
                         <motion.button
                           key={p.key}
@@ -418,7 +421,7 @@ const TheCouncil = () => {
                           style={{ marginBottom: isCenter ? 0 : i === 1 || i === 3 ? 4 : 10 }}
                         >
                           <div className="absolute -inset-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle, ${p.color}35 0%, transparent 70%)` }} />
-                          <CouncilAvatar color={p.color} size={size} />
+                          <BaymaxFace color={p.color} size={size} expression={expressions[p.key] || "straight"} />
                         </motion.button>
                       );
                     })}
