@@ -172,8 +172,8 @@
   }
 }
 
-/* Force light-mode variables locally, even when html has .dark */
-.force-light {
+/* Force light-mode variables locally, scoped to a single page content area */
+.force-light, .page-light {
   --background: 0 0% 99%;
   --foreground: 220 20% 10%;
   --card: 0 0% 100%;
