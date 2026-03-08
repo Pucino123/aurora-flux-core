@@ -214,7 +214,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
         }}
         onPointerDown={handlePointerDown}
         onClick={(e) => { e.stopPropagation(); if (!didDrag.current && !isMarqueeSelected) { if (onSingleSelect) onSingleSelect(doc.id); else setSelected(s => !s); } }}
-        onDoubleClick={(e) => { e.stopPropagation(); if (!didDrag.current) { setSelected(false); onOpen(doc); } }}
+        onDoubleClick={(e) => { e.stopPropagation(); if (!didDrag.current && !renaming) { setSelected(false); onOpen(doc); } }}
         onContextMenu={handleContextMenu}
       >
         {/* Pin badge */}
