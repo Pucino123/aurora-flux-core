@@ -343,8 +343,9 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
     return inboxTasks.filter(t => {
       if (t.done) return false;
       const due = t.due_date || t.scheduled_date;
-      if (!due) return false;
-      try { return isToday(parseISO(due)); } catch { return false; }
+      // Include tasks due today OR tasks with no due date (inbox-style pending)
+      if (!due) return true;
+      try { return isToday(parseISO(due)); } catch { return true; }
     }).length;
   }, [inboxTasks]);
   const totalInboxBadge = unreadEmails + pendingTodayTasks;
