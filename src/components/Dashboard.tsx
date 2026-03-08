@@ -29,7 +29,6 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { t } from "@/lib/i18n";
 import OnboardingFlow from "./onboarding/OnboardingFlow";
-import CommHub from "./CommHub";
 import FocusControlBar from "./focus/FocusControlBar";
 
 interface DashboardProps {
