@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useFocusStore } from "@/context/FocusContext";
 import { ChevronDown, Image, Upload, Plus, X, Palette, Save, Link, Sun } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
