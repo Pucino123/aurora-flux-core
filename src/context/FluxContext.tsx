@@ -137,8 +137,8 @@ interface FluxContextValue {
   // Navigation
   activeFolder: string | null;
   setActiveFolder: (id: string | null) => void;
-  activeView: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks";
-  setActiveView: (v: "stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks") => void;
+  activeView: "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks";
+  setActiveView: (v: "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks") => void;
   pendingDocumentId: string | null;
   setPendingDocumentId: (id: string | null) => void;
   filterPersona: string | null;
@@ -202,7 +202,7 @@ export function FluxProvider({ children }: { children: ReactNode }) {
   const [scheduleBlocks, setScheduleBlocksRaw] = useState<DbScheduleBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<"stream" | "canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks">("stream");
+  const [activeView, setActiveView] = useState<"canvas" | "council" | "focus" | "calendar" | "analytics" | "projects" | "documents" | "settings" | "tasks">("focus");
   const [pendingDocumentId, setPendingDocumentId] = useState<string | null>(null);
   const [filterPersona, setFilterPersona] = useState<string | null>(null);
 

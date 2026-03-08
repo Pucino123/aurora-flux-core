@@ -279,7 +279,7 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
     await removeFolder(folderId);
     if (activeFolder === folderId) {
       setActiveFolder(null);
-      setActiveView("stream");
+      setActiveView("focus");
     }
     toast.success(t("brain.folder_deleted"));
   };

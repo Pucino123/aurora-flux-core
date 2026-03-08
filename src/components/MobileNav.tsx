@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Focus, Layers, Users, CalendarDays, Home, ListTodo, Briefcase, Menu, X, Sun, Moon, CreditCard, Zap, ShieldCheck, Grid } from "lucide-react";
+import { Home, ListTodo, Layers, Users, CalendarDays, Briefcase, Menu, X, Sun, Moon, CreditCard, Zap, ShieldCheck, Grid } from "lucide-react";
 import { useFlux } from "@/context/FluxContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useMonetization } from "@/context/MonetizationContext";
@@ -19,7 +19,7 @@ const MobileNav = () => {
 
   const mainTabs = [
     { icon: Home, label: "Home", view: "focus" as const },
-    { icon: Layers, label: t("mob.stream"), view: "stream" as const },
+    { icon: ListTodo, label: "Tasks", view: "tasks" as const },
     { icon: Users, label: t("council.nav"), view: "council" as const },
     { icon: CalendarDays, label: "Calendar", view: "calendar" as const },
     { icon: Menu, label: "More", view: null as any },

@@ -10,7 +10,7 @@ const ProjectsOverview = () => {
 
   const openProject = (id: string) => {
     setActiveFolder(id);
-    setActiveView("stream");
+    setActiveView("canvas");
   };
 
   return (

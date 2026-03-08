@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SlidersHorizontal, Focus } from "lucide-react";
 import FluxSidebar from "./FluxSidebar";
-import GridDashboard from "./GridDashboard";
 import Scheduler from "./Scheduler";
 import MobileNav from "./MobileNav";
 import Canvas from "./Canvas";
@@ -50,7 +49,7 @@ function deriveFolderName(text: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-const VIEWS_WITHOUT_INPUT = ["council", "focus", "stream", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing", "canvas"];
+const VIEWS_WITHOUT_INPUT = ["council", "focus", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing", "canvas"];
 const VIEWS_WITHOUT_SCHEDULER = [...VIEWS_WITHOUT_INPUT];
 
 const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible, onToggleSidebar, focusMode }: DashboardProps) => {
@@ -169,7 +168,6 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             {effectiveView === "settings"                    && <SettingsView />}
             {effectiveView === "council"                     && <TheCouncil />}
             {effectiveView === "canvas"                      && <Canvas />}
-            {effectiveView === "stream"                      && <GridDashboard />}
             {(effectiveView as string) === "multitask"       && <MultitaskingView />}
             {(effectiveView as string) === "community"       && <CommunityBoardView />}
             {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
