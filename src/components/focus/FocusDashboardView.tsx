@@ -112,12 +112,13 @@ const FocusContent = () => {
           spaceSettings: p.spaceSettings,
           folderPositions: p.folderPositions,
           docPositions: p.docPositions,
+          // Migration: pages that have never had visibility lists stay undefined (migrated lazily below)
           visibleFolderIds: p.visibleFolderIds,
           visibleDocIds: p.visibleDocIds,
         }));
       }
     } catch {}
-    return [{ id: "page-1", label: "Home" }];
+    return [{ id: "page-1", label: "Home", visibleFolderIds: undefined, visibleDocIds: undefined }];
   });
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [pageDir, setPageDir] = useState<1 | -1>(1);
