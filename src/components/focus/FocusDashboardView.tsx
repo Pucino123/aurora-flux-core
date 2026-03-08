@@ -1698,6 +1698,31 @@ const FocusContent = () => {
         }}
       />
 
+      {/* ── Focus Mode: floating exit pill ── */}
+      <AnimatePresence>
+        {isFocusModeActive && (
+          <motion.button
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ type: "spring", stiffness: 480, damping: 32 }}
+            onClick={disableFocusMode}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-[10200] flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold select-none"
+            style={{
+              background: "rgba(139,92,246,0.18)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid rgba(139,92,246,0.35)",
+              color: "rgba(196,168,255,0.95)",
+              boxShadow: "0 4px 20px rgba(139,92,246,0.25)",
+            }}
+          >
+            <Focus size={13} />
+            Exit Focus Mode
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
       {/* IMPORTANT: pillRef wraps ONLY the pill row so getBoundingClientRect() always reflects
           the pill's exact visual position regardless of build/focus mode. All floating UI
