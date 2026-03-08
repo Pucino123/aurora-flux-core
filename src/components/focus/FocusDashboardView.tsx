@@ -777,7 +777,11 @@ const FocusContent = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <BackgroundEngine embedded />
+      <BackgroundEngine
+        embedded
+        pageBackground={currentPage?.background}
+        onPageBackgroundChange={(id) => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: id } : p))}
+      />
       {/* Vignette always visible */}
       <div
         className="absolute inset-0 z-[15] pointer-events-none"
