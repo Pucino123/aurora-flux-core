@@ -222,14 +222,14 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
             </div>
           </button>
 
-          {/* Workspace (Split-View) */}
+          {/* Thinkpad (Infinite Canvas) */}
           <button
-            onClick={() => nav("multitask")}
-            className={`sidebar-item w-full ${activeView === ("multitask" as any) ? "sidebar-item-active" : ""}`}
-            data-tour="workspace-nav"
+            onClick={() => nav("thinkpad")}
+            className={`sidebar-item w-full ${activeView === ("thinkpad" as any) ? "sidebar-item-active" : ""}`}
+            data-tour="thinkpad-nav"
           >
-            <Layers size={18} className="shrink-0" />
-            <span>Workspace</span>
+            <Network size={18} className="shrink-0" />
+            <span>Thinkpad</span>
           </button>
 
           {/* Community Board */}
