@@ -24,6 +24,9 @@ interface LayoutCanvasProps {
   entities: CanvasEntity[];
   onChange: (entities: CanvasEntity[]) => void;
   lightMode?: boolean;
+  /** External canvas mode override (pass from parent if you manage the toggle there) */
+  isCanvasMode?: boolean;
+  onCanvasModeChange?: (v: boolean) => void;
 }
 
 // ── Colour palettes ───────────────────────────────────────────────────────────
