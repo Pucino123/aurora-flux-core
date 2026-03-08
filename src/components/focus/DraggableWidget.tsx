@@ -461,7 +461,9 @@ const DraggableWidget = ({
                         </svg>
                       </button>
                       <button
-                        onClick={() => toggleWidget(id)}
+                        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                        onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                        onClick={(e) => { e.stopPropagation(); closeWidget(); }}
                         className="p-1 rounded-lg transition-colors"
                         style={{ color: iconColor }}
                       >
