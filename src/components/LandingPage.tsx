@@ -433,7 +433,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
         }}
       />
       <div className="fixed inset-0 z-0 pointer-events-none transition-colors duration-700"
-        style={{ background: isDark ? "rgba(4,2,10,0.55)" : "rgba(10,8,30,0.38)" }} />
+        style={{ background: isDark ? "rgba(4,2,10,0.55)" : "rgba(10,8,30,0.18)" }} />
 
       {/* Navbar */}
       <nav className="relative z-20 flex items-center justify-between px-5 md:px-16 py-4 md:py-5">
