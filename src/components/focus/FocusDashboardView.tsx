@@ -53,6 +53,8 @@ import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
 import { useFocusMode } from "@/context/FocusModeContext";
 import { useTrash } from "@/context/TrashContext";
+import FocusControlBar from "./FocusControlBar";
+import FocusIntentionModal from "./FocusIntentionModal";
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
@@ -332,7 +334,8 @@ const FocusContent = () => {
   const { activeWidgets, systemMode, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
-  const { isFocusModeActive, disableFocusMode } = useFocusMode();
+  const { isFocusModeActive, disableFocusMode, enableFocusMode } = useFocusMode();
+  const [intentionModalOpen, setIntentionModalOpen] = useState(false);
 
   // iOS-style dashboard pages state
   const [dashboardPages, setDashboardPages] = useState<DashboardPage[]>(() => {
@@ -1720,30 +1723,27 @@ const FocusContent = () => {
         }}
       />
 
-      {/* ── Focus Mode: floating exit pill ── */}
-      <AnimatePresence>
-        {isFocusModeActive && (
-          <motion.button
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ type: "spring", stiffness: 480, damping: 32 }}
-            onClick={disableFocusMode}
-            className="fixed top-5 left-1/2 -translate-x-1/2 z-[10200] flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold select-none"
-            style={{
-              background: "rgba(139,92,246,0.18)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(139,92,246,0.35)",
-              color: "rgba(196,168,255,0.95)",
-              boxShadow: "0 4px 20px rgba(139,92,246,0.25)",
-            }}
-          >
-            <Focus size={13} />
-            Exit Focus Mode
-          </motion.button>
-        )}
-      </AnimatePresence>
+
+      {/* ── Focus Mode: Control Bar (timer + task + exit) ── */}
+      <FocusControlBar />
+
+      {/* ── Intention Modal — shown before enabling focus mode ── */}
+      <FocusIntentionModal
+        open={intentionModalOpen}
+        onConfirm={(taskTitle, durationSeconds) => {
+          setIntentionModalOpen(false);
+          enableFocusMode(taskTitle, durationSeconds);
+        }}
+        onCancel={() => setIntentionModalOpen(false)}
+      />
+
+      {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
+
+      {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
+
+
+
+
 
       {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
       {/* IMPORTANT: pillRef wraps ONLY the pill row so getBoundingClientRect() always reflects

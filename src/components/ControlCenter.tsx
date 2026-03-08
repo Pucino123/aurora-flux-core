@@ -76,7 +76,14 @@ const ControlCenter = ({ open, onClose }: ControlCenterProps) => {
       active: isFocusModeActive,
       color: "text-violet-400",
       activeBg: "bg-violet-500/20 border-violet-500/40",
-      onClick: () => { toggleFocusMode(); },
+      onClick: () => {
+          if (isFocusModeActive) {
+            toggleFocusMode();
+          } else {
+            window.dispatchEvent(new Event("open-focus-intention"));
+            onClose();
+          }
+        },
     },
     {
       id: "mute",
