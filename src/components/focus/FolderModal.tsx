@@ -153,9 +153,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const handleCreateFromTemplate = async (title: string, type: "text" | "spreadsheet", content?: any) => {
     if (!createDocument) return;
     const doc = await createDocument(title, type, currentFolderId, content);
-    if (doc && content) {
-      updateDocument(doc.id, { content });
-    }
+    // content is now seeded at creation — no secondary update needed
   };
   const handleDuplicate = async () => {
     if (!currentFolder) return;
