@@ -608,12 +608,17 @@ const FocusContent = () => {
     setContextMenu(null);
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
     const doc = await createDocument(title, type, null);
-    if (doc && pos) {
-      updatePageDocPosition(doc.id, pos);
+    if (doc) {
+      if (pos) updatePageDocPosition(doc.id, pos);
+      // Register doc to this page only
+      setPages(prev => prev.map((p, i) => i === activePageIndex
+        ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
+        : p
+      ));
     }
     contextMenuPosRef.current = null;
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-  }, [createDocument, updatePageDocPosition]);
+  }, [createDocument, updatePageDocPosition, activePageIndex, setPages]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
