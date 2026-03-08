@@ -117,6 +117,40 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     return id;
   }, []);
 
+  const closeWindow = useCallback((id: string) => {
+    setWindows(prev => {
+      const next = prev.filter(w => w.id !== id);
+      const visible = next.filter(w => !w.minimized);
+      setFocusedId(visible.length ? visible.reduce((a, b) => a.zIndex > b.zIndex ? a : b).id : null);
+      return next;
+    });
+  }, []);
+
+  const setWindowLayout = useCallback((id: string, layout: WindowLayout) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, layout } : w));
+  }, []);
+
+  const updateWindowPosition = useCallback((id: string, x: number, y: number) => {
+    setWindows(prev => {
+      const win = prev.find(w => w.id === id);
+      if (!win) return prev;
+      if (win.groupId) {
+        const dx = x - win.position.x;
+        const dy = y - win.position.y;
+        return prev.map(w => {
+          if (w.id === id) return { ...w, position: { x, y } };
+          if (w.groupId === win.groupId) return { ...w, position: { x: w.position.x + dx, y: w.position.y + dy } };
+          return w;
+        });
+      }
+      return prev.map(w => w.id === id ? { ...w, position: { x, y } } : w);
+    });
+  }, []);
+
+  const updateWindowSize = useCallback((id: string, w: number, h: number) => {
+    setWindows(prev => prev.map(win => win.id === id ? { ...win, size: { w, h } } : win));
+  }, []);
+
   const bringToFront = useCallback((id: string) => {
     setFocusedId(id);
     setWindows(prev => {
