@@ -437,6 +437,30 @@ export type Database = {
           },
         ]
       }
+      focus_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          minutes: number
+          session_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          minutes?: number
+          session_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          minutes?: number
+          session_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       folders: {
         Row: {
           color: string | null
@@ -764,8 +788,11 @@ export type Database = {
         Row: {
           created_at: string
           duration: string
+          end_time: string | null
           id: string
+          is_ai: boolean
           scheduled_date: string
+          sort_order: number
           task_id: string | null
           time: string
           title: string
@@ -775,8 +802,11 @@ export type Database = {
         Insert: {
           created_at?: string
           duration?: string
+          end_time?: string | null
           id?: string
+          is_ai?: boolean
           scheduled_date?: string
+          sort_order?: number
           task_id?: string | null
           time: string
           title: string
@@ -786,8 +816,11 @@ export type Database = {
         Update: {
           created_at?: string
           duration?: string
+          end_time?: string | null
           id?: string
+          is_ai?: boolean
           scheduled_date?: string
+          sort_order?: number
           task_id?: string | null
           time?: string
           title?: string

@@ -3,7 +3,10 @@ import { Flame, Clock, TrendingUp, BarChart3, Play, Pause, Square } from "lucide
 import { motion } from "framer-motion";
 import DraggableWidget from "./DraggableWidget";
 import FocusReportModal from "./FocusReportModal";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
+// ── Fallback localStorage (used when not logged in) ───────────────────────────
 const STATS_KEY = "flux-focus-stats";
 
 interface FocusStats {
@@ -14,7 +17,11 @@ interface FocusStats {
 }
 
 const getToday = () => new Date().toISOString().slice(0, 10);
-const getYesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); };
+const getYesterday = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+};
 
 const getWeekData = (log: Record<string, number>) => {
   const labels = ["M", "T", "W", "T", "F", "S", "S"];
@@ -25,11 +32,15 @@ const getWeekData = (log: Record<string, number>) => {
     const d = new Date(now);
     d.setDate(d.getDate() + mondayOffset + i);
     const key = d.toISOString().slice(0, 10);
-    return { label: labels[i], minutes: log[key] || (i < 5 ? [42, 67, 35, 80, 55, 0, 0][i] : 0), isToday: key === getToday() };
+    return {
+      label: labels[i],
+      minutes: log[key] || (i < 5 ? [42, 67, 35, 80, 55, 0, 0][i] : 0),
+      isToday: key === getToday(),
+    };
   });
 };
 
-function loadStats(): FocusStats {
+function loadLocalStats(): FocusStats {
   try {
     const raw = localStorage.getItem(STATS_KEY);
     if (raw) return { totalSessions: 0, ...JSON.parse(raw) };
@@ -37,12 +48,12 @@ function loadStats(): FocusStats {
   return { dailyLog: {}, streak: 4, lastDate: getToday(), totalSessions: 12 };
 }
 
-function saveStats(stats: FocusStats) {
+function saveLocalStats(stats: FocusStats) {
   localStorage.setItem(STATS_KEY, JSON.stringify(stats));
 }
 
 export function logFocusMinutes(minutes: number) {
-  const stats = loadStats();
+  const stats = loadLocalStats();
   const today = getToday();
   const yesterday = getYesterday();
   if (!stats.dailyLog[today]) {
@@ -52,38 +63,95 @@ export function logFocusMinutes(minutes: number) {
   stats.dailyLog[today] = (stats.dailyLog[today] || 0) + minutes;
   stats.lastDate = today;
   stats.totalSessions = (stats.totalSessions || 0) + 1;
-  saveStats(stats);
+  saveLocalStats(stats);
   window.dispatchEvent(new Event("focus-stats-updated"));
 }
 
 const DAILY_GOAL_MIN = 300; // 5h
 const POMODORO_SECS = 25 * 60;
 
+// ── Component ─────────────────────────────────────────────────────────────────
 const FocusStatsWidget = () => {
-  const [stats, setStats] = useState<FocusStats>(loadStats);
+  const { user } = useAuth();
+  const [stats, setStats] = useState<FocusStats>(loadLocalStats);
   const [reportOpen, setReportOpen] = useState(false);
   const [timerSecs, setTimerSecs] = useState(POMODORO_SECS);
   const [timerRunning, setTimerRunning] = useState(false);
   const [ringAnim, setRingAnim] = useState(false);
+  // DB-backed today minutes
+  const [dbTodayMin, setDbTodayMin] = useState<number | null>(null);
+  const [dbTotalSessions, setDbTotalSessions] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const refresh = useCallback(() => setStats(loadStats()), []);
+  // ── Load today's sessions from DB ─────────────────────────────────────────
+  const loadDbSessions = useCallback(async () => {
+    if (!user) return;
+    const today = getToday();
+    const { data, error } = await supabase
+      .from("focus_sessions")
+      .select("minutes, session_date")
+      .eq("user_id", user.id);
+    if (error || !data) return;
+
+    const todayRows = data.filter(r => r.session_date === today);
+    const todayMin = todayRows.reduce((sum, r) => sum + (r.minutes ?? 0), 0);
+    setDbTodayMin(todayMin);
+    setDbTotalSessions(data.length);
+
+    // Rebuild dailyLog from DB
+    const dailyLog: Record<string, number> = {};
+    data.forEach(r => {
+      dailyLog[r.session_date] = (dailyLog[r.session_date] || 0) + (r.minutes ?? 0);
+    });
+
+    // Compute streak
+    let streak = 0;
+    let date = new Date(today);
+    while (dailyLog[date.toISOString().slice(0, 10)]) {
+      streak++;
+      date.setDate(date.getDate() - 1);
+    }
+
+    setStats(prev => ({
+      ...prev,
+      dailyLog,
+      streak: Math.max(streak, 1),
+      totalSessions: data.length,
+      lastDate: today,
+    }));
+  }, [user]);
+
+  useEffect(() => {
+    loadDbSessions();
+    setTimeout(() => setRingAnim(true), 300);
+  }, [loadDbSessions]);
+
+  // ── Sync local stats updated event ───────────────────────────────────────
+  const refresh = useCallback(() => {
+    setStats(loadLocalStats());
+    loadDbSessions();
+  }, [loadDbSessions]);
 
   useEffect(() => {
     window.addEventListener("focus-stats-updated", refresh);
     return () => window.removeEventListener("focus-stats-updated", refresh);
   }, [refresh]);
 
-  useEffect(() => {
-    const s = loadStats();
-    const today = getToday();
-    const yesterday = getYesterday();
-    if (s.lastDate && s.lastDate !== today && s.lastDate !== yesterday) {
-      s.streak = 0; saveStats(s); setStats(s);
-    }
-    setTimeout(() => setRingAnim(true), 300);
-  }, []);
+  // ── Persist a completed session to DB ────────────────────────────────────
+  const persistSession = useCallback(async (minutes: number) => {
+    if (!user) return;
+    await supabase.from("focus_sessions").insert({
+      user_id: user.id,
+      session_date: getToday(),
+      minutes,
+    });
+    // Optimistically update local
+    setDbTodayMin(prev => (prev ?? 0) + minutes);
+    setDbTotalSessions(prev => (prev ?? 0) + 1);
+    loadDbSessions();
+  }, [user, loadDbSessions]);
 
+  // ── Pomodoro timer ────────────────────────────────────────────────────────
   useEffect(() => {
     if (timerRunning) {
       intervalRef.current = setInterval(() => {
@@ -92,6 +160,7 @@ const FocusStatsWidget = () => {
             clearInterval(intervalRef.current!);
             setTimerRunning(false);
             logFocusMinutes(25);
+            persistSession(25);
             return POMODORO_SECS;
           }
           return s - 1;
@@ -101,18 +170,22 @@ const FocusStatsWidget = () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [timerRunning]);
+  }, [timerRunning, persistSession]);
 
   const stopTimer = () => {
     const elapsed = Math.round((POMODORO_SECS - timerSecs) / 60);
-    if (elapsed > 0) logFocusMinutes(elapsed);
+    if (elapsed > 0) {
+      logFocusMinutes(elapsed);
+      persistSession(elapsed);
+    }
     setTimerRunning(false);
     setTimerSecs(POMODORO_SECS);
   };
 
-  const todayMin = stats.dailyLog[getToday()] || 0;
-  const mockTodayMin = 180; // 3h for demo
-  const displayMin = todayMin > 0 ? todayMin : mockTodayMin;
+  // Use DB data when available, otherwise fall back to local
+  const todayMin = dbTodayMin !== null ? dbTodayMin : (stats.dailyLog[getToday()] || 180);
+  const totalSessions = dbTotalSessions !== null ? dbTotalSessions : (stats.totalSessions || 12);
+  const displayMin = todayMin;
   const dailyPct = Math.min((displayMin / DAILY_GOAL_MIN) * 100, 100);
   const weekData = getWeekData(stats.dailyLog);
   const maxWeek = Math.max(...weekData.map(d => d.minutes), 1);
@@ -121,11 +194,12 @@ const FocusStatsWidget = () => {
   const secs = timerSecs % 60;
   const timerPct = 1 - timerSecs / POMODORO_SECS;
 
-  // SVG ring
   const RING_R = 44;
   const RING_C = 2 * Math.PI * RING_R;
 
-  const todayDate = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const todayDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long", month: "short", day: "numeric",
+  });
 
   return (
     <>
@@ -160,7 +234,9 @@ const FocusStatsWidget = () => {
                 </defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-[15px] font-bold text-white/90 leading-none">{Math.floor(displayMin / 60)}h {displayMin % 60}m</p>
+                <p className="text-[15px] font-bold text-white/90 leading-none">
+                  {Math.floor(displayMin / 60)}h {displayMin % 60}m
+                </p>
                 <p className="text-[8px] text-white/30 mt-0.5">/ 5h goal</p>
               </div>
             </div>
@@ -182,7 +258,7 @@ const FocusStatsWidget = () => {
                 <TrendingUp size={12} className="text-violet-400" />
               </div>
               <div>
-                <p className="text-[14px] font-bold text-white/90 leading-none">{stats.totalSessions || 12}</p>
+                <p className="text-[14px] font-bold text-white/90 leading-none">{totalSessions}</p>
                 <p className="text-[8px] text-white/30">Sessions</p>
               </div>
             </div>
