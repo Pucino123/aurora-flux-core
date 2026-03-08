@@ -34,9 +34,11 @@ const AUTO_DELETE_OPTIONS: { label: string; value: AutoDeleteDays }[] = [
   { label: "Never", value: null },
 ];
 
-function TrashRow({ item, onRestore, onDelete }: { item: TrashItem; onRestore: () => void; onDelete: () => void }) {
+const TrashRow = forwardRef<HTMLDivElement, { item: TrashItem; onRestore: () => void; onDelete: () => void }>(
+  function TrashRow({ item, onRestore, onDelete }, ref) {
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
