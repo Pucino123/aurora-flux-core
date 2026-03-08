@@ -1514,8 +1514,38 @@ const FocusContent = () => {
             document.body
           )}
           {openFolderId && (
-            <FolderModal folderId={openFolderId} onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }} />
+            <ExpandedFolderOverlay
+              folderId={openFolderId}
+              onClose={() => { setOpenFolderId(null); refetchDesktopDocs(); }}
+              onOpenDocument={(doc) => {
+                openWindow({
+                  type: "document",
+                  contentId: doc.id,
+                  title: doc.title,
+                  layout: "floating",
+                  position: { x: Math.max(60, (window.innerWidth / 2) - 410 + Math.random() * 80), y: Math.max(40, (window.innerHeight / 2) - 310 + Math.random() * 60) },
+                });
+              }}
+              onMoveDocToDesktop={(docId, clientX, clientY) => {
+                const canvasPos = toCanvasCoords(clientX, clientY);
+                updatePageDocPosition(docId, canvasPos);
+                setPages(prev => prev.map((p, i) => i === activePageIndex
+                  ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []).filter(id => id !== docId), docId] }
+                  : p
+                ));
+                setTimeout(() => refetchDesktopDocs(), 400);
+              }}
+              onMoveFolderToDesktop={(fid, clientX, clientY) => {
+                const canvasPos = toCanvasCoords(clientX, clientY);
+                updatePageFolderPosition(fid, canvasPos);
+                setPages(prev => prev.map((p, i) => i === activePageIndex
+                  ? { ...p, visibleFolderIds: [...(p.visibleFolderIds ?? []).filter(id => id !== fid), fid] }
+                  : p
+                ));
+              }}
+            />
           )}
+
 
         </div>
       </div>
