@@ -37,6 +37,8 @@ interface WordsToolbarProps {
   isStreaming?: boolean;
   onStopStream?: () => void;
   onFinishStream?: () => void;
+  canvasMode?: boolean;
+  onToggleCanvasMode?: () => void;
 }
 
 const ALL_SEGMENTS = ["file", "typography", "structure", "insert", "emoji", "ai", "view"];
