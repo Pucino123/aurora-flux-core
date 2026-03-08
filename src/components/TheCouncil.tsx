@@ -234,7 +234,7 @@ const TheCouncil = () => {
       await supabase.from("council_ideas").delete().eq("id", ideaId).eq("user_id", user.id);
       if (activeIdeaId === ideaId) { setActiveIdeaId(null); setActiveIdeaContent(""); setResponses([]); setConsensusScore(null); setBiasData([]); setStickyNotes([]); }
       setIdeas((prev) => prev.filter((i) => i.id !== ideaId));
-      toast.success("Idé slettet");
+      toast.success("Idea deleted");
     } catch (e: any) { console.error("Delete idea error:", e); toast.error("Could not delete idea"); }
   };
 
