@@ -23,6 +23,7 @@ import { UpgradeModal, OutOfSparksModal } from "./billing/BillingView";
 import CRMPage from "../pages/CRMPage";
 import CommHub from "./CommHub";
 import ControlCenter from "./ControlCenter";
+import InboxView from "./InboxView";
 import { useFlux } from "@/context/FluxContext";
 import { useMonetization } from "@/context/MonetizationContext";
 import { useFocusMode } from "@/context/FocusModeContext";
