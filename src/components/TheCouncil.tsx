@@ -846,7 +846,7 @@ const TheCouncil = () => {
                           >
                             <Swords size={16} />
                           </motion.div>
-                          {hasStrongDisagreement ? "⚡ Stærk uenighed — Start Debate!" : "⚔️ Start Debate"}
+                          {hasStrongDisagreement ? "⚡ Strong disagreement — Start Debate!" : "⚔️ Start Debate"}
                         </motion.button>
                       )}
                       {filteredResponses.map((persona, i) => {
