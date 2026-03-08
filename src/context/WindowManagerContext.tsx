@@ -211,6 +211,10 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     setWindows(prev => prev.map(w => w.id === id ? { ...w, groupId: undefined } : w));
   }, []);
 
+  const updateWindowTitle = useCallback((id: string, title: string) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, title } : w));
+  }, []);
+
   // ── Global keyboard shortcuts ──────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
