@@ -1,14 +1,13 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useFlux } from "@/context/FluxContext";
-import { Inbox, Check, Trash2, AlertTriangle, Calendar, ListTodo, CheckCircle2, Circle, Pin, Mail, MessageSquare, Search, Plus, Reply, Forward, Archive, Star, Users, MailPlus } from "lucide-react";
+import { Check, Trash2, AlertTriangle, Calendar, ListTodo, Mail, MessageSquare, Search, Plus, Reply, Forward, Archive, Users, MailPlus, Send, Users2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { t } from "@/lib/i18n";
-import CollapsibleSection from "./CollapsibleSection";
 import { MOCK_EMAILS } from "./inbox/MockEmailData";
 import type { Email } from "./inbox/MockEmailData";
-import TeamChatView from "./inbox/TeamChatView";
 import SEO from "@/components/SEO";
+import { useTeamChat, getUserColor } from "@/hooks/useTeamChat";
 
 const priorityColor = (p?: string | null) => {
   if (p === "high") return "hsl(var(--priority-high))";
