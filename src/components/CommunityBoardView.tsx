@@ -286,11 +286,9 @@ const CommunityBoardView = () => {
     };
   }, [fetchSlots]);
 
-  /* ── Pending queue (only user's own + admin) ── */
+  /* ── Pending queue (only current user's own) ── */
   const pendingSlots = slots.filter(
-    (s) =>
-      s.status === "pending" &&
-      (adminMode || s.userId === user?.id)
+    (s) => s.status === "pending" && s.userId === user?.id
   );
 
   /* ── Claim ── */
