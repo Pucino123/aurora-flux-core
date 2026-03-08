@@ -204,6 +204,7 @@ const AuraAnalysisPanel: React.FC<AuraAnalysisPanelProps> = ({ deal, onClose }) 
 
 const CRMPage: React.FC = () => {
   const { deals, addDeal, updateDeal, removeDeal } = useCRM();
+  const { theme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<Stage | "all">("all");
   const [showForm, setShowForm] = useState(false);
