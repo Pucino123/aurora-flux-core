@@ -67,6 +67,100 @@ function savingsForecast(current: number, target: number, deadline: string | nul
   return fmt(Math.ceil(perMonth));
 }
 
+/** Build month-by-month projected balance points for SVG sparkline */
+function buildForecastPoints(current: number, target: number, deadline: string): { x: number; y: number }[] {
+  const daysLeft = differenceInDays(parseISO(deadline), new Date());
+  if (daysLeft <= 0) return [];
+  const monthsLeft = Math.max(daysLeft / 30.44, 0.5);
+  const remaining  = target - current;
+  const perMonth   = remaining / monthsLeft;
+  const nPoints    = Math.min(Math.ceil(monthsLeft) + 1, 13);
+  const WIDTH = 100; const HEIGHT = 28;
+  const maxVal = target;
+  return Array.from({ length: nPoints }, (_, i) => {
+    const balance = Math.min(current + perMonth * i, target);
+    const x = (i / (nPoints - 1)) * WIDTH;
+    const y = HEIGHT - (balance / maxVal) * HEIGHT;
+    return { x, y };
+  });
+}
+
+// ── Forecast Sparkline SVG ──────────────────────────────────────────────────
+function ForecastSparkline({
+  current, target, deadline,
+}: {
+  current: number; target: number; deadline: string;
+}) {
+  const points = buildForecastPoints(current, target, deadline);
+  if (points.length < 2) return null;
+
+  const WIDTH = 100; const HEIGHT = 28;
+
+  // Build SVG path
+  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const areaPath = `${linePath} L ${WIDTH} ${HEIGHT} L 0 ${HEIGHT} Z`;
+
+  // Current position dot
+  const dotX = (current / target) * WIDTH;
+  const dotY = HEIGHT - (current / target) * HEIGHT;
+
+  return (
+    <div className="mt-1.5 mb-1">
+      <p className="text-[7px] text-white/20 uppercase tracking-wider mb-1 flex items-center gap-0.5">
+        <TrendingUp size={7} className="text-violet-300/40" /> Forecast to deadline
+      </p>
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full" style={{ height: 28 }}>
+        {/* Area fill */}
+        <motion.path
+          d={areaPath}
+          fill="url(#forecastGrad)"
+          fillOpacity={0.18}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+        />
+        {/* Line */}
+        <motion.path
+          d={linePath}
+          fill="none"
+          stroke="hsl(265 70% 65%)"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="200"
+          initial={{ strokeDashoffset: 200 }}
+          animate={{ strokeDashoffset: 0 }}
+          transition={{ duration: 0.9, ease: "easeOut" }}
+        />
+        {/* Target line */}
+        <line x1="0" y1="0" x2={WIDTH} y2="0" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" strokeDasharray="3 2" />
+        {/* Current dot */}
+        <motion.circle
+          cx={dotX}
+          cy={dotY}
+          r="2.2"
+          fill="hsl(265 70% 65%)"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.6, type: "spring" }}
+        />
+        <defs>
+          <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="hsl(265 70% 65%)" />
+            <stop offset="100%" stopColor="hsl(265 70% 65%)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="flex items-center justify-between mt-0.5">
+        <span className="text-[7px] text-white/20">Now</span>
+        <span className="text-[7px] text-violet-300/60 font-medium">
+          {format(parseISO(deadline), "MMM yyyy")}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /** Export goals to CSV and trigger browser download */
 function exportGoalsCSV(goals: SavingsGoal[]) {
   const header = ["Name", "Current ($)", "Target ($)", "Progress (%)", "Deadline"];
