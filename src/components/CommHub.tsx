@@ -290,7 +290,7 @@ const CommHub = () => {
                       />
                     )}
                     <span className="relative z-10 flex items-center gap-1.5">
-                      {t === "aura" ? <Sparkles size={12} /> : <Users size={12} />}
+                      {t === "aura" ? <AuraOrb state="idle" size={16} /> : <Users size={12} />}
                       {t === "aura" ? "Aura AI" : "Team"}
                     </span>
                   </button>
