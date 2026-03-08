@@ -40,7 +40,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage, isPinned, onTogglePin }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
@@ -84,6 +84,7 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   const [renameValue, setRenameValue] = useState(folder.title);
   const [justAbsorbed, setJustAbsorbed] = useState(false);
   const [isDropTarget, setIsDropTarget] = useState(false);
+  const [flyingOff, setFlyingOff] = useState<{ dir: 1 | -1 } | null>(null);
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const didDrag = useRef(false);

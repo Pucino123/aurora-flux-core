@@ -54,7 +54,7 @@ const BG_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage }: DesktopDocumentProps) => {
+const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragState, onDragStateChange, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage, isPinned, onTogglePin }: DesktopDocumentProps) => {
   const { user } = useAuth();
   const store = useFocusStore();
   const { folders, createBlock } = useFlux();
@@ -84,6 +84,7 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
   const [calTime, setCalTime] = useState("09:00");
   const [showMoveFolder, setShowMoveFolder] = useState(false);
   const [showMoveToPageMenu, setShowMoveToPageMenu] = useState(false);
+  const [flyingOff, setFlyingOff] = useState<{ dir: 1 | -1 } | null>(null);
 
   const rootFolders = useMemo(() => folders.filter(f => !f.parent_id), [folders]);
 
