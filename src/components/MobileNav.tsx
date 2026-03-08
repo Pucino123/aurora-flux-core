@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ListTodo, Briefcase, Menu, X, Sun, Moon, CreditCard, Zap, ShieldCheck, Grid } from "lucide-react";
+import { Home, ListTodo, Layers, Users, CalendarDays, Briefcase, Menu, X, Sun, Moon, CreditCard, Zap, ShieldCheck, Grid } from "lucide-react";
 import { useFlux } from "@/context/FluxContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useMonetization } from "@/context/MonetizationContext";
