@@ -1563,20 +1563,20 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
       {/* Pitch area */}
       <div className="space-y-3 shrink-0">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
           <input
             value={idea}
             onChange={e => setIdea(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleConsult()}
             placeholder="Idea: Should I start an eco-friendly coffee shop?"
-            className="flex-1 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/20 transition-colors"
+            className="flex-1 px-4 py-3 rounded-2xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/40 transition-colors"
           />
           {/* New Session button */}
           <button
             onClick={handleNewSession}
             disabled={isConsulting}
             title="New Session"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/8 transition-colors shrink-0 disabled:opacity-30"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30"
           >
             <RotateCcw size={14} />
           </button>
@@ -1599,7 +1599,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             onClick={handleExportPDF}
             disabled={isExportingPDF || !allRevealed}
             title="Export PDF"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0 disabled:opacity-30"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30"
           >
             {isExportingPDF ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           </button>
@@ -1608,14 +1608,14 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             onClick={handleShareSession}
             disabled={!allRevealed}
             title="Copy Shareable Link"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0 disabled:opacity-30"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0 disabled:opacity-30"
           >
             <Link size={14} />
           </button>
           {/* Share verdict card */}
           <button
             onClick={() => setShowExport(true)}
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0"
             title="Share Verdict Card"
           >
             <Share2 size={15} />
@@ -1624,7 +1624,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
           <button
             onClick={() => setShowTour(true)}
             title="How to use the Boardroom"
-            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/20 hover:text-white/50 hover:bg-white/8 transition-colors shrink-0"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-secondary border border-border text-muted-foreground/50 hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0"
           >
             <span className="text-[13px] font-bold">?</span>
           </button>
@@ -1644,12 +1644,12 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="px-4 py-3 rounded-2xl bg-white/4 border border-white/8">
+              <div className="px-4 py-3 rounded-2xl bg-secondary/60 border border-border/50">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider">Board Consensus</span>
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Board Consensus</span>
                   <span className="text-[11px] font-bold" style={{ color: consensus.color }}>{consensus.label}</span>
                 </div>
-                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${avgRing}%` }}
@@ -1658,7 +1658,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
                     style={{ background: `linear-gradient(90deg, ${consensus.color}80, ${consensus.color})` }}
                   />
                 </div>
-                <p className="text-[9px] text-white/25 mt-1">{avgRing}% average confidence across all 4 advisors</p>
+                <p className="text-[9px] text-muted-foreground/60 mt-1">{avgRing}% average confidence across all 4 advisors</p>
               </div>
             </motion.div>
           )}
