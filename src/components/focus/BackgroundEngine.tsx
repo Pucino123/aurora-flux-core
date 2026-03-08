@@ -272,6 +272,8 @@ const SPACES_STYLE_KEY = "flux-spaces-style";
 
 interface SpacesStyle {
   bgOpacity: number;
+  bgColor: string;
+  textColor: string;
   blurAmount: number;
   borderOpacity: number;
   borderRadius: number;
@@ -280,7 +282,8 @@ interface SpacesStyle {
   textOpacity: number;
 }
 const DEFAULT_SPACES_STYLE: SpacesStyle = {
-  bgOpacity: 10, blurAmount: 16, borderOpacity: 20,
+  bgOpacity: 10, bgColor: "#000000", textColor: "#ffffff",
+  blurAmount: 16, borderOpacity: 20,
   borderRadius: 50, borderWidth: 1, borderColor: "#ffffff", textOpacity: 80,
 };
 
@@ -293,16 +296,19 @@ function loadSpacesStyle(): SpacesStyle {
 }
 function saveSpacesStyle(s: SpacesStyle) { localStorage.setItem(SPACES_STYLE_KEY, JSON.stringify(s)); }
 
-const SWATCH_COLORS_SPACES = ["#ffffff", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc"];
+const TEXT_SWATCHES = ["#ffffff", "#f0f0f0", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc"];
+const BG_SWATCHES_S = ["#000000", "#1a1a2e", "#0f172a", "#1e293b", "#14041e", "#0a1628"];
 
 const SpacesStylePanel = ({ style, onUpdate, onReset, onClose }: {
   style: SpacesStyle; onUpdate: (p: Partial<SpacesStyle>) => void; onReset: () => void; onClose: () => void;
-}) => (
+}) => {
+  const [colorTab, setColorTab] = React.useState<"text" | "bg">("text");
+  return (
   <motion.div
     initial={{ opacity: 0, scale: 0.92, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 8 }}
     transition={{ type: "spring", stiffness: 420, damping: 30 }}
-    className="absolute bottom-[calc(100%+10px)] left-0 w-64 rounded-2xl p-4 shadow-2xl z-[10200]"
-    style={{ background: "rgba(18,18,20,0.94)", backdropFilter: "blur(48px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    className="absolute bottom-[calc(100%+10px)] left-0 w-68 rounded-2xl p-4 shadow-2xl z-[10200]"
+    style={{ background: "rgba(18,18,20,0.94)", backdropFilter: "blur(48px)", border: "1px solid rgba(255,255,255,0.1)", minWidth: 260 }}
     onPointerDown={e => e.stopPropagation()}
   >
     <div className="flex items-center justify-between mb-3">
@@ -313,8 +319,31 @@ const SpacesStylePanel = ({ style, onUpdate, onReset, onClose }: {
       </div>
     </div>
     <div className="space-y-3">
+      {/* Color tabs */}
+      <div className="space-y-2">
+        <div className="flex gap-1 p-0.5 rounded-xl bg-white/[0.05]">
+          {(["text", "bg"] as const).map(m => (
+            <button key={m} onClick={() => setColorTab(m)}
+              className={`flex-1 py-1 text-[10px] font-semibold rounded-lg transition-all ${colorTab === m ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"}`}>
+              {m === "text" ? "Text" : "Background"}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {(colorTab === "text" ? TEXT_SWATCHES : BG_SWATCHES_S).map(c => (
+            <button key={c} onClick={() => onUpdate(colorTab === "text" ? { textColor: c } : { bgColor: c })}
+              className="w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform"
+              style={{ backgroundColor: c, borderColor: (colorTab === "text" ? style.textColor : style.bgColor) === c ? "rgba(255,255,255,0.9)" : c === "#000000" ? "rgba(255,255,255,0.2)" : "transparent" }} />
+          ))}
+          <label className="w-5 h-5 rounded-full cursor-pointer border border-white/20 overflow-hidden hover:scale-110 transition-transform"
+            style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+            <input type="color" value={colorTab === "text" ? (style.textColor || "#ffffff") : (style.bgColor || "#000000")}
+              onChange={e => onUpdate(colorTab === "text" ? { textColor: e.target.value } : { bgColor: e.target.value })} className="opacity-0 w-full h-full" />
+          </label>
+        </div>
+      </div>
       {[
-        { label: "Background", key: "bgOpacity" as const, min: 0, max: 80, unit: "%" },
+        { label: "BG Opacity", key: "bgOpacity" as const, min: 0, max: 80, unit: "%" },
         { label: "Blur", key: "blurAmount" as const, min: 0, max: 40, unit: "px" },
         { label: "Text Opacity", key: "textOpacity" as const, min: 10, max: 100, unit: "%" },
         { label: "Border Opacity", key: "borderOpacity" as const, min: 0, max: 100, unit: "%" },
@@ -337,7 +366,7 @@ const SpacesStylePanel = ({ style, onUpdate, onReset, onClose }: {
       <div className="space-y-1">
         <span className="text-[9px] text-white/40 uppercase tracking-wider block">Border Color</span>
         <div className="flex gap-1.5 flex-wrap">
-          {SWATCH_COLORS_SPACES.map(c => (
+          {TEXT_SWATCHES.map(c => (
             <button key={c} onClick={() => onUpdate({ borderColor: c, borderWidth: Math.max(1, style.borderWidth) })}
               className="w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform"
               style={{ backgroundColor: c, borderColor: style.borderColor === c ? "rgba(255,255,255,0.9)" : "transparent" }} />
@@ -350,7 +379,8 @@ const SpacesStylePanel = ({ style, onUpdate, onReset, onClose }: {
       </div>
     </div>
   </motion.div>
-);
+  );
+};
 
 // ── Main Component ───────────────────────────────────────────────────
 const BackgroundEngine = ({
@@ -440,11 +470,11 @@ const BackgroundEngine = ({
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r},${g},${b},${alpha})`;
   };
-  const spacesBg = hexToRgba("#000000", spacesStyle.bgOpacity / 100);
+  const spacesBg = hexToRgba(spacesStyle.bgColor || "#000000", spacesStyle.bgOpacity / 100);
   const spacesBorder = spacesStyle.borderWidth > 0
     ? `${spacesStyle.borderWidth}px solid ${hexToRgba(spacesStyle.borderColor, spacesStyle.borderOpacity / 100)}`
     : "1px solid rgba(255,255,255,0.15)";
-  const spacesTextColor = `rgba(255,255,255,${spacesStyle.textOpacity / 100})`;
+  const spacesTextColor = hexToRgba(spacesStyle.textColor || "#ffffff", spacesStyle.textOpacity / 100);
   const spacesPosStyle: React.CSSProperties = spacesPos
     ? { left: spacesPos.x, top: spacesPos.y, bottom: "auto" }
     : { left: 268, bottom: 24, top: "auto" };
@@ -719,16 +749,18 @@ const BackgroundEngine = ({
                 )}
               </AnimatePresence>
             </div>
-            {/* Style button */}
-            <button
-              onPointerDown={e => e.stopPropagation()}
-              onClick={() => { setSpacesStyleOpen(!spacesStyleOpen); setMenuOpen(false); }}
-              className="ml-1 p-2 rounded-full transition-all hover:bg-white/10"
-              style={{ color: spacesStyleOpen ? spacesTextColor : "rgba(255,255,255,0.3)" }}
-              title="Customize button style"
-            >
-              <Palette size={13} />
-            </button>
+            {/* Style button — build mode only */}
+            {isBuild && (
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => { setSpacesStyleOpen(!spacesStyleOpen); setMenuOpen(false); }}
+                className="ml-1 p-2 rounded-full transition-all hover:bg-white/10"
+                style={{ color: spacesStyleOpen ? spacesTextColor : "rgba(255,255,255,0.3)" }}
+                title="Customize button style"
+              >
+                <Palette size={13} />
+              </button>
+            )}
           </motion.div>
         </>,
         document.body

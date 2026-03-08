@@ -60,17 +60,21 @@ const TOOLBAR_POS_KEY = "flux-toolbar-pos";
 const TOOLBAR_STYLE_KEY = "flux-toolbar-style";
 
 interface ToolbarStyle {
-  bgOpacity: number;       // 0–100
-  blurAmount: number;      // 0–40
-  borderOpacity: number;   // 0–100
-  borderRadius: number;    // 0–50 (px)
-  borderWidth: number;     // 0–4
-  borderColor: string;     // hex
-  textOpacity: number;     // 0–100
+  bgOpacity: number;
+  bgColor: string;
+  textColor: string;
+  blurAmount: number;
+  borderOpacity: number;
+  borderRadius: number;
+  borderWidth: number;
+  borderColor: string;
+  textOpacity: number;
 }
 
 const DEFAULT_TOOLBAR_STYLE: ToolbarStyle = {
   bgOpacity: 10,
+  bgColor: "#000000",
+  textColor: "#ffffff",
   blurAmount: 16,
   borderOpacity: 20,
   borderRadius: 50,
@@ -113,6 +117,7 @@ const BORDER_STYLES_LIST = [
 ];
 
 const SWATCH_COLORS = ["#ffffff", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc", "#fca5a5"];
+const BG_SWATCHES = ["#000000", "#1a1a2e", "#0f172a", "#1e293b", "#0c0c0c", "#14041e", "#0a1628"];
 
 // ── Style panel ──────────────────────────────────────────────────────
 const ToolbarStylePanel = ({ style, onUpdate, onReset, onClose }: {
@@ -120,7 +125,9 @@ const ToolbarStylePanel = ({ style, onUpdate, onReset, onClose }: {
   onUpdate: (patch: Partial<ToolbarStyle>) => void;
   onReset: () => void;
   onClose: () => void;
-}) => (
+}) => {
+  const [colorTab, setColorTab] = useState<"text" | "bg">("text");
+  return (
   <motion.div
     initial={{ opacity: 0, scale: 0.92, y: 8 }}
     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -140,10 +147,47 @@ const ToolbarStylePanel = ({ style, onUpdate, onReset, onClose }: {
     </div>
 
     <div className="space-y-4">
+      {/* Color tabs */}
+      <div className="space-y-2">
+        <div className="flex gap-1 p-0.5 rounded-xl bg-white/[0.05]">
+          {(["text", "bg"] as const).map(m => (
+            <button key={m} onClick={() => setColorTab(m)}
+              className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${colorTab === m ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"}`}>
+              {m === "text" ? "Text" : "Background"}
+            </button>
+          ))}
+        </div>
+        {colorTab === "text" ? (
+          <div className="flex gap-1.5 flex-wrap">
+            {["#ffffff", "#f0f0f0", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc"].map(c => (
+              <button key={c} onClick={() => onUpdate({ textColor: c })}
+                className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                style={{ backgroundColor: c, borderColor: style.textColor === c ? "rgba(255,255,255,0.9)" : "transparent" }} />
+            ))}
+            <label className="w-6 h-6 rounded-full cursor-pointer overflow-hidden border border-white/20 hover:scale-110 transition-transform"
+              style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+              <input type="color" value={style.textColor || "#ffffff"} onChange={e => onUpdate({ textColor: e.target.value })} className="opacity-0 w-full h-full" />
+            </label>
+          </div>
+        ) : (
+          <div className="flex gap-1.5 flex-wrap">
+            {BG_SWATCHES.map(c => (
+              <button key={c} onClick={() => onUpdate({ bgColor: c })}
+                className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                style={{ backgroundColor: c, borderColor: style.bgColor === c ? "rgba(255,255,255,0.9)" : "transparent", border: c === "#000000" ? "2px solid rgba(255,255,255,0.2)" : undefined }} />
+            ))}
+            <label className="w-6 h-6 rounded-full cursor-pointer overflow-hidden border border-white/20 hover:scale-110 transition-transform"
+              style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+              <input type="color" value={style.bgColor || "#000000"} onChange={e => onUpdate({ bgColor: e.target.value })} className="opacity-0 w-full h-full" />
+            </label>
+          </div>
+        )}
+      </div>
+
       {/* Background opacity */}
       <div className="space-y-1.5">
         <div className="flex justify-between items-center">
-          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">Background</span>
+          <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">BG Opacity</span>
           <span className="text-[10px] text-white/30 tabular-nums">{style.bgOpacity}%</span>
         </div>
         <Slider value={[style.bgOpacity]} onValueChange={([v]) => onUpdate({ bgOpacity: v })} min={0} max={80} step={1}
@@ -219,7 +263,8 @@ const ToolbarStylePanel = ({ style, onUpdate, onReset, onClose }: {
       </div>
     </div>
   </motion.div>
-);
+  );
+};
 
 interface ToolDrawerProps {
   pageActiveWidgets?: string[];
@@ -327,13 +372,14 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r},${g},${b},${alpha})`;
   };
-  const barBg = hexToRgba("#000000", toolbarStyle.bgOpacity / 100);
+  const barBg = hexToRgba(toolbarStyle.bgColor || "#000000", toolbarStyle.bgOpacity / 100);
   const barBorder = toolbarStyle.borderWidth > 0
     ? `${toolbarStyle.borderWidth}px solid ${hexToRgba(toolbarStyle.borderColor, toolbarStyle.borderOpacity / 100)}`
     : "1px solid rgba(255,255,255,0.12)";
   const barRadius = toolbarStyle.borderRadius;
   const barBlur = toolbarStyle.blurAmount;
   const textAlpha = toolbarStyle.textOpacity / 100;
+  const textRgba = hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha);
 
   return (
     <>
@@ -380,11 +426,9 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
             onClick={() => setSystemMode(key)}
             title={label}
             className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all ${
-              systemMode === key
-                ? "bg-white/15 shadow-[0_0_10px_rgba(255,255,255,0.05)]"
-                : "hover:bg-white/5"
+              systemMode === key ? "bg-white/15 shadow-[0_0_10px_rgba(255,255,255,0.05)]" : "hover:bg-white/5"
             }`}
-            style={{ color: systemMode === key ? `rgba(255,255,255,${textAlpha})` : `rgba(255,255,255,${textAlpha * 0.4})` }}
+            style={{ color: systemMode === key ? textRgba : hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
           >
             <Icon size={14} />
             <span className="hidden sm:inline">{label}</span>
@@ -397,7 +441,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           onClick={() => { setCollabOpen(true); markAsRead(); }}
           title="Collab"
           className="relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all hover:bg-white/5"
-          style={{ color: `rgba(255,255,255,${textAlpha * 0.4})` }}
+          style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
         >
           <MessageCircle size={14} />
           <span className="hidden sm:inline">Collab</span>
@@ -408,35 +452,37 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           )}
         </button>
 
-        <div className="w-px h-5 mx-1" style={{ background: `rgba(255,255,255,${textAlpha * 0.15})` }} />
+        <div className="w-px h-5 mx-1" style={{ background: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.15) }} />
 
         {/* Tools trigger */}
         <motion.button
           onPointerDown={e => e.stopPropagation()}
           onClick={() => { setOpen(!open); setStyleOpen(false); }}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-medium transition-all ${open ? "bg-white/15" : "hover:bg-white/5"}`}
-          style={{ color: open ? `rgba(255,255,255,${textAlpha})` : `rgba(255,255,255,${textAlpha * 0.5})` }}
+          style={{ color: open ? textRgba : hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.5) }}
           whileTap={{ scale: 0.96 }}
         >
           <ChevronUp size={14} className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
           <span className="hidden sm:inline">Tools</span>
-          <span className="text-[10px] tabular-nums" style={{ color: `rgba(255,255,255,${textAlpha * 0.3})` }}>{effectiveWidgets.length}</span>
+          <span className="text-[10px] tabular-nums" style={{ color: hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.3) }}>{effectiveWidgets.length}</span>
         </motion.button>
 
-        {/* Style button — always visible */}
-        <button
-          onPointerDown={e => e.stopPropagation()}
-          onClick={() => { setStyleOpen(!styleOpen); setOpen(false); }}
-          title="Customize toolbar style"
-          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all ${styleOpen ? "bg-white/15" : "hover:bg-white/5"}`}
-          style={{ color: styleOpen ? `rgba(255,255,255,${textAlpha})` : `rgba(255,255,255,${textAlpha * 0.4})` }}
-        >
-          <Palette size={13} />
-        </button>
+        {/* Style button — build mode only */}
+        {isBuild && (
+          <button
+            onPointerDown={e => e.stopPropagation()}
+            onClick={() => { setStyleOpen(!styleOpen); setOpen(false); }}
+            title="Customize toolbar style"
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all ${styleOpen ? "bg-white/15" : "hover:bg-white/5"}`}
+            style={{ color: styleOpen ? textRgba : hexToRgba(toolbarStyle.textColor || "#ffffff", textAlpha * 0.4) }}
+          >
+            <Palette size={13} />
+          </button>
+        )}
 
         {/* Style panel */}
         <AnimatePresence>
-          {styleOpen && (
+          {styleOpen && isBuild && (
             <ToolbarStylePanel
               style={toolbarStyle}
               onUpdate={updateToolbarStyle}
