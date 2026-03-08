@@ -111,8 +111,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
     toast.success(`Plan created: ${createdTasks.length} tasks in "${folderName}"`);
   }, [createTask, createFolder, createBlock, setActiveFolder, setActiveView]);
 
-  const handleCreateFolder = useCallback(async (data: { title: string; type: string; color: string | null; icon: string | null }) => {
-    const folder = await createFolder(data);
+  const handleCreateFolder = useCallback(async (data: { title: string; color: string | null; icon: string; subfolders?: string[] }) => {
+    const folder = await createFolder({ title: data.title, type: "project", color: data.color, icon: data.icon });
     if (folder) {
       setActiveFolder(folder.id);
       setShowCreateModal(false);
