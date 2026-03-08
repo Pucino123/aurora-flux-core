@@ -139,6 +139,9 @@ const DraggableWidget = ({
   };
 
   const dragging = useRef(false);
+  const dragCancelled = useRef(false); // set true when drag started on text/editable
+  const dragStartPos = useRef({ x: 0, y: 0 }); // for threshold detection
+  const DRAG_THRESHOLD = 6; // px — must move this far before drag activates
   const offset = useRef({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [showOpacity, setShowOpacity] = useState(false);
