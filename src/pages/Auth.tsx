@@ -133,7 +133,7 @@ const Auth = () => {
               {isSignUp ? "Create account" : "Welcome back"}
             </h1>
             <p className="text-sm" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.65)" }}>
-              {isSignUp ? "Start your productivity journey with Flux" : "Sign in to your Flux workspace"}
+              {isSignUp ? "Start your productivity journey with Dashiii" : "Sign in to your Dashiii workspace"}
             </p>
           </div>
 

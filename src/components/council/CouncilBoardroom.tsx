@@ -1487,7 +1487,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
 ---
 
-*Powered by Flux Boardroom · [aurora-flux-core.lovable.app](https://aurora-flux-core.lovable.app)*`;
+*Powered by Dashiii Boardroom · [aurora-flux-core.lovable.app](https://aurora-flux-core.lovable.app)*`;
 
   return (
     <div ref={boardroomRef} className="flex flex-col h-full min-h-0 gap-4">
