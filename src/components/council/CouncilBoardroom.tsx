@@ -646,13 +646,15 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
       <div className="p-4 flex flex-col h-full">
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
-          <div className="relative w-14 h-14 shrink-0">
-            <ConfidenceRing pct={response?.confidence ?? persona.ringPct} color={color} animate={state === "revealed"} size={56} />
-            <div
-              className="absolute inset-[6px] rounded-full flex items-center justify-center text-[12px] font-bold"
-              style={{ background: `linear-gradient(135deg, ${color}25, ${color}10)`, border: `1px solid ${color}30` }}
-            >
-              <span style={{ color }}>{persona.initials}</span>
+          <div className="relative shrink-0" style={{ width: 52, height: 52 }}>
+            <ConfidenceRing pct={response?.confidence ?? persona.ringPct} color={color} animate={state === "revealed"} size={52} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <CouncilAvatar
+                color={color}
+                size={36}
+                isSpeaking={state === "typing"}
+                personalityIndex={PERSONAS.findIndex(p => p.key === persona.key)}
+              />
             </div>
           </div>
           <div className="flex-1 min-w-0">
