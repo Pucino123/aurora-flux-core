@@ -1776,15 +1776,16 @@ const FocusContent = () => {
             exit={{ opacity: 0, scale: 0.9 }}
             className="fixed z-[10001] rounded-xl py-1.5 overflow-hidden"
             style={{
-              left: dotMenu.x, top: dotMenu.y,
+              left: Math.max(8, Math.min(dotMenu.x, window.innerWidth - (dotBgPickerOpen ? 288 : 208))),
+              bottom: window.innerHeight - dotMenu.y + 8,
               minWidth: dotBgPickerOpen ? 280 : 200,
+              maxHeight: "70vh",
+              overflowY: "auto",
               background: "rgba(10,8,20,0.94)", backdropFilter: "blur(24px)",
               border: "1px solid rgba(255,255,255,0.15)",
               boxShadow: "0 12px 40px rgba(0,0,0,0.7)",
-              transform: "translateX(-50%)",
               transition: "min-width 0.18s ease",
             }}
-          >
             <div className="px-3 py-1.5 text-[10px] font-semibold text-white/35 uppercase tracking-wider">
               {dashboardPages[dotMenu.idx]?.label || `Page ${dotMenu.idx + 1}`}
             </div>
