@@ -1,6 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import FluxSidebar from "./FluxSidebar";
+import Dashboard from "./Dashboard";
 import GridDashboard from "./GridDashboard";
 import Scheduler from "./Scheduler";
 import InputBar from "./InputBar";
@@ -22,6 +20,7 @@ import CommunityBoardView from "./CommunityBoardView";
 import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
 import { UpgradeModal, OutOfSparksModal } from "./billing/BillingView";
+import CRMPage from "../pages/CRMPage";
 import { useFlux } from "@/context/FluxContext";
 import { useMonetization } from "@/context/MonetizationContext";
 import { toast } from "sonner";

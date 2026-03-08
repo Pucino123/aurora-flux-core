@@ -43,6 +43,7 @@ const App = () => (
           <MonetizationProvider>
             <FluxProvider>
               <WorkspaceProvider>
+                <CRMProvider>
                 <FocusProvider>
                   <TooltipProvider>
                     <DarkModeShortcut />
