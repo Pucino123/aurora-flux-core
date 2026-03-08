@@ -1391,15 +1391,16 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             <div className="flex items-center gap-2">
               <Eye size={12} className="text-purple-400/70 shrink-0" />
               <div>
-                <p className="text-[11px] font-semibold text-purple-300">You're viewing a shared Boardroom analysis</p>
-                <p className="text-[9px] text-white/35">This analysis was shared with you. Sign up to save your own sessions and consult the board.</p>
+                <p className="text-[11px] font-semibold text-purple-300">
+                  {sharedByName ? `Shared by ${sharedByName}` : "Shared Boardroom analysis"}
+                </p>
+                <p className="text-[9px] text-white/35">
+                  {sharedByName
+                    ? `${sharedByName} shared this council analysis with you. Sign up to save your own sessions.`
+                    : "This analysis was shared with you. Sign up to save your own sessions and consult the board."}
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {!user && (
-                <a
-                  href="/auth"
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-purple-200 transition-colors"
                   style={{ background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.35)" }}
                 >
                   <Sparkles size={9} /> Sign up free
