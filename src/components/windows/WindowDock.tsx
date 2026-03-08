@@ -43,7 +43,7 @@ function WindowTile({ win }: { win: AppWindow }) {
       initial={{ opacity: 0, scale: 0.7, y: 12 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.6, y: 8 }}
-      transition={{ type: "spring", stiffness: 420, damping: 28 }}
+      transition={{ type: "spring" as const, stiffness: 420, damping: 28 }}
       className="group relative flex flex-col items-center gap-1"
     >
       <button
