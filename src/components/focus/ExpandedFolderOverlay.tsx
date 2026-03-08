@@ -353,6 +353,20 @@ const ExpandedFolderOverlay = ({
     </AnimatePresence>,
     document.body
   );
-};
 
-export default ExpandedFolderOverlay;
+  return (
+    <>
+      {portal}
+      {showTemplateChooser && (
+        <TemplateChooserModal
+          onClose={() => setShowTemplateChooser(false)}
+          onCreateDocument={async (title, type, content) => {
+            const doc = await createDocument(title, type, folderId);
+            if (doc && content) updateDocument(doc.id, { content });
+            refetch();
+            setShowTemplateChooser(false);
+          }}
+        />
+      )}
+    </>
+  );
