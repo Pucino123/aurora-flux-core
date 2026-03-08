@@ -340,13 +340,9 @@ const TaskManagerWidget = () => {
   const cancelEdit = () => setEditingId(null);
 
   const handleDelete = useCallback((id: string) => {
-    // Optimistic removal via done = true then delete if deleteTask exists
     updateTask(id, { done: true });
-    setTimeout(() => {
-      if (typeof (deleteTask as any) === "function") (deleteTask as any)(id);
-    }, 300);
     toast("Task removed", { duration: 2000 });
-  }, [updateTask, deleteTask]);
+  }, [updateTask]);
 
   const toggleFlag = (id: string, current: boolean) => {
     const task = fluxTasks.find(t => t.id === id);
