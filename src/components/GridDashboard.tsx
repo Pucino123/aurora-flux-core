@@ -404,8 +404,8 @@ const GridDashboard = () => {
               onRemoveWidget={removeWidgetFromPage}
               renamingWidget={renamingWidget}
               renameValue={renameValue}
-              setRenamingWidget={setRenamingWidget}
-              setRenameValue={setRenameValue}
+              setRenamingWidget={handleSetRenamingWidget}
+              setRenameValue={handleSetRenameValue}
               commitRename={commitRename}
               config={config}
               onWidgetDragStart={(wId, pId) => { setDraggingWidgetId(wId || null); setDraggingFromPageId(pId || null); }}
