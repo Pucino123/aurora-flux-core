@@ -116,7 +116,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     });
     return id;
   }, []);
-...
+
   const bringToFront = useCallback((id: string) => {
     setFocusedId(id);
     setWindows(prev => {
