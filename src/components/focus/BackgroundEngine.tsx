@@ -441,7 +441,7 @@ const BackgroundEngine = ({
             <AnimatePresence>
               {menuOpen && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                  className="absolute bottom-14 left-0 w-80 max-h-[480px] rounded-2xl bg-black/60 backdrop-blur-[20px] border border-white/15 p-4 overflow-auto shadow-2xl">
+                  className="absolute bottom-14 right-0 w-80 max-h-[480px] rounded-2xl bg-black/60 backdrop-blur-[20px] border border-white/15 p-4 overflow-auto shadow-2xl">
                   <div className="mb-3">
                     <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-2">This page only</p>
                   </div>
