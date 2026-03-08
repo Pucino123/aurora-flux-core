@@ -1224,7 +1224,7 @@ const FocusContent = () => {
 
           {/* Pill: dots + reorder + hover preview + plus */}
           <div
-            className="flex items-center gap-2.5 px-4 py-2 rounded-full select-none relative"
+            className="group flex items-center gap-2.5 px-4 py-2 rounded-full select-none relative"
             style={{
               background: `rgba(15,12,25,${(paginationSettings.pillOpacity / 100).toFixed(2)})`,
               backdropFilter: "blur(24px)",
@@ -1233,7 +1233,27 @@ const FocusContent = () => {
               boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
             }}
           >
-            {/* Dot hover preview */}
+            {/* ← → keyboard hint — visible on hover when no dot is hovered */}
+            <AnimatePresence>
+              {hoverDotIdx === null && dashboardPages.length > 1 && (
+                <motion.div
+                  key="key-hint"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 0, y: 0 }}
+                  whileHover={{ opacity: 1 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                >
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: "rgba(10,8,20,0.85)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
+                    <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">←</span>
+                    <span className="text-[9px] text-white/30">navigate</span>
+                    <span className="text-[10px] font-mono text-white/50 px-1.5 py-0.5 rounded bg-white/10 border border-white/10">→</span>
+                  </div>
+                  <div className="w-2 h-2 mx-auto -mt-1 rotate-45 rounded-sm" style={{ background: "rgba(10,8,20,0.85)", borderRight: "1px solid rgba(255,255,255,0.1)", borderBottom: "1px solid rgba(255,255,255,0.1)" }} />
+                </motion.div>
+              )}
+            </AnimatePresence>
             <AnimatePresence>
               {hoverDotIdx !== null && hoverDotIdx !== activePageIndex && (
                 <motion.div
