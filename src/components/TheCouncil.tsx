@@ -414,21 +414,20 @@ const TheCouncil = () => {
                       const expressions: Record<string, import("./council/BaymaxFace").BaymaxExpression> = {
                         strategist: "smile", operator: "straight", skeptic: "frown", advocate: "analytical", growth: "wide-smile",
                       };
-                      return (
-                        <motion.button
-                          key={p.key}
-                          initial={{ opacity: 0, y: 24, scale: 0.7 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          transition={{ delay: 0.1 + i * 0.08, type: "spring", stiffness: 200 }}
-                          whileHover={{ scale: 1.15, y: -6 }}
-                          onClick={() => setProfilePersona(p.key)}
-                          className="relative group"
-                          style={{ marginBottom: isCenter ? 0 : i === 1 || i === 3 ? 4 : 10 }}
-                        >
-                          <div className="absolute -inset-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle, ${p.color}35 0%, transparent 70%)` }} />
-                          <BaymaxFace color={p.color} size={size} expression={expressions[p.key] || "straight"} />
-                        </motion.button>
-                      );
+                       return (
+                         <motion.button
+                           key={p.key}
+                           initial={{ opacity: 0, y: 24, scale: 0.7 }}
+                           animate={{ opacity: 1, y: 0, scale: 1 }}
+                           transition={{ delay: 0.1 + i * 0.08, type: "spring", stiffness: 200 }}
+                           onClick={() => setProfilePersona(p.key)}
+                           className="relative group"
+                           style={{ marginBottom: isCenter ? 0 : i === 1 || i === 3 ? 4 : 10 }}
+                         >
+                           <div className="absolute -inset-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle, ${p.color}35 0%, transparent 70%)` }} />
+                           <BaymaxFace color={p.color} size={size} expression={expressions[p.key] || "straight"} personalityIndex={i} />
+                         </motion.button>
+                       );
                     })}
                   </div>
 
