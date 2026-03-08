@@ -1179,35 +1179,7 @@ const FocusContent = () => {
                     className="w-20 accent-white"
                   />
                 </label>
-                {/* Per-page background override */}
-                <div>
-                  <p className="text-[10px] text-white/40 mb-1.5">Page background</p>
-                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-                    {["cozy-fireplace","cozy-library","nature-rain","nature-ocean","urban-tokyo","nature-forest","urban-cafe","scenic-beach","scenic-sakura","cine-clouds","aurora-northern","aurora-sunset","aurora-ocean","aurora-cosmic","aurora-mint"].map(bgId => (
-                      <button
-                        key={bgId}
-                        onClick={() => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: p.background === bgId ? undefined : bgId } : p))}
-                        className="text-[9px] px-2 py-1 rounded-lg transition-all"
-                        style={{
-                          background: currentPage?.background === bgId ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.06)",
-                          border: currentPage?.background === bgId ? "1px solid rgba(255,255,255,0.4)" : "1px solid rgba(255,255,255,0.1)",
-                          color: "rgba(255,255,255,0.7)",
-                        }}
-                      >
-                        {bgId.replace("aurora-","").replace("-"," ")}
-                      </button>
-                    ))}
-                    {currentPage?.background && (
-                      <button
-                        onClick={() => setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, background: undefined } : p))}
-                        className="text-[9px] px-2 py-1 rounded-lg"
-                        style={{ background: "rgba(255,80,80,0.15)", border: "1px solid rgba(255,80,80,0.3)", color: "rgba(255,120,120,0.9)" }}
-                      >
-                        ✕ Reset
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <p className="text-[9px] text-white/30 text-center">Change page background via the Spaces menu ↙</p>
                 <button
                   onClick={() => setShowPillSettings(false)}
                   className="text-[10px] text-white/30 hover:text-white/60 text-center"
