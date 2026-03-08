@@ -3,9 +3,12 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import {
   X, Maximize2, PanelLeft, PanelRight, Square, Minus, Sun, Moon,
-  Copy, Group, Ungroup,
+  Copy, Group, Ungroup, Pencil, FolderOpen,
 } from "lucide-react";
 import { useWindowManager, AppWindow, WindowLayout } from "@/context/WindowManagerContext";
+import { useFolders } from "@/hooks/useCloudSync";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 // Non-floating layouts must sit above pill (z-9999) and dock (z-10150)
 const OVERLAY_Z = 10300;
