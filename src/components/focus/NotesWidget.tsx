@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 interface Note {
   id: string;
   title: string;
-  content: string;
+  content: string; // stores innerHTML for rich text
   isLocked: boolean;
   password?: string;
   updatedAt: string;
@@ -16,9 +16,6 @@ interface Note {
 }
 
 // ── DB encoding helpers ──
-// tags: ["locked", "pw:1234"] for locked notes; [] for normal
-// content: plain text
-
 const encodeTags = (isLocked: boolean, password?: string): string[] => {
   if (!isLocked) return [];
   return password ? ["locked", `pw:${password}`] : ["locked"];
@@ -50,14 +47,14 @@ const FALLBACK_NOTES: Note[] = [
   {
     id: "note-1",
     title: "Project Brainstorm",
-    content: "Project Brainstorm\n\nIdeas for Q2 launch:\n• Revamp onboarding flow\n• Add AI-powered suggestions\n• Mobile-first redesign\n\nKey metrics to watch: retention, DAU, conversion.",
+    content: "<p><b>Project Brainstorm</b></p><p><br></p><p>Ideas for Q2 launch:</p><p>• Revamp onboarding flow</p><p>• Add AI-powered suggestions</p><p>• Mobile-first redesign</p><p><br></p><p>Key metrics to watch: <b>retention</b>, DAU, <i>conversion</i>.</p>",
     isLocked: false,
     updatedAt: new Date(Date.now() - 3600000).toISOString(),
   },
   {
     id: "note-2",
     title: "Personal Goals",
-    content: "Personal Goals\n\nMy private notes...",
+    content: "<p>Personal Goals</p><p><br></p><p>My private notes...</p>",
     isLocked: true,
     password: "1234",
     updatedAt: new Date(Date.now() - 86400000).toISOString(),
@@ -65,14 +62,14 @@ const FALLBACK_NOTES: Note[] = [
   {
     id: "note-3",
     title: "Meeting Notes — April",
-    content: "Meeting Notes — April\n\nAttendees: Sarah, John, Marcus\nAgenda:\n1. Q1 review\n2. Budget allocation\n3. Hiring plans\n\nDecisions: Approved 2 new hires in engineering.",
+    content: "<p><b>Meeting Notes — April</b></p><p><br></p><p>Attendees: <i>Sarah, John, Marcus</i></p><p>Agenda:</p><p>1. Q1 review</p><p>2. Budget allocation</p><p>3. Hiring plans</p><p><br></p><p>Decisions: Approved <b>2 new hires</b> in engineering.</p>",
     isLocked: false,
     updatedAt: new Date(Date.now() - 7200000).toISOString(),
   },
   {
     id: "note-4",
     title: "Reading List",
-    content: "Reading List\n\n• Atomic Habits — James Clear ✓\n• Deep Work — Cal Newport\n• The Lean Startup — Eric Ries\n• Zero to One — Peter Thiel",
+    content: "<p><b>Reading List</b></p><p><br></p><p>• Atomic Habits — James Clear ✓</p><p>• <i>Deep Work</i> — Cal Newport</p><p>• The Lean Startup — Eric Ries</p><p>• Zero to One — Peter Thiel</p>",
     isLocked: false,
     updatedAt: new Date(Date.now() - 172800000).toISOString(),
   },
@@ -90,8 +87,100 @@ const formatRelativeTime = (isoString: string) => {
 
 const getPreview = (note: Note, unlocked: boolean) => {
   if (note.isLocked && !unlocked) return "🔒 Locked Note";
-  const lines = note.content.split("\n").filter(l => l.trim());
+  // Strip HTML for preview
+  const plain = note.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const lines = plain.split(/[.\n]/).filter(l => l.trim());
   return lines.slice(1, 3).join(" ") || "No additional text";
+};
+
+// ── Rich Text Editor ──
+
+const RichEditor: React.FC<{
+  content: string;
+  onChange: (html: string) => void;
+  placeholder?: string;
+}> = ({ content, onChange, placeholder }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const isComposing = useRef(false);
+  const lastContent = useRef(content);
+
+  // Set content when it changes externally (note switch)
+  useEffect(() => {
+    if (ref.current && ref.current.innerHTML !== content) {
+      ref.current.innerHTML = content;
+      lastContent.current = content;
+    }
+  }, [content]);
+
+  const handleInput = useCallback(() => {
+    if (!ref.current || isComposing.current) return;
+    const html = ref.current.innerHTML;
+    if (html !== lastContent.current) {
+      lastContent.current = html;
+      onChange(html);
+    }
+  }, [onChange]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Markdown shortcuts on Space/Enter
+    if (e.key === " " || e.key === "Enter") {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      const node = range.startContainer;
+      if (node.nodeType !== Node.TEXT_NODE) return;
+      const text = node.textContent || "";
+      const offset = range.startOffset;
+      const before = text.slice(0, offset);
+
+      // **bold** → <b>bold</b>
+      const boldMatch = before.match(/\*\*([^*]+)\*\*$/);
+      if (boldMatch) {
+        e.preventDefault();
+        const match = boldMatch[0];
+        const word = boldMatch[1];
+        const newText = text.slice(0, offset - match.length) + text.slice(offset);
+        node.textContent = newText;
+        document.execCommand("insertHTML", false, `<b>${word}</b>${e.key === " " ? "&nbsp;" : "<br>"}`);
+        setTimeout(handleInput, 0);
+        return;
+      }
+
+      // *italic* → <em>italic</em>
+      const italicMatch = before.match(/(?<!\*)\*([^*]+)\*$/);
+      if (italicMatch) {
+        e.preventDefault();
+        const match = italicMatch[0];
+        const word = italicMatch[1];
+        const newText = text.slice(0, offset - match.length) + text.slice(offset);
+        node.textContent = newText;
+        document.execCommand("insertHTML", false, `<em>${word}</em>${e.key === " " ? "&nbsp;" : "<br>"}`);
+        setTimeout(handleInput, 0);
+        return;
+      }
+
+      // _underline_ → <u>underline</u>
+      const underlineMatch = before.match(/_([^_]+)_$/);
+      if (underlineMatch) {
+        e.preventDefault();
+        const match = underlineMatch[0];
+        const word = underlineMatch[1];
+        const newText = text.slice(0, offset - match.length) + text.slice(offset);
+        node.textContent = newText;
+        document.execCommand("insertHTML", false, `<u>${word}</u>${e.key === " " ? "&nbsp;" : "<br>"}`);
+        setTimeout(handleInput, 0);
+        return;
+      }
+    }
+  }, [handleInput]);
+
+  const execFormat = (cmd: string) => {
+    ref.current?.focus();
+    document.execCommand(cmd, false);
+    setTimeout(handleInput, 0);
+  };
+
+  return { ref, handleInput, handleKeyDown, execFormat };
 };
 
 // ── Note Editor ──
@@ -108,9 +197,22 @@ const NoteContent: React.FC<{
   const [pwInput, setPwInput] = useState("");
   const [pwError, setPwError] = useState(false);
   const [showPw, setShowPw] = useState(false);
-  const textRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const isComposing = useRef(false);
+  const lastHtml = useRef("");
 
   const isEffectivelyUnlocked = !note?.isLocked || unlockedIds.has(selectedId);
+
+  // Sync editor content when switching notes
+  useEffect(() => {
+    if (editorRef.current && note && isEffectivelyUnlocked) {
+      if (editorRef.current.innerHTML !== note.content) {
+        editorRef.current.innerHTML = note.content;
+        lastHtml.current = note.content;
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, isEffectivelyUnlocked]);
 
   const handleUnlock = () => {
     if (!note) return;
@@ -124,12 +226,70 @@ const NoteContent: React.FC<{
     }
   };
 
-  const handleContentChange = (val: string) => {
+  const handleInput = useCallback(() => {
+    if (!editorRef.current || isComposing.current) return;
+    const html = editorRef.current.innerHTML;
+    if (html === lastHtml.current) return;
+    lastHtml.current = html;
+    const plain = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const title = plain.split(/[.\n]/)[0]?.slice(0, 60)?.trim() || "Untitled";
     onUpdate(selectedId, {
-      content: val,
-      title: val.split("\n")[0]?.trim() || "Untitled",
+      content: html,
+      title,
       updatedAt: new Date().toISOString(),
     });
+  }, [selectedId, onUpdate]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === " " || e.key === "Enter") {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      const node = range.startContainer;
+      if (node.nodeType !== Node.TEXT_NODE) return;
+      const text = node.textContent || "";
+      const offset = range.startOffset;
+      const before = text.slice(0, offset);
+
+      const boldMatch = before.match(/\*\*([^*]+)\*\*$/);
+      if (boldMatch) {
+        e.preventDefault();
+        const match = boldMatch[0];
+        const word = boldMatch[1];
+        node.textContent = text.slice(0, offset - match.length) + text.slice(offset);
+        document.execCommand("insertHTML", false, `<b>${word}</b>${e.key === " " ? "&nbsp;" : "<br>"}`);
+        setTimeout(handleInput, 0);
+        return;
+      }
+
+      const italicMatch = before.match(/(?<!\*)\*([^*]+)\*$/);
+      if (italicMatch) {
+        e.preventDefault();
+        const match = italicMatch[0];
+        const word = italicMatch[1];
+        node.textContent = text.slice(0, offset - match.length) + text.slice(offset);
+        document.execCommand("insertHTML", false, `<em>${word}</em>${e.key === " " ? "&nbsp;" : "<br>"}`);
+        setTimeout(handleInput, 0);
+        return;
+      }
+
+      const ulMatch = before.match(/_([^_]+)_$/);
+      if (ulMatch) {
+        e.preventDefault();
+        const match = ulMatch[0];
+        const word = ulMatch[1];
+        node.textContent = text.slice(0, offset - match.length) + text.slice(offset);
+        document.execCommand("insertHTML", false, `<u>${word}</u>${e.key === " " ? "&nbsp;" : "<br>"}`);
+        setTimeout(handleInput, 0);
+        return;
+      }
+    }
+  }, [handleInput]);
+
+  const execFormat = (cmd: string) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false);
+    setTimeout(handleInput, 0);
   };
 
   if (!note) return (
@@ -180,11 +340,22 @@ const NoteContent: React.FC<{
     <div className="flex-1 flex flex-col min-h-0">
       {/* Toolbar */}
       <div className="flex items-center gap-1 px-3 py-2 border-b border-white/8 shrink-0">
-        {[{ icon: Bold, label: "Bold" }, { icon: Italic, label: "Italic" }, { icon: Underline, label: "Underline" }].map(({ icon: Icon, label }) => (
-          <button key={label} title={label} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/8 transition-colors">
+        {[
+          { icon: Bold, label: "Bold", cmd: "bold" },
+          { icon: Italic, label: "Italic", cmd: "italic" },
+          { icon: Underline, label: "Underline", cmd: "underline" },
+        ].map(({ icon: Icon, label, cmd }) => (
+          <button
+            key={label}
+            title={label}
+            onMouseDown={e => { e.preventDefault(); execFormat(cmd); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+          >
             <Icon size={12} />
           </button>
         ))}
+        <div className="w-px h-4 bg-white/10 mx-1" />
+        <span className="text-[9px] text-white/20 italic">**bold** *italic* _underline_</span>
         <div className="flex-1" />
         <button
           onClick={() => onLockToggle(selectedId)}
@@ -194,14 +365,18 @@ const NoteContent: React.FC<{
           {note.isLocked ? <><Unlock size={11} /> Unlock</> : <><Lock size={11} /> Lock</>}
         </button>
       </div>
-      {/* Editor */}
-      <textarea
-        ref={textRef}
-        value={note.content}
-        onChange={e => handleContentChange(e.target.value)}
-        className="flex-1 w-full bg-transparent text-white/80 text-[13px] leading-relaxed resize-none outline-none px-4 py-3 placeholder:text-white/20 council-hidden-scrollbar"
-        placeholder="Start writing..."
-        style={{ fontFamily: "inherit" }}
+      {/* Rich Text Editor */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onKeyDown={handleKeyDown}
+        onCompositionStart={() => { isComposing.current = true; }}
+        onCompositionEnd={() => { isComposing.current = false; handleInput(); }}
+        className="flex-1 w-full bg-transparent text-white/80 text-[13px] leading-relaxed outline-none px-4 py-3 overflow-y-auto council-hidden-scrollbar notes-editor"
+        data-placeholder="Start writing…"
+        style={{ fontFamily: "inherit", whiteSpace: "pre-wrap", wordBreak: "break-word" }}
       />
     </div>
   );
@@ -339,7 +514,7 @@ const NotesWidgetContent = () => {
     if (user) {
       const { data, error } = await supabase.from("tasks").insert({
         title: "New Note",
-        content: "New Note\n\n",
+        content: "<p><b>New Note</b></p><p><br></p>",
         tags: [],
         type: "note",
         user_id: user.id,
@@ -352,11 +527,10 @@ const NotesWidgetContent = () => {
         return;
       }
     }
-    // Offline fallback
     const newNote: Note = {
       id: `note-${Date.now()}`,
       title: "New Note",
-      content: "New Note\n\n",
+      content: "<p><b>New Note</b></p><p><br></p>",
       isLocked: false,
       updatedAt: new Date().toISOString(),
     };
