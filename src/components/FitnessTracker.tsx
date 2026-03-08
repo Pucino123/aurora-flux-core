@@ -148,9 +148,77 @@ const FitnessTracker = ({ folderId }: FitnessTrackerProps) => {
 
       <CollapsibleSection title={t("fit.activity_map") || "Activity Map"}>
         <div className="flux-card mb-6">
-          <StreakHeatmap workouts={workouts} />
+          {/* Heatmap share header */}
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-muted-foreground font-medium">365-day activity</span>
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+              title="Share streak card"
+            >
+              <Share2 size={12} /> Share
+            </button>
+          </div>
+          {/* Capturable heatmap area */}
+          <div ref={heatmapRef} className="p-3 rounded-xl" style={{ background: "hsl(var(--card))" }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Flame size={14} className="text-orange-400" />
+              <span className="text-xs font-semibold text-foreground">{folder?.title || "Fitness"} — {stats.streak} day streak 🔥</span>
+            </div>
+            <StreakHeatmap workouts={workouts} />
+            <p className="text-[10px] text-muted-foreground/50 mt-2 text-right">flux.app</p>
+          </div>
         </div>
       </CollapsibleSection>
+
+      {/* Share Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9000] flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(12px)" }}
+            onClick={() => setShowShareModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 16 }}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-2xl border border-border/30 overflow-hidden shadow-2xl w-full max-w-xs"
+              style={{ background: "hsl(var(--card)/0.95)", backdropFilter: "blur(32px)" }}
+            >
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold font-display">Share Streak Card</h3>
+                  <button onClick={() => setShowShareModal(false)} className="p-1 rounded-lg hover:bg-secondary text-muted-foreground">
+                    <X size={14} />
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-5">
+                  Export your activity heatmap as a PNG to share on social media or save locally.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={handleDownload}
+                    disabled={shareLoading}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    <Download size={14} />
+                    {shareLoading ? "Capturing…" : "Download PNG"}
+                  </button>
+                  <button
+                    onClick={handleCopyToClipboard}
+                    disabled={shareLoading}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors disabled:opacity-50"
+                  >
+                    <Copy size={14} />
+                    Copy to Clipboard
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <CollapsibleSection title={t("fit.recent")} count={workouts.length} defaultOpen={true}>
         {workouts.length === 0 ? (
