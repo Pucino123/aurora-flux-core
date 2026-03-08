@@ -1,9 +1,10 @@
 import { createPortal } from "react-dom";
+import { forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Trash2, RotateCcw, AlertTriangle, FileText, CheckSquare, Users, Clock } from "lucide-react";
 import { useTrash, TrashItem, AutoDeleteDays } from "@/context/TrashContext";
 import { useFlux } from "@/context/FluxContext";
-import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { parseISO, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
