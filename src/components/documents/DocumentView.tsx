@@ -528,7 +528,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          onInput={handleInput}
+          onInput={handleInputWithSlash}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => { handleClick(e); editorRef.current?.focus(); }}
           onKeyDown={handleKeyDown}
