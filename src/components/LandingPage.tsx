@@ -200,7 +200,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
             fully yours.
           </h1>
           <p className="text-base md:text-xl text-white/85 max-w-sm md:max-w-lg mx-auto mb-8 md:mb-10 leading-relaxed drop-shadow font-sans">
-            Drag widgets, build your dashboard, let AI handle the rest. Flux is the personalizable OS for focused people.
+            Drag widgets, build your dashboard, let AI handle the rest. Dashiii is the personalizable workspace for focused people.
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
             <button onClick={handleCTA} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-slate-800 font-bold px-8 py-3.5 md:py-4 rounded-full shadow-2xl hover:scale-[1.03] active:scale-[0.98] transition-all text-sm md:text-base">
