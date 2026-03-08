@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Plus, Minus, Check, Sparkles, Trash2, Loader2, CalendarDays, ArrowUpDown, Pencil, X } from "lucide-react";
+import React, { useState, useEffect, useCallback, useRef, createPortal } from "react";
+import { Plus, Minus, Check, Sparkles, Trash2, Loader2, CalendarDays, ArrowUpDown, TrendingUp, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
