@@ -1552,6 +1552,14 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
           >
             <Share2 size={15} />
           </button>
+          {/* Help / Onboarding tour trigger */}
+          <button
+            onClick={() => setShowTour(true)}
+            title="How to use the Boardroom"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/20 hover:text-white/50 hover:bg-white/8 transition-colors shrink-0"
+          >
+            <span className="text-[13px] font-bold">?</span>
+          </button>
         </div>
 
         {/* Personality sliders */}
