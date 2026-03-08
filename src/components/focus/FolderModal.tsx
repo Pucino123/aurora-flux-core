@@ -61,7 +61,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const currentFolderId = navStack[navStack.length - 1];
   const currentFolder = findFolderNode(currentFolderId);
 
-  const { documents, loading: docsLoading, createDocument, updateDocument, removeDocument } = useDocuments(currentFolderId);
+  const { documents, loading: docsLoading, createDocument, updateDocument, removeDocument } = useDocuments(currentFolderId, moveToTrash);
 
   // Filter & sort
   const filteredData = useMemo(() => {
