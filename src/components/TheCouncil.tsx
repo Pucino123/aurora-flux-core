@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import SEO from "./SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Loader2, ChevronDown, ChevronUp, Clock, X, Swords, Cpu } from "lucide-react";
+import BaymaxFace from "./council/BaymaxFace";
 import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n";
 import { toast } from "sonner";
@@ -269,11 +270,11 @@ const TheCouncil = () => {
       <SEO title="The Council" description="Get multi-perspective AI advisory on your ideas and decisions. Meet your AI Council." url="/" keywords="AI council, advisory board, decision making, AI advisors, brainstorming" />
       {/* Full-page gradient background */}
       <div className="council-hero-gradient relative min-h-screen overflow-hidden">
-        {/* Ambient blobs — slowed down */}
+        {/* Ambient blobs — dark OS palette */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[hsl(25_80%_75%/0.05)] blur-[120px] animate-aurora-slow-1" />
-          <div className="absolute top-[10%] right-[-15%] w-[50%] h-[50%] rounded-full bg-[hsl(330_70%_75%/0.04)] blur-[120px] animate-aurora-slow-2" />
-          <div className="absolute bottom-[-10%] left-[20%] w-[55%] h-[55%] rounded-full bg-[hsl(217_80%_75%/0.04)] blur-[120px] animate-aurora-slow-3" />
+          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[hsl(270_70%_40%/0.06)] blur-[130px] animate-aurora-slow-1" />
+          <div className="absolute top-[10%] right-[-15%] w-[50%] h-[50%] rounded-full bg-[hsl(217_80%_40%/0.05)] blur-[130px] animate-aurora-slow-2" />
+          <div className="absolute bottom-[-10%] left-[20%] w-[55%] h-[55%] rounded-full bg-[hsl(200_70%_35%/0.04)] blur-[130px] animate-aurora-slow-3" />
         </div>
 
         {/* Tab switcher */}
@@ -401,10 +402,13 @@ const TheCouncil = () => {
                 >
                   {/* Avatars */}
                   <div className="flex justify-center items-end gap-1 sm:gap-2 mb-[-18px] sm:mb-[-22px] relative z-20">
-                    {PERSONAS.map((p, i) => {
+                   {PERSONAS.map((p, i) => {
                       const isCenter = i === 2;
                       const baseSize = isMobile ? 38 : 52;
                       const size = isCenter ? baseSize + (isMobile ? 12 : 16) : baseSize;
+                      const expressions: Record<string, "smile" | "straight" | "frown" | "calm" | "wide"> = {
+                        strategist: "smile", operator: "straight", skeptic: "frown", advocate: "straight", growth: "wide",
+                      };
                       return (
                         <motion.button
                           key={p.key}
@@ -417,7 +421,7 @@ const TheCouncil = () => {
                           style={{ marginBottom: isCenter ? 0 : i === 1 || i === 3 ? 4 : 10 }}
                         >
                           <div className="absolute -inset-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle, ${p.color}35 0%, transparent 70%)` }} />
-                          <CouncilAvatar color={p.color} size={size} />
+                          <BaymaxFace color={p.color} size={size} expression={expressions[p.key] || "straight"} />
                         </motion.button>
                       );
                     })}
@@ -855,16 +859,25 @@ const TheCouncil = () => {
                             {/* Header bar — clickable for profile modal */}
                             <div className="flex items-center gap-3 p-3 sm:p-4">
                               <motion.div
-                                whileHover={{ scale: 1.1 }}
+                                whileHover={{ scale: 1.12 }}
+                                whileTap={{ scale: 0.96 }}
                                 onClick={() => setProfilePersona(persona.personaKey)}
-                                className="cursor-pointer"
+                                className="cursor-pointer shrink-0"
+                                animate={speakingPersona === persona.personaKey ? { scale: [1, 1.08, 1] } : {}}
+                                transition={{ duration: 0.6, repeat: speakingPersona === persona.personaKey ? Infinity : 0 }}
                               >
-                                <CouncilAvatar
-                                  color={persona.color}
-                                  vote={persona.vote}
-                                  isSpeaking={speakingPersona === persona.personaKey}
-                                  size={isMobile ? 34 : 40}
-                                />
+                                {(() => {
+                                  const expressions: Record<string, "smile" | "straight" | "frown" | "calm" | "wide"> = {
+                                    strategist: "smile", operator: "straight", skeptic: "frown", advocate: "straight", growth: "wide",
+                                  };
+                                  return (
+                                    <BaymaxFace
+                                      color={persona.color}
+                                      size={isMobile ? 34 : 42}
+                                      expression={expressions[persona.personaKey] || "straight"}
+                                    />
+                                  );
+                                })()}
                               </motion.div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-0.5">

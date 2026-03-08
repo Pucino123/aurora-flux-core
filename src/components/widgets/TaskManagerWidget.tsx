@@ -34,8 +34,6 @@ function nextWorkday(): string {
   return format(d, "yyyy-MM-dd");
 }
 
-// ─── Streak helpers ──────────────────────────────────────────────────────────
-
 interface StreakData { dates: string[]; }
 
 function loadStreak(): StreakData {
@@ -49,7 +47,6 @@ function recordPerfectDay(today: string): number {
   const dates = Array.isArray(data.dates) ? data.dates : [];
   const updated = Array.from(new Set([...dates, today])).sort();
   saveStreak({ dates: updated });
-  // Count consecutive days ending today
   let streak = 0;
   let d = new Date(today);
   while (updated.includes(format(d, "yyyy-MM-dd"))) {
@@ -70,11 +67,7 @@ function getCurrentStreak(today: string): number {
   return streak;
 }
 
-// ─── Task Card ───────────────────────────────────────────────────────────────
-// NOTE: drag="x" is intentionally NOT used on the card because it blocks all
-// button clicks inside the card. Swipe gestures are simulated via pointer
-// events with manual state tracking so that a deliberate horizontal drag
-// (>80 px) triggers the action while vertical taps / short taps pass through.
+// ─── Task Card (compact) ─────────────────────────────────────────────────────
 
 interface TaskCardProps {
   task: any;
@@ -107,7 +100,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const isFlagged = !!(task as any).pinned;
 
-  // Pointer-based swipe (doesn't block clicks)
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const [swipeX, setSwipeX] = useState(0);
   const SWIPE_THRESHOLD = 80;
@@ -119,7 +111,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
     if (!pointerStart.current) return;
     const dx = e.clientX - pointerStart.current.x;
     const dy = Math.abs(e.clientY - pointerStart.current.y);
-    if (dy > 12) { pointerStart.current = null; return; } // vertical scroll — ignore
+    if (dy > 12) { pointerStart.current = null; return; }
     if (Math.abs(dx) > 8) setSwipeX(dx);
   };
   const onPointerUp = () => {
@@ -129,52 +121,45 @@ const TaskCard: React.FC<TaskCardProps> = ({
     pointerStart.current = null;
   };
 
-  const bgLeft  = Math.max(0, swipeX / SWIPE_THRESHOLD);   // amber fill 0→1
-  const bgRight = Math.max(0, -swipeX / SWIPE_THRESHOLD);  // rose fill 0→1
+  const bgRight = Math.max(0, -swipeX / SWIPE_THRESHOLD);
 
   return (
-    <div className="relative mb-1.5 rounded-xl overflow-visible">
-      {/* Swipe hint backgrounds (beneath card) */}
-      <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 flex items-center justify-between px-3">
-          <div className="flex items-center gap-1.5 text-amber-300" style={{ opacity: bgLeft }}>
-            <Calendar size={12} />
-            <span className="text-[10px] font-bold">Reschedule</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-rose-300" style={{ opacity: bgRight }}>
-            <span className="text-[10px] font-bold">Delete</span>
-            <X size={12} />
+    <div className="relative mb-1 rounded-lg overflow-visible">
+      <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-end px-3">
+          <div className="flex items-center gap-1 text-rose-300" style={{ opacity: bgRight }}>
+            <span className="text-[9px] font-bold">Delete</span>
+            <X size={10} />
           </div>
         </div>
       </div>
 
-      {/* Card */}
       <motion.div
         animate={{ x: swipeX * 0.4, opacity: task.done ? 0.5 : 1 }}
         transition={{ type: "spring", stiffness: 400, damping: 35 }}
         layout
-        initial={{ opacity: 0, y: 4 }}
+        initial={{ opacity: 0, y: 3 }}
         exit={{ opacity: 0, x: swipeX < -20 ? -80 : 20, transition: { duration: 0.22 } }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
-        className="flex items-start gap-2 py-2 px-2.5 rounded-xl border border-white/[0.1] bg-[hsl(var(--card)/0.65)] backdrop-blur-sm group/row relative select-none touch-pan-y hover:border-white/[0.18] hover:bg-[hsl(var(--card)/0.8)] transition-all duration-150"
+        className="flex items-center gap-1.5 py-1.5 px-2 rounded-lg border border-white/[0.08] bg-[hsl(var(--card)/0.55)] backdrop-blur-sm group/row relative select-none touch-pan-y hover:border-white/[0.15] hover:bg-[hsl(var(--card)/0.75)] transition-all duration-150"
         onClick={e => e.stopPropagation()}
       >
         {/* Checkbox */}
         <motion.button
           whileTap={{ scale: 0.6 }}
           onClick={e => { e.stopPropagation(); task.done ? onUncomplete(task.id) : onComplete(task.id); }}
-          className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+          className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
             task.done || completing === task.id
               ? `border-0 ${cfg.bg}`
-              : "border-white/25 hover:border-white/55"
+              : "border-white/20 hover:border-white/50"
           }`}
         >
           {(task.done || completing === task.id) && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 600, damping: 20 }}>
-              <Check size={9} className={cfg.color} />
+              <Check size={8} className={cfg.color} />
             </motion.div>
           )}
         </motion.button>
@@ -195,7 +180,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   if ((e.relatedTarget as HTMLElement)?.dataset?.auraBtn) return;
                   onSaveEdit(task.id);
                 }}
-                className="flex-1 bg-white/5 border border-emerald-500/40 rounded px-1.5 py-0.5 outline-none text-foreground/90 text-[11px]"
+                className="flex-1 bg-white/5 border border-emerald-500/40 rounded px-1.5 py-0.5 outline-none text-foreground/90 text-[10px]"
               />
               <motion.button
                 data-aura-btn="1"
@@ -204,17 +189,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 onMouseDown={e => e.preventDefault()}
                 onClick={e => { e.stopPropagation(); onRowAura(task.id, editValue || task.title); }}
                 disabled={rowAuraLoading === task.id}
-                className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg,rgba(139,92,246,.5),rgba(16,185,129,.5))", boxShadow: "0 0 8px rgba(139,92,246,.6)", border: "0.5px solid rgba(139,92,246,.4)" }}
+                className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg,rgba(139,92,246,.5),rgba(16,185,129,.5))", boxShadow: "0 0 6px rgba(139,92,246,.6)", border: "0.5px solid rgba(139,92,246,.4)" }}
               >
                 {rowAuraLoading === task.id
-                  ? <Loader2 size={8} className="text-violet-300 animate-spin" />
-                  : <Sparkles size={8} className="text-violet-300" />}
+                  ? <Loader2 size={7} className="text-violet-300 animate-spin" />
+                  : <Sparkles size={7} className="text-violet-300" />}
               </motion.button>
             </div>
           ) : (
-            <p className={`text-[11px] leading-tight ${task.done ? "line-through decoration-muted-foreground/50 text-muted-foreground/40" : "text-foreground/80"}`}>
-              {isFlagged && <span className="text-amber-400 mr-1">●</span>}
+            <p className={`text-[10px] leading-tight truncate ${task.done ? "line-through decoration-muted-foreground/50 text-muted-foreground/30" : "text-foreground/75"}`}>
+              {isFlagged && <span className="text-amber-400 mr-0.5">●</span>}
+              {task.priority && PRIORITY_DOT[task.priority] && (
+                <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${PRIORITY_DOT[task.priority]}`} />
+              )}
               {task.title}
             </p>
           )}
@@ -222,64 +210,59 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {/* Linked entity pill */}
           {(task as any).linkedEntity && editingId !== task.id && (
             <div className="flex items-center gap-1 mt-0.5">
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] cursor-pointer hover:opacity-80 transition-opacity"
+              <div className="flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[8px] cursor-pointer hover:opacity-80 transition-opacity"
                 style={{ background: "rgba(139,92,246,0.15)", border: "0.5px solid rgba(139,92,246,0.35)", color: "rgb(196,181,253)" }}>
-                {(task as any).linkedEntity.type === "document" ? <FileText size={7} /> : <User size={7} />}
-                <span className="truncate max-w-[80px]">{(task as any).linkedEntity.name}</span>
+                {(task as any).linkedEntity.type === "document" ? <FileText size={6} /> : <User size={6} />}
+                <span className="truncate max-w-[60px]">{(task as any).linkedEntity.name}</span>
               </div>
             </div>
           )}
 
           {/* Due date badge */}
           {task.due_date && editingId !== task.id && (
-            <p className="text-[9px] text-muted-foreground/40 mt-0.5 flex items-center gap-1">
-              <Clock size={7} /> {task.due_date}
+            <p className="text-[8px] text-muted-foreground/35 mt-0.5 flex items-center gap-0.5">
+              <Clock size={6} /> {task.due_date}
             </p>
           )}
         </div>
 
-        {/* Priority dot — always visible if set */}
-        {task.priority && PRIORITY_DOT[task.priority] && (
-          <div className={`w-2 h-2 rounded-full shrink-0 mt-1 ${PRIORITY_DOT[task.priority]}`} title={task.priority} />
-        )}
-
-        {/* Flag button — always visible if flagged, visible on hover otherwise */}
+        {/* Flag button */}
         {!task.done && editingId !== task.id && (
           <button
             onClick={e => { e.stopPropagation(); onToggleFlag(task.id, isFlagged); }}
-            className={`shrink-0 mt-0.5 transition-all duration-150 z-10 ${
+            className={`shrink-0 transition-all duration-150 z-10 ${
               isFlagged
-                ? "text-amber-400 opacity-100 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)]"
-                : "text-white/50 opacity-0 group-hover/row:opacity-100 hover:!text-amber-400 hover:!opacity-100"
+                ? "text-amber-400 opacity-100 drop-shadow-[0_0_5px_rgba(251,191,36,0.7)]"
+                : "text-white/40 opacity-0 group-hover/row:opacity-100 hover:!text-amber-400 hover:!opacity-100"
             }`}
-            title={isFlagged ? "Unflag task" : "Flag task"}
+            title={isFlagged ? "Unflag" : "Flag"}
           >
-            <Flag size={12} fill={isFlagged ? "currentColor" : "none"} strokeWidth={isFlagged ? 0 : 1.8} />
+            <Flag size={11} fill={isFlagged ? "currentColor" : "none"} strokeWidth={isFlagged ? 0 : 1.8} />
           </button>
         )}
 
-        {/* Edit + quick menu buttons — visible on hover */}
+        {/* Edit + menu buttons */}
         {!task.done && editingId !== task.id && (
           <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0 z-10">
             <button
               onClick={e => { e.stopPropagation(); onStartEdit(task.id, task.title); }}
-              className="mt-0.5 p-1 rounded-lg text-white/50 hover:text-white hover:bg-white/15 transition-all"
-              title="Edit task"
+              className="p-1 rounded text-white/40 hover:text-white hover:bg-white/12 transition-all"
+              title="Edit"
             >
-              <Pencil size={12} />
+              <Pencil size={11} />
             </button>
             <button
               onClick={e => { e.stopPropagation(); onSetQuickMenu(quickMenuId === task.id ? null : task.id); }}
-              className="mt-0.5 p-1 rounded-lg text-white/50 hover:text-white hover:bg-white/15 transition-all"
-              title="More options"
+              className="p-1 rounded text-white/40 hover:text-white hover:bg-white/12 transition-all"
+              title="More"
             >
-              <MoreHorizontal size={12} />
+              <MoreHorizontal size={11} />
             </button>
           </div>
         )}
       </motion.div>
 
-      {/* Quick menu — rendered OUTSIDE the card so it isn't clipped */}
+      {/* Quick menu */}
       <AnimatePresence>
         {quickMenuId === task.id && (
           <motion.div
@@ -287,11 +270,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: -4 }}
             transition={{ duration: 0.14 }}
-            className="absolute right-0 top-full mt-1 z-[200] rounded-xl p-2.5 flex flex-col gap-1 min-w-[160px]"
+            className="absolute right-0 top-full mt-1 z-[200] rounded-xl p-2.5 flex flex-col gap-1 min-w-[150px]"
             style={{ background: "rgba(12,8,32,.97)", border: "1px solid rgba(255,255,255,.1)", backdropFilter: "blur(24px)", boxShadow: "0 16px 48px rgba(0,0,0,.7)" }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Priority */}
             <p className="text-[9px] text-white/25 font-semibold uppercase tracking-wider px-1 mb-0.5">Priority</p>
             {(["high", "medium", "low"] as const).map(p => (
               <button
@@ -309,7 +291,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
             <div className="w-full h-px my-1" style={{ background: "rgba(255,255,255,.07)" }} />
 
-            {/* Duration */}
             <p className="text-[9px] text-white/25 font-semibold uppercase tracking-wider px-1 mb-0.5">Est. Time</p>
             <div className="flex flex-wrap gap-1 px-1 mb-1">
               {DURATION_OPTIONS.map(d => (
@@ -326,7 +307,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
             <div className="w-full h-px my-1" style={{ background: "rgba(255,255,255,.07)" }} />
 
-            {/* Due date */}
             <p className="text-[9px] text-white/25 font-semibold uppercase tracking-wider px-1 mb-0.5">Due Date</p>
             <Popover>
               <PopoverTrigger asChild>
@@ -388,7 +368,6 @@ const TaskManagerWidget = () => {
   const editRef  = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ── Derived pools ────────────────────────────────────────────────────────
   const todayTasks     = useMemo(() => fluxTasks.filter(t => t.type === "task" && (t.scheduled_date === today || t.due_date === today)), [fluxTasks, today]);
   const scheduledTasks = useMemo(() => fluxTasks.filter(t => t.type === "task" && t.due_date && t.due_date !== today), [fluxTasks, today]);
   const allTasks       = useMemo(() => fluxTasks.filter(t => t.type === "task"), [fluxTasks]);
@@ -405,7 +384,7 @@ const TaskManagerWidget = () => {
 
   const activeTasks    = sortedPool.filter(t => !t.done);
   const completedTasks = sortedPool.filter(t => t.done);
-  const counts         = {
+  const counts = {
     today:     todayTasks.filter(t => !t.done).length,
     scheduled: scheduledTasks.filter(t => !t.done).length,
     all:       allTasks.filter(t => !t.done).length,
@@ -413,13 +392,11 @@ const TaskManagerWidget = () => {
   };
   const visibleTasks = viewTab === "active" ? activeTasks : completedTasks;
 
-  // Progress ring
   const totalToday     = todayTasks.length;
   const completedToday = todayTasks.filter(t => t.done).length;
   const progressPct    = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
   const isPerfectDay   = totalToday > 0 && completedToday === totalToday;
 
-  // Record streak when perfect day achieved
   useEffect(() => {
     if (isPerfectDay) {
       const s = recordPerfectDay(today);
@@ -427,7 +404,6 @@ const TaskManagerWidget = () => {
     }
   }, [isPerfectDay, today]);
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleComplete   = (id: string) => {
     setCompleting(id);
     setTimeout(() => { updateTask(id, { done: true }); setCompleting(null); }, 480);
@@ -481,7 +457,6 @@ const TaskManagerWidget = () => {
     }
   };
 
-  // ── Aura AI ───────────────────────────────────────────────────────────────
   const invokeAuraBreakdown = useCallback(async (title: string): Promise<string[]> => {
     const res = await supabase.functions.invoke("flux-ai", {
       body: {
@@ -523,7 +498,6 @@ const TaskManagerWidget = () => {
     finally { setRowAuraLoading(null); }
   }, [rowAuraLoading, invokeAuraBreakdown, createTask, today]);
 
-  // ── OS-wide drop ─────────────────────────────────────────────────────────
   const handleDragOver  = (e: React.DragEvent) => { e.preventDefault(); setIsDropTarget(true); };
   const handleDragLeave = () => setIsDropTarget(false);
   const handleDrop      = (e: React.DragEvent) => {
@@ -538,71 +512,60 @@ const TaskManagerWidget = () => {
   };
 
   const cfg = SMART_LISTS.find(l => l.key === activeList)!;
-  const CIRC = 2 * Math.PI * 21;
+  const CIRC = 2 * Math.PI * 16;
 
   return (
     <div
-      className={`h-full flex flex-col gap-2 overflow-hidden transition-all duration-200 ${isDropTarget ? "ring-2 ring-violet-400/50 rounded-2xl" : ""}`}
+      className={`h-full flex flex-col gap-1.5 overflow-hidden transition-all duration-200 ${isDropTarget ? "ring-2 ring-violet-400/50 rounded-2xl" : ""}`}
       onClick={() => setQuickMenuId(null)}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* ── Progress Ring Header ───────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 shrink-0 px-0.5 pb-2 border-b border-white/[0.07]">
-        {/* Ring */}
+      {/* ── Compact Progress Header ─────────────────────────────────────── */}
+      <div className="flex items-center gap-2 shrink-0 px-0.5 pb-1.5 border-b border-white/[0.07]">
+        {/* Tiny Ring */}
         <div className="relative shrink-0">
-          <svg width={52} height={52} className="-rotate-90">
-            <circle cx={26} cy={26} r={21} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
+          <svg width={38} height={38} className="-rotate-90">
+            <circle cx={19} cy={19} r={16} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={3} />
             <motion.circle
-              cx={26} cy={26} r={21} fill="none"
-              stroke="url(#tRingGrad)" strokeWidth={4} strokeLinecap="round"
+              cx={19} cy={19} r={16} fill="none"
+              stroke="url(#tRingGrad2)" strokeWidth={3} strokeLinecap="round"
               strokeDasharray={CIRC}
               initial={{ strokeDashoffset: CIRC }}
               animate={{ strokeDashoffset: CIRC * (1 - progressPct / 100) }}
               transition={{ duration: 1.1, ease: "easeOut" }}
             />
             <defs>
-              <linearGradient id="tRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <linearGradient id="tRingGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#34d399" />
                 <stop offset="100%" stopColor="#22d3ee" />
               </linearGradient>
             </defs>
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[11px] font-bold text-white/70">{progressPct}%</span>
+            <span className="text-[9px] font-bold text-white/70">{progressPct}%</span>
           </div>
         </div>
 
-        {/* Stats + streak */}
+        {/* Stats */}
         <div className="flex-1 min-w-0">
-          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-widest uppercase">Daily Focus</p>
-          <p className="text-sm font-bold text-foreground/80 leading-tight">{completedToday} of {totalToday} done</p>
-
-          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-            {/* Perfect Day badge */}
+          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-widest uppercase leading-none">Daily Focus</p>
+          <p className="text-xs font-bold text-foreground/80 leading-tight mt-0.5">{completedToday}/{totalToday} done</p>
+          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
             <AnimatePresence>
               {isPerfectDay && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.75 }}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold"
-                  style={{ background: "linear-gradient(135deg,rgba(52,211,153,.2),rgba(34,211,238,.2))", border: "0.5px solid rgba(52,211,153,.45)", color: "rgb(110,231,183)", boxShadow: "0 0 10px rgba(52,211,153,.25)" }}
-                >
-                  ✦ Perfect Day
-                </motion.div>
+                <motion.div initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.75 }}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-bold"
+                  style={{ background: "linear-gradient(135deg,rgba(52,211,153,.2),rgba(34,211,238,.2))", border: "0.5px solid rgba(52,211,153,.45)", color: "rgb(110,231,183)" }}
+                >✦ Perfect</motion.div>
               )}
-            </AnimatePresence>
-
-            {/* Streak badge */}
-            <AnimatePresence>
               {streak >= 3 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.75 }}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold"
-                  style={{ background: "linear-gradient(135deg,rgba(251,146,60,.2),rgba(239,68,68,.2))", border: "0.5px solid rgba(251,146,60,.45)", color: "rgb(253,186,116)", boxShadow: "0 0 10px rgba(251,146,60,.25)" }}
+                <motion.div initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.75 }}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-bold"
+                  style={{ background: "linear-gradient(135deg,rgba(251,146,60,.2),rgba(239,68,68,.2))", border: "0.5px solid rgba(251,146,60,.45)", color: "rgb(253,186,116)" }}
                 >
-                  <Flame size={8} className="text-orange-400" />
-                  {streak} day streak
+                  <Flame size={7} className="text-orange-400" />{streak}d
                 </motion.div>
               )}
             </AnimatePresence>
@@ -611,58 +574,52 @@ const TaskManagerWidget = () => {
 
         {isDropTarget && (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-            className="text-[10px] font-semibold flex items-center gap-1" style={{ color: "rgb(196,181,253)" }}>
-            <Link2 size={10} /> Link
+            className="text-[9px] font-semibold flex items-center gap-0.5" style={{ color: "rgb(196,181,253)" }}>
+            <Link2 size={9} /> Link
           </motion.div>
         )}
       </div>
 
-      {/* ── Smart list grid ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-1.5 shrink-0">
+      {/* ── Compact Smart List Tabs ─────────────────────────────────────── */}
+      <div className="flex gap-1 shrink-0 overflow-x-auto no-scrollbar">
         {SMART_LISTS.map(sl => (
           <button key={sl.key} onClick={() => setActiveList(sl.key)}
-            className={`flex items-start gap-2 p-2.5 rounded-xl border transition-all ${
-              activeList === sl.key ? `${sl.bg} border-white/15` : "bg-white/[0.04] border-white/[0.06] hover:bg-white/[0.07]"
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border transition-all shrink-0 ${
+              activeList === sl.key ? `${sl.bg} border-white/15` : "bg-white/[0.03] border-white/[0.05] hover:bg-white/[0.06]"
             }`}
           >
-            <div className={`w-6 h-6 rounded-full ${sl.bg} flex items-center justify-center shrink-0`}>
-              <sl.icon size={12} className={sl.color} />
-            </div>
-            <div className="text-left min-w-0">
-              <p className={`text-lg font-bold leading-none ${activeList === sl.key ? "text-foreground/90" : "text-foreground/50"}`}>
+            <sl.icon size={10} className={sl.color} />
+            <span className={`text-[10px] font-semibold ${activeList === sl.key ? "text-foreground/90" : "text-foreground/40"}`}>
+              {sl.label}
+            </span>
+            {counts[sl.key as keyof typeof counts] > 0 && (
+              <span className={`text-[9px] font-bold ${activeList === sl.key ? sl.color : "text-foreground/30"}`}>
                 {counts[sl.key as keyof typeof counts]}
-              </p>
-              <p className="text-[9px] text-muted-foreground/40 mt-0.5">{sl.label}</p>
-            </div>
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Segmented control */}
-      <div className="flex items-center shrink-0 bg-white/[0.04] rounded-xl p-0.5">
+      {/* ── Segmented control ──────────────────────────────────────────── */}
+      <div className="flex items-center shrink-0 bg-white/[0.03] rounded-lg p-0.5">
         {(["active", "completed"] as const).map(tab => (
           <button key={tab} onClick={() => setViewTab(tab)}
-            className={`flex-1 py-1.5 rounded-[10px] text-[11px] font-semibold transition-all ${
+            className={`flex-1 py-1 rounded-[8px] text-[10px] font-semibold transition-all ${
               viewTab === tab ? "bg-white/10 text-foreground/90" : "text-muted-foreground/40 hover:text-muted-foreground/60"
             }`}
           >
-            {tab === "active" ? "Active" : "Completed"}
+            {tab === "active" ? "Active" : "Done"}
           </button>
         ))}
-      </div>
-
-      {/* List header */}
-      <div className="flex items-center justify-between shrink-0 px-0.5">
-        <span className={`text-[12px] font-semibold ${cfg.color}`}>{cfg.label}</span>
-        <span className="text-[10px] text-muted-foreground/30">{visibleTasks.length} tasks</span>
       </div>
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto overflow-x-visible council-hidden-scrollbar relative">
         <AnimatePresence initial={false}>
           {visibleTasks.length === 0 ? (
-            <div className="flex items-center justify-center h-16 text-[11px] text-muted-foreground/20">
-              {viewTab === "active" ? "All clear ✨" : "Nothing completed yet"}
+            <div className="flex items-center justify-center h-12 text-[10px] text-muted-foreground/20">
+              {viewTab === "active" ? "All clear ✨" : "Nothing done yet"}
             </div>
           ) : (
             visibleTasks.map(task => (
@@ -694,14 +651,14 @@ const TaskManagerWidget = () => {
         </AnimatePresence>
       </div>
 
-      {/* Smart NLP input pill */}
+      {/* ── Add input ───────────────────────────────────────────────────── */}
       <motion.div
         animate={{
-          boxShadow: isInputFocused ? "0 0 0 1px rgba(139,92,246,0.5), 0 4px 20px rgba(139,92,246,0.18)" : "0 0 0 1px rgba(255,255,255,0.07)",
-          background: isInputFocused ? "rgba(139,92,246,0.07)" : "rgba(255,255,255,0.04)",
+          boxShadow: isInputFocused ? "0 0 0 1px rgba(139,92,246,0.5), 0 4px 16px rgba(139,92,246,0.15)" : "0 0 0 1px rgba(255,255,255,0.06)",
+          background: isInputFocused ? "rgba(139,92,246,0.06)" : "rgba(255,255,255,0.03)",
         }}
         transition={{ duration: 0.18 }}
-        className="flex items-center gap-2 px-3 py-2 rounded-2xl shrink-0"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl shrink-0"
       >
         <motion.button
           whileTap={{ scale: 0.7, rotate: 90 }}
@@ -709,7 +666,7 @@ const TaskManagerWidget = () => {
           className="text-muted-foreground/40 hover:text-foreground/60 transition-colors"
           onClick={handleAdd}
         >
-          <Plus size={13} />
+          <Plus size={12} />
         </motion.button>
         <input
           ref={inputRef}
@@ -718,8 +675,8 @@ const TaskManagerWidget = () => {
           onFocus={() => setIsInputFocused(true)}
           onBlur={() => setIsInputFocused(false)}
           onKeyDown={e => e.key === "Enter" && handleAdd()}
-          placeholder="Type a task, e.g. 'Call John tomorrow'…"
-          className="flex-1 bg-transparent text-[11px] text-foreground/70 placeholder:text-muted-foreground/25 outline-none min-w-0"
+          placeholder="Add task…"
+          className="flex-1 bg-transparent text-[10px] text-foreground/70 placeholder:text-muted-foreground/25 outline-none min-w-0"
         />
         <AnimatePresence>
           {newTitle.trim() && (
@@ -734,12 +691,12 @@ const TaskManagerWidget = () => {
               onClick={handleAuraBreakdown}
               disabled={auraLoading}
               title="Aura AI breakdown"
-              className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg,rgba(139,92,246,.5),rgba(16,185,129,.5))", boxShadow: "0 0 8px rgba(139,92,246,.6)", border: "0.5px solid rgba(139,92,246,.4)" }}
+              className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg,rgba(139,92,246,.5),rgba(16,185,129,.5))", boxShadow: "0 0 6px rgba(139,92,246,.6)", border: "0.5px solid rgba(139,92,246,.4)" }}
             >
               {auraLoading
-                ? <Loader2 size={9} className="text-violet-300 animate-spin" />
-                : <Sparkles size={9} className="text-violet-300" />}
+                ? <Loader2 size={7} className="text-violet-300 animate-spin" />
+                : <Sparkles size={7} className="text-violet-300" />}
             </motion.button>
           )}
         </AnimatePresence>
