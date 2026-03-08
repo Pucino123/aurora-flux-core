@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Sparkles, Loader2, ChevronDown } from "lucide-react";
+import { X, Send, Sparkles, Loader2, ChevronDown, FileText, Check } from "lucide-react";
 import { useFlux } from "@/context/FluxContext";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,9 +18,17 @@ const AskAura = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [insertedIdx, setInsertedIdx] = useState<number | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const { tasks, goals, workouts, folders } = useFlux();
+  const { tasks, goals, workouts, folders, pendingDocumentId, updateTask } = useFlux();
+
+  // ── Cmd+Shift+A global toggle ──
+  useEffect(() => {
+    const handler = () => setOpen(prev => !prev);
+    window.addEventListener("toggle-aura", handler);
+    return () => window.removeEventListener("toggle-aura", handler);
+  }, []);
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 120);
@@ -29,7 +38,7 @@ const AskAura = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Build workspace context summary for Aura's system prompt
+  // Build workspace context summary
   const workspaceContext = useCallback(() => {
     const pendingTasks = tasks.filter(t => !t.done).slice(0, 10);
     const recentWorkouts = workouts.slice(0, 5);
@@ -48,6 +57,8 @@ const AskAura = () => {
     const text = input.trim();
     if (!text || loading) return;
     setInput("");
+    // Reset textarea height
+    if (inputRef.current) inputRef.current.style.height = "auto";
 
     const userMsg: Message = { role: "user", content: text };
     const nextMessages = [...messages, userMsg];
@@ -76,14 +87,13 @@ const AskAura = () => {
         throw new Error(err.error || `HTTP ${resp.status}`);
       }
 
-      // SSE streaming parse
+      // SSE streaming
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let textBuf = "";
       let assembled = "";
       let streamDone = false;
 
-      // Prime the assistant message slot
       setMessages(prev => [...prev, { role: "assistant", content: "" }]);
 
       while (!streamDone) {
@@ -112,11 +122,10 @@ const AskAura = () => {
                 return copy;
               });
             }
-          } catch { /* partial chunk, wait */ }
+          } catch { /* partial chunk */ }
         }
       }
 
-      // If nothing was streamed (tool calls only), show a fallback
       if (!assembled) {
         setMessages(prev => {
           const copy = [...prev];
@@ -132,6 +141,35 @@ const AskAura = () => {
     }
   }, [input, messages, loading, workspaceContext]);
 
+  // ── Insert assistant reply into open document ──
+  const handleInsertIntoDocument = useCallback(async (msgIdx: number, content: string) => {
+    if (!pendingDocumentId) {
+      toast.error("No document is currently open.");
+      return;
+    }
+    // Read existing doc content, append Aura reply as new paragraph
+    const { data: doc } = await supabase
+      .from("documents")
+      .select("content, title")
+      .eq("id", pendingDocumentId)
+      .maybeSingle();
+
+    if (!doc) { toast.error("Document not found."); return; }
+
+    const existingContent = (doc.content as any) || {};
+    const existing = typeof existingContent.text === "string" ? existingContent.text : "";
+    const newText = existing ? `${existing}\n\n${content}` : content;
+
+    await supabase
+      .from("documents")
+      .update({ content: { ...existingContent, text: newText }, updated_at: new Date().toISOString() })
+      .eq("id", pendingDocumentId);
+
+    setInsertedIdx(msgIdx);
+    toast.success("Inserted into document ✓");
+    setTimeout(() => setInsertedIdx(null), 2500);
+  }, [pendingDocumentId]);
+
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   };
@@ -141,6 +179,8 @@ const AskAura = () => {
     e.target.style.height = "auto";
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
   };
+
+  const hasOpenDoc = !!pendingDocumentId;
 
   return (
     <>
@@ -158,7 +198,8 @@ const AskAura = () => {
               background: "linear-gradient(135deg, hsl(var(--aurora-violet)), hsl(var(--aurora-blue)))",
               boxShadow: "0 8px 24px hsl(var(--aurora-violet)/0.4)",
             }}
-            aria-label="Ask Aura"
+            aria-label="Ask Aura (⌘⇧A)"
+            title="Ask Aura (⌘⇧A)"
           >
             <Sparkles size={20} className="text-white" />
           </motion.button>
@@ -181,8 +222,8 @@ const AskAura = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 24, scale: 0.96 }}
               transition={{ type: "spring", stiffness: 340, damping: 30 }}
-              className="fixed bottom-0 right-0 z-[9980] w-full md:bottom-6 md:right-6 md:w-[380px] flex flex-col"
-              style={{ maxHeight: "85vh" }}
+              className="fixed bottom-0 right-0 z-[9980] w-full md:bottom-6 md:right-6 md:w-[400px] flex flex-col"
+              style={{ maxHeight: "88vh" }}
             >
               <div
                 className="flex flex-col rounded-t-2xl md:rounded-2xl overflow-hidden shadow-2xl border border-border/30"
@@ -190,7 +231,7 @@ const AskAura = () => {
                   background: "hsl(var(--card)/0.95)",
                   backdropFilter: "blur(32px)",
                   WebkitBackdropFilter: "blur(32px)",
-                  maxHeight: "85vh",
+                  maxHeight: "88vh",
                 }}
               >
                 {/* Header */}
@@ -206,11 +247,14 @@ const AskAura = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">Ask Aura</p>
-                    <p className="text-[11px] text-muted-foreground">Your AI workspace assistant</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {hasOpenDoc ? "Document open — replies can be inserted ↓" : "Your AI workspace assistant · ⌘⇧A"}
+                    </p>
                   </div>
                   <button
                     onClick={() => setOpen(false)}
                     className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                    title="Minimise"
                   >
                     <ChevronDown size={16} />
                   </button>
@@ -222,6 +266,15 @@ const AskAura = () => {
                     <X size={14} />
                   </button>
                 </div>
+
+                {/* Document badge */}
+                {hasOpenDoc && (
+                  <div className="px-4 py-1.5 border-b border-border/10 flex items-center gap-2"
+                    style={{ background: "hsl(var(--aurora-blue)/0.06)" }}>
+                    <FileText size={11} className="text-primary/60 shrink-0" />
+                    <span className="text-[11px] text-primary/70">Document is open — use "Insert into document" on any reply</span>
+                  </div>
+                )}
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
@@ -252,9 +305,9 @@ const AskAura = () => {
                   )}
 
                   {messages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div key={i} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
                       <div
-                        className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                        className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                           msg.role === "user"
                             ? "text-primary-foreground rounded-br-sm"
                             : "text-foreground rounded-bl-sm border border-border/20"
@@ -270,6 +323,26 @@ const AskAura = () => {
                           </div>
                         ) : msg.content}
                       </div>
+
+                      {/* Insert into document button — only on assistant messages when doc is open */}
+                      {msg.role === "assistant" && msg.content && hasOpenDoc && (
+                        <motion.button
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          onClick={() => handleInsertIntoDocument(i, msg.content)}
+                          className={`mt-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all border ${
+                            insertedIdx === i
+                              ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
+                              : "border-border/30 text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/5"
+                          }`}
+                        >
+                          {insertedIdx === i ? (
+                            <><Check size={11} /> Inserted</>
+                          ) : (
+                            <><FileText size={11} /> Insert into document</>
+                          )}
+                        </motion.button>
+                      )}
                     </div>
                   ))}
 
@@ -312,7 +385,10 @@ const AskAura = () => {
                       <Send size={13} className="text-white" />
                     </button>
                   </div>
-                  <p className="text-[10px] text-muted-foreground/40 text-center mt-1.5">⌘ Enter to send</p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <p className="text-[10px] text-muted-foreground/40">↵ send · Shift+↵ newline</p>
+                    <p className="text-[10px] text-muted-foreground/30">⌘⇧A to toggle</p>
+                  </div>
                 </div>
               </div>
             </motion.div>
