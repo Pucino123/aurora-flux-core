@@ -333,7 +333,7 @@ const IdeaCanvas = ({
             whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
             title="Zoom in"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+            style={{ background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)", border: isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)", color: isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)" }}
           >
             <ZoomIn size={15} />
           </motion.button>
@@ -344,7 +344,7 @@ const IdeaCanvas = ({
             whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
             title="Zoom out"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+            style={{ background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)", border: isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)", color: isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)" }}
           >
             <ZoomOut size={15} />
           </motion.button>
@@ -355,12 +355,12 @@ const IdeaCanvas = ({
             whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
             title="Fit all nodes in view"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+            style={{ background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)", border: isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)", color: isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)" }}
           >
             <Maximize2 size={14} />
           </motion.button>
 
-          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+          <div style={{ width: 1, height: 24, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)" }} />
 
           {/* Mark / bookmark */}
           <motion.button
@@ -369,9 +369,9 @@ const IdeaCanvas = ({
             title={markedNodes.size > 0 ? `${markedNodes.size} marked — click to go there` : "Mark selected nodes"}
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all relative"
             style={{
-              background: markedNodes.size > 0 ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.06)",
-              border: markedNodes.size > 0 ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(255,255,255,0.1)",
-              color: markedNodes.size > 0 ? "#60a5fa" : "rgba(255,255,255,0.7)"
+              background: markedNodes.size > 0 ? "rgba(59,130,246,0.25)" : isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
+              border: markedNodes.size > 0 ? "1px solid rgba(59,130,246,0.5)" : isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)",
+              color: markedNodes.size > 0 ? "#60a5fa" : isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)"
             }}
           >
             <Bookmark size={15} fill={markedNodes.size > 0 ? "#60a5fa" : "none"} />
@@ -391,13 +391,13 @@ const IdeaCanvas = ({
               whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }}
               title="Jump to marked node"
               className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all"
-              style={{ background: "rgba(59,130,246,0.2)", border: "1px solid rgba(59,130,246,0.4)", color: "#93c5fd" }}
+              style={{ background: "rgba(59,130,246,0.2)", border: "1px solid rgba(59,130,246,0.4)", color: isLight ? "#2563eb" : "#93c5fd" }}
             >
               Go to mark
             </motion.button>
           )}
 
-          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+          <div style={{ width: 1, height: 24, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)" }} />
 
           {/* Lock / unlock */}
           <motion.button
@@ -406,15 +406,15 @@ const IdeaCanvas = ({
             title={isLocked ? "Unlock canvas" : "Lock canvas (disable drag)"}
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
             style={{
-              background: isLocked ? "rgba(234,179,8,0.2)" : "rgba(255,255,255,0.06)",
-              border: isLocked ? "1px solid rgba(234,179,8,0.5)" : "1px solid rgba(255,255,255,0.1)",
-              color: isLocked ? "#fbbf24" : "rgba(255,255,255,0.7)"
+              background: isLocked ? "rgba(234,179,8,0.2)" : isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
+              border: isLocked ? "1px solid rgba(234,179,8,0.5)" : isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.1)",
+              color: isLocked ? "#d97706" : isLight ? "rgba(30,30,50,0.7)" : "rgba(255,255,255,0.7)"
             }}
           >
             {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
           </motion.button>
 
-          <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.08)" }} />
+          <div style={{ width: 1, height: 24, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)" }} />
 
           {/* Save */}
           <motion.button
@@ -422,7 +422,7 @@ const IdeaCanvas = ({
             whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
             title="Save track"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "rgba(74,222,128,0.85)" }}
+            style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: isLight ? "#16a34a" : "rgba(74,222,128,0.85)" }}
           >
             <Save size={15} />
           </motion.button>
