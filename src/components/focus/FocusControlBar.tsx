@@ -9,12 +9,7 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-interface FocusControlBarProps {
-  /** Only render on the Focus dashboard, not on other views */
-  onlyOnDashboard?: boolean;
-}
-
-const FocusControlBar = ({ onlyOnDashboard = true }: FocusControlBarProps) => {
+const FocusControlBar = () => {
   const {
     isFocusModeActive,
     focusTaskTitle,
@@ -24,19 +19,27 @@ const FocusControlBar = ({ onlyOnDashboard = true }: FocusControlBarProps) => {
     notificationQueue,
   } = useFocusMode();
 
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Countdown tick
+  // Single stable interval — uses functional updater so no re-creation on every tick
   useEffect(() => {
-    if (isFocusModeActive && focusTimeRemaining > 0) {
-      timerRef.current = setInterval(() => {
-        setFocusTimeRemaining(Math.max(0, focusTimeRemaining - 1));
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (isFocusModeActive) {
+      intervalRef.current = setInterval(() => {
+        setFocusTimeRemaining(prev => {
+          if (prev <= 1) {
+            clearInterval(intervalRef.current!);
+            intervalRef.current = null;
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
     }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isFocusModeActive, focusTimeRemaining, setFocusTimeRemaining]);
+    return () => {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    };
+  }, [isFocusModeActive, setFocusTimeRemaining]); // ← no focusTimeRemaining dep
 
   const isTimerDone = focusTimeRemaining === 0;
   const timerColor = isTimerDone
