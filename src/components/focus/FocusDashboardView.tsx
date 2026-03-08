@@ -1513,7 +1513,7 @@ const FocusContent = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed z-[10001] rounded-xl py-1.5 min-w-[160px] overflow-hidden"
+            className="fixed z-[10001] rounded-xl py-1.5 min-w-[170px] overflow-hidden"
             style={{ left: dotMenu.x, top: dotMenu.y, background: "rgba(10,8,20,0.92)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)", transform: "translateX(-50%)" }}
           >
             <div className="px-3 py-1.5 text-[10px] font-semibold text-white/35 uppercase tracking-wider">
@@ -1528,6 +1528,10 @@ const FocusContent = () => {
               onClick={() => { goToPage(dotMenu.idx); setDotMenu(null); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
             >→ Switch to page</button>
+            <button
+              onClick={() => duplicatePage(dotMenu.idx)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/80 hover:bg-white/8 transition-colors"
+            >⧉ Duplicate page</button>
             {dashboardPages.length > 1 && (
               deleteConfirmIdx === dotMenu.idx ? (
                 <div className="px-3 py-2">
