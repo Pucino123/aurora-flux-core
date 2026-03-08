@@ -1309,6 +1309,7 @@ const FocusContent = () => {
               className="absolute inset-0 pointer-events-none"
             >
               <div className="pointer-events-auto w-full h-full">
+            <WidgetCloseProvider closeWidget={(wid) => updatePageWidgets(pageActiveWidgets.filter(w => w !== wid))}>
             <AnimatePresence>
               {pageActiveWidgets.includes("clock") && !clockEditorOpen && <ClockWidget key="clock" onOpenEditor={() => setClockEditorOpen(true)} />}
               {pageActiveWidgets.includes("timer") && <FocusTimer key="timer" />}
@@ -1341,6 +1342,7 @@ const FocusContent = () => {
               {pageActiveWidgets.includes("smart-plan") && <FocusSmartPlanWidget key="smart-plan" />}
               {pageActiveWidgets.includes("gamification") && <FocusGamificationWidget key="gamification" />}
             </AnimatePresence>
+            </WidgetCloseProvider>
               {/* Per-page sticky notes — outside AnimatePresence to avoid forwardRef warning */}
               <FocusStickyNotes
                 key={`sticky-${activePageIndex}`}
