@@ -1519,8 +1519,8 @@ const FocusContent = () => {
         </div>
       </div>
 
-      {/* ── Window Dock (taskbar) ────────────────────────────────────────── */}
-      <WindowDock />
+      {/* ── Widget Toggle Bar (unified toolbar) ───────────────────────── */}
+      <WidgetToggleBar />
       <WindowSwitcher />
 
       {/* Canvas right-click context menu */}
