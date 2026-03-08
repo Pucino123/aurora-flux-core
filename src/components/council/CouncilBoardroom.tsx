@@ -897,6 +897,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const [personalitySliders, setPersonalitySliders] = useState<AllSliders>(DEFAULT_ALL_SLIDERS);
   // Shared session banner (viewing someone else's link)
   const [isSharedView, setIsSharedView] = useState(false);
+  const [sharedByName, setSharedByName] = useState<string | null>(null);
   // Council Digest modal (shown after saving)
   const [showDigest, setShowDigest] = useState(false);
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
@@ -1196,8 +1197,20 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const handleShareSession = useCallback(async () => {
     if (!allRevealed) return;
     try {
+      // Fetch sharer's display name for the banner
+      let sharedBy = user?.email?.split("@")[0] || "Someone";
+      if (user) {
+        const db = supabase as any;
+        const { data: profile } = await db
+          .from("profiles")
+          .select("display_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profile?.display_name) sharedBy = profile.display_name;
+      }
       const payload = {
         idea: idea || "Should I start a new business?",
+        sharedBy,
         responses: PERSONAS.map(p => ({
           key: p.key,
           analysis: responses[p.key]?.analysis || "",
@@ -1238,6 +1251,7 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
         setRevealedCount(4);
         revealedCountRef.current = 4;
         setIsSharedView(true);
+        if (payload.sharedBy) setSharedByName(payload.sharedBy);
         const clean = new URL(window.location.href);
         clean.searchParams.delete("boardroom");
         window.history.replaceState({}, "", clean.toString());
@@ -1377,8 +1391,14 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             <div className="flex items-center gap-2">
               <Eye size={12} className="text-purple-400/70 shrink-0" />
               <div>
-                <p className="text-[11px] font-semibold text-purple-300">You're viewing a shared Boardroom analysis</p>
-                <p className="text-[9px] text-white/35">This analysis was shared with you. Sign up to save your own sessions and consult the board.</p>
+                <p className="text-[11px] font-semibold text-purple-300">
+                  {sharedByName ? `Shared by ${sharedByName}` : "Shared Boardroom analysis"}
+                </p>
+                <p className="text-[9px] text-white/35">
+                  {sharedByName
+                    ? `${sharedByName} shared this council analysis with you. Sign up to save your own sessions.`
+                    : "This analysis was shared with you. Sign up to save your own sessions and consult the board."}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
