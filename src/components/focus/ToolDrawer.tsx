@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2, GripHorizontal, Palette, SlidersHorizontal } from "lucide-react";
+import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2, GripHorizontal, Palette, SlidersHorizontal, AppWindow } from "lucide-react";
 import { useFocusStore, SystemMode } from "@/context/FocusContext";
+import { useWindowManager } from "@/context/WindowManagerContext";
 import { AnimatePresence, motion } from "framer-motion";
 import FocusReportModal from "./FocusReportModal";
 import CollabMessagesModal from "./CollabMessagesModal";
