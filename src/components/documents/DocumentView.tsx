@@ -570,10 +570,19 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
               : "0 4px 32px rgba(0,0,0,0.5)",
             border: lm ? "1px solid hsl(var(--border))" : "1px solid hsl(var(--border)/0.15)",
             borderRadius: 4,
-            overflow: "visible",
+            overflow: isCanvas ? "hidden" : "visible",
             zoom: `${zoom}%`,
+            position: "relative",
           }}
         >
+        {/* ── Layout Canvas mode ── */}
+        {isCanvas ? (
+          <LayoutCanvas
+            entities={canvasEntities}
+            onChange={handleCanvasChange}
+            lightMode={lm}
+          />
+        ) : (
         <div
           ref={editorRef}
           contentEditable
