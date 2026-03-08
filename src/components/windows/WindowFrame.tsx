@@ -111,7 +111,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const {
     closeWindow, setWindowLayout, updateWindowPosition,
     updateWindowSize, bringToFront, minimizeWindow,
-    duplicateWindow, groupWindows, ungroupWindow, windows,
+    duplicateWindow, groupWindows, ungroupWindow, windows, updateWindowTitle,
   } = useWindowManager();
 
   const { user } = useAuth();
@@ -131,12 +131,11 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     const trimmed = renameValue.trim();
     if (!trimmed || trimmed === win.title) { setIsRenaming(false); return; }
     if (win.type === "document" && user) {
-      await supabase.from("documents").update({ title: trimmed }).eq("id", win.contentId).eq("user_id", user.id);
+      await (supabase as any).from("documents").update({ title: trimmed }).eq("id", win.contentId).eq("user_id", user.id);
     }
-    // Update window title via context — patch the windows array
-    setWindows_((prev: AppWindow[]) => prev.map((w: AppWindow) => w.id === win.id ? { ...w, title: trimmed } : w));
+    updateWindowTitle(win.id, trimmed);
     setIsRenaming(false);
-  }, [renameValue, win, user]);
+  }, [renameValue, win, user, updateWindowTitle]);
 
   const handleRenameKey = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") commitRename();
@@ -149,7 +148,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
 
   const moveToFolder = useCallback(async (folderId: string | null) => {
     if (!user) return;
-    await supabase.from("documents").update({ folder_id: folderId }).eq("id", win.contentId).eq("user_id", user.id);
+    await (supabase as any).from("documents").update({ folder_id: folderId }).eq("id", win.contentId).eq("user_id", user.id);
   }, [win.contentId, user]);
 
   const isFloating = win.layout === "floating";
