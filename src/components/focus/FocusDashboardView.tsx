@@ -558,7 +558,7 @@ const FocusContent = () => {
 
   // Per-page active widgets
   const currentPage = dashboardPages[activePageIndex];
-  const pageActiveWidgets: string[] = currentPage?.activeWidgets ?? activeWidgets;
+  const pageActiveWidgets: string[] = currentPage?.activeWidgets ?? [];
 
   const updatePageWidgets = useCallback((widgets: string[]) => {
     setPages(prev => prev.map((p, i) => i === activePageIndex ? { ...p, activeWidgets: widgets } : p));
