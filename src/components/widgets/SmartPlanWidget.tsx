@@ -34,6 +34,7 @@ interface ScheduleBlock {
   type: BlockType;
   isAI?: boolean;
   sort_order: number;
+  scheduledDate: string; // YYYY-MM-DD
 }
 
 // ── Defaults ───────────────────────────────────────────────────────────────
