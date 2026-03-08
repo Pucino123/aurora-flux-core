@@ -1467,9 +1467,9 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
   }, [selectedTemplateId, favorites]);
 
   const handleCreate = useCallback(() => {
-    onCreateDocument(selectedTemplate.title, selectedTemplate.type, selectedTemplate.content);
+    onCreateDocument(selectedTemplate.title, selectedTemplate.type, selectedTemplate.content, previewTheme === "light");
     onClose();
-  }, [selectedTemplate, onCreateDocument, onClose]);
+  }, [selectedTemplate, previewTheme, onCreateDocument, onClose]);
 
   // Keyboard navigation — isolated to modal div (no window listener → no bleed)
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
