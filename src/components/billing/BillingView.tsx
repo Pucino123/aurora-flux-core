@@ -106,7 +106,7 @@ export function OutOfSparksModal() {
             {PACKS.map((pack) => (
               <button
                 key={pack.sparks}
-                onClick={() => { addSparks(pack.sparks); closeOutOfSparks(); }}
+              onClick={() => { addSparks(pack.sparks); closeOutOfSparks(); }}
                 className={`relative flex flex-col items-center gap-1 p-4 rounded-2xl border transition-all hover:scale-[1.02] ${
                   pack.highlight
                     ? "border-primary bg-primary/10 ring-2 ring-primary/30"
