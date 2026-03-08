@@ -530,16 +530,6 @@ const CommunityBoardView = () => {
                     </div>
                   </a>
                 )}
-
-                {/* Admin remove button on approved */}
-                {adminMode && slot.status === "approved" && (
-                  <button
-                    onClick={() => handleReject(slot)}
-                    className="absolute top-1 right-1 p-1 rounded-lg bg-destructive/80 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <X size={10} />
-                  </button>
-                )}
               </motion.div>
             );
           })}
