@@ -1443,18 +1443,19 @@ const FocusContent = () => {
                 onTouchEnd={handleDotTouchEnd}
                 onMouseEnter={() => setHoverDotIdx(i)}
                 onMouseLeave={() => setHoverDotIdx(null)}
-                draggable
-                onDragStart={() => handleDotDragStart(i)}
-                onDragOver={(e) => handleDotDragOver(i, e)}
-                onDrop={() => handleDotDrop(i)}
+                draggable={systemMode === "build"}
+                onDragStart={() => systemMode === "build" && handleDotDragStart(i)}
+                onDragOver={(e) => systemMode === "build" && handleDotDragOver(i, e)}
+                onDrop={() => systemMode === "build" && handleDotDrop(i)}
                 onDragEnd={() => { setDraggingDotIdx(null); setDragOverIdx(null); }}
                 onPointerDown={e => e.stopPropagation()}
-                className="transition-all duration-300 flex-shrink-0 cursor-grab active:cursor-grabbing"
-                title={page.label || `Page ${i + 1}`}
+                className="transition-all duration-300 flex-shrink-0"
+                title={systemMode === "build" ? `${page.label || `Page ${i + 1}`} — drag to reorder` : page.label || `Page ${i + 1}`}
                 style={{
                   width: i === activePageIndex ? 24 : 8,
                   height: 8,
                   borderRadius: 9999,
+                  cursor: systemMode === "build" ? (draggingDotIdx === i ? "grabbing" : "grab") : "pointer",
                   background: draggingDotIdx === i
                     ? "rgba(255,255,255,0.15)"
                     : dragOverIdx === i
