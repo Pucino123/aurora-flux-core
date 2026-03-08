@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from "react";
-import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2 } from "lucide-react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { Timer, Music, CalendarClock, StickyNote, Clock, BarChart3, FileText, MessageSquareQuote, Wind, Users, DollarSign, PieChart, Dumbbell, ListTodo, Briefcase, Sparkles, Award, Brain, X, ChevronUp, Focus, Hammer, MessageCircle, Lightbulb, RotateCcw, Orbit, Users2, GripHorizontal } from "lucide-react";
 import { useFocusStore, SystemMode } from "@/context/FocusContext";
 import { AnimatePresence, motion } from "framer-motion";
 import FocusReportModal from "./FocusReportModal";
 import CollabMessagesModal from "./CollabMessagesModal";
 import { getSuggestedWidgets } from "@/hooks/useWidgetIntelligence";
 import { useTeamChat } from "@/hooks/useTeamChat";
+
 const TOOL_CATEGORIES = [
   {
     label: "Core",
@@ -54,22 +55,30 @@ const MODES: { key: SystemMode; label: string; icon: any; desc: string }[] = [
   { key: "build", label: "Build", icon: Hammer, desc: "Customize layout" },
 ];
 
+const TOOLBAR_POS_KEY = "flux-toolbar-pos";
+
+function loadToolbarPos(): { x: number; y: number } | null {
+  try {
+    const raw = localStorage.getItem(TOOLBAR_POS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function saveToolbarPos(pos: { x: number; y: number }) {
+  localStorage.setItem(TOOLBAR_POS_KEY, JSON.stringify(pos));
+}
+
 interface ToolDrawerProps {
-  /** Per-page active widgets override. When provided, toggle affects this list instead of the global store. */
   pageActiveWidgets?: string[];
   onTogglePageWidget?: (id: string) => void;
 }
 
 const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps = {}) => {
   const { activeWidgets, toggleWidget, systemMode, setSystemMode, resetDashboard } = useFocusStore();
-  
+
   const effectiveWidgets = pageActiveWidgets ?? activeWidgets;
   const effectiveToggle = (id: string) => {
-    if (onTogglePageWidget) {
-      onTogglePageWidget(id);
-    } else {
-      toggleWidget(id);
-    }
+    if (onTogglePageWidget) onTogglePageWidget(id);
+    else toggleWidget(id);
   };
 
   const [open, setOpen] = useState(false);
@@ -77,15 +86,114 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
   const [collabOpen, setCollabOpen] = useState(false);
   const allToolIds = useMemo(() => TOOL_CATEGORIES.flatMap(c => c.tools), []);
   const suggestions = useMemo(() => getSuggestedWidgets(effectiveWidgets as string[]), [effectiveWidgets]);
-  const { unreadCount, markAsRead, setModalOpen } = useTeamChat();
+  const { unreadCount, markAsRead } = useTeamChat();
+
+  // ── Drag position (build mode only) ──────────────────────────────────
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(loadToolbarPos);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isBouncing, setIsBouncing] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const offset = useRef({ x: 0, y: 0 });
+  const didDrag = useRef(false);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (systemMode !== "build") return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragging.current = true;
+    didDrag.current = false;
+    setIsDragging(true);
+    const rect = barRef.current?.getBoundingClientRect();
+    if (rect) {
+      offset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    } else if (toolbarPos) {
+      offset.current = { x: e.clientX - toolbarPos.x, y: e.clientY - toolbarPos.y };
+    } else {
+      // default center-bottom position
+      const w = barRef.current?.offsetWidth ?? 320;
+      offset.current = { x: e.clientX - (window.innerWidth / 2 - w / 2), y: e.clientY - (window.innerHeight - 48) };
+    }
+  }, [systemMode, toolbarPos]);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!dragging.current) return;
+      didDrag.current = true;
+      const nx = e.clientX - offset.current.x;
+      const ny = e.clientY - offset.current.y;
+      // Clamp inside viewport
+      const w = barRef.current?.offsetWidth ?? 320;
+      const h = barRef.current?.offsetHeight ?? 48;
+      const cx = Math.max(0, Math.min(nx, window.innerWidth - w));
+      const cy = Math.max(0, Math.min(ny, window.innerHeight - h));
+      setToolbarPos({ x: cx, y: cy });
+    };
+    const onUp = () => {
+      if (!dragging.current) return;
+      dragging.current = false;
+      setIsDragging(false);
+      if (didDrag.current && toolbarPos) {
+        saveToolbarPos(toolbarPos);
+        setIsBouncing(true);
+        setTimeout(() => setIsBouncing(false), 500);
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [toolbarPos]);
+
+  // Reset to center-bottom when switching away from build mode (optional UX clarity)
+  // Keep position sticky across modes so it stays where user placed it
+
+  const posStyle: React.CSSProperties = toolbarPos
+    ? { left: toolbarPos.x, top: toolbarPos.y, bottom: "auto", transform: "none" }
+    : { left: "50%", bottom: "24px", top: "auto", transform: "translateX(-50%)" };
+
+  const isBuild = systemMode === "build";
+
   return (
     <>
-      {/* Bottom bar with trigger + mode switcher */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10100] flex items-center gap-1 px-2 py-1.5 rounded-full bg-white/10 backdrop-blur-[16px] border border-white/20 shadow-lg">
+      {/* Bottom bar */}
+      <motion.div
+        ref={barRef}
+        className="fixed z-[10100] flex items-center gap-1 px-2 py-1.5 rounded-full bg-white/10 backdrop-blur-[16px] border shadow-lg select-none"
+        animate={isBouncing ? { scale: [1, 1.06, 0.97, 1.02, 1] } : { scale: 1 }}
+        transition={isBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
+        style={{
+          ...posStyle,
+          cursor: isBuild ? (isDragging ? "grabbing" : "grab") : "default",
+          borderColor: isBuild ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.20)",
+          boxShadow: isDragging
+            ? "0 16px 48px rgba(0,0,0,0.7), 0 0 0 1.5px rgba(255,255,255,0.3)"
+            : "0 8px 32px rgba(0,0,0,0.55)",
+        }}
+        onPointerDown={isBuild ? handlePointerDown : undefined}
+      >
+        {/* Grip indicator in build mode */}
+        <AnimatePresence>
+          {isBuild && (
+            <motion.div
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.18 }}
+              className="overflow-hidden"
+            >
+              <GripHorizontal size={12} className="text-white/30 mr-1" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Mode buttons */}
         {MODES.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
+            onPointerDown={e => e.stopPropagation()}
             onClick={() => setSystemMode(key)}
             title={label}
             className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all ${
@@ -99,8 +207,9 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           </button>
         ))}
 
-        {/* Collab button – opens modal without switching mode */}
+        {/* Collab button */}
         <button
+          onPointerDown={e => e.stopPropagation()}
           onClick={() => { setCollabOpen(true); markAsRead(); }}
           title="Collab"
           className="relative flex items-center gap-1.5 px-2.5 py-2 rounded-full text-[10px] font-medium transition-all text-white/30 hover:text-white/60 hover:bg-white/5"
@@ -118,6 +227,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
 
         {/* Tools trigger */}
         <motion.button
+          onPointerDown={e => e.stopPropagation()}
           onClick={() => setOpen(!open)}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-medium transition-all ${
             open ? "bg-white/15 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"
@@ -128,7 +238,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
           <span className="hidden sm:inline">Tools</span>
           <span className="text-[10px] text-white/25 tabular-nums">{effectiveWidgets.length}</span>
         </motion.button>
-      </div>
+      </motion.div>
 
       {/* Backdrop */}
       <AnimatePresence>
@@ -143,16 +253,21 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
         )}
       </AnimatePresence>
 
-      {/* Drawer panel */}
+      {/* Drawer panel — anchored above the bar */}
       <AnimatePresence>
         {open && (
-      <motion.div
+          <motion.div
             initial={{ opacity: 0, y: 24, scaleX: 0.92, scaleY: 0.88 }}
             animate={{ opacity: 1, y: 0, scaleX: 1, scaleY: 1 }}
             exit={{ opacity: 0, y: 18, scaleX: 0.94, scaleY: 0.90 }}
             transition={{ type: "spring", stiffness: 500, damping: 36, mass: 0.8 }}
-            style={{ transformOrigin: "50% 100%" }}
-            className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[10100] w-[92vw] max-w-[520px] p-4 rounded-2xl bg-black/60 backdrop-blur-[24px] border border-white/15 shadow-2xl"
+            style={{
+              transformOrigin: "50% 100%",
+              ...(toolbarPos
+                ? { left: toolbarPos.x, bottom: `calc(100vh - ${toolbarPos.y}px + 8px)`, top: "auto", transform: "none" }
+                : { left: "50%", bottom: "88px", top: "auto", transform: "translateX(-50%)" }),
+            }}
+            className="fixed z-[10100] w-[92vw] max-w-[520px] p-4 rounded-2xl bg-black/60 backdrop-blur-[24px] border border-white/15 shadow-2xl"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-white/50 uppercase tracking-widest">Tool Ecosystem</span>
@@ -178,7 +293,6 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
             </div>
 
             <div className="space-y-3 max-h-[50vh] overflow-y-auto council-hidden-scrollbar">
-              {/* Suggested for you */}
               {suggestions.length > 0 && (
                 <div>
                   <span className="text-[10px] text-white/25 font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
