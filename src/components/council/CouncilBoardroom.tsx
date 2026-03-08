@@ -1783,31 +1783,29 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
               exit={{ scale: 0.93, opacity: 0, y: 20 }}
               transition={{ duration: 0.25 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-lg rounded-3xl overflow-hidden border"
-              style={{ background: "linear-gradient(135deg, rgba(10,8,20,0.98), rgba(20,12,40,0.98))", borderColor: "rgba(139,92,246,0.3)", boxShadow: "0 0 60px rgba(139,92,246,0.2)" }}
+               className="w-full max-w-lg rounded-3xl overflow-hidden border border-accent/30 bg-card shadow-2xl"
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
                 <div className="flex items-center gap-2">
-                  <FileText size={13} className="text-purple-400/70" />
-                  <p className="text-[11px] font-semibold text-white/60 uppercase tracking-widest">Council Digest</p>
+                  <FileText size={13} className="text-accent/70" />
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Council Digest</p>
                 </div>
-                <button onClick={() => setShowDigest(false)} className="w-6 h-6 flex items-center justify-center text-white/30 hover:text-white transition-colors">
+                <button onClick={() => setShowDigest(false)} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
                   <X size={12} />
                 </button>
               </div>
               <div className="p-5 space-y-3">
-                <p className="text-[10px] text-white/35">Copy this digest to paste into email, Notion, Slack, or anywhere you need a formatted summary.</p>
+                <p className="text-[10px] text-muted-foreground">Copy this digest to paste into email, Notion, Slack, or anywhere you need a formatted summary.</p>
                 <pre
-                  className="w-full p-4 rounded-2xl text-[10px] leading-relaxed text-white/60 overflow-auto max-h-60 font-mono"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", whiteSpace: "pre-wrap" }}
+                  className="w-full p-4 rounded-2xl text-[10px] leading-relaxed text-foreground/70 overflow-auto max-h-60 font-mono bg-secondary border border-border/40"
+                  style={{ whiteSpace: "pre-wrap" }}
                 >
                   {digestText}
                 </pre>
                  <div className="flex gap-2">
                   <button
                     onClick={() => { navigator.clipboard.writeText(digestText); toast.success("Digest copied to clipboard!"); }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-purple-200 transition-colors"
-                    style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.3)" }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-accent-foreground transition-colors bg-accent/20 hover:bg-accent/30 border border-accent/30"
                   >
                     <Copy size={11} /> Copy Digest
                   </button>
