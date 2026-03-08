@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, BarChart2, Send, Loader2, Share2, X, MessageSquare, TrendingUp, AlertTriangle,
-  Lightbulb, Star, Reply, Maximize2, BookmarkPlus, Check,
+  Lightbulb, Star, Reply, Maximize2, BookmarkPlus, Check, RotateCcw, Download, Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import html2canvas from "html2canvas";
 
 // ── Types ──
 
