@@ -67,7 +67,7 @@ const TeamChatView = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] min-h-[400px]">
+    <div className="flex flex-col h-full min-h-0">
       {/* Online users bar */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30">
         <span className="text-xs text-muted-foreground font-medium">Team</span>
