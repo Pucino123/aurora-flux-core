@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { t } from "@/lib/i18n";
 import OnboardingFlow from "./onboarding/OnboardingFlow";
+import CommHub from "./CommHub";
 
 
 interface DashboardProps {
@@ -172,7 +173,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       )}
 
       <MobileNav />
-      
+      {effectiveView !== "focus" && effectiveView !== "stream" && <CommHub />}
 
       {/* Global Modals */}
       <UpgradeModal />
