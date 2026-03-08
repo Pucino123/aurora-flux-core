@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlignLeft } from "lucide-react";
+import { X, AlignLeft, Sun, Moon } from "lucide-react";
 
 type DocType = "text" | "spreadsheet";
+type PreviewTheme = "light" | "dark";
 
 interface Template {
   id: string;
@@ -11,28 +12,45 @@ interface Template {
   subtitle: string;
   type: DocType;
   category: string;
-  thumbnail: React.ReactNode;
+  thumbnail: (isDark: boolean) => React.ReactNode;
   content?: any;
 }
 
+// ─── Shared palette helpers ───────────────────────────────────────────────────
+const p = (isDark: boolean) => ({
+  paper: isDark ? "#1e293b" : "#ffffff",
+  paperBorder: isDark ? "#334155" : "#e2e8f0",
+  line: isDark ? "#334155" : "#e2e8f0",
+  lineAlt: isDark ? "#3f4f66" : "#f1f5f9",
+  block: isDark ? "#475569" : "#cbd5e1",
+  blockSoft: isDark ? "#334155" : "#e2e8f0",
+  muted: isDark ? "#64748b" : "#94a3b8",
+  textDark: isDark ? "#94a3b8" : "#475569",
+  heading: isDark ? "#cbd5e1" : "#1e293b",
+});
+
+// ─── Template catalog ────────────────────────────────────────────────────────
 const TEMPLATES: Template[] = [
+  // ── BLANK ────────────────────────────────────────────────────────────────
   {
     id: "blank-text",
     title: "Blank Document",
     subtitle: "Start from scratch",
     type: "text",
     category: "Blank",
-    thumbnail: (
-      <div className="w-full h-full bg-white flex flex-col p-3 gap-2">
-        <div className="w-3/4 h-2 rounded-full bg-slate-200" />
-        <div className="flex-1 flex flex-col gap-1.5 pt-1">
-          <div className="w-full h-1.5 rounded-full bg-slate-100" />
-          <div className="w-5/6 h-1.5 rounded-full bg-slate-100" />
-          <div className="w-full h-1.5 rounded-full bg-slate-100" />
-          <div className="w-4/6 h-1.5 rounded-full bg-slate-100" />
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      return (
+        <div className="w-full h-full flex flex-col p-3 gap-2" style={{ background: c.paper }}>
+          <div className="w-3/4 h-2 rounded-full" style={{ background: c.block }} />
+          <div className="flex-1 flex flex-col gap-1.5 pt-1">
+            {[100, 83, 100, 67, 91, 75].map((w, i) => (
+              <div key={i} className="h-1.5 rounded-full" style={{ background: c.lineAlt, width: `${w}%` }} />
+            ))}
+          </div>
         </div>
-      </div>
-    ),
+      );
+    },
   },
   {
     id: "blank-spreadsheet",
@@ -40,42 +58,138 @@ const TEMPLATES: Template[] = [
     subtitle: "Empty grid to fill",
     type: "spreadsheet",
     category: "Blank",
-    thumbnail: (
-      <div
-        className="w-full h-full bg-white"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)",
-          backgroundSize: "20% 14px",
-        }}
-      >
-        <div className="flex border-b border-slate-300 bg-slate-50">
-          {[16, 20, 20, 20, 20].map((w, i) => (
-            <div
-              key={i}
-              className="border-r border-slate-300 text-[4px] text-slate-400 flex items-center justify-center"
-              style={{ width: `${w}%`, height: 10 }}
-            >
-              {i === 0 ? "" : String.fromCharCode(64 + i)}
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      return (
+        <div className="w-full h-full" style={{ background: c.paper }}>
+          <div
+            className="w-full h-full"
+            style={{
+              backgroundImage: `linear-gradient(to right, ${c.line} 1px, transparent 1px), linear-gradient(to bottom, ${c.line} 1px, transparent 1px)`,
+              backgroundSize: "20% 14px",
+            }}
+          >
+            <div className="flex border-b" style={{ borderColor: c.block, background: c.lineAlt }}>
+              {[16, 21, 21, 21, 21].map((w, i) => (
+                <div key={i} className="flex items-center justify-center text-[4px]"
+                  style={{ width: `${w}%`, height: 10, borderRight: `1px solid ${c.block}`, color: c.muted }}>
+                  {i === 0 ? "" : String.fromCharCode(64 + i)}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        {Array.from({ length: 6 }).map((_, r) => (
-          <div key={r} className="flex border-b border-slate-200">
-            {[16, 20, 20, 20, 20].map((w, c) => (
-              <div
-                key={c}
-                className="border-r border-slate-200 text-[4px] text-slate-300 flex items-center pl-0.5"
-                style={{ width: `${w}%`, height: 9 }}
-              >
-                {c === 0 ? r + 1 : ""}
+            {Array.from({ length: 6 }).map((_, r) => (
+              <div key={r} className="flex" style={{ borderBottom: `1px solid ${c.line}` }}>
+                {[16, 21, 21, 21, 21].map((w, c2) => (
+                  <div key={c2} className="flex items-center pl-0.5 text-[4px]"
+                    style={{ width: `${w}%`, height: 9, borderRight: `1px solid ${c.line}`, color: c.muted }}>
+                    {c2 === 0 ? r + 1 : ""}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
-        ))}
-      </div>
-    ),
+        </div>
+      );
+    },
   },
+
+  // ── BASIC (Word) ─────────────────────────────────────────────────────────
+  {
+    id: "academic-essay",
+    title: "Academic Essay",
+    subtitle: "Structured scholarly writing",
+    type: "text",
+    category: "Basic",
+    content: {
+      html: `<h1>Title of Essay</h1>
+<p><em>Author Name · Course · Date</em></p>
+<hr />
+<h2>Abstract</h2>
+<p>Provide a concise summary of the essay's main argument and conclusions in 150–250 words.</p>
+<h2>Introduction</h2>
+<p>Introduce the topic, state the thesis, and outline the structure of the essay.</p>
+<h2>Background</h2>
+<p>Provide context and relevant prior research or theory.</p>
+<h2>Argument</h2>
+<p>Develop the main argument with evidence and analysis.</p>
+<h2>Conclusion</h2>
+<p>Summarise findings and suggest areas for further research.</p>
+<h2>References</h2>
+<p>List all cited sources in the appropriate citation style.</p>`,
+    },
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      return (
+        <div className="w-full h-full flex flex-col px-3 pt-2.5 pb-2 gap-1.5" style={{ background: c.paper }}>
+          {/* Title */}
+          <div className="w-4/5 h-2 rounded-full mx-auto" style={{ background: c.block }} />
+          <div className="w-1/2 h-1 rounded-full mx-auto" style={{ background: c.line }} />
+          <div className="w-full h-px my-0.5" style={{ background: c.line }} />
+          {/* Section heading */}
+          <div className="w-2/5 h-1.5 rounded-full" style={{ background: c.blockSoft }} />
+          {/* Dense text lines */}
+          {[100, 100, 100, 92, 100, 100, 88].map((w, i) => (
+            <div key={i} className="h-1 rounded-full" style={{ background: c.lineAlt, width: `${w}%` }} />
+          ))}
+          <div className="w-1/3 h-1.5 rounded-full mt-0.5" style={{ background: c.blockSoft }} />
+          {[100, 100, 95].map((w, i) => (
+            <div key={i} className="h-1 rounded-full" style={{ background: c.lineAlt, width: `${w}%` }} />
+          ))}
+        </div>
+      );
+    },
+  },
+  {
+    id: "formal-letter",
+    title: "Formal Letter",
+    subtitle: "Professional correspondence",
+    type: "text",
+    category: "Basic",
+    content: {
+      html: `<p style="text-align:right">Your Name<br/>Your Address<br/>City, Postcode<br/>${new Date().toLocaleDateString()}</p>
+<p><br/>Recipient Name<br/>Their Title<br/>Their Organisation<br/>Their Address</p>
+<p><br/>Dear [Recipient Name],</p>
+<h2>Re: [Subject of Letter]</h2>
+<p>I am writing to you regarding [purpose]. Please find the relevant details below.</p>
+<p>[Body paragraph 1]</p>
+<p>[Body paragraph 2]</p>
+<p>I trust the above is clear. Please do not hesitate to contact me should you require any further information.</p>
+<p>Yours sincerely,</p>
+<p><br/><strong>Your Name</strong></p>`,
+    },
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      return (
+        <div className="w-full h-full flex flex-col p-2.5 gap-1" style={{ background: c.paper }}>
+          {/* Sender block — top right */}
+          <div className="self-end flex flex-col gap-0.5 items-end mb-0.5">
+            {[28, 22, 24, 18].map((w, i) => (
+              <div key={i} className="h-1 rounded-full" style={{ background: c.blockSoft, width: w }} />
+            ))}
+          </div>
+          {/* Recipient block — left */}
+          <div className="flex flex-col gap-0.5 mb-1">
+            {[26, 20, 22].map((w, i) => (
+              <div key={i} className="h-1 rounded-full" style={{ background: c.blockSoft, width: w }} />
+            ))}
+          </div>
+          {/* Greeting */}
+          <div className="w-2/5 h-1 rounded-full" style={{ background: c.line }} />
+          {/* Subject */}
+          <div className="w-1/2 h-1.5 rounded-full" style={{ background: c.block }} />
+          {/* Body paragraphs */}
+          {[100, 100, 82, 100, 100, 75, 100, 88].map((w, i) => (
+            <div key={i} className="h-1 rounded-full" style={{ background: c.lineAlt, width: `${w}%` }} />
+          ))}
+          {/* Sign-off */}
+          <div className="w-1/3 h-1 rounded-full mt-1" style={{ background: c.line }} />
+          <div className="w-1/4 h-1.5 rounded-full" style={{ background: c.blockSoft }} />
+        </div>
+      );
+    },
+  },
+
+  // ── BUSINESS & FINANCE ───────────────────────────────────────────────────
   {
     id: "modern-invoice",
     title: "Modern Invoice",
@@ -99,45 +213,159 @@ const TEMPLATES: Template[] = [
         ["", "", "Total", "$0.00", ""],
       ],
     },
-    thumbnail: (
-      <div className="w-full h-full bg-white flex flex-col">
-        <div className="bg-slate-800 px-3 py-2 flex items-center justify-between">
-          <div className="w-8 h-1.5 bg-white/30 rounded-full" />
-          <div className="w-6 h-1.5 bg-white/20 rounded-full" />
-        </div>
-        <div className="px-3 pt-2 pb-1 flex justify-between gap-2">
-          <div className="flex flex-col gap-1">
-            <div className="w-10 h-1.5 bg-slate-300 rounded-full" />
-            <div className="w-8 h-1 bg-slate-200 rounded-full" />
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      const headerBg = isDark ? "#0f172a" : "#1e293b";
+      return (
+        <div className="w-full h-full flex flex-col" style={{ background: c.paper }}>
+          <div className="px-3 py-2 flex items-center justify-between" style={{ background: headerBg }}>
+            <div className="w-8 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.3)" }} />
+            <div className="w-6 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
           </div>
-          <div className="flex flex-col gap-1 items-end">
-            <div className="w-10 h-1 bg-slate-200 rounded-full" />
-            <div className="w-8 h-1 bg-slate-200 rounded-full" />
-          </div>
-        </div>
-        <div className="flex-1 px-3 flex flex-col gap-1 pt-1">
-          <div className="flex gap-1 border-b border-slate-200 pb-0.5">
-            <div className="flex-1 h-1 bg-slate-300 rounded-full" />
-            <div className="w-4 h-1 bg-slate-300 rounded-full" />
-            <div className="w-5 h-1 bg-slate-300 rounded-full" />
-          </div>
-          {[1, 2, 3].map(i => (
-            <div key={i} className="flex gap-1">
-              <div className="flex-1 h-1 bg-slate-100 rounded-full" />
-              <div className="w-4 h-1 bg-slate-100 rounded-full" />
-              <div className="w-5 h-1 bg-slate-100 rounded-full" />
+          <div className="px-3 pt-2 pb-1 flex justify-between gap-2">
+            <div className="flex flex-col gap-0.5">
+              <div className="w-10 h-1.5 rounded-full" style={{ background: c.block }} />
+              <div className="w-8 h-1 rounded-full" style={{ background: c.line }} />
             </div>
+            <div className="flex flex-col gap-0.5 items-end">
+              <div className="w-10 h-1 rounded-full" style={{ background: c.line }} />
+              <div className="w-8 h-1 rounded-full" style={{ background: c.line }} />
+            </div>
+          </div>
+          <div className="flex-1 px-3 flex flex-col gap-1 pt-1">
+            <div className="flex gap-1 pb-0.5" style={{ borderBottom: `1px solid ${c.line}` }}>
+              <div className="flex-1 h-1 rounded-full" style={{ background: c.block }} />
+              <div className="w-4 h-1 rounded-full" style={{ background: c.block }} />
+              <div className="w-5 h-1 rounded-full" style={{ background: c.block }} />
+            </div>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex gap-1">
+                <div className="flex-1 h-1 rounded-full" style={{ background: c.line }} />
+                <div className="w-4 h-1 rounded-full" style={{ background: c.line }} />
+                <div className="w-5 h-1 rounded-full" style={{ background: c.line }} />
+              </div>
+            ))}
+          </div>
+          <div className="mx-3 mb-2 mt-1 self-end">
+            <div className="rounded px-2 py-1 flex gap-3 items-center" style={{ background: headerBg }}>
+              <div className="w-6 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
+              <div className="w-6 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.55)" }} />
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "saas-churn",
+    title: "SaaS Churn Dashboard",
+    subtitle: "Track retention metrics",
+    type: "spreadsheet",
+    category: "Business & Finance",
+    content: {
+      rows: [
+        ["Metric", "Jan", "Feb", "Mar", "Apr", "May"],
+        ["Total Customers", "1200", "1350", "1480", "1620", "1755"],
+        ["New Customers", "200", "180", "210", "195", "220"],
+        ["Churned", "50", "30", "80", "55", "45"],
+        ["Churn Rate %", "4.2%", "2.2%", "5.4%", "3.4%", "2.6%"],
+        ["MRR ($)", "$42,000", "$47,250", "$51,800", "$56,700", "$61,425"],
+        ["Net Revenue Churn", "-1.8%", "-0.5%", "-2.1%", "-1.2%", "-0.9%"],
+      ],
+    },
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      const emeraldBg = isDark ? "rgba(16,185,129,0.15)" : "rgba(16,185,129,0.1)";
+      const emeraldBorder = isDark ? "rgba(16,185,129,0.3)" : "rgba(16,185,129,0.25)";
+      const barHeights = [60, 80, 45, 70, 90, 55];
+      const barColor = isDark ? "#3b82f6" : "#6366f1";
+      return (
+        <div className="w-full h-full flex flex-col p-2 gap-1.5" style={{ background: c.paper }}>
+          {/* 3 metric cards */}
+          <div className="flex gap-1">
+            {[{ label: "MRR", v: "$61k", c: emeraldBg, b: emeraldBorder },
+              { label: "Churn", v: "2.6%", c: isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)", b: isDark ? "rgba(239,68,68,0.25)" : "rgba(239,68,68,0.2)" },
+              { label: "NRR", v: "108%", c: emeraldBg, b: emeraldBorder }
+            ].map((m, i) => (
+              <div key={i} className="flex-1 rounded flex flex-col items-center justify-center py-1 gap-0.5"
+                style={{ background: m.c, border: `0.5px solid ${m.b}` }}>
+                <div className="text-[3.5px] font-medium" style={{ color: c.muted }}>{m.label}</div>
+                <div className="text-[5px] font-bold" style={{ color: c.textDark }}>{m.v}</div>
+              </div>
+            ))}
+          </div>
+          {/* Bar chart */}
+          <div className="flex-1 flex items-end gap-0.5 px-1 pt-1" style={{ borderTop: `1px solid ${c.line}` }}>
+            {barHeights.map((h, i) => (
+              <div key={i} className="flex-1 rounded-sm" style={{ height: `${h}%`, background: barColor, opacity: 0.7 + i * 0.05 }} />
+            ))}
+          </div>
+          {/* X axis */}
+          <div className="flex gap-0.5 px-1">
+            {["J", "F", "M", "A", "M", "J"].map((l, i) => (
+              <div key={i} className="flex-1 text-center text-[3px]" style={{ color: c.muted }}>{l}</div>
+            ))}
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "roi-calculator",
+    title: "ROI Calculator",
+    subtitle: "Measure investment returns",
+    type: "spreadsheet",
+    category: "Business & Finance",
+    content: {
+      rows: [
+        ["Personal ROI Calculator", "", "", "", ""],
+        ["", "", "", "", ""],
+        ["Investment Details", "", "", "", ""],
+        ["Initial Investment ($)", "", "", "$10,000", ""],
+        ["Final Value ($)", "", "", "$24,700", ""],
+        ["Time Period (Years)", "", "", "3", ""],
+        ["", "", "", "", ""],
+        ["Results", "", "", "", ""],
+        ["Total Return ($)", "", "", "$14,700", ""],
+        ["ROI (%)", "", "", "147%", ""],
+        ["Annualised Return (%)", "", "", "34.7%", ""],
+        ["Multiplier", "", "", "2.47x", ""],
+      ],
+    },
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      const gridLine = isDark ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.1)";
+      return (
+        <div className="w-full h-full relative flex items-center justify-center" style={{ background: c.paper }}>
+          {/* Grid overlay */}
+          <div className="absolute inset-0" style={{
+            backgroundImage: `linear-gradient(to right, ${gridLine} 1px, transparent 1px), linear-gradient(to bottom, ${gridLine} 1px, transparent 1px)`,
+            backgroundSize: "16px 16px",
+          }} />
+          {/* Centered ROI number */}
+          <div className="relative flex flex-col items-center gap-0.5">
+            <div className="text-[8px] font-bold" style={{ color: isDark ? "#a78bfa" : "#6366f1", letterSpacing: "-0.5px" }}>147%</div>
+            <div className="text-[4px]" style={{ color: c.muted }}>Total ROI</div>
+            <div className="w-12 h-px my-0.5" style={{ background: c.line }} />
+            <div className="flex gap-3">
+              {[{ l: "2.47x", s: "Multiplier" }, { l: "34.7%", s: "Annual" }].map((m, i) => (
+                <div key={i} className="flex flex-col items-center gap-0.5">
+                  <div className="text-[5.5px] font-semibold" style={{ color: c.textDark }}>{m.l}</div>
+                  <div className="text-[3px]" style={{ color: c.muted }}>{m.s}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Corner labels */}
+          {[["top-2 left-2", "Initial"], ["top-2 right-2", "Final"], ["bottom-2 left-2", "3 Yrs"], ["bottom-2 right-2", "$14.7k"]].map(([pos, label], i) => (
+            <div key={i} className={`absolute ${pos} text-[3px]`} style={{ color: c.muted }}>{label}</div>
           ))}
         </div>
-        <div className="mx-3 mb-2 mt-1 self-end">
-          <div className="bg-slate-800 rounded px-2 py-1 flex gap-3 items-center">
-            <div className="w-6 h-1 bg-white/30 rounded-full" />
-            <div className="w-6 h-1.5 bg-white/60 rounded-full" />
-          </div>
-        </div>
-      </div>
-    ),
+      );
+    },
   },
+
+  // ── PROJECT MANAGEMENT ───────────────────────────────────────────────────
   {
     id: "project-proposal",
     title: "Project Proposal",
@@ -159,32 +387,93 @@ const TEMPLATES: Template[] = [
 <h2>Team</h2>
 <p>List the key team members and their roles.</p>`,
     },
-    thumbnail: (
-      <div className="w-full h-full bg-white flex flex-col overflow-hidden">
-        <div
-          className="w-full flex items-end pb-2 px-3"
-          style={{ height: "44%", background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)" }}
-        >
-          <div className="flex flex-col gap-1">
-            <div className="w-16 h-2 bg-white/70 rounded-full" />
-            <div className="w-10 h-1.5 bg-white/40 rounded-full" />
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      return (
+        <div className="w-full h-full flex flex-col overflow-hidden" style={{ background: c.paper }}>
+          <div className="w-full flex items-end pb-2 px-3" style={{
+            height: "44%",
+            background: isDark
+              ? "linear-gradient(135deg, #312e81 0%, #4c1d95 100%)"
+              : "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+          }}>
+            <div className="flex flex-col gap-1">
+              <div className="w-16 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.7)" }} />
+              <div className="w-10 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.4)" }} />
+            </div>
+          </div>
+          <div className="flex-1 px-3 pt-2 flex gap-2">
+            {[0, 1].map(col => (
+              <div key={col} className="flex flex-col gap-1.5 flex-1">
+                <div className="w-full h-1.5 rounded-full" style={{ background: c.blockSoft }} />
+                <div className="w-4/5 h-1 rounded-full" style={{ background: c.line }} />
+                <div className="w-full h-1 rounded-full" style={{ background: c.line }} />
+              </div>
+            ))}
           </div>
         </div>
-        <div className="flex-1 px-3 pt-2 flex gap-2">
-          <div className="flex flex-col gap-1.5 flex-1">
-            <div className="w-full h-1.5 bg-slate-200 rounded-full" />
-            <div className="w-4/5 h-1 bg-slate-100 rounded-full" />
-            <div className="w-full h-1 bg-slate-100 rounded-full" />
-          </div>
-          <div className="flex flex-col gap-1.5 flex-1">
-            <div className="w-full h-1.5 bg-slate-200 rounded-full" />
-            <div className="w-4/5 h-1 bg-slate-100 rounded-full" />
-            <div className="w-full h-1 bg-slate-100 rounded-full" />
-          </div>
-        </div>
-      </div>
-    ),
+      );
+    },
   },
+  {
+    id: "employee-schedule",
+    title: "Employee Schedule",
+    subtitle: "Weekly shift planner",
+    type: "spreadsheet",
+    category: "Project Management",
+    content: {
+      rows: [
+        ["Employee", "Mon", "Tue", "Wed", "Thu", "Fri"],
+        ["Alice M.", "9–5", "9–5", "OFF", "9–5", "9–3"],
+        ["Bob T.", "OFF", "10–6", "10–6", "10–6", "10–6"],
+        ["Carol S.", "8–4", "8–4", "8–4", "OFF", "8–4"],
+        ["David L.", "12–8", "OFF", "12–8", "12–8", "12–8"],
+        ["Eva K.", "9–5", "9–5", "9–5", "9–5", "OFF"],
+      ],
+    },
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      const shiftColors = [
+        isDark ? "#1d4ed8" : "#3b82f6",
+        isDark ? "#047857" : "#10b981",
+        isDark ? "#7c3aed" : "#8b5cf6",
+        isDark ? "#b45309" : "#f59e0b",
+      ];
+      const days = ["M", "T", "W", "T", "F"];
+      const employees = ["Alice", "Bob", "Carol", "David", "Eva"];
+      const offPattern = [[2], [0], [3], [1], [4]];
+      return (
+        <div className="w-full h-full flex flex-col" style={{ background: c.paper }}>
+          {/* Header row */}
+          <div className="flex" style={{ borderBottom: `1.5px solid ${c.block}` }}>
+            <div className="w-10 text-[4px] flex items-center px-1.5 py-1" style={{ color: c.muted, borderRight: `1px solid ${c.line}` }}>Name</div>
+            {days.map((d, i) => (
+              <div key={i} className="flex-1 text-center text-[4px] font-bold py-1" style={{ color: c.textDark, borderRight: i < 4 ? `1px solid ${c.line}` : undefined }}>{d}</div>
+            ))}
+          </div>
+          {employees.map((emp, r) => (
+            <div key={r} className="flex" style={{ borderBottom: `1px solid ${c.line}` }}>
+              <div className="w-10 text-[3.5px] flex items-center px-1.5 py-0.5" style={{ color: c.muted, borderRight: `1px solid ${c.line}` }}>{emp}</div>
+              {days.map((_, col) => {
+                const isOff = offPattern[r].includes(col);
+                return (
+                  <div key={col} className="flex-1 flex items-center justify-center py-0.5"
+                    style={{ borderRight: col < 4 ? `1px solid ${c.line}` : undefined }}>
+                    {isOff
+                      ? <div className="w-3 h-1.5 rounded-sm text-[3px] flex items-center justify-center" style={{ background: c.lineAlt, color: c.muted }}>—</div>
+                      : <div className="w-3 h-2 rounded-sm" style={{ background: shiftColors[r % shiftColors.length], opacity: 0.8 }} />
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      );
+    },
+  },
+
+  // ── NOTES & MEETINGS ─────────────────────────────────────────────────────
   {
     id: "meeting-minutes",
     title: "Meeting Minutes",
@@ -207,27 +496,89 @@ const TEMPLATES: Template[] = [
 <h2>Next Meeting</h2>
 <p>Date & time: </p>`,
     },
-    thumbnail: (
-      <div className="w-full h-full bg-white flex flex-col px-3 py-2.5 gap-2">
-        <div className="w-3/4 h-2 bg-slate-700 rounded-full" />
-        <div className="w-1/2 h-1 bg-slate-300 rounded-full" />
-        <div className="w-full h-px bg-slate-200 my-0.5" />
-        {[1, 2, 3].map(i => (
-          <div key={i} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-slate-300 shrink-0" />
-            <div className="h-1.5 bg-slate-200 rounded-full" style={{ width: `${40 + i * 15}%` }} />
-          </div>
-        ))}
-        <div className="w-full h-px bg-slate-200 my-0.5" />
-        {[1, 2].map(i => (
-          <div key={i} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded border border-slate-300 shrink-0" />
-            <div className="h-1 bg-slate-100 rounded-full" style={{ width: `${50 + i * 10}%` }} />
-          </div>
-        ))}
-      </div>
-    ),
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      return (
+        <div className="w-full h-full flex flex-col px-3 py-2.5 gap-1.5" style={{ background: c.paper }}>
+          <div className="w-3/4 h-2 rounded-full" style={{ background: c.block }} />
+          <div className="w-1/2 h-1 rounded-full" style={{ background: c.blockSoft }} />
+          <div className="w-full h-px my-0.5" style={{ background: c.line }} />
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: c.blockSoft }} />
+              <div className="h-1.5 rounded-full" style={{ background: c.lineAlt, width: `${40 + i * 15}%` }} />
+            </div>
+          ))}
+          <div className="w-full h-px my-0.5" style={{ background: c.line }} />
+          {[1, 2].map(i => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded shrink-0" style={{ border: `1px solid ${c.blockSoft}` }} />
+              <div className="h-1 rounded-full" style={{ background: c.lineAlt, width: `${50 + i * 10}%` }} />
+            </div>
+          ))}
+        </div>
+      );
+    },
   },
+  {
+    id: "modern-newsletter",
+    title: "Modern Newsletter",
+    subtitle: "Engaging email / digest",
+    type: "text",
+    category: "Notes & Meetings",
+    content: {
+      html: `<div style="max-width:600px; margin:0 auto; font-family:sans-serif">
+<div style="background:#6366f1; padding:32px; text-align:center">
+  <h1 style="color:white; margin:0">Newsletter Title</h1>
+  <p style="color:rgba(255,255,255,0.8)">Issue #1 · ${new Date().toLocaleDateString()}</p>
+</div>
+<h2>Top Story</h2>
+<p>Lead article body goes here. Keep this paragraph punchy and engaging — aim for 2–3 sentences that hook the reader.</p>
+<hr />
+<h2>Section One</h2>
+<p>First section content — add your text, links, and imagery here.</p>
+<h2>Section Two</h2>
+<p>Second section content — short paragraph, then a call to action.</p>
+<p style="text-align:center"><strong>→ Read more</strong></p>
+<hr />
+<p style="text-align:center; font-size:12px; color:#94a3b8">You're receiving this because you subscribed · Unsubscribe</p>
+</div>`,
+    },
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      const heroGrad = isDark
+        ? "linear-gradient(135deg, #312e81, #1e1b4b)"
+        : "linear-gradient(135deg, #6366f1, #8b5cf6)";
+      return (
+        <div className="w-full h-full flex flex-col overflow-hidden" style={{ background: c.paper }}>
+          {/* Hero image block */}
+          <div className="w-full flex flex-col items-center justify-end pb-1.5" style={{ height: "35%", background: heroGrad }}>
+            <div className="w-16 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.85)" }} />
+            <div className="w-10 h-1 rounded-full mt-0.5" style={{ background: "rgba(255,255,255,0.4)" }} />
+          </div>
+          {/* Large headline */}
+          <div className="px-2.5 pt-2 pb-1">
+            <div className="w-4/5 h-2 rounded-full" style={{ background: c.block }} />
+            <div className="w-full h-1 rounded-full mt-1" style={{ background: c.lineAlt }} />
+            <div className="w-full h-1 rounded-full mt-0.5" style={{ background: c.lineAlt }} />
+          </div>
+          {/* Two columns */}
+          <div className="flex gap-1.5 px-2.5 pt-0.5">
+            {[0, 1].map(col => (
+              <div key={col} className="flex-1 flex flex-col gap-0.5">
+                <div className="w-3/4 h-1.5 rounded-full" style={{ background: c.blockSoft }} />
+                {[100, 90, 100, 80].map((w, i) => (
+                  <div key={i} className="h-1 rounded-full" style={{ background: c.lineAlt, width: `${w}%` }} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    },
+  },
+
+  // ── CRM & SALES ──────────────────────────────────────────────────────────
   {
     id: "crm-pipeline",
     title: "CRM Pipeline",
@@ -244,51 +595,40 @@ const TEMPLATES: Template[] = [
         ["Anna Müller", "NovaTech GmbH", "Closed Won", "$19,800", new Date(Date.now() - 432000000).toLocaleDateString()],
       ],
     },
-    thumbnail: (
-      <div className="w-full h-full bg-white flex flex-col">
-        {/* Header row */}
-        <div className="flex border-b-2 border-emerald-500 bg-emerald-50 px-2 py-1 gap-1">
-          {["Contact", "Stage", "Value"].map((h, i) => (
-            <div key={i} className="flex-1 text-[4px] font-bold text-emerald-700 truncate">{h}</div>
-          ))}
-        </div>
-        {/* Data rows */}
-        {[
-          ["S. Johnson", "Qualified", "$12.5k"],
-          ["M. Chen", "Proposal", "$8.2k"],
-          ["E. Rodriguez", "Negotiation", "$31k"],
-          ["D. Kim", "Demo", "$5.7k"],
-          ["A. Müller", "Closed ✓", "$19.8k"],
-        ].map((row, i) => (
-          <div key={i} className="flex px-2 py-0.5 gap-1 border-b border-slate-100">
-            {row.map((cell, j) => (
-              <div
-                key={j}
-                className="flex-1 text-[4px] truncate"
-                style={{
-                  color: j === 1
-                    ? cell.includes("Closed") ? "#16a34a" : cell.includes("Negotiation") ? "#d97706" : "#3b82f6"
-                    : "#475569",
-                  fontWeight: j === 0 ? "600" : "400",
-                }}
-              >
-                {cell}
-              </div>
+    thumbnail: (isDark) => {
+      const c = p(isDark);
+      return (
+        <div className="w-full h-full flex flex-col" style={{ background: c.paper }}>
+          <div className="flex px-2 py-1 gap-1" style={{ borderBottom: `1.5px solid ${isDark ? "#10b981" : "#059669"}`, background: isDark ? "rgba(16,185,129,0.1)" : "rgba(16,185,129,0.07)" }}>
+            {["Contact", "Stage", "Value"].map((h, i) => (
+              <div key={i} className="flex-1 text-[4px] font-bold" style={{ color: isDark ? "#34d399" : "#065f46" }}>{h}</div>
             ))}
           </div>
-        ))}
-      </div>
-    ),
+          {[
+            ["S. Johnson", "Qualified", "$12.5k", "#3b82f6"],
+            ["M. Chen", "Proposal", "$8.2k", "#f59e0b"],
+            ["E. Rodriguez", "Negotiation", "$31k", "#f97316"],
+            ["D. Kim", "Demo", "$5.7k", "#8b5cf6"],
+            ["A. Müller", "✓ Closed", "$19.8k", "#10b981"],
+          ].map((row, i) => (
+            <div key={i} className="flex px-2 py-0.5 gap-1" style={{ borderBottom: `1px solid ${c.line}` }}>
+              {[0, 1, 2].map(j => (
+                <div key={j} className="flex-1 text-[4px] truncate"
+                  style={{ color: j === 1 ? row[3] : j === 0 ? c.textDark : c.muted, fontWeight: j === 0 ? 600 : 400 }}>
+                  {row[j]}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      );
+    },
   },
 ];
 
 const CATEGORIES = [
-  "All",
-  "Blank",
-  "Business & Finance",
-  "Project Management",
-  "Notes & Meetings",
-  "CRM & Sales",
+  "All", "Blank", "Basic", "Business & Finance",
+  "Project Management", "Notes & Meetings", "CRM & Sales",
 ];
 
 interface TemplateChooserModalProps {
@@ -299,12 +639,12 @@ interface TemplateChooserModalProps {
 const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModalProps) => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("blank-text");
+  const [previewTheme, setPreviewTheme] = useState<PreviewTheme>("light");
   const modalRef = useRef<HTMLDivElement>(null);
 
   const filtered = selectedCategory === "All" ? TEMPLATES : TEMPLATES.filter(t => t.category === selectedCategory);
   const selectedTemplate = TEMPLATES.find(t => t.id === selectedTemplateId) ?? TEMPLATES[0];
 
-  // Keep selection valid when category changes
   const handleCategoryChange = useCallback((cat: string) => {
     setSelectedCategory(cat);
     const newFiltered = cat === "All" ? TEMPLATES : TEMPLATES.filter(t => t.category === cat);
@@ -323,9 +663,7 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { onClose(); return; }
       if (e.key === "Enter") { handleCreate(); return; }
-
       const catIndex = CATEGORIES.indexOf(selectedCategory);
-
       if (e.key === "Tab") {
         e.preventDefault();
         const next = e.shiftKey
@@ -334,48 +672,34 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
         handleCategoryChange(CATEGORIES[next]);
         return;
       }
-
       const currentIndex = filtered.findIndex(t => t.id === selectedTemplateId);
       const cols = 3;
-
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        const next = Math.min(currentIndex + 1, filtered.length - 1);
-        setSelectedTemplateId(filtered[next].id);
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        const prev = Math.max(currentIndex - 1, 0);
-        setSelectedTemplateId(filtered[prev].id);
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        const next = Math.min(currentIndex + cols, filtered.length - 1);
-        setSelectedTemplateId(filtered[next].id);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        const prev = Math.max(currentIndex - cols, 0);
-        setSelectedTemplateId(filtered[prev].id);
-      }
+      if (e.key === "ArrowRight") { e.preventDefault(); setSelectedTemplateId(filtered[Math.min(currentIndex + 1, filtered.length - 1)].id); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); setSelectedTemplateId(filtered[Math.max(currentIndex - 1, 0)].id); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); setSelectedTemplateId(filtered[Math.min(currentIndex + cols, filtered.length - 1)].id); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setSelectedTemplateId(filtered[Math.max(currentIndex - cols, 0)].id); }
     };
-
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, handleCreate, filtered, selectedTemplateId, selectedCategory, handleCategoryChange]);
 
-  // Auto-focus modal on mount
   useEffect(() => { modalRef.current?.focus(); }, []);
+
+  const isDark = previewTheme === "dark";
 
   return createPortal(
     <AnimatePresence>
+      {/* Backdrop */}
       <motion.div
         key="template-backdrop"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[9980] flex items-center justify-center"
+        className="fixed inset-0 z-[9980]"
         style={{ background: "rgba(2,2,10,0.7)", backdropFilter: "blur(8px)" }}
         onClick={onClose}
       />
+
+      {/* Modal */}
       <motion.div
         key="template-modal"
         initial={{ opacity: 0, scale: 0.93, y: 24 }}
@@ -389,61 +713,71 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
           tabIndex={-1}
           className="pointer-events-auto flex flex-col rounded-2xl shadow-2xl overflow-hidden outline-none"
           style={{
-            width: 860,
-            height: 580,
-            background: "rgba(12, 10, 28, 0.97)",
+            width: 900, height: 600,
+            background: "rgba(10,8,24,0.97)",
             backdropFilter: "blur(48px)",
             border: "1px solid rgba(255,255,255,0.09)",
-            boxShadow: "0 40px 120px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05)",
+            boxShadow: "0 40px 120px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.05)",
           }}
           onClick={e => e.stopPropagation()}
         >
-          {/* Traffic light title bar */}
-          <div
-            className="flex items-center gap-2 px-5"
-            style={{
-              height: 44,
-              background: "rgba(255,255,255,0.04)",
-              borderBottom: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
-            <button
-              onClick={onClose}
-              className="group flex items-center justify-center"
-              style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.25)", boxShadow: "0 0.5px 2px rgba(0,0,0,0.3)" }}
-            >
+          {/* ── Title bar ───────────────────────────────────────────────── */}
+          <div className="flex items-center gap-2 px-5 shrink-0"
+            style={{ height: 44, background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            {/* Traffic lights */}
+            <button onClick={onClose} className="group flex items-center justify-center"
+              style={{ width: 13, height: 13, borderRadius: "50%", background: "#ff5f57", border: "0.5px solid rgba(0,0,0,0.25)" }}>
               <X size={7} strokeWidth={3} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "rgba(80,0,0,0.75)" }} />
             </button>
             <div style={{ width: 13, height: 13, borderRadius: "50%", background: "#febc2e", border: "0.5px solid rgba(0,0,0,0.2)" }} />
             <div style={{ width: 13, height: 13, borderRadius: "50%", background: "#28c840", border: "0.5px solid rgba(0,0,0,0.2)" }} />
-            <span className="flex-1 text-center text-[13px] font-medium text-white/50 -ml-8 select-none">
+
+            {/* Title — centered */}
+            <span className="flex-1 text-center text-[13px] font-medium select-none" style={{ color: "rgba(255,255,255,0.45)", marginLeft: -8 }}>
               Choose a Template
             </span>
-            <span className="text-[10px] text-white/20 select-none">↑↓←→ navigate · Tab switch category · ↵ create · Esc cancel</span>
+
+            {/* ── Light / Dark preview toggle ─────────────────────────── */}
+            <div className="flex items-center rounded-lg p-0.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              {([["light", Sun, "Light"], ["dark", Moon, "Dark"]] as const).map(([val, Icon, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setPreviewTheme(val)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200"
+                  style={{
+                    background: previewTheme === val ? "rgba(255,255,255,0.12)" : "transparent",
+                    color: previewTheme === val ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)",
+                    boxShadow: previewTheme === val ? "0 1px 3px rgba(0,0,0,0.4)" : "none",
+                  }}
+                >
+                  <Icon size={11} />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Keyboard hint */}
+            <span className="text-[9px] select-none ml-1" style={{ color: "rgba(255,255,255,0.18)" }}>
+              ↑↓←→ · Tab · ↵
+            </span>
           </div>
 
-          {/* Body: sidebar + content */}
+          {/* ── Body ─────────────────────────────────────────────────────── */}
           <div className="flex flex-1 min-h-0">
-            {/* Left sidebar — Tab navigates categories */}
-            <div
-              className="flex flex-col gap-0.5 py-4 px-2 overflow-y-auto"
-              style={{
-                width: 192,
-                background: "rgba(255,255,255,0.02)",
-                borderRight: "1px solid rgba(255,255,255,0.07)",
-              }}
-            >
-              <p className="text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 mb-1.5">
-                Categories <span className="text-white/15 normal-case tracking-normal">(Tab)</span>
+            {/* Sidebar */}
+            <div className="flex flex-col gap-0.5 py-4 px-2 overflow-y-auto shrink-0"
+              style={{ width: 192, background: "rgba(255,255,255,0.015)", borderRight: "1px solid rgba(255,255,255,0.07)" }}>
+              <p className="text-[9px] font-semibold uppercase tracking-widest px-3 mb-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>
+                Categories
               </p>
-              {CATEGORIES.map((cat, idx) => (
+              {CATEGORIES.map(cat => (
                 <button
                   key={cat}
                   onClick={() => handleCategoryChange(cat)}
                   className="w-full text-left px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-150"
                   style={{
-                    background: selectedCategory === cat ? "rgba(59,130,246,0.9)" : "transparent",
-                    color: selectedCategory === cat ? "#fff" : "rgba(255,255,255,0.5)",
+                    background: selectedCategory === cat ? "rgba(59,130,246,0.85)" : "transparent",
+                    color: selectedCategory === cat ? "#fff" : "rgba(255,255,255,0.48)",
                   }}
                   onMouseEnter={e => { if (selectedCategory !== cat) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
                   onMouseLeave={e => { if (selectedCategory !== cat) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
@@ -453,47 +787,51 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
               ))}
             </div>
 
-            {/* Right content area */}
-            <div className="flex-1 overflow-y-auto px-8 py-6 bg-transparent">
+            {/* Template grid */}
+            <div className="flex-1 overflow-y-auto px-8 py-6">
               {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-white/20">
+                <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: "rgba(255,255,255,0.2)" }}>
                   <AlignLeft size={32} />
                   <p className="text-sm">No templates in this category yet</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-3 gap-8">
                   {filtered.map(template => {
                     const isSelected = template.id === selectedTemplateId;
                     return (
                       <div
                         key={template.id}
-                        className="flex flex-col items-center gap-3 cursor-pointer group"
+                        className="flex flex-col items-center gap-3 cursor-pointer"
                         onClick={() => setSelectedTemplateId(template.id)}
                         onDoubleClick={handleCreate}
                       >
+                        {/* Thumbnail */}
                         <div
                           className="transition-all duration-200"
                           style={{
                             borderRadius: 8,
                             overflow: "hidden",
-                            width: 128,
+                            width: 120,
                             aspectRatio: "1 / 1.4",
                             boxShadow: isSelected
                               ? "0 0 0 3px rgba(59,130,246,1), 0 8px 32px rgba(59,130,246,0.3)"
-                              : "0 4px 16px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3)",
-                            transform: isSelected ? "scale(1.04)" : undefined,
+                              : isDark
+                                ? "0 4px 16px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5)"
+                                : "0 4px 16px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.25)",
+                            transform: isSelected ? "scale(1.05)" : "scale(1)",
                           }}
                         >
-                          {template.thumbnail}
+                          {template.thumbnail(isDark)}
                         </div>
+                        {/* Label */}
                         <div className="text-center">
-                          <p
-                            className="text-[12px] font-semibold transition-colors"
-                            style={{ color: isSelected ? "rgba(147,197,253,1)" : "rgba(255,255,255,0.8)" }}
-                          >
+                          <p className="text-[12px] font-semibold transition-colors"
+                            style={{ color: isSelected ? "rgba(147,197,253,1)" : "rgba(255,255,255,0.8)" }}>
                             {template.title}
                           </p>
-                          <p className="text-[10px] text-white/30 mt-0.5">{template.subtitle}</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.28)" }}>
+                            {template.subtitle}
+                          </p>
                         </div>
                       </div>
                     );
@@ -503,21 +841,19 @@ const TemplateChooserModal = ({ onCreateDocument, onClose }: TemplateChooserModa
             </div>
           </div>
 
-          {/* Bottom action bar */}
-          <div
-            className="flex items-center justify-between px-6"
-            style={{
-              height: 64,
-              background: "rgba(255,255,255,0.03)",
-              borderTop: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
-            <div className="text-[11px] text-white/30">
+          {/* ── Action bar ───────────────────────────────────────────────── */}
+          <div className="flex items-center justify-between px-6 shrink-0"
+            style={{ height: 64, background: "rgba(255,255,255,0.025)", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="text-[11px]" style={{ color: "rgba(255,255,255,0.28)" }}>
               {selectedTemplate && (
                 <span>
-                  <span className="text-white/50 font-medium">{selectedTemplate.title}</span>
+                  <span className="font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>{selectedTemplate.title}</span>
                   {" · "}
                   {selectedTemplate.type === "text" ? "Word Document" : "Spreadsheet"}
+                  {" · "}
+                  <span style={{ color: isDark ? "#93c5fd" : "#7dd3fc" }}>
+                    {previewTheme === "dark" ? "Dark" : "Light"} preview
+                  </span>
                 </span>
               )}
             </div>
