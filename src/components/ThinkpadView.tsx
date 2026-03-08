@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -19,10 +19,18 @@ import "@xyflow/react/dist/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash2, Save, Lightbulb, Zap, Target, Rocket,
-  Code, Database, Star, Heart, Brain, LayoutTemplate, X
+  Code, Database, Star, Heart, Brain, LayoutTemplate, X, Pencil, Check
 } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
+
+/* ─── Types ─── */
+interface IdeaTrack {
+  id: string;
+  name: string;
+  nodes: Node[];
+  edges: Edge[];
+}
 
 /* ─── Icon palette ─── */
 const ICONS = [
@@ -75,13 +83,11 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
           : "0 8px 32px rgba(0,0,0,0.3)",
       }}
     >
-      {/* Handles */}
       <Handle type="target" position={Position.Top} style={{ background: data.iconColor, border: "none", width: 8, height: 8 }} />
       <Handle type="source" position={Position.Bottom} style={{ background: data.iconColor, border: "none", width: 8, height: 8 }} />
       <Handle type="target" position={Position.Left} style={{ background: data.iconColor, border: "none", width: 8, height: 8 }} />
       <Handle type="source" position={Position.Right} style={{ background: data.iconColor, border: "none", width: 8, height: 8 }} />
 
-      {/* Icon badge */}
       <div
         className="w-9 h-9 rounded-xl flex items-center justify-center mb-3 shrink-0"
         style={{ background: `${data.iconColor}20`, border: `1px solid ${data.iconColor}30` }}
@@ -89,7 +95,6 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
         <IconComp size={16} style={{ color: data.iconColor }} />
       </div>
 
-      {/* Editable title */}
       <input
         value={String(data.label)}
         onChange={(e) => updateLabel(e.target.value)}
@@ -104,19 +109,22 @@ const IdeaNode = ({ id, data, selected }: { id: string; data: IdeaNodeData; sele
 
 const nodeTypes = { idea: IdeaNode };
 
-/* ─── Initial demo nodes ─── */
-const INIT_NODES: Node[] = [
-  { id: "1", type: "idea", position: { x: 250, y: 150 }, data: { label: "Landing Page", iconKey: "Layout", iconColor: "#14b8a6" } },
-  { id: "2", type: "idea", position: { x: 550, y: 80 }, data: { label: "User Auth", iconKey: "Database", iconColor: "#3b82f6" } },
-  { id: "3", type: "idea", position: { x: 550, y: 260 }, data: { label: "Dashboard", iconKey: "Zap", iconColor: "#6366f1" } },
+/* ─── Default demo nodes/edges per new track ─── */
+const makeDefaultNodes = (): Node[] => [
+  { id: "1", type: "idea", position: { x: 250, y: 150 }, data: { label: "Big Idea", iconKey: "Lightbulb", iconColor: "#f59e0b" } },
+  { id: "2", type: "idea", position: { x: 550, y: 80 }, data: { label: "Research", iconKey: "Brain", iconColor: "#a855f7" } },
+  { id: "3", type: "idea", position: { x: 550, y: 260 }, data: { label: "Action Plan", iconKey: "Target", iconColor: "#ef4444" } },
   { id: "4", type: "idea", position: { x: 850, y: 150 }, data: { label: "Launch 🚀", iconKey: "Rocket", iconColor: "#8b5cf6" } },
 ];
-
-const INIT_EDGES: Edge[] = [
-  { id: "e1-2", source: "1", target: "2", type: "smoothstep", animated: true, style: { stroke: "#3b82f6", strokeWidth: 2 } },
-  { id: "e1-3", source: "1", target: "3", type: "smoothstep", animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } },
+const makeDefaultEdges = (): Edge[] => [
+  { id: "e1-2", source: "1", target: "2", type: "smoothstep", animated: true, style: { stroke: "#a855f7", strokeWidth: 2 } },
+  { id: "e1-3", source: "1", target: "3", type: "smoothstep", animated: true, style: { stroke: "#ef4444", strokeWidth: 2 } },
   { id: "e2-4", source: "2", target: "4", type: "smoothstep", animated: true, style: { stroke: "#8b5cf6", strokeWidth: 2 } },
   { id: "e3-4", source: "3", target: "4", type: "smoothstep", animated: true, style: { stroke: "#8b5cf6", strokeWidth: 2 } },
+];
+
+const DEFAULT_TRACKS: IdeaTrack[] = [
+  { id: "track-1", name: "Idea Track 1", nodes: makeDefaultNodes(), edges: makeDefaultEdges() },
 ];
 
 /* ─── Icon picker ─── */
@@ -145,21 +153,30 @@ const IconPicker = ({ onPick, onClose }: { onPick: (key: string, color: string) 
   </motion.div>
 );
 
-/* ─── Main canvas (inner, needs ReactFlow context) ─── */
-const ThinkpadCanvas = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(INIT_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(INIT_EDGES);
+/* ─── Single canvas for active track ─── */
+const IdeaCanvas = ({
+  track,
+  onSave,
+}: {
+  track: IdeaTrack;
+  onSave: (nodes: Node[], edges: Edge[]) => void;
+}) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState(track.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(track.edges);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const { screenToFlowPosition } = useReactFlow();
-  const nodeIdRef = useRef(100);
+  const nodeIdRef = useRef(200);
+
+  // Sync when track changes
+  useEffect(() => {
+    setNodes(track.nodes);
+    setEdges(track.edges);
+  }, [track.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onConnect = useCallback(
     (params: Connection) =>
       setEdges((eds) =>
-        addEdge(
-          { ...params, type: "smoothstep", animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } },
-          eds
-        )
+        addEdge({ ...params, type: "smoothstep", animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } }, eds)
       ),
     [setEdges]
   );
@@ -167,13 +184,20 @@ const ThinkpadCanvas = () => {
   const addNode = (iconKey: string, iconColor: string) => {
     const id = String(++nodeIdRef.current);
     const pos = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-    const newNode: Node = {
-      id,
-      type: "idea",
-      position: { x: pos.x - 90 + Math.random() * 60 - 30, y: pos.y - 50 + Math.random() * 60 - 30 },
-      data: { label: "New Idea", iconKey, iconColor },
-    };
-    setNodes((nds) => [...nds, newNode]);
+    setNodes((nds) => [
+      ...nds,
+      {
+        id,
+        type: "idea",
+        position: { x: pos.x - 90 + Math.random() * 60 - 30, y: pos.y - 50 + Math.random() * 60 - 30 },
+        data: { label: "New Idea", iconKey, iconColor },
+      },
+    ]);
+  };
+
+  const handleSave = () => {
+    onSave(nodes, edges);
+    toast.success("✨ Track saved!");
   };
 
   const clearCanvas = () => {
@@ -182,16 +206,8 @@ const ThinkpadCanvas = () => {
     toast("Canvas cleared.");
   };
 
-  const saveCanvas = () => {
-    const data = { nodes, edges };
-    localStorage.setItem("thinkpad_canvas", JSON.stringify(data));
-    toast.success("✨ Canvas saved locally!");
-  };
-
   return (
-    <div className="flex-1 relative h-full w-full" style={{ background: "#06080f" }}>
-      <SEO title="Thinkpad" description="Node-based infinite canvas for ideas and connections." />
-
+    <div className="flex-1 relative h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -206,23 +222,11 @@ const ThinkpadCanvas = () => {
       >
         <Background color="rgba(255,255,255,0.06)" gap={28} size={1} />
         <Controls
-          style={{
-            background: "rgba(15,18,30,0.9)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "12px",
-            gap: 0,
-          }}
+          style={{ background: "rgba(15,18,30,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }}
         />
         <MiniMap
-          style={{
-            background: "rgba(15,18,30,0.9)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "12px",
-          }}
-          nodeColor={(n) => {
-            const icon = ICONS.find((i) => i.key === (n.data as IdeaNodeData).iconKey);
-            return icon?.color ?? "#6366f1";
-          }}
+          style={{ background: "rgba(15,18,30,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }}
+          nodeColor={(n) => ICONS.find((i) => i.key === (n.data as IdeaNodeData).iconKey)?.color ?? "#6366f1"}
           maskColor="rgba(0,0,0,0.4)"
         />
       </ReactFlow>
@@ -231,10 +235,7 @@ const ThinkpadCanvas = () => {
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
         <AnimatePresence>
           {showIconPicker && (
-            <IconPicker
-              onPick={(key, color) => addNode(key, color)}
-              onClose={() => setShowIconPicker(false)}
-            />
+            <IconPicker onPick={(key, color) => addNode(key, color)} onClose={() => setShowIconPicker(false)} />
           )}
         </AnimatePresence>
 
@@ -242,59 +243,33 @@ const ThinkpadCanvas = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-3 px-4 py-2.5 rounded-full"
-          style={{
-            background: "rgba(15,18,30,0.92)",
-            backdropFilter: "blur(24px)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
-          }}
+          style={{ background: "rgba(15,18,30,0.92)", backdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}
         >
-          {/* Add Idea Box */}
           <motion.button
             onClick={() => setShowIconPicker((p) => !p)}
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
-            style={{
-              background: showIconPicker ? "rgba(99,102,241,0.4)" : "rgba(99,102,241,0.2)",
-              border: "1px solid rgba(99,102,241,0.5)",
-              color: "#a5b4fc",
-            }}
+            style={{ background: showIconPicker ? "rgba(99,102,241,0.4)" : "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.5)", color: "#a5b4fc" }}
           >
-            <Plus size={14} />
-            Add Idea Box
+            <Plus size={14} /> Add Idea Box
           </motion.button>
 
-          {/* Save */}
           <motion.button
-            onClick={saveCanvas}
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
+            onClick={handleSave}
+            whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
             className="flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              color: "rgba(255,255,255,0.6)",
-            }}
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
           >
-            <Save size={13} />
-            Save
+            <Save size={13} /> Save
           </motion.button>
 
-          {/* Clear */}
           <motion.button
             onClick={clearCanvas}
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
             className="flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all"
-            style={{
-              background: "rgba(239,68,68,0.08)",
-              border: "1px solid rgba(239,68,68,0.2)",
-              color: "rgba(239,68,68,0.7)",
-            }}
+            style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "rgba(239,68,68,0.7)" }}
           >
-            <Trash2 size={13} />
-            Clear
+            <Trash2 size={13} /> Clear
           </motion.button>
         </motion.div>
       </div>
@@ -302,13 +277,186 @@ const ThinkpadCanvas = () => {
   );
 };
 
-/* ─── Export wrapped in provider ─── */
-const ThinkpadView = () => (
-  <div className="flex flex-col flex-1 h-full min-h-screen" style={{ background: "#06080f" }}>
-    <ReactFlowProvider>
-      <ThinkpadCanvas />
-    </ReactFlowProvider>
-  </div>
-);
+/* ─── Tab bar ─── */
+const TabBar = ({
+  tracks,
+  activeId,
+  onSelect,
+  onAdd,
+  onDelete,
+  onRename,
+}: {
+  tracks: IdeaTrack[];
+  activeId: string;
+  onSelect: (id: string) => void;
+  onAdd: () => void;
+  onDelete: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+}) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
-export default ThinkpadView;
+  const startEdit = (track: IdeaTrack, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(track.id);
+    setEditValue(track.name);
+  };
+
+  const commitEdit = () => {
+    if (editingId && editValue.trim()) onRename(editingId, editValue.trim());
+    setEditingId(null);
+  };
+
+  return (
+    <div
+      className="flex items-center gap-1 px-3 pt-3 pb-0 overflow-x-auto scrollbar-none shrink-0"
+      style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      {tracks.map((track) => {
+        const isActive = track.id === activeId;
+        return (
+          <div
+            key={track.id}
+            onClick={() => onSelect(track.id)}
+            className="group relative flex items-center gap-1.5 px-3 py-2 rounded-t-xl cursor-pointer shrink-0 transition-all duration-200"
+            style={{
+              background: isActive ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.03)",
+              border: isActive ? "1px solid rgba(99,102,241,0.35)" : "1px solid rgba(255,255,255,0.06)",
+              borderBottom: isActive ? "1px solid transparent" : "1px solid rgba(255,255,255,0.06)",
+              marginBottom: isActive ? "-1px" : 0,
+            }}
+          >
+            {editingId === track.id ? (
+              <>
+                <input
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={commitEdit}
+                  onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingId(null); }}
+                  className="bg-transparent text-xs font-medium outline-none w-24"
+                  style={{ color: "rgba(255,255,255,0.9)" }}
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <button onClick={(e) => { e.stopPropagation(); commitEdit(); }} className="text-white/40 hover:text-white/80">
+                  <Check size={10} />
+                </button>
+              </>
+            ) : (
+              <>
+                <span
+                  className="text-xs font-medium max-w-[120px] truncate"
+                  style={{ color: isActive ? "rgba(165,180,252,1)" : "rgba(255,255,255,0.45)" }}
+                >
+                  {track.name}
+                </span>
+                {/* Edit on hover */}
+                <button
+                  onClick={(e) => startEdit(track, e)}
+                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  style={{ color: "rgba(255,255,255,0.5)" }}
+                >
+                  <Pencil size={9} />
+                </button>
+                {/* Delete — only if more than 1 track */}
+                {tracks.length > 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(track.id); }}
+                    className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                    style={{ color: "rgba(239,68,68,0.7)" }}
+                  >
+                    <X size={9} />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Add new track */}
+      <button
+        onClick={onAdd}
+        className="flex items-center gap-1 px-2.5 py-2 rounded-t-xl text-xs transition-all hover:bg-white/8 shrink-0"
+        style={{ color: "rgba(255,255,255,0.3)", border: "1px solid transparent" }}
+      >
+        <Plus size={11} /> New Track
+      </button>
+    </div>
+  );
+};
+
+/* ─── Main view ─── */
+const IdeapadView = () => {
+  const STORAGE_KEY = "ideapad_tracks";
+
+  const loadTracks = (): IdeaTrack[] => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return DEFAULT_TRACKS;
+  };
+
+  const [tracks, setTracks] = useState<IdeaTrack[]>(loadTracks);
+  const [activeId, setActiveId] = useState<string>(tracks[0]?.id ?? "track-1");
+
+  const activeTrack = tracks.find((t) => t.id === activeId) ?? tracks[0];
+
+  const persistTracks = (updated: IdeaTrack[]) => {
+    setTracks(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  };
+
+  const handleSave = (nodes: Node[], edges: Edge[]) => {
+    persistTracks(tracks.map((t) => t.id === activeId ? { ...t, nodes, edges } : t));
+  };
+
+  const addTrack = () => {
+    const id = `track-${Date.now()}`;
+    const newTrack: IdeaTrack = {
+      id,
+      name: `Idea Track ${tracks.length + 1}`,
+      nodes: makeDefaultNodes(),
+      edges: makeDefaultEdges(),
+    };
+    const updated = [...tracks, newTrack];
+    persistTracks(updated);
+    setActiveId(id);
+  };
+
+  const deleteTrack = (id: string) => {
+    const updated = tracks.filter((t) => t.id !== id);
+    persistTracks(updated);
+    if (activeId === id) setActiveId(updated[0]?.id ?? "");
+  };
+
+  const renameTrack = (id: string, name: string) => {
+    persistTracks(tracks.map((t) => t.id === id ? { ...t, name } : t));
+  };
+
+  return (
+    <div className="flex flex-col flex-1 h-full min-h-screen" style={{ background: "#06080f" }}>
+      <SEO title="Ideapad" description="Multi-track infinite canvas for idea mapping." />
+
+      {/* Tab bar */}
+      <TabBar
+        tracks={tracks}
+        activeId={activeId}
+        onSelect={setActiveId}
+        onAdd={addTrack}
+        onDelete={deleteTrack}
+        onRename={renameTrack}
+      />
+
+      {/* Canvas */}
+      <div className="flex-1 relative overflow-hidden">
+        <ReactFlowProvider key={activeTrack?.id}>
+          <IdeaCanvas track={activeTrack} onSave={handleSave} />
+        </ReactFlowProvider>
+      </div>
+    </div>
+  );
+};
+
+export default IdeapadView;
