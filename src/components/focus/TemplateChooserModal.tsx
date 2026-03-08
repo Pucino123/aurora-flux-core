@@ -916,37 +916,26 @@ const TEMPLATES: Template[] = [
     type: "text",
     category: "Creative",
     content: {
-      html: `<div style="background:#0a0a0a;min-height:900px;padding:48px;font-family:system-ui,sans-serif">
-  <div style="text-align:center;margin-bottom:48px">
-    <h1 style="font-size:80px;font-weight:900;letter-spacing:-4px;color:white;margin:0;line-height:0.9;text-transform:uppercase">VISION<br/><span style="color:#f59e0b">BOARD</span></h1>
-    <p style="color:#6b7280;font-size:12px;letter-spacing:4px;text-transform:uppercase;margin:16px 0 0">Brand Identity v2.0</p>
-  </div>
-  <div style="display:grid;grid-template-columns:2fr 1fr;grid-template-rows:auto auto;gap:16px;margin-bottom:24px">
-    <div style="grid-row:span 2;background:linear-gradient(135deg,#1c1c2e,#2d1b4e);border-radius:16px;padding:32px;display:flex;align-items:center;justify-content:center;min-height:240px;border:1px dashed rgba(255,255,255,0.1)">
-      <p style="color:rgba(255,255,255,0.2);font-size:14px;text-align:center;margin:0">Drop Image or Paste URL</p>
-    </div>
-    <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);border-radius:12px;padding:24px;display:flex;align-items:center;justify-content:center;min-height:110px;border:1px dashed rgba(255,255,255,0.1)">
-      <p style="color:rgba(255,255,255,0.4);font-size:12px;text-align:center;margin:0">Drop Image</p>
-    </div>
-    <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;padding:24px;display:flex;align-items:center;justify-content:center;min-height:110px;border:1px dashed rgba(255,255,255,0.1)">
-      <p style="color:rgba(255,255,255,0.4);font-size:12px;text-align:center;margin:0">Drop Image</p>
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-    <div style="background:#1c1c2e;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05)">
-      <p style="color:#f59e0b;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">Palette</p>
-      <div style="display:flex;gap:6px"><div style="width:20px;height:20px;border-radius:50%;background:#f59e0b"></div><div style="width:20px;height:20px;border-radius:50%;background:#ef4444"></div><div style="width:20px;height:20px;border-radius:50%;background:#6366f1"></div><div style="width:20px;height:20px;border-radius:50%;background:#0f172a;border:1px solid rgba(255,255,255,0.1)"></div><div style="width:20px;height:20px;border-radius:50%;background:#f8fafc"></div></div>
-    </div>
-    <div style="background:#1c1c2e;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05)">
-      <p style="color:#6366f1;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">Typography</p>
-      <p style="color:white;font-size:18px;font-weight:800;margin:0;line-height:1.2">Aa</p>
-    </div>
-    <div style="background:#1c1c2e;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05)">
-      <p style="color:#ef4444;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">Tone</p>
-      <p style="color:#9ca3af;font-size:12px;line-height:1.6;margin:0">Bold. Minimal. Impactful.</p>
-    </div>
-  </div>
-</div>`,
+      entities: [
+        { id: "mb-bg",       type: "rect",    position: { x: 0,   y: 0   }, size: { w: 794, h: 1120 }, style: { fill: "#0a0a0a",   stroke: "transparent", strokeWidth: 0, borderRadius: 0,  opacity: 1 }, content: "", zIndex: 1 },
+        { id: "mb-title",    type: "textBox", position: { x: 200, y: 60  }, size: { w: 400, h: 80   }, style: { fill: "transparent", stroke: "#ffffff",   strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "VISION BOARD", zIndex: 10 },
+        { id: "mb-subtitle", type: "textBox", position: { x: 260, y: 148 }, size: { w: 280, h: 28   }, style: { fill: "transparent", stroke: "#f59e0b",   strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "BRAND IDENTITY · 2025", zIndex: 10 },
+        { id: "mb-hero",     type: "rect",    position: { x: 40,  y: 200  }, size: { w: 460, h: 280  }, style: { fill: "#1c1c2e",    stroke: "rgba(255,255,255,0.15)", strokeWidth: 1, borderRadius: 16, opacity: 1 }, content: "", zIndex: 2 },
+        { id: "mb-block1",   type: "rect",    position: { x: 520, y: 200  }, size: { w: 234, h: 130  }, style: { fill: "#f59e0b",    stroke: "transparent", strokeWidth: 0, borderRadius: 12, opacity: 1 }, content: "", zIndex: 2 },
+        { id: "mb-block2",   type: "rect",    position: { x: 520, y: 350  }, size: { w: 234, h: 130  }, style: { fill: "#6366f1",    stroke: "transparent", strokeWidth: 0, borderRadius: 12, opacity: 1 }, content: "", zIndex: 2 },
+        { id: "mb-circle1",  type: "circle",  position: { x: 40,  y: 510  }, size: { w: 80,  h: 80   }, style: { fill: "#f59e0b",    stroke: "transparent", strokeWidth: 0, borderRadius: 50, opacity: 1 }, content: "", zIndex: 3 },
+        { id: "mb-circle2",  type: "circle",  position: { x: 140, y: 510  }, size: { w: 80,  h: 80   }, style: { fill: "#ef4444",    stroke: "transparent", strokeWidth: 0, borderRadius: 50, opacity: 1 }, content: "", zIndex: 3 },
+        { id: "mb-circle3",  type: "circle",  position: { x: 240, y: 510  }, size: { w: 80,  h: 80   }, style: { fill: "#6366f1",    stroke: "transparent", strokeWidth: 0, borderRadius: 50, opacity: 1 }, content: "", zIndex: 3 },
+        { id: "mb-circle4",  type: "circle",  position: { x: 340, y: 510  }, size: { w: 80,  h: 80   }, style: { fill: "#0f172a",    stroke: "rgba(255,255,255,0.15)", strokeWidth: 1, borderRadius: 50, opacity: 1 }, content: "", zIndex: 3 },
+        { id: "mb-circle5",  type: "circle",  position: { x: 440, y: 510  }, size: { w: 80,  h: 80   }, style: { fill: "#f8fafc",    stroke: "transparent", strokeWidth: 0, borderRadius: 50, opacity: 1 }, content: "", zIndex: 3 },
+        { id: "mb-pal-lbl",  type: "textBox", position: { x: 40,  y: 614  }, size: { w: 120, h: 24   }, style: { fill: "transparent", stroke: "#f59e0b",   strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "PALETTE", zIndex: 10 },
+        { id: "mb-typo",     type: "rect",    position: { x: 40,  y: 660  }, size: { w: 220, h: 100  }, style: { fill: "#1c1c2e",    stroke: "rgba(255,255,255,0.07)", strokeWidth: 1, borderRadius: 12, opacity: 1 }, content: "", zIndex: 2 },
+        { id: "mb-typo-lbl", type: "textBox", position: { x: 56,  y: 680  }, size: { w: 180, h: 24   }, style: { fill: "transparent", stroke: "#6366f1",   strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "TYPOGRAPHY", zIndex: 10 },
+        { id: "mb-aa",       type: "textBox", position: { x: 56,  y: 710  }, size: { w: 80,  h: 40   }, style: { fill: "transparent", stroke: "#ffffff",   strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "Aa", zIndex: 10 },
+        { id: "mb-tone",     type: "rect",    position: { x: 280, y: 660  }, size: { w: 220, h: 100  }, style: { fill: "#1c1c2e",    stroke: "rgba(255,255,255,0.07)", strokeWidth: 1, borderRadius: 12, opacity: 1 }, content: "", zIndex: 2 },
+        { id: "mb-tone-lbl", type: "textBox", position: { x: 296, y: 680  }, size: { w: 180, h: 24   }, style: { fill: "transparent", stroke: "#ef4444",   strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "TONE", zIndex: 10 },
+        { id: "mb-tone-val", type: "textBox", position: { x: 296, y: 710  }, size: { w: 180, h: 40   }, style: { fill: "transparent", stroke: "#9ca3af",   strokeWidth: 0, borderRadius: 4,  opacity: 1 }, content: "Bold. Minimal. Impactful.", zIndex: 10 },
+      ],
     },
     thumbnail: (_isDark) => {
       return (
@@ -969,6 +958,12 @@ const TEMPLATES: Template[] = [
             {["#f59e0b","#ef4444","#6366f1","#0f172a","#f8fafc"].map(c => (
               <div key={c} className="w-2 h-2 rounded-full" style={{ background: c }} />
             ))}
+          </div>
+          {/* Canvas mode badge */}
+          <div className="flex justify-center pb-1.5">
+            <div className="px-1.5 py-0.5 rounded text-[4px] font-bold" style={{ background: "rgba(99,102,241,0.3)", color: "#a5b4fc", border: "0.5px solid rgba(99,102,241,0.5)" }}>
+              CANVAS MODE
+            </div>
           </div>
         </div>
       );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import AuroraBackground from "../components/AuroraBackground";
@@ -7,11 +7,13 @@ import Dashboard from "../components/Dashboard";
 import CommandPalette from "../components/CommandPalette";
 import KeyboardShortcutsSheet from "../components/KeyboardShortcutsSheet";
 import GlobalSearch from "../components/GlobalSearch";
-import SettingsModal from "../components/settings/SettingsModal";
 import { useFlux } from "@/context/FluxContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+// Lazy-load heavy modals to improve initial page load / Core Web Vitals
+const SettingsModal = lazy(() => import("../components/settings/SettingsModal"));
 
 const Index = () => {
   const { user } = useAuth();
@@ -179,7 +181,9 @@ const Index = () => {
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
       <KeyboardShortcutsSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <Suspense fallback={null}>
+        {settingsOpen && <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />}
+      </Suspense>
     </div>
   );
 };

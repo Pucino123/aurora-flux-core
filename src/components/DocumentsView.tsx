@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import SEO from "./SEO";
 import { useDocuments } from "@/hooks/useDocuments";
 import { FileText, Table, Plus, Trash2, Search } from "lucide-react";
@@ -7,7 +7,9 @@ import DocumentView from "./documents/DocumentView";
 import { useFlux } from "@/context/FluxContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useTrash } from "@/context/TrashContext";
-import TemplateChooserModal from "./focus/TemplateChooserModal";
+
+// Lazy-load heavy template chooser
+const TemplateChooserModal = lazy(() => import("./focus/TemplateChooserModal"));
 
 const DocumentsView = () => {
   const { moveToTrash } = useTrash();
@@ -117,17 +119,19 @@ const DocumentsView = () => {
       )}
 
       {showTemplateChooser && (
-        <TemplateChooserModal
-          onClose={() => setShowTemplateChooser(false)}
-          onCreateDocument={async (title, type, content) => {
-            const doc = await createDocument(title, type, undefined, content);
-            if (doc) {
-              openInWorkspace(doc);
-              setActiveView("multitask" as any);
-            }
-            setShowTemplateChooser(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <TemplateChooserModal
+            onClose={() => setShowTemplateChooser(false)}
+            onCreateDocument={async (title, type, content) => {
+              const doc = await createDocument(title, type, undefined, content);
+              if (doc) {
+                openInWorkspace(doc);
+                setActiveView("multitask" as any);
+              }
+              setShowTemplateChooser(false);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

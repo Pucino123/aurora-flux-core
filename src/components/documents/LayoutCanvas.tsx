@@ -58,17 +58,19 @@ const StyleToolbar: React.FC<StyleToolbarProps> = ({ entity, onUpdate, onDelete,
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 6, scale: 0.96 }}
       transition={{ duration: 0.14 }}
-      className="absolute z-[9999] rounded-xl flex flex-col gap-2 p-2.5 shadow-2xl"
+      // Fixed position so it's always visible regardless of entity location on canvas
+      className="fixed z-[9999] rounded-xl flex flex-col gap-2 p-2.5 shadow-2xl"
       style={{
-        top: entity.position.y - 80,
-        left: entity.position.x,
-        minWidth: 220,
-        background: "rgba(12,8,30,0.95)",
-        border: "1px solid rgba(255,255,255,0.12)",
+        top: 80,
+        right: 16,
+        minWidth: 240,
+        background: "rgba(12,8,30,0.97)",
+        border: "1px solid rgba(255,255,255,0.14)",
         backdropFilter: "blur(24px)",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.06)",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.8), 0 0 0 0.5px rgba(255,255,255,0.06)",
       }}
       onMouseDown={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
     >
       {/* Tab row */}
       <div className="flex items-center gap-1">
@@ -195,6 +197,9 @@ const EntityNode: React.FC<EntityNodeProps> = ({
 }) => {
   const { type, position, size, style, content, zIndex } = entity;
   const resizeStart = useRef<{ mx: number; my: number; w: number; h: number } | null>(null);
+  // Track whether the pointer moved (drag) vs just clicked
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+  const didDrag = useRef(false);
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -221,9 +226,9 @@ const EntityNode: React.FC<EntityNodeProps> = ({
     border:        style.strokeWidth > 0 ? `${style.strokeWidth}px solid ${style.stroke}` : "none",
     borderRadius:  type === "circle" ? "50%" : `${style.borderRadius}px`,
     opacity:       style.opacity,
-    outline:       isSelected ? "2px solid rgba(139,92,246,0.8)" : "none",
-    outlineOffset: 2,
-    boxShadow:     isSelected ? "0 0 0 4px rgba(139,92,246,0.15)" : undefined,
+    outline:       isSelected ? "2.5px solid rgba(99,102,241,0.9)" : "none",
+    outlineOffset: 3,
+    boxShadow:     isSelected ? "0 0 0 5px rgba(99,102,241,0.18), 0 8px 24px rgba(0,0,0,0.3)" : undefined,
     overflow:      "hidden",
     display:       "flex",
     alignItems:    "center",
@@ -238,6 +243,8 @@ const EntityNode: React.FC<EntityNodeProps> = ({
       dragConstraints={canvasRef}
       initial={{ x: position.x, y: position.y }}
       animate={{ x: position.x, y: position.y }}
+      onDragStart={() => { didDrag.current = false; }}
+      onDrag={() => { didDrag.current = true; }}
       onDragEnd={(_, info) => {
         const canvas = canvasRef.current?.getBoundingClientRect();
         if (!canvas) return;
@@ -245,9 +252,20 @@ const EntityNode: React.FC<EntityNodeProps> = ({
         const ny = clamp(position.y + info.offset.y, 0, canvas.height - size.h);
         onDragEnd(entity.id, nx, ny);
       }}
-      onClick={e => { e.stopPropagation(); onSelect(entity.id); }}
+      onPointerDown={e => {
+        e.stopPropagation();
+        pointerDownPos.current = { x: e.clientX, y: e.clientY };
+        didDrag.current = false;
+      }}
+      onPointerUp={e => {
+        e.stopPropagation();
+        if (!didDrag.current) {
+          onSelect(entity.id);
+        }
+        pointerDownPos.current = null;
+      }}
       className="absolute cursor-move touch-none"
-      style={{ zIndex, position: "absolute", left: position.x, top: position.y }}
+      style={{ zIndex, position: "absolute", left: position.x, top: position.y, willChange: "transform" }}
     >
       <div style={shapeStyle}>
         {type === "textBox" && (

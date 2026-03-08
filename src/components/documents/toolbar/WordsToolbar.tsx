@@ -1,6 +1,6 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Square, FastForward } from "lucide-react";
+import { Square, FastForward, LayoutTemplate } from "lucide-react";
 import FileMenu from "./FileMenu";
 import TypographyPanel from "./TypographyPanel";
 import StructureTools from "./StructureTools";
@@ -37,6 +37,8 @@ interface WordsToolbarProps {
   isStreaming?: boolean;
   onStopStream?: () => void;
   onFinishStream?: () => void;
+  canvasMode?: boolean;
+  onToggleCanvasMode?: () => void;
 }
 
 const ALL_SEGMENTS = ["file", "typography", "structure", "insert", "emoji", "ai", "view"];
@@ -55,7 +57,7 @@ const WordsToolbar = ({
   editorRef, onContentChange, exec, renaming, setRenaming, renameValue, setRenameValue,
   commitRename, documentTitle, documentId = "", confirmDelete, setConfirmDelete, onDelete,
   studioMode, onToggleStudio, zoom, onZoomChange, lightMode = false, onToggleLightMode,
-  isStreaming = false, onStopStream, onFinishStream,
+  isStreaming = false, onStopStream, onFinishStream, canvasMode = false, onToggleCanvasMode,
 }: WordsToolbarProps) => {
   const lm = lightMode;
   const { visible, hiddenSegments, hideSegment, showSegment, showAll, reset } = useToolbarVisibility("words", ALL_SEGMENTS);
@@ -132,6 +134,28 @@ const WordsToolbar = ({
         {renderSegments(studioMode)}
       </AnimatePresence>
       <ToolboxPopover hiddenSegments={hiddenSegments} segmentLabels={SEGMENT_LABELS} onRestore={showSegment} onRestoreAll={showAll} onReset={reset} lightMode={lm} />
+      {/* Canvas Mode Toggle */}
+      {onToggleCanvasMode && (
+        <>
+          <div className={`w-px h-5 mx-1 ${lm ? "bg-gray-200" : "bg-white/[0.08]"}`} />
+          <button
+            onClick={onToggleCanvasMode}
+            title={canvasMode ? "Switch to Text Editor" : "Switch to Canvas Mode"}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-200 ${
+              canvasMode
+                ? lm
+                  ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                  : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                : lm
+                  ? "text-gray-500 hover:bg-gray-100"
+                  : "text-foreground/40 hover:text-foreground/70 hover:bg-white/[0.06]"
+            }`}
+          >
+            <LayoutTemplate size={12} />
+            <span className="hidden sm:inline">{canvasMode ? "Canvas" : "Canvas"}</span>
+          </button>
+        </>
+      )}
       {streamingBanner}
     </>
   );
