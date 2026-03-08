@@ -1046,8 +1046,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
 
     if (replay) {
       // Reset to idle first, then animate the reveal sequence
-      setCardStates({ elena: "idle", helen: "idle", anton: "idle", margot: "idle" });
-      setResponses({ elena: null, helen: null, anton: null, margot: null });
+      setCardStates({ strategist: "idle", operator: "idle", skeptic: "idle", advocate: "idle" });
+      setResponses({ strategist: null, operator: null, skeptic: null, advocate: null });
       setRevealedCount(0);
       revealedCountRef.current = 0;
       setExpandedCard(null);
