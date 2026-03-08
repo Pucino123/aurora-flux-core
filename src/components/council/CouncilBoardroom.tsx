@@ -322,7 +322,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
               animate={{ scale: [1, 1.06, 1], opacity: [0.4, 0.6, 0.4] }}
               transition={{ duration: 2.5, repeat: Infinity }}
             >
-              <Icon size={20} style={{ color: `${color}60` }} />
+              <Icon size={20} style={{ color: `${color}60` } as React.CSSProperties} />
             </motion.div>
           </div>
         )}
