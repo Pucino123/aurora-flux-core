@@ -62,7 +62,7 @@ const da: Record<string, string> = {
   "brain.move_prompt": "Flyt ind i hvilken mappe?",
 
   // Stream
-  "stream.welcome_title": "Velkommen til Flux",
+  "stream.welcome_title": "Velkommen til Dashiii",
   "stream.welcome_desc": "Skriv et mål, budget eller en opgave nedenfor for at komme i gang.",
   "stream.tracking": "Aktiv Sporing",
   "stream.progress": "Fremgang",
