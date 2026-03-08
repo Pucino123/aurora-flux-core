@@ -17,6 +17,8 @@ import DesktopDocumentViewer from "./DesktopDocumentViewer";
 import MusicWidget from "./MusicWidget";
 import TodaysPlanWidget from "./TodaysPlanWidget";
 import FocusStickyNotes from "./FocusStickyNotes";
+import NotesWidget from "./NotesWidget";
+import CRMWidget from "./CRMWidget";
 import ClockWidget from "./ClockWidget";
 import FocusStatsWidget from "./FocusStatsWidget";
 import ScratchpadWidget from "./ScratchpadWidget";
@@ -39,6 +41,7 @@ import {
   FocusSmartPlanWidget,
   FocusGamificationWidget,
   FocusChatWidget,
+  FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks } from "lucide-react";
@@ -524,7 +527,8 @@ const FocusContent = () => {
             {activeWidgets.includes("timer") && <FocusTimer key="timer" />}
             {activeWidgets.includes("music") && <MusicWidget key="music" />}
             {activeWidgets.includes("planner") && <TodaysPlanWidget key="planner" />}
-            {activeWidgets.includes("notes") && <FocusStickyNotes key="notes" />}
+            {activeWidgets.includes("notes") && <NotesWidget key="notes" />}
+            {activeWidgets.includes("crm") && <FocusCRMWidget key="crm" />}
             {activeWidgets.includes("stats") && <FocusStatsWidget key="stats" />}
             {activeWidgets.includes("scratchpad") && <ScratchpadWidget key="scratchpad" />}
             {activeWidgets.includes("quote") && <QuoteOfDay key="quote" />}

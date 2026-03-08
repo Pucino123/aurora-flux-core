@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Loader2, ChevronDown, ChevronUp, Clock, X, Swords } from "lucide-react";
+import { Send, Loader2, ChevronDown, ChevronUp, Clock, X, Swords, Cpu } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ import WeaknessScanner from "./council/WeaknessScanner";
 import PersonalityControls from "./council/PersonalityControls";
 import VoteTooltip from "./council/VoteTooltip";
 import ProactiveIntelligence from "./council/ProactiveIntelligence";
+import CouncilBoardroom from "./council/CouncilBoardroom";
 
 // ── Types ──
 
@@ -83,6 +84,7 @@ const TheCouncil = () => {
   const { user } = useAuth();
   const { filterPersona } = useFlux();
   const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState<"council" | "boardroom">("council");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<PersonaResponse[]>([]);
@@ -268,7 +270,40 @@ const TheCouncil = () => {
           <div className="absolute bottom-[-10%] left-[20%] w-[55%] h-[55%] rounded-full bg-[hsl(217_80%_75%/0.04)] blur-[120px] animate-aurora-slow-3" />
         </div>
 
-        {/* Dashboard view */}
+        {/* Tab switcher */}
+        <div className="relative z-20 flex items-center justify-center pt-4 pb-2">
+          <div className="flex items-center gap-1 p-1 rounded-full bg-black/10 backdrop-blur-sm border border-black/8">
+            {[
+              { key: "council" as const, label: "Council", icon: "🔮" },
+              { key: "boardroom" as const, label: "Boardroom", icon: "🪄" },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  activeTab === tab.key
+                    ? "bg-white/80 text-foreground shadow-sm"
+                    : "text-foreground/50 hover:text-foreground/80"
+                }`}
+              >
+                <span>{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Boardroom view */}
+        {activeTab === "boardroom" && (
+          <div className="relative z-10 px-4 md:px-8 pb-8 pt-4 max-w-5xl mx-auto" style={{ minHeight: "calc(100vh - 80px)" }}>
+            <CouncilBoardroom />
+          </div>
+        )}
+
+        {/* Classic council view */}
+        {activeTab === "council" && (
+          <>
+          {/* Dashboard view */}
         {showDashboard && (
           <div className="relative z-10 px-4 md:px-8 pb-8 pt-6 max-w-4xl mx-auto">
             <button
@@ -821,6 +856,8 @@ const TheCouncil = () => {
               )}
             </AnimatePresence>
           </div>
+        )}
+          </>
         )}
       </div>
 
