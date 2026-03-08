@@ -130,18 +130,6 @@ const CommunityAdminView = () => {
     );
   }
 
-  const fetchSlots = useCallback(async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from("community_slots").select("*").order("created_at", { ascending: false });
-    if (error) { toast.error("Failed to load slots"); setLoading(false); return; }
-    setSlots((data || []).map((row) => ({
-      id: row.id, slotIndex: row.slot_index, userId: row.user_id,
-      status: row.status as Slot["status"], projectName: row.project_name ?? undefined,
-      websiteUrl: row.website_url ?? undefined, thumbnailUrl: row.thumbnail_url ?? undefined,
-      createdAt: row.created_at ?? "",
-    })));
-    setLoading(false);
-  }, []);
 
   const handleApprove = async (slot: Slot) => {
     const { error } = await supabase.from("community_slots").update({ status: "approved" }).eq("id", slot.id);
