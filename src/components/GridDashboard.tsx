@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { ResponsiveGridLayout, useContainerWidth } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings2, Plus, X, GripVertical, Pin, StickyNote, Pencil } from "lucide-react";
+import { Settings2, Plus, X, GripVertical, Pin, StickyNote, Pencil, GripHorizontal } from "lucide-react";
 import { useFlux } from "@/context/FluxContext";
 import { useDashboardConfig } from "@/hooks/useDashboardConfig";
 import { t } from "@/lib/i18n";
