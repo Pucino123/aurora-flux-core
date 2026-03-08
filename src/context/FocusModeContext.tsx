@@ -14,7 +14,7 @@ interface FocusModeContextType {
   focusTaskTitle: string | null;
   focusTimeRemaining: number; // seconds
   setFocusTaskTitle: (title: string | null) => void;
-  setFocusTimeRemaining: (seconds: number) => void;
+  setFocusTimeRemaining: (seconds: number | ((prev: number) => number)) => void;
   enableFocusMode: (taskTitle?: string, durationSeconds?: number) => void;
   disableFocusMode: () => void;
   toggleFocusMode: () => void;

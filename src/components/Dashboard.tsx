@@ -20,6 +20,7 @@ import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
 import { UpgradeModal, OutOfSparksModal } from "./billing/BillingView";
 import CRMPage from "../pages/CRMPage";
+import CommHub from "./CommHub";
 import ControlCenter from "./ControlCenter";
 import { useFlux } from "@/context/FluxContext";
 import { useMonetization } from "@/context/MonetizationContext";
@@ -49,7 +50,7 @@ function deriveFolderName(text: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-const VIEWS_WITHOUT_INPUT = ["council", "focus", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing", "canvas"];
+const VIEWS_WITHOUT_INPUT = ["council", "focus", "calendar", "analytics", "projects", "documents", "settings", "tasks", "multitask", "community", "community-admin", "billing", "canvas", "inbox"];
 const VIEWS_WITHOUT_SCHEDULER = [...VIEWS_WITHOUT_INPUT];
 
 const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible, onToggleSidebar, focusMode }: DashboardProps) => {
@@ -172,6 +173,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
             {(effectiveView as string) === "community"       && <CommunityBoardView />}
             {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
             {(effectiveView as string) === "crm"             && <CRMPage />}
+            {(effectiveView as string) === "inbox"           && <CommHub />}
             {effectiveView === "billing"                     && <BillingView />}
             {!VIEWS_WITHOUT_SCHEDULER.includes(effectiveView as string) && <Scheduler />}
           </motion.div>

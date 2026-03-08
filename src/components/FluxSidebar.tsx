@@ -1,4 +1,4 @@
-import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase, Settings } from "lucide-react";
+import { Home, PanelLeftClose, PanelLeft, LogOut, Users, Sun, Moon, CalendarDays, ListTodo, Camera, Layers, Grid, CreditCard, Zap, ShieldCheck, Briefcase, Settings, MessageSquare } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
@@ -192,6 +192,15 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
           >
             <Briefcase size={18} className="shrink-0" />
             <span>CRM</span>
+          </button>
+
+          {/* CommHub */}
+          <button
+            onClick={() => nav("inbox")}
+            className={`sidebar-item w-full ${activeView === ("inbox" as any) ? "sidebar-item-active" : ""}`}
+          >
+            <MessageSquare size={18} className="shrink-0" />
+            <span>CommHub</span>
           </button>
 
           {/* Council */}
