@@ -29,6 +29,7 @@ const TaskManagerWidget = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [auraLoading, setAuraLoading] = useState(false);
+  const [rowAuraLoading, setRowAuraLoading] = useState<string | null>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
