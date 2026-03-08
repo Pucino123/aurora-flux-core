@@ -191,6 +191,9 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       <OnboardingFlow />
       <CreateFolderModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onCreate={handleCreateFolder} />
 
+      {/* Focus Mode Control Bar — global, visible on all views */}
+      <FocusControlBar />
+
       {/* Control Center */}
       <ControlCenter open={controlCenterOpen} onClose={() => setControlCenterOpen(false)} />
     </motion.div>
