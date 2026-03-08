@@ -91,9 +91,32 @@ const CommunityAdminView = () => {
   const [tab, setTab] = useState<"pending" | "approved" | "all">("pending");
   const [adminTab, setAdminTab] = useState<AdminTab>("overview");
   const [reports, setReports] = useState(MOCK_REPORTS);
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
-  // ─── RBAC guard ───
-  if (user && user.email !== ADMIN_EMAIL) {
+  const fetchSlots = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("community_slots").select("*").order("created_at", { ascending: false });
+    if (error) { toast.error("Failed to load slots"); setLoading(false); return; }
+    setSlots((data || []).map((row) => ({
+      id: row.id, slotIndex: row.slot_index, userId: row.user_id,
+      status: row.status as Slot["status"], projectName: row.project_name ?? undefined,
+      websiteUrl: row.website_url ?? undefined, thumbnailUrl: row.thumbnail_url ?? undefined,
+      createdAt: row.created_at ?? "",
+    })));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchSlots();
+    const channel = supabase.channel("admin_community_slots")
+      .on("postgres_changes", { event: "*", schema: "public", table: "community_slots" }, () => fetchSlots())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchSlots, isAdmin]);
+
+  // ─── RBAC guard — after all hooks ───
+  if (user && !isAdmin) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-screen" style={{ background: "radial-gradient(ellipse at top, #0f172a 0%, #020617 100%)" }}>
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
