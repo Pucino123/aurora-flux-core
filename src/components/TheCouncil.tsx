@@ -730,7 +730,7 @@ const TheCouncil = () => {
                           {/* Council Summary */}
                           {responses.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-black/8 space-y-4">
-                              <h4 className="text-[11px] font-bold text-foreground/50 uppercase tracking-wider">Resumé</h4>
+                              <h4 className="text-[11px] font-bold text-foreground/50 uppercase tracking-wider">Summary</h4>
                               {(() => {
                                 const positives = responses.filter(r => r.voteScore >= 1);
                                 const negatives = responses.filter(r => r.voteScore <= -1);
