@@ -384,24 +384,24 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Suppress default Radix animation; we handle it ourselves */}
+      {/* Override default Radix overlay & content animations */}
       <style dangerouslySetInnerHTML={{ __html: `
         [data-state="open"][class*="bg-black"] { background: rgba(0,0,0,0.35) !important; backdrop-filter: blur(4px); }
         @keyframes genie-in {
-          0%   { opacity:0; transform: translate(-50%, -50%) scaleY(0.06) scaleX(0.45); transform-origin: center bottom; filter: blur(4px); }
-          40%  { opacity:1; transform: translate(-50%, -50%) scaleY(0.60) scaleX(0.82); filter: blur(1px); }
-          70%  { transform: translate(-50%, -50%) scaleY(1.04) scaleX(1.01); filter: blur(0); }
-          85%  { transform: translate(-50%, -50%) scaleY(0.975) scaleX(1.005); }
-          100% { opacity:1; transform: translate(-50%, -50%) scaleY(1) scaleX(1); filter: blur(0); }
+          0%   { opacity:0; transform: scaleY(0.04) scaleX(0.40); filter: blur(6px); }
+          35%  { opacity:1; transform: scaleY(0.55) scaleX(0.78); filter: blur(2px); }
+          68%  { transform: scaleY(1.04) scaleX(1.01); filter: blur(0); }
+          83%  { transform: scaleY(0.978) scaleX(1.004); }
+          100% { opacity:1; transform: scaleY(1) scaleX(1); filter: blur(0); }
         }
         @keyframes genie-out {
-          0%   { opacity:1; transform: translate(-50%, -50%) scaleY(1) scaleX(1); }
-          25%  { transform: translate(-50%, -50%) scaleY(0.80) scaleX(0.90); }
-          65%  { transform: translate(-50%, -50%) scaleY(0.20) scaleX(0.60); filter: blur(1px); }
-          100% { opacity:0; transform: translate(-50%, -50%) scaleY(0.04) scaleX(0.40); filter: blur(4px); }
+          0%   { opacity:1; transform: scaleY(1) scaleX(1); }
+          20%  { transform: scaleY(0.82) scaleX(0.92); }
+          60%  { transform: scaleY(0.18) scaleX(0.55); filter: blur(2px); }
+          100% { opacity:0; transform: scaleY(0.03) scaleX(0.38); filter: blur(6px); }
         }
-        [data-collab-modal][data-state="open"]  { animation: genie-in  0.50s cubic-bezier(0.34,1.36,0.64,1) forwards !important; }
-        [data-collab-modal][data-state="closed"] { animation: genie-out 0.35s cubic-bezier(0.4,0,1,1)        forwards !important; }
+        [data-collab-modal][data-state="open"]  { animation: genie-in  0.48s cubic-bezier(0.22,1.2,0.36,1) forwards !important; transform-origin: center center !important; }
+        [data-collab-modal][data-state="closed"] { animation: genie-out 0.32s cubic-bezier(0.4,0,1,1) forwards !important; transform-origin: center center !important; }
       ` }} />
       <DialogContent
         data-collab-modal
