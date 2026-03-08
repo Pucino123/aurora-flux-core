@@ -561,6 +561,55 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
             ${lm ? "selection:bg-primary/20" : "selection:bg-primary/20"}`}
           data-placeholder="Start typing..."
         />
+        {/* ── Slash Command Palette ── */}
+        <AnimatePresence>
+          {slashOpen && slashPos && filteredSlashCmds.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.97 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="absolute z-[200] w-60 rounded-2xl border border-border/50 shadow-2xl overflow-hidden"
+              style={{
+                top: slashPos.top,
+                left: Math.max(8, slashPos.left),
+                background: lm ? "rgba(255,255,255,0.98)" : "rgba(20,18,32,0.98)",
+                backdropFilter: "blur(20px)",
+              }}
+              onMouseDown={e => e.preventDefault()}
+            >
+              <div className="px-3 py-1.5 border-b border-border/30">
+                <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">Insert block</p>
+              </div>
+              <div className="py-1 max-h-52 overflow-y-auto">
+                {filteredSlashCmds.map((cmd, i) => (
+                  <button
+                    key={cmd.label}
+                    onMouseDown={e => { e.preventDefault(); applySlashCommand(cmd); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                      i === slashIndex
+                        ? "bg-primary/15 text-primary"
+                        : lm ? "hover:bg-gray-100 text-gray-800" : "hover:bg-white/5 text-foreground/80"
+                    }`}
+                  >
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                      i === slashIndex ? "bg-primary/20 text-primary" : "bg-secondary/60 text-muted-foreground"
+                    }`}>
+                      {cmd.icon}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-medium leading-tight">{cmd.label}</p>
+                      <p className="text-[9px] text-muted-foreground/60 truncate">{cmd.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="px-3 py-1.5 border-t border-border/20">
+                <p className="text-[8px] text-muted-foreground/40">↑↓ navigate · Enter to apply · Esc to dismiss</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <DocumentAiChat getDocumentContent={() => editorRef.current?.innerText || ""} editorRef={editorRef as React.RefObject<HTMLDivElement>} lightMode={lm} studioMode={studioMode} />
         <StatusBar wordCount={wordCount} charCount={charCount} lightMode={lm} />
       </div>
