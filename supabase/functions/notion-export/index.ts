@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
           rich_text: [
             { type: "text", text: { content: "Powered by " } },
             {
-              type: "text", text: { content: "Flux Boardroom", link: { url: "https://aurora-flux-core.lovable.app" } },
+              type: "text", text: { content: "Dashiii Boardroom", link: { url: "https://aurora-flux-core.lovable.app" } },
               annotations: { italic: true, color: "purple" },
             },
           ],
