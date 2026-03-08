@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ChevronRight, FolderOpen, Folder, Plus, Brain, Pencil, Palette, Trash2, GripVertical, Image, Search, FileText, Table } from "lucide-react";
+import { ChevronRight, FolderOpen, Folder, Plus, Inbox, Brain, Pencil, Palette, Trash2, GripVertical, Image, Search, FileText, Table } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -337,6 +337,20 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
 
   return (
     <div className="space-y-1" onDragOver={(e) => e.preventDefault()} onDrop={handleRootDrop}>
+      {/* Inbox */}
+      <button
+        onClick={() => { setActiveFolder(null); setActiveView("inbox" as any); }}
+        className={`sidebar-item w-full ${activeView === ("inbox" as any) && activeFolder === null ? "sidebar-item-active" : ""}`}
+      >
+        <Inbox size={16} className="shrink-0" />
+        <span className="flex-1 text-left">{t("brain.inbox")}</span>
+        {inboxTasks.length > 0 && (
+          <span className="text-[10px] bg-primary/10 text-primary rounded-full px-1.5 py-0.5 font-semibold">
+            {inboxTasks.length}
+          </span>
+        )}
+      </button>
+
       {/* Folders header */}
       <div className="flex items-center justify-between">
         <span className="sidebar-section-label">Folders</span>

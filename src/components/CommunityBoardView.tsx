@@ -242,12 +242,17 @@ const CheckoutModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 };
 
 /* ─── Main View ─── */
+const ADMIN_EMAIL = "kevin.therkildsen@icloud.com";
+
 const CommunityBoardView = () => {
   const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const [slots, setSlots] = useState<Slot[]>(buildGrid([]));
   const [loading, setLoading] = useState(true);
   const [checkoutSlot, setCheckoutSlot] = useState<number | null>(null);
   const [setupSlot, setSetupSlot] = useState<number | null>(null);
+  const [adminUploadSlot, setAdminUploadSlot] = useState<number | null>(null);
+  const [adminUploading, setAdminUploading] = useState(false);
 
   const fetchSlots = useCallback(async () => {
     const { data, error } = await supabase.from("community_slots").select("*").order("slot_index", { ascending: true });
@@ -293,6 +298,32 @@ const CommunityBoardView = () => {
     if (error) { toast.error("Failed to submit — please try again"); fetchSlots(); }
     else { toast.success("Submitted for approval! We'll review it shortly."); fetchSlots(); }
   }, [setupSlot, user, fetchSlots]);
+
+  // Admin: upload/replace thumbnail for any slot
+  const handleAdminThumbnailUpload = useCallback(async (file: File, slotIndex: number) => {
+    const slot = slots.find(s => s.slotIndex === slotIndex);
+    if (!slot?.id) return;
+    setAdminUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `community/admin-${slotIndex}-${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage.from("document-images").upload(path, file, { upsert: true });
+      let url = "";
+      if (!error && data) {
+        const { data: urlData } = supabase.storage.from("document-images").getPublicUrl(data.path);
+        url = urlData.publicUrl;
+      } else {
+        await new Promise<void>((res) => {
+          const reader = new FileReader();
+          reader.onload = (e) => { url = e.target?.result as string; res(); };
+          reader.readAsDataURL(file);
+        });
+      }
+      const { error: updateError } = await supabase.from("community_slots").update({ thumbnail_url: url }).eq("id", slot.id);
+      if (!updateError) { toast.success("Thumbnail updated!"); fetchSlots(); }
+      else toast.error("Failed to update thumbnail");
+    } finally { setAdminUploading(false); setAdminUploadSlot(null); }
+  }, [slots, fetchSlots]);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
@@ -364,29 +395,43 @@ const CommunityBoardView = () => {
 
                 {/* Approved — CSS micro-layout */}
                 {slot.status === "approved" && (
-                  <a href={slot.websiteUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                    {slot.thumbnailUrl ? (
-                      <div className="relative w-full h-full overflow-hidden">
-                        <img src={slot.thumbnailUrl} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={slot.projectName} />
-                        <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/60 transition-all duration-300 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 backdrop-blur-[2px]">
-                          <span className="text-xs font-bold text-white text-center">{slot.projectName}</span>
-                          <span className="text-[9px] text-white/80 flex items-center gap-0.5">Visit <ExternalLink size={8} /></span>
+                  <div className="relative w-full h-full">
+                    <a href={slot.websiteUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                      {slot.thumbnailUrl ? (
+                        <div className="relative w-full h-full overflow-hidden">
+                          <img src={slot.thumbnailUrl} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={slot.projectName} />
+                          <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/60 transition-all duration-300 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 backdrop-blur-[2px]">
+                            <span className="text-xs font-bold text-white text-center">{slot.projectName}</span>
+                            <span className="text-[9px] text-white/80 flex items-center gap-0.5">Visit <ExternalLink size={8} /></span>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="relative w-full h-full flex flex-col overflow-hidden">
-                        {/* Browser chrome with CSS micro-layout */}
-                        <div className="flex flex-col h-full overflow-hidden group-hover:scale-[1.03] transition-transform duration-500 origin-center">
-                          <BrowserChrome layoutType={lt} />
+                      ) : (
+                        <div className="relative w-full h-full flex flex-col overflow-hidden">
+                          <div className="flex flex-col h-full overflow-hidden group-hover:scale-[1.03] transition-transform duration-500 origin-center">
+                            <BrowserChrome layoutType={lt} />
+                          </div>
+                          <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/70 transition-all duration-300 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 rounded-2xl">
+                            <span className="text-xs font-bold text-white text-center px-2">{slot.projectName}</span>
+                            <span className="text-[9px] text-white/80 flex items-center gap-0.5">Visit Project <ExternalLink size={8} /></span>
+                          </div>
                         </div>
-                        {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/70 transition-all duration-300 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 rounded-2xl">
-                          <span className="text-xs font-bold text-white text-center px-2">{slot.projectName}</span>
-                          <span className="text-[9px] text-white/80 flex items-center gap-0.5">Visit Project <ExternalLink size={8} /></span>
-                        </div>
-                      </div>
+                      )}
+                    </a>
+                    {/* Admin upload button */}
+                    {isAdmin && (
+                      <label
+                        className="absolute top-1.5 right-1.5 z-20 cursor-pointer p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all opacity-0 group-hover:opacity-100"
+                        title="Replace thumbnail"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {adminUploading && adminUploadSlot === slot.slotIndex
+                          ? <Loader2 size={11} className="animate-spin" />
+                          : <Plus size={11} />}
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) { setAdminUploadSlot(slot.slotIndex); handleAdminThumbnailUpload(f, slot.slotIndex); } }} />
+                      </label>
                     )}
-                  </a>
+                  </div>
                 )}
               </motion.div>
             );

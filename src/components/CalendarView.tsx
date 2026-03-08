@@ -1027,23 +1027,26 @@ const CalendarView = () => {
                 <span className="ml-auto text-[10px] font-bold text-primary">{connectedProviders.length} connected</span>
               )}
             </div>
-            <div className="flex items-center gap-2 w-full">
-              {/* Google */}
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all ${connectedProviders.includes("google") ? "bg-[#4285f4]/15 text-[#4285f4] border border-[#4285f4]/30" : "bg-secondary/60 text-muted-foreground/50"}`}>
-                <span className="w-3 h-3 rounded-full bg-[#4285f4] text-white text-[6px] font-bold flex items-center justify-center">G</span>
-                Google
-              </div>
-              {/* Outlook */}
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all ${connectedProviders.includes("outlook") ? "bg-[#0078d4]/15 text-[#0078d4] border border-[#0078d4]/30" : "bg-secondary/60 text-muted-foreground/50"}`}>
-                <span className="w-3 h-3 rounded-sm bg-[#0078d4] text-white text-[6px] font-bold flex items-center justify-center">O</span>
-                Outlook
-              </div>
-              {/* Apple */}
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all ${connectedProviders.includes("apple") ? "bg-gray-500/15 text-gray-400 border border-gray-500/30" : "bg-secondary/60 text-muted-foreground/50"}`}>
-                <span className="w-3 h-3 rounded-full bg-gray-500 text-white text-[6px] font-bold flex items-center justify-center">🍎</span>
-                iCloud
-              </div>
-            </div>
+          {/* Provider pills — each clickable to open sync modal */}
+          <div className="flex items-center gap-2 w-full flex-wrap">
+            {([
+              { id: "google" as Provider, label: "Google", bg: "#4285f4", icon: "G", shape: "rounded-full" },
+              { id: "outlook" as Provider, label: "Outlook", bg: "#0078d4", icon: "O", shape: "rounded-sm" },
+              { id: "apple" as Provider, label: "iCloud", bg: "#555", icon: "🍎", shape: "rounded-full" },
+            ] as const).map(p => (
+              <button
+                key={p.id}
+                onClick={(e) => { e.stopPropagation(); if (!connectedProviders.includes(p.id)) setShowSyncModal(true); }}
+                title={connectedProviders.includes(p.id) ? `${p.label} connected` : `Connect ${p.label}`}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all hover:scale-105 ${connectedProviders.includes(p.id) ? "border" : "opacity-50 hover:opacity-80"}`}
+                style={connectedProviders.includes(p.id) ? { background: `${p.bg}15`, color: p.bg, border: `1px solid ${p.bg}30` } : { background: "hsl(var(--secondary)/0.6)", color: "hsl(var(--muted-foreground))" }}
+              >
+                <span className={`w-3 h-3 ${p.shape} text-white text-[6px] font-bold flex items-center justify-center`} style={{ background: p.bg }}>{p.icon}</span>
+                {p.label}
+                {!connectedProviders.includes(p.id) && <span className="ml-0.5 text-[8px] opacity-60">+</span>}
+              </button>
+            ))}
+          </div>
           </button>
         </div>
 

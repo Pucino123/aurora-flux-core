@@ -3,13 +3,15 @@
  */
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2, Send, Loader2, Building2, CreditCard, ToggleLeft, ToggleRight } from "lucide-react";
+import { X, Plus, Trash2, Send, Loader2, Building2, CreditCard, ToggleLeft, ToggleRight, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCRM, CRMContact } from "@/context/CRMContext";
 import { pushNotification } from "@/components/NotificationBell";
 
-// ── Global payment profile (mock — editable in Settings later) ───────────────
-const PAYMENT_PROFILE = {
+// ── Payment profile helpers ───────────────────────────────────────────────────
+const PROFILE_KEY = "crm_payment_profile";
+
+const DEFAULT_PROFILE = {
   companyName: "Dashiii Workspace ApS",
   bankName: "Nordea Bank",
   regNumber: "2200",
@@ -18,6 +20,67 @@ const PAYMENT_PROFILE = {
   swift: "NDEADKKK",
   paymentTerms: "30",
   email: "billing@dashiii.io",
+};
+
+type PaymentProfile = typeof DEFAULT_PROFILE;
+
+const loadProfile = (): PaymentProfile => {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if (raw) return { ...DEFAULT_PROFILE, ...JSON.parse(raw) };
+  } catch {}
+  return DEFAULT_PROFILE;
+};
+
+const saveProfile = (p: PaymentProfile) => {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+};
+
+// ── Bank Info Settings Panel ──────────────────────────────────────────────────
+const BankInfoPanel = ({ profile, onSave, onClose }: { profile: PaymentProfile; onSave: (p: PaymentProfile) => void; onClose: () => void }) => {
+  const [draft, setDraft] = useState(profile);
+  const set = (k: keyof PaymentProfile, v: string) => setDraft(p => ({ ...p, [k]: v }));
+  const fields: { key: keyof PaymentProfile; label: string; ph: string }[] = [
+    { key: "companyName", label: "Company Name", ph: "Acme ApS" },
+    { key: "email", label: "Billing Email", ph: "billing@acme.com" },
+    { key: "bankName", label: "Bank Name", ph: "Nordea Bank" },
+    { key: "regNumber", label: "Reg. Number", ph: "2200" },
+    { key: "accountNumber", label: "Account Number", ph: "1234567890" },
+    { key: "iban", label: "IBAN", ph: "DK12 2200 1234 5678 90" },
+    { key: "swift", label: "SWIFT / BIC", ph: "NDEADKKK" },
+    { key: "paymentTerms", label: "Payment Terms (days)", ph: "30" },
+  ];
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9200] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(10px)" }}>
+      <motion.div initial={{ scale: 0.93, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.93, y: 20 }}
+        className="relative w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+        style={{ background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))" }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/20">
+          <div className="flex items-center gap-2">
+            <CreditCard size={15} className="text-primary" />
+            <h3 className="text-sm font-bold text-foreground">Bank & Payment Info</h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-secondary text-muted-foreground"><X size={14} /></button>
+        </div>
+        <div className="px-6 py-5 space-y-3 max-h-[60vh] overflow-y-auto">
+          {fields.map(f => (
+            <div key={f.key}>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">{f.label}</label>
+              <input value={draft[f.key]} onChange={e => set(f.key, e.target.value)} placeholder={f.ph}
+                className="w-full bg-secondary/40 border border-border/30 rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50 transition-all" />
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-4 border-t border-border/20 flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-2xl border border-border/30 text-sm font-medium text-muted-foreground hover:bg-secondary/50 transition-colors">Cancel</button>
+          <button onClick={() => { saveProfile(draft); onSave(draft); onClose(); toast.success("Payment info saved!"); }}
+            className="flex-1 py-2.5 rounded-2xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors">Save</button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 };
 
 interface LineItem {
@@ -50,6 +113,8 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
   });
   const [sending, setSending] = useState(false);
   const [includeBankDetails, setIncludeBankDetails] = useState(true);
+  const [profile, setProfile] = useState<PaymentProfile>(loadProfile);
+  const [showBankSettings, setShowBankSettings] = useState(false);
 
   const total = items.reduce((s, it) => s + it.qty * it.price, 0);
   const tax = total * 0.2;
@@ -111,9 +176,15 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                   <h2 className="text-base font-bold text-foreground">Send Invoice to {contact.name}</h2>
                   <p className="text-xs text-muted-foreground">Billing {contact.company || contact.email}</p>
                 </div>
-                <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-secondary text-muted-foreground">
-                  <X size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowBankSettings(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/30 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                    <Settings2 size={12} /> Bank Info
+                  </button>
+                  <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-secondary text-muted-foreground">
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* Two-column body */}
@@ -219,8 +290,8 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                           <Building2 size={14} className="text-white" />
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900 text-base leading-none">{PAYMENT_PROFILE.companyName}</p>
-                          <p className="text-[10px] text-gray-400">{PAYMENT_PROFILE.email}</p>
+                          <p className="font-bold text-gray-900 text-base leading-none">{profile.companyName}</p>
+                          <p className="text-[10px] text-gray-400">{profile.email}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -233,8 +304,8 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                     <div className="grid grid-cols-2 gap-4 mb-6 text-[11px]">
                       <div>
                         <p className="text-gray-400 uppercase tracking-wide font-semibold mb-1">From</p>
-                        <p className="font-semibold text-gray-900">{PAYMENT_PROFILE.companyName}</p>
-                        <p className="text-gray-500">{PAYMENT_PROFILE.email}</p>
+                        <p className="font-semibold text-gray-900">{profile.companyName}</p>
+                        <p className="text-gray-500">{profile.email}</p>
                       </div>
                       <div>
                         <p className="text-gray-400 uppercase tracking-wide font-semibold mb-1">Billed To</p>
@@ -274,15 +345,15 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
                         <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Payment Details</p>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
                           <span className="text-gray-400">Bank</span>
-                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.bankName}</span>
+                          <span className="text-gray-700 font-medium">{profile.bankName}</span>
                           <span className="text-gray-400">Reg / Account</span>
-                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.regNumber} – {PAYMENT_PROFILE.accountNumber}</span>
+                          <span className="text-gray-700 font-medium">{profile.regNumber} – {profile.accountNumber}</span>
                           <span className="text-gray-400">IBAN</span>
-                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.iban}</span>
+                          <span className="text-gray-700 font-medium">{profile.iban}</span>
                           <span className="text-gray-400">SWIFT</span>
-                          <span className="text-gray-700 font-medium">{PAYMENT_PROFILE.swift}</span>
+                          <span className="text-gray-700 font-medium">{profile.swift}</span>
                         </div>
-                        <p className="text-[9px] text-gray-400 italic mt-2">Please pay within {PAYMENT_PROFILE.paymentTerms} days of invoice date.</p>
+                        <p className="text-[9px] text-gray-400 italic mt-2">Please pay within {profile.paymentTerms} days of invoice date.</p>
                       </div>
                     )}
 
@@ -296,6 +367,12 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
           </motion.div>
         </>
       )}
+      {/* Bank settings panel */}
+      <AnimatePresence>
+        {showBankSettings && (
+          <BankInfoPanel profile={profile} onSave={setProfile} onClose={() => setShowBankSettings(false)} />
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 };
