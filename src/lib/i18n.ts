@@ -10,11 +10,11 @@ const isDanish = userLang.startsWith("da") || userLang === "da-DK";
 
 const da: Record<string, string> = {
   // App
-  "app.name": "Flux",
+  "app.name": "Dashiii",
   "app.tagline": "Planlæg, følg og opnå dine mål — ubesværet",
   "app.headline": "Hvad vil du opnå?",
   "app.hint": "Tryk Enter for at starte · Cmd+K for hurtige handlinger",
-  "app.pill": "Nyt: Flux Intelligens →",
+  "app.pill": "Nyt: Dashiii Intelligens →",
   "app.signin": "Log ind",
   "app.plan": "Gratis Plan",
 
