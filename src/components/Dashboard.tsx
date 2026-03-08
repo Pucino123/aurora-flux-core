@@ -21,8 +21,6 @@ import CommunityAdminView from "./CommunityAdminView";
 import BillingView from "./billing/BillingView";
 import { UpgradeModal, OutOfSparksModal } from "./billing/BillingView";
 import CRMPage from "../pages/CRMPage";
-import ControlCenter from "./ControlCenter";
-import { useFlux } from "@/context/FluxContext";
 import { useMonetization } from "@/context/MonetizationContext";
 import { useFocusMode } from "@/context/FocusModeContext";
 import { toast } from "sonner";
