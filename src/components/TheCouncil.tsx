@@ -8,6 +8,7 @@ import { t } from "@/lib/i18n";
 import { toast } from "sonner";
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from "recharts";
 import ReactMarkdown from "react-markdown";
+import { useMonetization } from "@/context/MonetizationContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useFlux } from "@/context/FluxContext";
 import CouncilAvatar from "./council/CouncilAvatar";
