@@ -1019,6 +1019,8 @@ const FocusContent = () => {
               onGroupDragStart={handleGroupDragStart}
               onSingleSelect={handleSingleSelect}
               onBulkContextMenu={handleBulkContextMenu}
+              positionOverride={pageFolderPositions[folder.id]}
+              onPositionChange={updatePageFolderPosition}
             />
           ))}
 
@@ -1036,6 +1038,8 @@ const FocusContent = () => {
               onGroupDragStart={handleGroupDragStart}
               onSingleSelect={handleSingleSelect}
               onBulkContextMenu={handleBulkContextMenu}
+              positionOverride={pageDocPositions[doc.id]}
+              onPositionChange={updatePageDocPosition}
             />
           ))}
 
