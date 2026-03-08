@@ -127,7 +127,7 @@ const DEFAULT_PAGES: Page[] = [
 ];
 
 /* ─── Page Grid (renders one page of widgets) ─── */
-const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue, setRenamingWidget, setRenameValue, commitRename, config }: {
+const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue, setRenamingWidget, setRenameValue, commitRename, config, onWidgetDragStart, draggingWidgetId }: {
   page: Page;
   editMode: boolean;
   onRemoveWidget: (pageId: string, widgetId: string) => void;
@@ -137,6 +137,8 @@ const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue,
   setRenameValue: (v: string) => void;
   commitRename: () => void;
   config: any;
+  onWidgetDragStart: (widgetId: string, fromPageId: string) => void;
+  draggingWidgetId: string | null;
 }) => {
   const { width, containerRef } = useContainerWidth({ initialWidth: 1200 });
   const layouts = makeLayouts(page.widgets);
@@ -165,8 +167,22 @@ const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue,
             {page.widgets.map((widgetId) => {
               const cfg = WIDGET_REGISTRY.find((w) => w.id === widgetId);
               if (!cfg) return null;
+              const isDragging = draggingWidgetId === widgetId;
               return (
-                <div key={widgetId} className={`flux-card relative overflow-hidden group ${editMode ? "ring-1 ring-primary/20" : ""}`}>
+                <div
+                  key={widgetId}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/flux-widget", widgetId);
+                    e.dataTransfer.setData("application/flux-from-page", page.id);
+                    e.dataTransfer.effectAllowed = "move";
+                    onWidgetDragStart(widgetId, page.id);
+                  }}
+                  onDragEnd={() => onWidgetDragStart("", "")}
+                  className={`flux-card relative overflow-hidden group cursor-grab active:cursor-grabbing transition-all duration-150 ${
+                    editMode ? "ring-1 ring-primary/20" : ""
+                  } ${isDragging ? "scale-105 shadow-2xl ring-2 ring-primary/40 opacity-80" : ""}`}
+                >
                   {!editMode && (
                     <button
                       onClick={() => onRemoveWidget(page.id, widgetId)}
@@ -174,6 +190,14 @@ const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue,
                     >
                       <X size={11} />
                     </button>
+                  )}
+                  {/* Cross-page drag hint — shown on hover when not in edit mode */}
+                  {!editMode && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      <span className="text-[9px] text-muted-foreground/60 bg-background/60 px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+                        drag to move page
+                      </span>
+                    </div>
                   )}
                   {editMode && (
                     <div className="absolute top-1 left-1 right-1 z-10 flex items-center justify-between">
@@ -203,10 +227,18 @@ const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue,
           </ResponsiveGridLayout>
         </div>
       ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flux-card text-center py-16">
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="flux-card text-center py-16"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            // handled by parent via dot drop
+          }}
+        >
           <Pin size={32} className="mx-auto mb-4 text-muted-foreground/30" />
           <h3 className="font-semibold font-display mb-2">Empty page</h3>
-          <p className="text-sm text-muted-foreground">Add widgets to this page using the controls above.</p>
+          <p className="text-sm text-muted-foreground">Drag a widget here or add one using the controls above.</p>
         </motion.div>
       )}
     </div>
