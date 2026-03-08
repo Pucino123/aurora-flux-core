@@ -124,13 +124,13 @@ const ControlCenter = ({ open, onClose }: ControlCenterProps) => {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 40, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 500, damping: 38 }}
-            className="fixed top-4 right-4 bottom-4 w-80 z-[9500] flex flex-col rounded-2xl overflow-hidden"
+            className="fixed top-4 right-4 bottom-4 w-80 z-[9500] flex flex-col rounded-2xl overflow-hidden dark"
             style={{
-              background: "hsl(var(--card) / 0.75)",
+              background: "hsl(240 15% 9% / 0.88)",
               backdropFilter: "blur(32px)",
               WebkitBackdropFilter: "blur(32px)",
-              border: "1px solid hsl(var(--border) / 0.4)",
-              boxShadow: "0 24px 64px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.06) inset",
+              border: "1px solid hsl(240 10% 25% / 0.5)",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.06) inset",
             }}
           >
             {/* Header */}
