@@ -301,14 +301,14 @@ interface EntityNodeProps {
   onResizeEnd: (id: string, dw: number, dh: number) => void;
   onContentChange: (id: string, content: string) => void;
   onContextMenu: (e: React.MouseEvent, id: string) => void;
+  isDraggable: boolean;
 }
 
 const EntityNode: React.FC<EntityNodeProps> = ({
-  entity, isSelected, canvasRef, onSelect, onDragEnd, onResizeEnd, onContentChange, onContextMenu,
+  entity, isSelected, canvasRef, onSelect, onDragEnd, onResizeEnd, onContentChange, onContextMenu, isDraggable,
 }) => {
   const { type, position, size, style, content, zIndex } = entity;
   const resizeStart = useRef<{ mx: number; my: number; w: number; h: number } | null>(null);
-  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
   const didDrag = useRef(false);
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
@@ -316,9 +316,7 @@ const EntityNode: React.FC<EntityNodeProps> = ({
     resizeStart.current = { mx: e.clientX, my: e.clientY, w: size.w, h: size.h };
     const onMove = (ev: MouseEvent) => {
       if (!resizeStart.current) return;
-      const dw = ev.clientX - resizeStart.current.mx;
-      const dh = ev.clientY - resizeStart.current.my;
-      onResizeEnd(entity.id, dw, dh);
+      onResizeEnd(entity.id, ev.clientX - resizeStart.current.mx, ev.clientY - resizeStart.current.my);
     };
     const onUp = () => {
       resizeStart.current = null;
@@ -336,14 +334,35 @@ const EntityNode: React.FC<EntityNodeProps> = ({
     border:         style.strokeWidth > 0 ? `${style.strokeWidth}px solid ${style.stroke}` : "none",
     borderRadius:   type === "circle" ? "50%" : `${style.borderRadius}px`,
     opacity:        style.opacity,
-    outline:        isSelected ? "2.5px solid rgba(99,102,241,0.9)" : "none",
+    outline:        isDraggable && isSelected ? "2.5px solid rgba(99,102,241,0.9)" : "none",
     outlineOffset:  3,
-    boxShadow:      isSelected ? "0 0 0 5px rgba(99,102,241,0.18), 0 8px 24px rgba(0,0,0,0.3)" : undefined,
+    boxShadow:      isDraggable && isSelected ? "0 0 0 5px rgba(99,102,241,0.18), 0 8px 24px rgba(0,0,0,0.3)" : undefined,
     overflow:       "hidden",
     display:        "flex",
     alignItems:     "center",
     justifyContent: "center",
   };
+
+  if (!isDraggable) {
+    // Text mode — fully static, no drag, no selection chrome
+    return (
+      <div
+        style={{ zIndex, position: "absolute", left: position.x, top: position.y, ...shapeStyle }}
+      >
+        {type === "textBox" && (
+          <div
+            contentEditable
+            suppressContentEditableWarning
+            onInput={e => onContentChange(entity.id, (e.target as HTMLDivElement).innerText)}
+            className="w-full h-full p-2 outline-none text-sm leading-snug cursor-text"
+            style={{ color: style.stroke || "#ffffff", fontSize: 13 }}
+          >
+            {content || ""}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -358,29 +377,14 @@ const EntityNode: React.FC<EntityNodeProps> = ({
       onDragEnd={(_, info) => {
         const canvas = canvasRef.current?.getBoundingClientRect();
         if (!canvas) return;
-        const nx = clamp(position.x + info.offset.x, 0, canvas.width - size.w);
-        const ny = clamp(position.y + info.offset.y, 0, canvas.height - size.h);
-        onDragEnd(entity.id, nx, ny);
+        onDragEnd(entity.id, clamp(position.x + info.offset.x, 0, canvas.width - size.w), clamp(position.y + info.offset.y, 0, canvas.height - size.h));
       }}
-      onPointerDown={e => {
-        e.stopPropagation();
-        pointerDownPos.current = { x: e.clientX, y: e.clientY };
-        didDrag.current = false;
-      }}
-      onPointerUp={e => {
-        e.stopPropagation();
-        if (!didDrag.current) {
-          onSelect(entity.id);
-        }
-        pointerDownPos.current = null;
-      }}
-      onContextMenu={e => {
-        e.preventDefault();
-        e.stopPropagation();
-        onContextMenu(e, entity.id);
-      }}
+      onPointerDown={e => { e.stopPropagation(); didDrag.current = false; }}
+      onPointerUp={e => { e.stopPropagation(); if (!didDrag.current) onSelect(entity.id); }}
+      onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, entity.id); }}
       className="absolute cursor-move touch-none"
       style={{ zIndex, position: "absolute", left: position.x, top: position.y, willChange: "transform" }}
+      whileHover={{ filter: "brightness(1.06)" }}
     >
       <div style={shapeStyle}>
         {type === "textBox" && (
@@ -396,8 +400,7 @@ const EntityNode: React.FC<EntityNodeProps> = ({
           </div>
         )}
       </div>
-
-      {/* Resize handle — bottom-right corner */}
+      {/* Resize handle */}
       {isSelected && (
         <div
           onMouseDown={handleResizeMouseDown}
