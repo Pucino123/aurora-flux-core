@@ -146,17 +146,15 @@ const DraggableWidget = ({
   };
 
   const dragging = useRef(false);
-  const dragCancelled = useRef(false);
-  const dragStartPos = useRef({ x: 0, y: 0 });
-  const DRAG_THRESHOLD = 6;
+  const dragCancelled = useRef(false); // set true when drag started on text/editable
+  const dragStartPos = useRef({ x: 0, y: 0 }); // for threshold detection
+  const DRAG_THRESHOLD = 6; // px — must move this far before drag activates
   const offset = useRef({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [showOpacity, setShowOpacity] = useState(false);
   const [showFontSize, setShowFontSize] = useState(false);
-  const [showStyleEditor, setShowStyleEditor] = useState(false);
+  const [showStyleEditor, setShowStyleEditor] = useState(false); // kept for non-focus-mode toggle tracking
   const [isHovered, setIsHovered] = useState(false);
-  // Ref to the DOM node — lets us move the widget without touching React state during drag
-  const nodeRef = useRef<HTMLDivElement | null>(null);
 
   const opacity = getWidgetOpacity(id);
   const textDark = opacity > 0.55;
@@ -169,6 +167,7 @@ const DraggableWidget = ({
   posRef.current = pos;
 
   const onPointerDownDrag = useCallback((e: React.PointerEvent) => {
+    // Don't initiate drag if the event target is a button, anchor, or inside one
     const target = e.target as HTMLElement;
     const isInteractive =
       target.tagName === "BUTTON" ||
@@ -176,6 +175,7 @@ const DraggableWidget = ({
       !!target.closest("button, a");
     if (isInteractive) return;
 
+    // Don't initiate drag if the event target is inside a text-editable element
     const isTextEditable =
       target.tagName === "INPUT" ||
       target.tagName === "TEXTAREA" ||
@@ -184,14 +184,16 @@ const DraggableWidget = ({
       !!target.closest("input, textarea, select");
     if (isTextEditable) return;
 
+    // Don't start a drag if the user is currently selecting text inside the widget
     const selection = window.getSelection();
     if (selection && selection.toString().length > 0) return;
 
     e.stopPropagation();
     dragCancelled.current = false;
-    dragging.current = true;
+    dragging.current = true; // tentative — confirmed after threshold
     dragStartPos.current = { x: e.clientX, y: e.clientY };
     offset.current = { x: e.clientX - posRef.current.x, y: e.clientY - posRef.current.y };
+    // Don't set isDragging yet — wait for threshold
   }, []);
 
   const { onPointerDownResize } = useResizable({
@@ -207,39 +209,22 @@ const DraggableWidget = ({
       if (!dragging.current || dragCancelled.current) return;
       const dx = e.clientX - dragStartPos.current.x;
       const dy = e.clientY - dragStartPos.current.y;
-      if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
+      // Only activate drag after exceeding threshold
+      if (!isDragging && Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
       e.preventDefault();
-
+      if (!isDragging) setIsDragging(true);
       const nx = e.clientX - offset.current.x;
       const ny = e.clientY - offset.current.y;
-
-      // ─── Direct DOM update — zero React re-renders during drag ───────────
-      if (nodeRef.current) {
-        nodeRef.current.style.left = `${nx}px`;
-        nodeRef.current.style.top = `${ny}px`;
-      }
-      // Keep posRef in sync so onUp can read the final coords
-      posRef.current = { ...posRef.current, x: nx, y: ny };
-
-      // Only flip isDragging once (for cursor / ring UI)
-      if (!isDragging) setIsDragging(true);
+      updateWidgetPosition(id, { x: nx, y: ny });
     };
 
     const onUp = () => {
       if (dragging.current) {
-        if (isDragging) {
-          const finalX = isBuildMode
-            ? Math.round(posRef.current.x / GRID) * GRID
-            : posRef.current.x;
-          const finalY = isBuildMode
-            ? Math.round(posRef.current.y / GRID) * GRID
-            : posRef.current.y;
-          // Snap DOM node to grid instantly before committing to state
-          if (nodeRef.current) {
-            nodeRef.current.style.left = `${finalX}px`;
-            nodeRef.current.style.top = `${finalY}px`;
-          }
-          updateWidgetPosition(id, { x: finalX, y: finalY });
+        if (isDragging && isBuildMode) {
+          updateWidgetPosition(id, {
+            x: Math.round(posRef.current.x / GRID) * GRID,
+            y: Math.round(posRef.current.y / GRID) * GRID,
+          });
         }
         dragging.current = false;
         dragCancelled.current = false;
@@ -303,7 +288,6 @@ const DraggableWidget = ({
 
   const widgetContent = (
     <motion.div
-      ref={nodeRef}
       data-widget-id={id}
       initial={{ opacity: 0, scale: 0.92, y: 8 }}
       animate={{
@@ -312,6 +296,7 @@ const DraggableWidget = ({
         filter: isEditingOther ? "blur(4px)" : "none",
       }}
       exit={{ opacity: 0, scale: 0.92, y: 8 }}
+      // During drag: cut all spring transitions so content never lags behind the position
       transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 20 }}
       className={`${isBeingEdited ? "fixed" : "absolute"} ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
       style={{
@@ -321,6 +306,7 @@ const DraggableWidget = ({
         ...(autoHeight ? {} : { height: pos.h }),
         pointerEvents: isEditingOther ? "none" : "auto",
         zIndex: containerStyle?.zIndex ?? (isBeingEdited ? 65 : isDragging ? 60 : 50),
+        willChange: isDragging ? "transform" : "auto",
         ...containerStyle,
       }}
       onMouseEnter={() => setIsHovered(true)}
