@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { ResponsiveGridLayout, useContainerWidth } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { motion, AnimatePresence } from "framer-motion";
@@ -72,29 +72,20 @@ const makeLayouts = (widgets: string[]) => {
   return { lg, md, sm };
 };
 
-/* ── Sticky Notes ── */
+/* ─── Sticky Notes ─── */
 const STICKY_COLORS = [
-  { key: "yellow", bg: "bg-yellow-100", text: "text-yellow-900" },
-  { key: "blue", bg: "bg-blue-100", text: "text-blue-900" },
-  { key: "green", bg: "bg-green-100", text: "text-green-900" },
-  { key: "pink", bg: "bg-pink-100", text: "text-pink-900" },
-  { key: "purple", bg: "bg-purple-100", text: "text-purple-900" },
+  { key: "yellow", bg: "bg-yellow-100 dark:bg-yellow-900/30", text: "text-yellow-900 dark:text-yellow-200" },
+  { key: "blue", bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-900 dark:text-blue-200" },
+  { key: "green", bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-900 dark:text-green-200" },
+  { key: "pink", bg: "bg-pink-100 dark:bg-pink-900/30", text: "text-pink-900 dark:text-pink-200" },
+  { key: "purple", bg: "bg-purple-100 dark:bg-purple-900/30", text: "text-purple-900 dark:text-purple-200" },
 ];
 
 const DashboardStickyNotes = ({ notes, onUpdate }: {
   notes: Array<{ id: string; text: string; color: string }>;
   onUpdate: (notes: Array<{ id: string; text: string; color: string }>) => void;
 }) => {
-  const updateNote = (id: string, text: string) => {
-    onUpdate(notes.map(n => n.id === id ? { ...n, text } : n));
-  };
-
-  const removeNote = (id: string) => {
-    onUpdate(notes.filter(n => n.id !== id));
-  };
-
   if (notes.length === 0) return null;
-
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between mb-2">
@@ -109,12 +100,12 @@ const DashboardStickyNotes = ({ notes, onUpdate }: {
             <div key={note.id} className={`relative w-[160px] min-h-[100px] p-3 rounded-xl shadow-sm ${colorCfg.bg} group`}>
               <textarea
                 value={note.text}
-                onChange={e => updateNote(note.id, e.target.value)}
+                onChange={e => onUpdate(notes.map(n => n.id === note.id ? { ...n, text: e.target.value } : n))}
                 placeholder="Write something..."
                 className={`w-full h-full bg-transparent border-none outline-none resize-none text-xs ${colorCfg.text}`}
               />
               <button
-                onClick={() => removeNote(note.id)}
+                onClick={() => onUpdate(notes.filter(n => n.id !== note.id))}
                 className="absolute top-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
               >
                 <X size={10} className={colorCfg.text} />
@@ -127,49 +118,159 @@ const DashboardStickyNotes = ({ notes, onUpdate }: {
   );
 };
 
+/* ─── Default pages ─── */
+interface Page { id: string; name: string; widgets: string[] }
+
+const DEFAULT_PAGES: Page[] = [
+  { id: "page-1", name: "Productivity", widgets: ["smart-plan", "today-todo", "budget-preview", "savings-ring"] },
+  { id: "page-2", name: "Analytics", widgets: ["top-tasks", "project-status", "gamification", "recent-notes"] },
+];
+
+/* ─── Page Grid (renders one page of widgets) ─── */
+const PageGrid = ({ page, editMode, onRemoveWidget, renamingWidget, renameValue, setRenamingWidget, setRenameValue, commitRename, config }: {
+  page: Page;
+  editMode: boolean;
+  onRemoveWidget: (pageId: string, widgetId: string) => void;
+  renamingWidget: string | null;
+  renameValue: string;
+  setRenamingWidget: (id: string | null) => void;
+  setRenameValue: (v: string) => void;
+  commitRename: () => void;
+  config: any;
+}) => {
+  const { width, containerRef } = useContainerWidth({ initialWidth: 1200 });
+  const layouts = makeLayouts(page.widgets);
+
+  const getLabel = (widgetId: string) => {
+    if (config.widgetNames?.[widgetId]) return config.widgetNames[widgetId];
+    const cfg = WIDGET_REGISTRY.find(w => w.id === widgetId);
+    if (!cfg) return widgetId;
+    return cfg.label.includes(".") ? t(cfg.label) : cfg.label;
+  };
+
+  return (
+    <div ref={containerRef}>
+      {page.widgets.length > 0 ? (
+        <div className={editMode ? "ring-1 ring-dashed ring-border/50 rounded-xl p-2 bg-secondary/20" : ""}>
+          <ResponsiveGridLayout
+            layouts={layouts}
+            breakpoints={{ lg: 1024, md: 768, sm: 0 }}
+            cols={{ lg: 12, md: 4, sm: 1 }}
+            rowHeight={60}
+            width={width}
+            margin={[12, 12] as [number, number]}
+            dragConfig={{ enabled: editMode, handle: ".widget-drag-handle" }}
+            resizeConfig={{ enabled: editMode }}
+          >
+            {page.widgets.map((widgetId) => {
+              const cfg = WIDGET_REGISTRY.find((w) => w.id === widgetId);
+              if (!cfg) return null;
+              return (
+                <div key={widgetId} className={`flux-card relative overflow-hidden group ${editMode ? "ring-1 ring-primary/20" : ""}`}>
+                  {!editMode && (
+                    <button
+                      onClick={() => onRemoveWidget(page.id, widgetId)}
+                      className="absolute top-2 right-2 z-20 p-1 rounded-lg bg-background/80 backdrop-blur border border-border/40 shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-150 hover:bg-destructive/10 text-muted-foreground hover:text-destructive hover:border-destructive/30"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
+                  {editMode && (
+                    <div className="absolute top-1 left-1 right-1 z-10 flex items-center justify-between">
+                      <div className="flex items-center gap-0.5">
+                        <div className="widget-drag-handle p-1 cursor-grab text-muted-foreground hover:text-foreground">
+                          <GripVertical size={12} />
+                        </div>
+                        {renamingWidget === widgetId ? (
+                          <input value={renameValue} onChange={e => setRenameValue(e.target.value)}
+                            onBlur={commitRename} onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingWidget(null); }}
+                            className="text-[10px] font-medium bg-transparent border-b border-primary/40 outline-none w-20" autoFocus />
+                        ) : (
+                          <button onClick={() => { setRenamingWidget(widgetId); setRenameValue(getLabel(widgetId)); }} className="text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-0.5">
+                            {getLabel(widgetId)} <Pencil size={8} />
+                          </button>
+                        )}
+                      </div>
+                      <button onClick={() => onRemoveWidget(page.id, widgetId)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+                  {renderWidget(cfg.type)}
+                </div>
+              );
+            })}
+          </ResponsiveGridLayout>
+        </div>
+      ) : (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flux-card text-center py-16">
+          <Pin size={32} className="mx-auto mb-4 text-muted-foreground/30" />
+          <h3 className="font-semibold font-display mb-2">Empty page</h3>
+          <p className="text-sm text-muted-foreground">Add widgets to this page using the controls above.</p>
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Main GridDashboard ─── */
 const GridDashboard = () => {
   const { config, updateConfig } = useDashboardConfig();
   const [editMode, setEditMode] = useState(false);
   const [showWidgetPicker, setShowWidgetPicker] = useState(false);
   const [renamingWidget, setRenamingWidget] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const { width, containerRef } = useContainerWidth({ initialWidth: 1200 });
 
   const { goals, tasks, updateTask, updateGoal, findFolderNode } = useFlux();
 
-  const activeWidgets = config.activeWidgets;
-  const layouts = config.layouts || makeLayouts(activeWidgets);
-  const stickyNotes = config.stickyNotes;
+  // Pages state (persisted via config.pages, falling back to default)
+  const pages: Page[] = (config as any).pages || DEFAULT_PAGES;
+  const [currentPage, setCurrentPage] = useState(0);
+  const [direction, setDirection] = useState(0); // -1 left, 1 right
+  const hoverDotTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const stickyNotes = config.stickyNotes;
   const pinnedGoals = goals.filter((g) => g.pinned);
   const pinnedTasks = tasks.filter((tk) => tk.pinned);
-  const hasPinnedContent = pinnedGoals.length > 0 || pinnedTasks.length > 0;
 
-  const handleLayoutChange = useCallback((_layout: any, allLayouts: any) => {
-    updateConfig({ layouts: allLayouts });
-  }, [updateConfig]);
+  const goToPage = useCallback((idx: number, dir: number) => {
+    setDirection(dir);
+    setCurrentPage(idx);
+  }, []);
 
-  const removeWidget = (id: string) => {
-    updateConfig({ activeWidgets: activeWidgets.filter(w => w !== id) });
+  /* Arrow key navigation */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+      if ((e.target as HTMLElement)?.isContentEditable) return;
+      if (e.key === "ArrowRight") goToPage(Math.min(currentPage + 1, pages.length - 1), 1);
+      if (e.key === "ArrowLeft") goToPage(Math.max(currentPage - 1, 0), -1);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [currentPage, pages.length, goToPage]);
+
+  const updatePages = useCallback((next: Page[]) => {
+    updateConfig({ ...config, pages: next } as any);
+  }, [config, updateConfig]);
+
+  const addPage = () => {
+    const next = [...pages, { id: `page-${Date.now()}`, name: `Page ${pages.length + 1}`, widgets: [] }];
+    updatePages(next);
+    setDirection(1);
+    setCurrentPage(next.length - 1);
+  };
+
+  const removeWidgetFromPage = (pageId: string, widgetId: string) => {
+    const next = pages.map(p => p.id === pageId ? { ...p, widgets: p.widgets.filter(w => w !== widgetId) } : p);
+    updatePages(next);
   };
 
   const addWidget = (id: string) => {
-    if (activeWidgets.includes(id)) return;
-    const next = [...activeWidgets, id];
-    updateConfig({ activeWidgets: next, layouts: makeLayouts(next) });
+    const next = pages.map((p, i) => i === currentPage ? { ...p, widgets: [...p.widgets.filter(w => w !== id), id] } : p);
+    updatePages(next);
     setShowWidgetPicker(false);
-  };
-
-  const getWidgetLabel = (widgetId: string) => {
-    if (config.widgetNames[widgetId]) return config.widgetNames[widgetId];
-    const cfg = WIDGET_REGISTRY.find(w => w.id === widgetId);
-    if (!cfg) return widgetId;
-    return cfg.label.includes(".") ? t(cfg.label) : cfg.label;
-  };
-
-  const startRename = (widgetId: string) => {
-    setRenamingWidget(widgetId);
-    setRenameValue(getWidgetLabel(widgetId));
   };
 
   const commitRename = () => {
@@ -184,10 +285,19 @@ const GridDashboard = () => {
     updateConfig({ stickyNotes: [...stickyNotes, { id: `sn-${Date.now()}`, text: "", color }] });
   };
 
-  const availableToAdd = WIDGET_REGISTRY.filter((w) => !activeWidgets.includes(w.id));
+  const currentWidgets = pages[currentPage]?.widgets || [];
+  const allActiveWidgets = pages.flatMap(p => p.widgets);
+  const availableToAdd = WIDGET_REGISTRY.filter((w) => !currentWidgets.includes(w.id));
+
+  /* Page slide variants */
+  const variants = {
+    enter: (dir: number) => ({ x: dir > 0 ? "100%" : "-100%", opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? "-100%" : "100%", opacity: 0 }),
+  };
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4" ref={containerRef}>
+    <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold font-display">{t("dashboard.title")}</h2>
@@ -234,84 +344,50 @@ const GridDashboard = () => {
         </button>
       )}
 
-      {/* Sticky Notes */}
       <DashboardStickyNotes notes={stickyNotes} onUpdate={(notes) => updateConfig({ stickyNotes: notes })} />
 
-      {/* Grid */}
-      {activeWidgets.length > 0 && (
-        <div className={editMode ? "ring-1 ring-dashed ring-border/50 rounded-xl p-2 bg-secondary/20" : ""}>
-          <ResponsiveGridLayout
-            layouts={layouts}
-            breakpoints={{ lg: 1024, md: 768, sm: 0 }}
-            cols={{ lg: 12, md: 4, sm: 1 }}
-            rowHeight={60}
-            width={width}
-            margin={[12, 12] as [number, number]}
-            dragConfig={{ enabled: editMode, handle: ".widget-drag-handle" }}
-            resizeConfig={{ enabled: editMode }}
-            onLayoutChange={handleLayoutChange}
+      {/* ─── iOS-style page slide ─── */}
+      <div className="relative overflow-hidden flex-1">
+        <AnimatePresence initial={false} custom={direction} mode="wait">
+          <motion.div
+            key={currentPage}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ type: "spring", stiffness: 280, damping: 32 }}
           >
-            {activeWidgets.map((widgetId) => {
-              const cfg = WIDGET_REGISTRY.find((w) => w.id === widgetId);
-              if (!cfg) return null;
-              return (
-                <div key={widgetId} className={`flux-card relative overflow-hidden group ${editMode ? "ring-1 ring-primary/20" : ""}`}>
-                  {/* Always-visible X button — shown outside edit mode, appears on hover */}
-                  {!editMode && (
-                    <button
-                      onClick={() => removeWidget(widgetId)}
-                      title="Remove widget"
-                      className="absolute top-2 right-2 z-20 p-1 rounded-lg bg-background/80 backdrop-blur border border-border/40 shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-150 hover:bg-destructive/10 text-muted-foreground hover:text-destructive hover:border-destructive/30"
-                    >
-                      <X size={11} />
-                    </button>
-                  )}
-                  {editMode && (
-                    <div className="absolute top-1 left-1 right-1 z-10 flex items-center justify-between">
-                      <div className="flex items-center gap-0.5">
-                        <div className="widget-drag-handle p-1 cursor-grab text-muted-foreground hover:text-foreground">
-                          <GripVertical size={12} />
-                        </div>
-                        {renamingWidget === widgetId ? (
-                          <input value={renameValue} onChange={e => setRenameValue(e.target.value)}
-                            onBlur={commitRename} onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingWidget(null); }}
-                            className="text-[10px] font-medium bg-transparent border-b border-primary/40 outline-none w-20" autoFocus />
-                        ) : (
-                          <button onClick={() => startRename(widgetId)} className="text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-0.5">
-                            {getWidgetLabel(widgetId)} <Pencil size={8} />
-                          </button>
-                        )}
-                      </div>
-                      <button onClick={() => removeWidget(widgetId)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-                        <X size={12} />
-                      </button>
-                    </div>
-                  )}
-                  {renderWidget(cfg.type)}
-                </div>
-              );
-            })}
-          </ResponsiveGridLayout>
-        </div>
-      )}
+            <PageGrid
+              page={pages[currentPage] || DEFAULT_PAGES[0]}
+              editMode={editMode}
+              onRemoveWidget={removeWidgetFromPage}
+              renamingWidget={renamingWidget}
+              renameValue={renameValue}
+              setRenamingWidget={setRenamingWidget}
+              setRenameValue={setRenameValue}
+              commitRename={commitRename}
+              config={config}
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-      {/* Pinned items */}
-      {hasPinnedContent && (
+      {/* Pinned items (always shown, independent of page) */}
+      {(pinnedGoals.length > 0 || pinnedTasks.length > 0) && (
         <div className="mt-6 space-y-3">
           <h3 className="text-sm font-semibold font-display text-muted-foreground flex items-center gap-1.5">
             <Pin size={12} className="fill-current" /> {t("dashboard.pinned_items")}
           </h3>
-          
           {pinnedGoals.map((goal) => (
             <div key={goal.id} className="relative group">
               <FinanceDashboard goal={goal} />
               <button onClick={() => { updateGoal(goal.id, { pinned: false }); toast.success(t("home.unpinned")); }}
-                className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/80 backdrop-blur border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
+                className="absolute top-3 right-3 p-1.5 rounded-lg bg-background/80 backdrop-blur border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
                 <PinOff size={14} />
               </button>
             </div>
           ))}
-
           {pinnedTasks.map((item) => {
             if (item.type === "budget") {
               let rows: BudgetRow[] = [];
@@ -320,7 +396,7 @@ const GridDashboard = () => {
                 <div key={item.id} className="relative group">
                   <BudgetTable taskId={item.id} title={item.title} initialRows={rows} pinned={item.pinned} />
                   <button onClick={() => { updateTask(item.id, { pinned: false }); toast.success(t("home.unpinned")); }}
-                    className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/80 backdrop-blur border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
+                    className="absolute top-3 right-3 p-1.5 rounded-lg bg-background/80 backdrop-blur border border-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
                     <PinOff size={14} />
                   </button>
                 </div>
@@ -331,9 +407,7 @@ const GridDashboard = () => {
               <div key={item.id} className="flux-card relative group">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    {item.type === "note" ? (
-                      <FileText size={16} className="text-muted-foreground" />
-                    ) : (
+                    {item.type === "note" ? <FileText size={16} className="text-muted-foreground" /> : (
                       <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${item.done ? "bg-primary border-primary" : "border-border"}`}>
                         {item.done && <Check size={10} className="text-primary-foreground" />}
                       </div>
@@ -355,14 +429,35 @@ const GridDashboard = () => {
         </div>
       )}
 
-      {/* Empty state */}
-      {activeWidgets.length === 0 && !hasPinnedContent && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flux-card text-center py-16">
-          <Pin size={32} className="mx-auto mb-4 text-muted-foreground/30" />
-          <h3 className="font-semibold font-display mb-2 text-lg">{t("home.empty")}</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">{t("home.empty_desc")}</p>
-        </motion.div>
-      )}
+      {/* ─── Pagination Dots + Add Page ─── */}
+      <div className="flex items-center justify-center gap-2 mt-5 pb-2" data-tour="pagination-dots">
+        <div className="flex items-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-sm" style={{ background: "hsl(var(--card)/0.6)", border: "1px solid hsl(var(--border)/0.4)" }}>
+          {pages.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => goToPage(idx, idx > currentPage ? 1 : -1)}
+              onDragOver={() => {
+                if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current);
+                hoverDotTimer.current = setTimeout(() => goToPage(idx, idx > currentPage ? 1 : -1), 500);
+              }}
+              onDragLeave={() => { if (hoverDotTimer.current) clearTimeout(hoverDotTimer.current); }}
+              aria-label={`Go to page ${idx + 1}`}
+              className={`transition-all duration-300 rounded-full ${
+                idx === currentPage
+                  ? "w-5 h-2 bg-primary"
+                  : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          onClick={addPage}
+          aria-label="Add new page"
+          className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
     </div>
   );
 };
