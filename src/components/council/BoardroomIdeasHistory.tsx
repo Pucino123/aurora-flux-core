@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, ChevronRight, Star, Trash2, TrendingUp, BookOpen,
-  Search, SlidersHorizontal, X, RotateCcw, Calendar,
+  Sparkles, ChevronRight, Star, Trash2, BookOpen,
+  Search, SlidersHorizontal, X, RotateCcw, Calendar, Tag,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,6 +20,7 @@ export interface BoardroomIdea {
   consensus_score: number | null;
   starred: boolean | null;
   created_at: string;
+  tags: string[];
   responses: { persona_key: string; vote_score: number | null; analysis: string | null }[];
 }
 
@@ -35,6 +36,7 @@ interface FilterState {
   starredOnly: boolean;
   dateRange: "all" | "week" | "month" | "3months";
   advisorFilter: Record<string, { min: number; max: number } | null>;
+  tagFilter: string | null;
 }
 
 const DEFAULT_FILTERS: FilterState = {
@@ -42,6 +44,7 @@ const DEFAULT_FILTERS: FilterState = {
   starredOnly: false,
   dateRange: "all",
   advisorFilter: { elena: null, helen: null, anton: null, margot: null },
+  tagFilter: null,
 };
 
 const DATE_RANGE_OPTIONS = [
@@ -58,12 +61,19 @@ const CONFIDENCE_BRACKETS = [
   { label: "Low",    min: 0,  max: 39 },
 ];
 
+// Tag chip colors cycling
+const TAG_PALETTE = ["#a78bfa", "#34d399", "#fbbf24", "#f87171", "#22d3ee", "#fb7185", "#a3e635"];
+const tagColor = (tag: string) => TAG_PALETTE[Math.abs(tag.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % TAG_PALETTE.length];
+
 const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
   const [ideas, setIdeas] = useState<BoardroomIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  // tag editing state per idea
+  const [editingTagsFor, setEditingTagsFor] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     loadBoardroomIdeas();
@@ -75,7 +85,7 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
     try {
       const { data: ideaData } = await supabase
         .from("council_ideas")
-        .select("id, content, consensus_score, starred, created_at")
+        .select("id, content, consensus_score, starred, created_at, tags")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -103,6 +113,7 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
           consensus_score: i.consensus_score,
           starred: i.starred,
           created_at: i.created_at,
+          tags: Array.isArray(i.tags) ? (i.tags as string[]) : [],
           responses: (respByIdea[i.id] || []) as { persona_key: string; vote_score: number | null; analysis: string | null }[],
         }));
 
@@ -123,6 +134,25 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
     setIdeas(prev => prev.filter(i => i.id !== ideaId));
   };
 
+  // ── Tag management ──
+  const handleAddTag = async (ideaId: string, tag: string) => {
+    const trimmed = tag.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (!trimmed) return;
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea || idea.tags.includes(trimmed)) return;
+    const newTags = [...idea.tags, trimmed];
+    await supabase.from("council_ideas").update({ tags: newTags }).eq("id", ideaId);
+    setIdeas(prev => prev.map(i => i.id === ideaId ? { ...i, tags: newTags } : i));
+  };
+
+  const handleRemoveTag = async (ideaId: string, tag: string) => {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) return;
+    const newTags = idea.tags.filter(t => t !== tag);
+    await supabase.from("council_ideas").update({ tags: newTags }).eq("id", ideaId);
+    setIdeas(prev => prev.map(i => i.id === ideaId ? { ...i, tags: newTags } : i));
+  };
+
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
@@ -135,17 +165,18 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
     return "#f87171";
   };
 
-  // ── Filtering logic ──
+  // All unique tags across all sessions
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    ideas.forEach(i => i.tags.forEach(t => set.add(t)));
+    return Array.from(set).sort();
+  }, [ideas]);
 
+  // ── Filtering logic ──
   const filteredIdeas = useMemo(() => {
     return ideas.filter(idea => {
-      // Search
       if (filters.search && !idea.content.toLowerCase().includes(filters.search.toLowerCase())) return false;
-
-      // Starred only
       if (filters.starredOnly && !idea.starred) return false;
-
-      // Date range
       if (filters.dateRange !== "all") {
         const now = Date.now();
         const created = new Date(idea.created_at).getTime();
@@ -155,15 +186,13 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
         if (filters.dateRange === "month"   && diffMs > 30 * day) return false;
         if (filters.dateRange === "3months" && diffMs > 90 * day) return false;
       }
-
-      // Advisor confidence filters
       for (const [key, bracket] of Object.entries(filters.advisorFilter)) {
         if (!bracket) continue;
         const r = idea.responses.find(r => r.persona_key === key);
         if (!r || r.vote_score === null) return false;
         if (r.vote_score < bracket.min || r.vote_score > bracket.max) return false;
       }
-
+      if (filters.tagFilter && !idea.tags.includes(filters.tagFilter)) return false;
       return true;
     });
   }, [ideas, filters]);
@@ -172,7 +201,8 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
     filters.search !== "" ||
     filters.starredOnly ||
     filters.dateRange !== "all" ||
-    Object.values(filters.advisorFilter).some(v => v !== null);
+    Object.values(filters.advisorFilter).some(v => v !== null) ||
+    filters.tagFilter !== null;
 
   const clearFilters = () => setFilters(DEFAULT_FILTERS);
 
@@ -234,6 +264,31 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
           className="w-full pl-8 pr-3 py-2 bg-white/4 border border-white/8 rounded-xl text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/15 transition-colors"
         />
       </div>
+
+      {/* Tag filter chips (if any tags exist) */}
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {allTags.map(tag => {
+            const color = tagColor(tag);
+            const active = filters.tagFilter === tag;
+            return (
+              <button
+                key={tag}
+                onClick={() => setFilters(f => ({ ...f, tagFilter: active ? null : tag }))}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium transition-all"
+                style={{
+                  background: active ? `${color}25` : `${color}0a`,
+                  border: `1px solid ${active ? `${color}50` : `${color}20`}`,
+                  color: active ? color : `${color}80`,
+                }}
+              >
+                <Tag size={7} />
+                {tag}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Filter panel */}
       <AnimatePresence initial={false}>
@@ -342,6 +397,7 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
               ? Math.round(idea.responses.reduce((a, r) => a + (r.vote_score ?? 0), 0) / idea.responses.length)
               : null;
             const consColor = getConsensusColor(idea.consensus_score ?? avgConf);
+            const isEditingTags = editingTagsFor === idea.id;
 
             return (
               <motion.div
@@ -363,8 +419,26 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
                     <Star size={11} className={idea.starred ? "fill-yellow-400 text-yellow-400" : ""} />
                   </button>
 
-                  {/* Idea text */}
-                  <p className="flex-1 text-[11px] text-white/70 truncate leading-snug">{idea.content}</p>
+                  {/* Idea text + tags inline */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-white/70 truncate leading-snug">{idea.content}</p>
+                    {idea.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {idea.tags.map(tag => {
+                          const color = tagColor(tag);
+                          return (
+                            <span
+                              key={tag}
+                              className="text-[8px] px-1.5 py-0.5 rounded-full font-medium"
+                              style={{ background: `${color}18`, color, border: `1px solid ${color}25` }}
+                            >
+                              {tag}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Advisor confidence badges */}
                   <div className="flex items-center gap-1 shrink-0">
@@ -443,6 +517,70 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
                               </div>
                             );
                           })}
+                        </div>
+
+                        {/* Tags editor */}
+                        <div className="rounded-xl p-2.5 border border-white/6" style={{ background: "rgba(255,255,255,0.02)" }}>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Tag size={9} className="text-white/30" />
+                            <span className="text-[9px] text-white/30 uppercase tracking-widest">Tags</span>
+                            <button
+                              onClick={e => { e.stopPropagation(); setEditingTagsFor(isEditingTags ? null : idea.id); setTagInput(""); }}
+                              className="ml-auto text-[8px] text-white/25 hover:text-white/50 transition-colors"
+                            >
+                              {isEditingTags ? "Done" : "+ Add"}
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {idea.tags.map(tag => {
+                              const color = tagColor(tag);
+                              return (
+                                <span
+                                  key={tag}
+                                  className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-medium"
+                                  style={{ background: `${color}18`, color, border: `1px solid ${color}28` }}
+                                >
+                                  {tag}
+                                  {isEditingTags && (
+                                    <button
+                                      onClick={e => { e.stopPropagation(); handleRemoveTag(idea.id, tag); }}
+                                      className="opacity-50 hover:opacity-100 transition-opacity"
+                                    >
+                                      <X size={7} />
+                                    </button>
+                                  )}
+                                </span>
+                              );
+                            })}
+                            {idea.tags.length === 0 && !isEditingTags && (
+                              <span className="text-[9px] text-white/20">No tags yet</span>
+                            )}
+                          </div>
+                          {isEditingTags && (
+                            <div className="flex gap-1.5 mt-2">
+                              <input
+                                value={tagInput}
+                                onChange={e => setTagInput(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === "Enter" || e.key === ",") {
+                                    e.preventDefault();
+                                    handleAddTag(idea.id, tagInput);
+                                    setTagInput("");
+                                  }
+                                }}
+                                placeholder="startup, product, pivot…"
+                                className="flex-1 bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-[10px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/15 transition-colors"
+                                onClick={e => e.stopPropagation()}
+                              />
+                              <button
+                                onClick={e => { e.stopPropagation(); handleAddTag(idea.id, tagInput); setTagInput(""); }}
+                                className="px-2 py-1 rounded-lg text-[9px] font-semibold text-purple-300 transition-colors"
+                                style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.25)" }}
+                              >
+                                Add
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Actions */}
