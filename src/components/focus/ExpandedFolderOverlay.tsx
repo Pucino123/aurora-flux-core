@@ -225,7 +225,7 @@ const ExpandedFolderOverlay = ({
   // Open as a proper WindowFrame (floating) via WindowManager — then close the overlay
   const openAsWindow = useCallback((layout: "floating" | "fullscreen" | "split-left" | "split-right" = "floating") => {
     if (!folder) return;
-    const win = openWindow({
+    openWindow({
       type: "widget",
       contentId: `folder-${folderId}`,
       title: folder.title,
@@ -234,7 +234,6 @@ const ExpandedFolderOverlay = ({
       position: pos ?? getCenter(),
       size: { w: MODAL_W, h: 560 },
     });
-    windowIdRef.current = win?.id ?? null;
     onClose();
   }, [folder, folderId, openWindow, pos, getCenter, onClose]);
 
