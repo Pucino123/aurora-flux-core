@@ -167,12 +167,14 @@ const BoardroomIdeasHistory: React.FC<Props> = ({ userId, onRestoreIdea }) => {
     return "#f87171";
   };
 
-  // All unique tags across all sessions
-  const allTags = useMemo(() => {
-    const set = new Set<string>();
-    ideas.forEach(i => i.tags.forEach(t => set.add(t)));
-    return Array.from(set).sort();
+  // All unique tags across all sessions, with usage counts
+  const allTagsWithCount = useMemo(() => {
+    const counts: Record<string, number> = {};
+    ideas.forEach(i => i.tags.forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([tag]) => tag);
   }, [ideas]);
+
+  const allTags = allTagsWithCount;
 
   // ── Filtering logic ──
   const filteredIdeas = useMemo(() => {
