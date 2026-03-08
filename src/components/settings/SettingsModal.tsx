@@ -214,6 +214,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
 
   const TAB_ITEMS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "account", label: "Account", icon: <User size={15} /> },
+    { id: "company", label: "Company Profile", icon: <Building2 size={15} /> },
     { id: "integrations", label: "Integrations", icon: <Link size={15} /> },
     { id: "sparks", label: "Sparks & Billing", icon: <Zap size={15} /> },
     { id: "appearance", label: "Appearance", icon: <Palette size={15} /> },
