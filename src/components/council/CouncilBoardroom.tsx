@@ -768,6 +768,7 @@ interface PersonaResponse {
 }
 
 const CouncilBoardroom: React.FC = () => {
+  const { user } = useAuth();
   const [idea, setIdea] = useState("");
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({
     elena: "idle", helen: "idle", anton: "idle", margot: "idle",
@@ -784,6 +785,7 @@ const CouncilBoardroom: React.FC = () => {
   const [floatingEmojis, setFloatingEmojis] = useState<Record<string, string[]>>({
     elena: [], helen: [], anton: [], margot: [],
   });
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
 
