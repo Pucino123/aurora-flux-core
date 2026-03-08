@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import DOMPurify from "dompurify";
 import { DbDocument } from "@/hooks/useDocuments";
 import DocumentAiChat from "./DocumentAiChat";
 import WordsToolbar from "./toolbar/WordsToolbar";
@@ -7,6 +8,17 @@ import SheetsToolbar from "./toolbar/SheetsToolbar";
 import StatusBar from "./toolbar/StatusBar";
 import StudioModeOverlay from "./toolbar/StudioModeToggle";
 import { getCellDisplayValue, colIndexToLetter } from "@/lib/formulaEngine";
+import LayoutCanvas, { CanvasEntity } from "./LayoutCanvas";
+
+/** Safely sanitize HTML — strips scripts & inline handlers, keeps basic formatting + styles */
+const sanitize = (html: string) =>
+  DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["p","h1","h2","h3","h4","h5","h6","br","hr","b","strong","i","em","u","s","del",
+      "span","div","ul","ol","li","blockquote","pre","code","table","thead","tbody","tr","th","td",
+      "img","a","figure","figcaption","mark","sup","sub"],
+    ALLOWED_ATTR: ["href","src","alt","class","style","id","data-checked","data-aura-stream","contenteditable"],
+    FORBID_ATTR:  ["onerror","onload","onclick","onmouseover"],
+  });
 
 interface DocumentViewProps {
   document: DbDocument;
