@@ -62,6 +62,12 @@ const InvoiceModal = ({ open, contact, onClose }: Props) => {
       description: items.map(i => i.description).join(", ").slice(0, 80),
     });
     toast.success(`Invoice sent to ${contact.email || contact.name}`);
+    pushNotification({
+      type: "general",
+      title: "Invoice Sent",
+      body: `${invoiceNo} for $${grandTotal.toFixed(2)} sent to ${contact.name}`,
+      icon: "📄",
+    });
     setSending(false);
     onClose();
   };
