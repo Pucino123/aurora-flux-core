@@ -453,7 +453,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
       </nav>
 
       {/* Hero */}
-      <section className="relative z-10 flex flex-col items-center text-center pt-10 md:pt-16 pb-16 md:pb-24 px-5">
+      <section className="relative z-10 flex flex-col items-center text-center pt-10 md:pt-16 pb-10 md:pb-16 px-5">
         <motion.div initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }} className="flex flex-col items-center w-full">
           <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md border border-white/35 text-white text-[11px] md:text-xs font-semibold px-3 md:px-4 py-1 md:py-1.5 rounded-full mb-7 md:mb-10 shadow-sm">
             <Sparkles size={10} className="text-yellow-200" /> The workspace that shapes itself around you
@@ -478,6 +478,51 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
               Sign in
             </button>
           </div>
+        </motion.div>
+      </section>
+
+      {/* Social Proof Strip */}
+      <section className="relative z-10 pb-14 md:pb-20 px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
+          className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4"
+        >
+          {[
+            { initials: "MK", name: "Marcus K.", role: "Freelance Designer", stars: 5, quote: "Dashiii replaced four apps for me. The focus mode alone is worth it." },
+            { initials: "SR", name: "Sofia R.", role: "Product Manager", stars: 5, quote: "The Council feature is uncanny — it debates my ideas better than most colleagues." },
+            { initials: "JT", name: "James T.", role: "Solo Founder", stars: 5, quote: "I went from scattered notes and tabs to one beautiful workspace in an afternoon." },
+          ].map((t) => (
+            <div
+              key={t.initials}
+              className="rounded-2xl p-5 flex flex-col gap-3"
+              style={{
+                background: isDark ? "rgba(12,10,22,0.60)" : "rgba(255,255,255,0.14)",
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
+                border: isDark ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(255,255,255,0.32)",
+              }}
+            >
+              {/* Stars */}
+              <div className="flex gap-0.5">
+                {Array.from({ length: t.stars }).map((_, i) => (
+                  <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill="#fbbf24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                ))}
+              </div>
+              {/* Quote */}
+              <p className="text-sm text-white/75 leading-relaxed flex-1">"{t.quote}"</p>
+              {/* Author */}
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                  style={{ background: "rgba(139,92,246,0.5)", border: "1px solid rgba(139,92,246,0.4)" }}>
+                  {t.initials}
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-white/90">{t.name}</div>
+                  <div className="text-[10px] text-white/40">{t.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
         </motion.div>
       </section>
 
@@ -509,7 +554,7 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
             <p className="text-sm text-white/50">Watch how Dashiii adapts to the way you work.</p>
           </div>
           <div
-            className="relative rounded-3xl overflow-hidden aspect-video flex items-center justify-center"
+            className="relative rounded-3xl overflow-hidden aspect-video"
             style={{
               background: isDark ? "rgba(12,10,20,0.70)" : "rgba(255,255,255,0.12)",
               backdropFilter: "blur(32px)",
@@ -519,9 +564,10 @@ const LandingPage = ({ onEnter }: LandingPageProps) => {
             }}
           >
             {/* Ambient glow */}
-            <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(167,139,250,0.18), transparent 70%)" }} />
-            {/* Play button placeholder */}
-            <div className="flex flex-col items-center gap-4 relative z-10">
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(100,140,255,0.18), transparent 70%)" }} />
+            {/* Placeholder — replace src with real YouTube embed when ready */}
+            {/* To embed: <iframe className="w-full h-full" src="https://www.youtube.com/embed/YOUR_VIDEO_ID?autoplay=0&rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 relative z-10">
               <div
                 className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200"
                 style={{ background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.3)", backdropFilter: "blur(8px)" }}
