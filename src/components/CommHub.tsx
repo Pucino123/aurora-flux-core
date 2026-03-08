@@ -190,10 +190,10 @@ const TeamChatInline = () => {
         {messages.slice(-40).map(m => (
           <div key={m.id} className="flex gap-2">
             <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[9px] font-bold text-muted-foreground shrink-0 mt-0.5">
-              {m.display_name?.[0]?.toUpperCase() || "?"}
+              {(m.sender_name || m.user_id)?.[0]?.toUpperCase() || "?"}
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground mb-0.5">{m.display_name}</p>
+              <p className="text-[10px] text-muted-foreground mb-0.5">{m.sender_name || m.user_id.slice(0, 8)}</p>
               <div className="bg-secondary text-foreground text-xs px-2.5 py-1.5 rounded-2xl rounded-tl-sm max-w-[180px] break-words">
                 {m.content}
               </div>
