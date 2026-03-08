@@ -106,3 +106,7 @@ export const FocusChatWidget = () => {
     </DraggableWidget>
   );
 };
+
+/* ── CRM Pipeline ── */
+export const FocusCRMWidget = () => <CRMWidget />;
+
