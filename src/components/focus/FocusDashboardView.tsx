@@ -1468,6 +1468,30 @@ const FocusContent = () => {
               const winDoc = win.type === "document"
                 ? desktopDocs.find(d => d.id === win.contentId)
                 : null;
+
+              // Widget content map
+              const WIDGET_MAP: Record<string, React.ReactNode> = {
+                clock: <ClockWidget onOpenEditor={() => setClockEditorOpen(true)} />,
+                timer: <FocusTimer />,
+                music: <MusicWidget />,
+                planner: <TodaysPlanWidget />,
+                notes: <NotesWidget />,
+                crm: <CRMWidget />,
+                stats: <FocusStatsWidget />,
+                scratchpad: <ScratchpadWidget />,
+                quote: <QuoteOfDay />,
+                breathing: <BreathingWidget />,
+                council: <FocusCouncilWidget />,
+                aura: <AuraWidget />,
+                "budget-preview": <FocusBudgetWidget />,
+                "savings-ring": <FocusSavingsWidget />,
+                "weekly-workout": <FocusWorkoutWidget />,
+                "project-status": <FocusProjectStatusWidget />,
+                "top-tasks": <FocusTopTasksWidget />,
+                "smart-plan": <FocusSmartPlanWidget />,
+                gamification: <FocusGamificationWidget />,
+              };
+
               return (
                 <WindowFrame key={win.id} window={win}>
                   {win.type === "document" && winDoc ? (
@@ -1477,6 +1501,10 @@ const FocusContent = () => {
                       onUpdate={(id, upd) => updateDesktopDoc(id, upd)}
                       onDelete={(id) => { removeDesktopDoc(id); closeWindow(win.id); }}
                     />
+                  ) : win.type === "widget" && WIDGET_MAP[win.contentId] ? (
+                    <div className="w-full h-full overflow-auto relative">
+                      {WIDGET_MAP[win.contentId]}
+                    </div>
                   ) : (
                     <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                       Content not found
