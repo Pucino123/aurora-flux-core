@@ -2,11 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider, useTheme } from "next-themes";
+import { HelmetProvider } from "react-helmet-async";
 import { FluxProvider } from "./context/FluxContext";
 import { FocusProvider } from "./context/FocusContext";
 import { AuthProvider } from "./hooks/useAuth";
+import { MonetizationProvider } from "./context/MonetizationContext";
 import Index from "./pages/Index";
 import Focus from "./pages/Focus";
 import Auth from "./pages/Auth";
@@ -16,7 +18,6 @@ import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
-/** Global Cmd+Shift+D dark-mode toggle */
 const DarkModeShortcut = () => {
   const { theme, setTheme } = useTheme();
   useEffect(() => {
@@ -33,30 +34,34 @@ const DarkModeShortcut = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <AuthProvider>
-        <FluxProvider>
-          <FocusProvider>
-          <TooltipProvider>
-            <DarkModeShortcut />
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/focus" element={<Focus />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/calendar" element={<CalendarCallback />} />
-                <Route path="/" element={<Index />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-          </FocusProvider>
-        </FluxProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+  <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <AuthProvider>
+          <MonetizationProvider>
+            <FluxProvider>
+              <FocusProvider>
+                <TooltipProvider>
+                  <DarkModeShortcut />
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <Routes>
+                      <Route path="/focus" element={<Focus />} />
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/calendar" element={<CalendarCallback />} />
+                      <Route path="/" element={<Index />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </BrowserRouter>
+                </TooltipProvider>
+              </FocusProvider>
+            </FluxProvider>
+          </MonetizationProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;
