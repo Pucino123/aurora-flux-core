@@ -13,6 +13,8 @@ export interface DbDocument {
   updated_at: string;
 }
 
+export type MoveToTrashFn = (item: { id: string; type: "document"; title: string; originalData: any }) => void;
+
 const LS_KEY = "flux_local_documents";
 
 function lsGetDocs(): DbDocument[] {
