@@ -38,6 +38,7 @@ interface FolderModalProps {
 
 const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const { findFolderNode, updateFolder, removeFolder, createFolder, moveFolder, createBlock } = useFlux();
+  const { moveToTrash } = useTrash();
 
   const [navStack, setNavStack] = useState<string[]>([folderId]);
   const [direction, setDirection] = useState<1 | -1>(1);
