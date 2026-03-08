@@ -565,11 +565,11 @@ const FocusContent = () => {
     const title = type === "text" ? "Untitled Document" : "Untitled Spreadsheet";
     const doc = await createDocument(title, type, null);
     if (doc && pos) {
-      updateDesktopDocPosition(doc.id, pos);
+      updatePageDocPosition(doc.id, pos);
     }
     contextMenuPosRef.current = null;
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-  }, [createDocument, updateDesktopDocPosition]);
+  }, [createDocument, updatePageDocPosition]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
