@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import DOMPurify from "dompurify";
 import { DbDocument } from "@/hooks/useDocuments";
 import DocumentAiChat from "./DocumentAiChat";
 import WordsToolbar from "./toolbar/WordsToolbar";
@@ -7,6 +8,17 @@ import SheetsToolbar from "./toolbar/SheetsToolbar";
 import StatusBar from "./toolbar/StatusBar";
 import StudioModeOverlay from "./toolbar/StudioModeToggle";
 import { getCellDisplayValue, colIndexToLetter } from "@/lib/formulaEngine";
+import LayoutCanvas, { CanvasEntity } from "./LayoutCanvas";
+
+/** Safely sanitize HTML — strips scripts & inline handlers, keeps basic formatting + styles */
+const sanitize = (html: string) =>
+  DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["p","h1","h2","h3","h4","h5","h6","br","hr","b","strong","i","em","u","s","del",
+      "span","div","ul","ol","li","blockquote","pre","code","table","thead","tbody","tr","th","td",
+      "img","a","figure","figcaption","mark","sup","sub"],
+    ALLOWED_ATTR: ["href","src","alt","class","style","id","data-checked","data-aura-stream","contenteditable"],
+    FORBID_ATTR:  ["onerror","onload","onclick","onmouseover"],
+  });
 
 interface DocumentViewProps {
   document: DbDocument;
@@ -90,6 +102,13 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const initialized = useRef(false);
   const [studioMode, setStudioMode] = useState(false);
   const [zoom, setZoom] = useState(100);
+
+  // Layout canvas mode: if doc.content has an entities array, show canvas instead of text editor
+  const isCanvas = Array.isArray((doc.content as any)?.entities);
+  const canvasEntities: CanvasEntity[] = (doc.content as any)?.entities || [];
+  const handleCanvasChange = useCallback((entities: CanvasEntity[]) => {
+    onUpdate(doc.id, { content: { ...(doc.content as any), entities } });
+  }, [doc.id, doc.content, onUpdate]);
   const [ghostText, setGhostText] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const streamCancelRef = useRef<(() => void) | null>(null);
@@ -105,7 +124,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   useEffect(() => {
     if (editorRef.current && !initialized.current) {
       let html = (doc.content as any)?.html || "";
-      html = processCheckboxes(html);
+      html = sanitize(processCheckboxes(html));
       editorRef.current.innerHTML = html;
       initialized.current = true;
       bindCheckboxes(editorRef.current);
@@ -130,10 +149,11 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
     const handler = (e: CustomEvent) => {
       const { html, append } = e.detail || {};
       if (!html || !editorRef.current) return;
+      const safe = sanitize(html);
       if (append) {
-        editorRef.current.innerHTML += html;
+        editorRef.current.innerHTML += safe;
       } else {
-        editorRef.current.innerHTML = html;
+        editorRef.current.innerHTML = safe;
       }
       onUpdate(doc.id, { content: { html: editorRef.current.innerHTML } });
     };
@@ -550,10 +570,19 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
               : "0 4px 32px rgba(0,0,0,0.5)",
             border: lm ? "1px solid hsl(var(--border))" : "1px solid hsl(var(--border)/0.15)",
             borderRadius: 4,
-            overflow: "visible",
+            overflow: isCanvas ? "hidden" : "visible",
             zoom: `${zoom}%`,
+            position: "relative",
           }}
         >
+        {/* ── Layout Canvas mode ── */}
+        {isCanvas ? (
+          <LayoutCanvas
+            entities={canvasEntities}
+            onChange={handleCanvasChange}
+            lightMode={lm}
+          />
+        ) : (
         <div
           ref={editorRef}
           contentEditable
@@ -589,6 +618,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
             ${lm ? "selection:bg-primary/20" : "selection:bg-primary/20"}`}
           data-placeholder="Start typing..."
         />
+        )}
         </div>
         {/* ── Slash Command Palette ── */}
         <AnimatePresence>
