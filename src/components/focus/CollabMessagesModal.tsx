@@ -385,9 +385,13 @@ const CollabMessagesModal = ({ open, onOpenChange }: CollabMessagesModalProps) =
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Lighten default overlay so frosted glass effect is visible */}
-      <style dangerouslySetInnerHTML={{ __html: `[data-state="open"][class*="bg-black"] { background: rgba(0,0,0,0.35) !important; backdrop-filter: blur(4px); }` }} />
+      <style dangerouslySetInnerHTML={{ __html: `
+        [data-state="open"][class*="bg-black"] { background: rgba(0,0,0,0.35) !important; backdrop-filter: blur(4px); }
+        [data-slot="dialog-content"][data-state="open"] { animation: none !important; }
+        [data-slot="dialog-content"][data-state="closed"] { animation: none !important; }
+      ` }} />
       <DialogContent
-        className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden"
+        className="border-0 p-0 gap-0 overflow-hidden [&>button]:hidden data-[state=open]:animate-none data-[state=closed]:animate-none"
         onOpenAutoFocus={e => e.preventDefault()}
         onPointerDownOutside={e => {
           // Prevent dialog from closing when clicking the context menu portal
