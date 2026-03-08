@@ -206,13 +206,14 @@ const DraggableWidget = ({
 
     const onUp = () => {
       if (dragging.current) {
-        if (isBuildMode) {
+        if (isDragging && isBuildMode) {
           updateWidgetPosition(id, {
             x: Math.round(posRef.current.x / GRID) * GRID,
             y: Math.round(posRef.current.y / GRID) * GRID,
           });
         }
         dragging.current = false;
+        dragCancelled.current = false;
         setIsDragging(false);
       }
     };
