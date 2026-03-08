@@ -55,6 +55,7 @@ interface WindowManagerContextType {
   duplicateWindow: (id: string) => void;
   groupWindows: (idA: string, idB: string) => void;
   ungroupWindow: (id: string) => void;
+  updateWindowTitle: (id: string, title: string) => void;
 }
 
 const WindowManagerContext = createContext<WindowManagerContextType | null>(null);
