@@ -14,12 +14,12 @@ interface AiToolsPanelProps {
 }
 
 const AI_ACTIONS = [
-  { key: "rewrite", label: "AI Rewrite", icon: <RefreshCw size={13} /> },
-  { key: "improve", label: "Improve Tone", icon: <Sparkles size={13} /> },
-  { key: "summarize", label: "Summarize", icon: <Minimize2 size={13} /> },
-  { key: "expand", label: "Expand", icon: <Maximize2 size={13} /> },
-  { key: "shorten", label: "Shorten", icon: <Minimize2 size={13} /> },
-  { key: "translate", label: "Translate", icon: <Languages size={13} /> },
+  { key: "rewrite",   label: "AI Rewrite",   spark: 2, icon: <RefreshCw size={13} /> },
+  { key: "improve",   label: "Improve Tone", spark: 1, icon: <Sparkles size={13} /> },
+  { key: "summarize", label: "Summarize",    spark: 1, icon: <Minimize2 size={13} /> },
+  { key: "expand",    label: "Expand",       spark: 2, icon: <Maximize2 size={13} /> },
+  { key: "shorten",   label: "Shorten",      spark: 1, icon: <Minimize2 size={13} /> },
+  { key: "translate", label: "Translate",    spark: 3, icon: <Languages size={13} /> },
 ];
 
 const FLUX_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flux-ai`;
