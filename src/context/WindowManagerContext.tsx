@@ -55,6 +55,7 @@ interface WindowManagerContextType {
   duplicateWindow: (id: string) => void;
   groupWindows: (idA: string, idB: string) => void;
   ungroupWindow: (id: string) => void;
+  updateWindowTitle: (id: string, title: string) => void;
 }
 
 const WindowManagerContext = createContext<WindowManagerContextType | null>(null);
@@ -210,6 +211,10 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     setWindows(prev => prev.map(w => w.id === id ? { ...w, groupId: undefined } : w));
   }, []);
 
+  const updateWindowTitle = useCallback((id: string, title: string) => {
+    setWindows(prev => prev.map(w => w.id === id ? { ...w, title } : w));
+  }, []);
+
   // ── Global keyboard shortcuts ──────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -299,7 +304,7 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
       openWindow, closeWindow, setWindowLayout,
       updateWindowPosition, updateWindowSize, bringToFront,
       minimizeWindow, restoreWindow, closeSwitcher,
-      duplicateWindow, groupWindows, ungroupWindow,
+      duplicateWindow, groupWindows, ungroupWindow, updateWindowTitle,
     }}>
       {children}
     </WindowManagerContext.Provider>

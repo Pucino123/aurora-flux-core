@@ -3,9 +3,12 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import {
   X, Maximize2, PanelLeft, PanelRight, Square, Minus, Sun, Moon,
-  Copy, Group, Ungroup,
+  Copy, Group, Ungroup, Pencil, FolderOpen,
 } from "lucide-react";
 import { useWindowManager, AppWindow, WindowLayout } from "@/context/WindowManagerContext";
+import { useFolders } from "@/hooks/useCloudSync";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 // Non-floating layouts must sit above pill (z-9999) and dock (z-10150)
 const OVERLAY_Z = 10300;
@@ -108,8 +111,45 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const {
     closeWindow, setWindowLayout, updateWindowPosition,
     updateWindowSize, bringToFront, minimizeWindow,
-    duplicateWindow, groupWindows, ungroupWindow, windows,
+    duplicateWindow, groupWindows, ungroupWindow, windows, updateWindowTitle,
   } = useWindowManager();
+
+  const { user } = useAuth();
+  const { fetchFolders } = useFolders();
+  const [folders, setFolders] = useState<{ id: string; title: string; icon?: string | null }[]>([]);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(win.title);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Load folders for "Move to Folder" submenu
+  const loadFolders = useCallback(async () => {
+    const data = await fetchFolders();
+    setFolders(data || []);
+  }, [fetchFolders]);
+
+  const commitRename = useCallback(async () => {
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === win.title) { setIsRenaming(false); return; }
+    if (win.type === "document" && user) {
+      await (supabase as any).from("documents").update({ title: trimmed }).eq("id", win.contentId).eq("user_id", user.id);
+    }
+    updateWindowTitle(win.id, trimmed);
+    setIsRenaming(false);
+  }, [renameValue, win, user, updateWindowTitle]);
+
+  const handleRenameKey = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") commitRename();
+    if (e.key === "Escape") { setIsRenaming(false); setRenameValue(win.title); }
+  }, [commitRename, win.title]);
+
+  useEffect(() => {
+    if (isRenaming) setTimeout(() => renameInputRef.current?.select(), 30);
+  }, [isRenaming]);
+
+  const moveToFolder = useCallback(async (folderId: string | null) => {
+    if (!user) return;
+    await (supabase as any).from("documents").update({ folder_id: folderId }).eq("id", win.contentId).eq("user_id", user.id);
+  }, [win.contentId, user]);
 
   const isFloating = win.layout === "floating";
   const prevLayoutRef = useRef<WindowLayout>(win.layout);
@@ -379,10 +419,26 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
         {win.groupId && <GroupBadge groupId={win.groupId} />}
       </div>
 
-      {/* Center: title */}
-      <span className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[36%] pointer-events-none select-none">
-        {win.title}
-      </span>
+      {/* Center: title — tappable for rename */}
+      {isRenaming ? (
+        <input
+          ref={renameInputRef}
+          value={renameValue}
+          onChange={e => setRenameValue(e.target.value)}
+          onKeyDown={handleRenameKey}
+          onBlur={commitRename}
+          onClick={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+          className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold bg-transparent border-b border-primary outline-none text-foreground/90 truncate max-w-[36%] text-center"
+          style={{ minWidth: 80 }}
+        />
+      ) : (
+        <span
+          className="absolute left-1/2 -translate-x-1/2 text-xs font-semibold text-foreground/70 truncate max-w-[36%] pointer-events-none select-none"
+          title="Double-click header to fullscreen; right-click for more">
+          {win.title}
+        </span>
+      )}
 
       {/* Drag hint */}
       <div className="absolute left-1/2 -translate-x-1/2 top-[11px] w-8 h-1 rounded-full bg-foreground/15 pointer-events-none" />
@@ -506,6 +562,9 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
           <ContextMenuSeparator />
 
           {/* Window management */}
+          <ContextMenuItem onClick={() => { setIsRenaming(true); setRenameValue(win.title); }} className="flex items-center gap-2.5 text-xs">
+            <Pencil size={13} /> Rename
+          </ContextMenuItem>
           <ContextMenuItem onClick={() => duplicateWindow(win.id)} className="flex items-center gap-2.5 text-xs">
             <Copy size={13} /> Duplicate
           </ContextMenuItem>
@@ -513,6 +572,39 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
             <Minus size={13} /> Minimize
             <span className="ml-auto text-foreground/30">⌘M</span>
           </ContextMenuItem>
+
+          {/* Move to folder (documents only) */}
+          {win.type === "document" && (
+            <ContextMenuSub>
+              <ContextMenuSubTrigger
+                className="flex items-center gap-2.5 text-xs"
+                onPointerEnter={loadFolders}
+              >
+                <FolderOpen size={13} /> Move to Folder…
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent style={{ zIndex: 11000 }} className="min-w-[180px]">
+                <ContextMenuItem
+                  onClick={() => moveToFolder(null)}
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                >
+                  No folder (root)
+                </ContextMenuItem>
+                {folders.map(f => (
+                  <ContextMenuItem
+                    key={f.id}
+                    onClick={() => moveToFolder(f.id)}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <span className="mr-0.5">{f.icon || "📁"}</span>
+                    <span className="truncate max-w-[140px]">{f.title}</span>
+                  </ContextMenuItem>
+                ))}
+                {folders.length === 0 && (
+                  <ContextMenuItem disabled className="text-xs text-muted-foreground">No folders found</ContextMenuItem>
+                )}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          )}
 
           <ContextMenuSeparator />
 
