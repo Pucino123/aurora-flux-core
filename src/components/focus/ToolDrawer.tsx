@@ -578,18 +578,37 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
                     {cat.tools.map(({ id, label, icon: Icon }) => {
                       const active = effectiveWidgets.includes(id);
                       return (
-                        <button
-                          key={id}
-                          onClick={() => effectiveToggle(id)}
-                          className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl text-[10px] font-medium transition-all ${
-                            active
-                              ? "bg-white/15 text-white shadow-[0_0_10px_rgba(255,255,255,0.05)]"
-                              : "text-white/35 hover:text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <Icon size={16} />
-                          <span>{label}</span>
-                        </button>
+                        <div key={id} className="relative group/tile">
+                          <button
+                            onClick={() => effectiveToggle(id)}
+                            className={`w-full flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl text-[10px] font-medium transition-all ${
+                              active
+                                ? "bg-white/15 text-white shadow-[0_0_10px_rgba(255,255,255,0.05)]"
+                                : "text-white/35 hover:text-white/70 hover:bg-white/5"
+                            }`}
+                          >
+                            <Icon size={16} />
+                            <span>{label}</span>
+                          </button>
+                          {/* Open in Window button — appears on hover */}
+                          <button
+                            title="Open in Window"
+                            onPointerDown={e => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openWindow({
+                                type: 'widget',
+                                contentId: id,
+                                title: label,
+                                layout: 'floating',
+                                position: { x: 120 + Math.random() * 80, y: 80 + Math.random() * 40 },
+                              });
+                            }}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover/tile:opacity-100 transition-opacity bg-primary/80 hover:bg-primary text-primary-foreground shadow-md z-10"
+                          >
+                            <AppWindow size={9} />
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
