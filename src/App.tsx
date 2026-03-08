@@ -9,6 +9,7 @@ import { FluxProvider } from "./context/FluxContext";
 import { FocusProvider } from "./context/FocusContext";
 import { AuthProvider } from "./hooks/useAuth";
 import { MonetizationProvider } from "./context/MonetizationContext";
+import { WorkspaceProvider } from "./context/WorkspaceContext";
 import Index from "./pages/Index";
 import Focus from "./pages/Focus";
 import Auth from "./pages/Auth";
