@@ -2,7 +2,8 @@ import { useFlux } from "@/context/FluxContext";
 import { formatCurrency } from "@/lib/locale";
 import { t } from "@/lib/i18n";
 import ProgressRing from "../ProgressRing";
-import { Wallet, TrendingUp, PiggyBank } from "lucide-react";
+import { Wallet, TrendingUp } from "lucide-react";
+import SavingsWidget from "./SavingsWidget";
 
 export const BudgetPreviewWidget = () => {
   const { tasks } = useFlux();
@@ -46,33 +47,7 @@ export const BudgetPreviewWidget = () => {
   );
 };
 
-export const SavingsRingWidget = () => {
-  const { goals } = useFlux();
-  const topGoal = goals[0];
-
-  if (!topGoal) {
-    return (
-      <div className="h-full flex items-center justify-center text-muted-foreground text-xs">
-        {t("widget.no_goals")}
-      </div>
-    );
-  }
-
-  const pct = topGoal.target_amount > 0
-    ? Math.min((topGoal.current_amount / topGoal.target_amount) * 100, 100)
-    : 0;
-
-  return (
-    <div className="h-full flex flex-col items-center justify-center gap-2">
-      <PiggyBank size={16} className="text-primary" />
-      <ProgressRing value={pct} size={64} strokeWidth={4} />
-      <span className="text-xs font-semibold font-display truncate max-w-full px-2">{topGoal.title}</span>
-      <span className="text-[10px] text-muted-foreground">
-        {formatCurrency(topGoal.current_amount)} / {formatCurrency(topGoal.target_amount)}
-      </span>
-    </div>
-  );
-};
+export const SavingsRingWidget = () => <SavingsWidget />;
 
 export const TotalBalanceWidget = () => {
   const { goals, tasks } = useFlux();
