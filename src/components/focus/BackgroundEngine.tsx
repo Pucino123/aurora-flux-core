@@ -272,6 +272,8 @@ const SPACES_STYLE_KEY = "flux-spaces-style";
 
 interface SpacesStyle {
   bgOpacity: number;
+  bgColor: string;
+  textColor: string;
   blurAmount: number;
   borderOpacity: number;
   borderRadius: number;
@@ -280,8 +282,104 @@ interface SpacesStyle {
   textOpacity: number;
 }
 const DEFAULT_SPACES_STYLE: SpacesStyle = {
-  bgOpacity: 10, blurAmount: 16, borderOpacity: 20,
+  bgOpacity: 10, bgColor: "#000000", textColor: "#ffffff",
+  blurAmount: 16, borderOpacity: 20,
   borderRadius: 50, borderWidth: 1, borderColor: "#ffffff", textOpacity: 80,
+};
+
+function loadSpacesPos(): { x: number; y: number } | null {
+  try { const r = localStorage.getItem(SPACES_POS_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function saveSpacesPos(p: { x: number; y: number }) { localStorage.setItem(SPACES_POS_KEY, JSON.stringify(p)); }
+function loadSpacesStyle(): SpacesStyle {
+  try { const r = localStorage.getItem(SPACES_STYLE_KEY); return r ? { ...DEFAULT_SPACES_STYLE, ...JSON.parse(r) } : DEFAULT_SPACES_STYLE; } catch { return DEFAULT_SPACES_STYLE; }
+}
+function saveSpacesStyle(s: SpacesStyle) { localStorage.setItem(SPACES_STYLE_KEY, JSON.stringify(s)); }
+
+const TEXT_SWATCHES = ["#ffffff", "#f0f0f0", "#a5b4fc", "#6ee7b7", "#fde68a", "#f9a8d4", "#7dd3fc"];
+const BG_SWATCHES_S = ["#000000", "#1a1a2e", "#0f172a", "#1e293b", "#14041e", "#0a1628"];
+
+const SpacesStylePanel = ({ style, onUpdate, onReset, onClose }: {
+  style: SpacesStyle; onUpdate: (p: Partial<SpacesStyle>) => void; onReset: () => void; onClose: () => void;
+}) => {
+  const [colorTab, setColorTab] = React.useState<"text" | "bg">("text");
+  return (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.92, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 8 }}
+    transition={{ type: "spring", stiffness: 420, damping: 30 }}
+    className="absolute bottom-[calc(100%+10px)] left-0 w-68 rounded-2xl p-4 shadow-2xl z-[10200]"
+    style={{ background: "rgba(18,18,20,0.94)", backdropFilter: "blur(48px)", border: "1px solid rgba(255,255,255,0.1)", minWidth: 260 }}
+    onPointerDown={e => e.stopPropagation()}
+  >
+    <div className="flex items-center justify-between mb-3">
+      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-widest">Button Style</span>
+      <div className="flex gap-1.5">
+        <button onClick={onReset} className="text-[9px] text-white/30 hover:text-white/60 px-1.5 py-0.5 rounded hover:bg-white/5">Reset</button>
+        <button onClick={onClose} className="text-white/30 hover:text-white/60"><X size={12} /></button>
+      </div>
+    </div>
+    <div className="space-y-3">
+      {/* Color tabs */}
+      <div className="space-y-2">
+        <div className="flex gap-1 p-0.5 rounded-xl bg-white/[0.05]">
+          {(["text", "bg"] as const).map(m => (
+            <button key={m} onClick={() => setColorTab(m)}
+              className={`flex-1 py-1 text-[10px] font-semibold rounded-lg transition-all ${colorTab === m ? "bg-white/15 text-white/90" : "text-white/40 hover:text-white/60"}`}>
+              {m === "text" ? "Text" : "Background"}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {(colorTab === "text" ? TEXT_SWATCHES : BG_SWATCHES_S).map(c => (
+            <button key={c} onClick={() => onUpdate(colorTab === "text" ? { textColor: c } : { bgColor: c })}
+              className="w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform"
+              style={{ backgroundColor: c, borderColor: (colorTab === "text" ? style.textColor : style.bgColor) === c ? "rgba(255,255,255,0.9)" : c === "#000000" ? "rgba(255,255,255,0.2)" : "transparent" }} />
+          ))}
+          <label className="w-5 h-5 rounded-full cursor-pointer border border-white/20 overflow-hidden hover:scale-110 transition-transform"
+            style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+            <input type="color" value={colorTab === "text" ? (style.textColor || "#ffffff") : (style.bgColor || "#000000")}
+              onChange={e => onUpdate(colorTab === "text" ? { textColor: e.target.value } : { bgColor: e.target.value })} className="opacity-0 w-full h-full" />
+          </label>
+        </div>
+      </div>
+      {[
+        { label: "BG Opacity", key: "bgOpacity" as const, min: 0, max: 80, unit: "%" },
+        { label: "Blur", key: "blurAmount" as const, min: 0, max: 40, unit: "px" },
+        { label: "Text Opacity", key: "textOpacity" as const, min: 10, max: 100, unit: "%" },
+        { label: "Border Opacity", key: "borderOpacity" as const, min: 0, max: 100, unit: "%" },
+      ].map(({ label, key, min, max, unit }) => (
+        <div key={key} className="space-y-1">
+          <div className="flex justify-between"><span className="text-[9px] text-white/40 uppercase tracking-wider">{label}</span><span className="text-[9px] text-white/30 tabular-nums">{style[key]}{unit}</span></div>
+          <Slider value={[style[key]]} onValueChange={([v]) => onUpdate({ [key]: v })} min={min} max={max} step={1}
+            className="[&_[data-radix-slider-track]]:h-[4px] [&_[data-radix-slider-track]]:bg-white/8 [&_[data-radix-slider-range]]:bg-white/50 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:w-3.5 [&_[data-radix-slider-thumb]]:h-3.5" />
+        </div>
+      ))}
+      <div className="space-y-1">
+        <span className="text-[9px] text-white/40 uppercase tracking-wider block">Shape</span>
+        <div className="flex gap-1">
+          {[{ l: "Soft", v: 8 }, { l: "Round", v: 24 }, { l: "Pill", v: 50 }].map(p => (
+            <button key={p.l} onClick={() => onUpdate({ borderRadius: p.v })}
+              className={`flex-1 py-1 rounded-lg text-[9px] font-medium transition-all ${style.borderRadius === p.v ? "bg-white/15 text-white" : "text-white/35 border border-white/8 hover:bg-white/8"}`}>{p.l}</button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1">
+        <span className="text-[9px] text-white/40 uppercase tracking-wider block">Border Color</span>
+        <div className="flex gap-1.5 flex-wrap">
+          {TEXT_SWATCHES.map(c => (
+            <button key={c} onClick={() => onUpdate({ borderColor: c, borderWidth: Math.max(1, style.borderWidth) })}
+              className="w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform"
+              style={{ backgroundColor: c, borderColor: style.borderColor === c ? "rgba(255,255,255,0.9)" : "transparent" }} />
+          ))}
+          <label className="w-5 h-5 rounded-full cursor-pointer border border-white/20 overflow-hidden hover:scale-110 transition-transform"
+            style={{ background: "conic-gradient(hsl(0 80% 60%),hsl(120 80% 60%),hsl(240 80% 60%),hsl(360 80% 60%))" }}>
+            <input type="color" value={style.borderColor} onChange={e => onUpdate({ borderColor: e.target.value })} className="opacity-0 w-full h-full" />
+          </label>
+        </div>
+      </div>
+    </div>
+  </motion.div>
+  );
 };
 
 function loadSpacesPos(): { x: number; y: number } | null {
