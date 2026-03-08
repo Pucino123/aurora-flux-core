@@ -138,38 +138,19 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
       didDrag.current = true;
       const nx = Math.max(0, e.clientX - offset.current.x);
       const ny = Math.max(0, e.clientY - offset.current.y);
-      updateDesktopFolderPosition(folder.id, { x: nx, y: ny });
+      _updatePos(folder.id, { x: nx, y: ny });
       onDragStateChange?.({ id: folder.id, x: e.clientX, y: e.clientY });
     };
-    const onUp = () => {
-      if (!dragging.current) return;
-      dragging.current = false;
-      if (didDrag.current && onDragStateChange) { onDragStateChange(null); }
-    };
-    window.addEventListener("pointermove", onMove);
+...
     window.addEventListener("pointerup", onUp);
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
-  }, [folder.id, updateDesktopFolderPosition, onDragStateChange]);
+  }, [folder.id, _updatePos, onDragStateChange]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    if (isMarqueeSelected && onBulkContextMenu) { onBulkContextMenu(e); return; }
-    setContextMenu({ x: e.clientX, y: e.clientY });
-  };
-
-  const commitRename = () => {
-    if (renameValue.trim() && renameValue !== folder.title) { updateFolder(folder.id, { title: renameValue.trim() }); }
-    setRenaming(false);
-  };
-
-  const handleDelete = async () => { setContextMenu(null); await removeFolder(folder.id); toast.success("Folder deleted"); };
-
-  const handleDuplicate = async () => {
-    setContextMenu(null);
-    const newFolder = await createFolder({ parent_id: folder.parent_id, title: `${folder.title} (copy)`, type: folder.type, color: folder.color ?? undefined, icon: folder.icon ?? undefined });
+...
     if (newFolder) {
       const srcPos = desktopFolderPositions[folder.id] ?? { x: 40, y: 40 };
-      updateDesktopFolderPosition(newFolder.id, { x: srcPos.x + 30, y: srcPos.y + 30 });
+      _updatePos(newFolder.id, { x: srcPos.x + 30, y: srcPos.y + 30 });
       if (folderOpacity !== 1) updateDesktopFolderOpacity(newFolder.id, folderOpacity);
       if (titleSize !== 11) updateDesktopFolderTitleSize(newFolder.id, titleSize);
       toast.success("Folder duplicated");

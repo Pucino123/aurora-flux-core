@@ -108,19 +108,13 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
       didDrag.current = true;
       const nx = Math.max(0, e.clientX - offset.current.x);
       const ny = Math.max(0, e.clientY - offset.current.y);
-      store.updateDesktopDocPosition(doc.id, { x: nx, y: ny });
+      _updatePos(doc.id, { x: nx, y: ny });
       onDragStateChange?.({ id: doc.id, x: e.clientX, y: e.clientY });
     };
-    const onUp = () => {
-      if (!dragging.current) return;
-      dragging.current = false;
-      setIsDraggingActive(false);
-      if (didDrag.current && onDragStateChange) { onDragStateChange(null); }
-    };
-    window.addEventListener("pointermove", onMove);
+...
     window.addEventListener("pointerup", onUp);
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
-  }, [doc.id, store.updateDesktopDocPosition]);
+  }, [doc.id, _updatePos]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
