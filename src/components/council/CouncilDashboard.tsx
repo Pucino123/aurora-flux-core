@@ -66,7 +66,7 @@ const CouncilDashboard = ({ totalIdeas, totalVotes, totalThreads, totalNotes, pe
 
             return (
               <div key={p.key} className="flex items-center gap-3">
-                <CouncilAvatar color={p.color} size={32} />
+                <CouncilAvatar color={p.color} size={32} personalityIndex={PERSONAS.indexOf(p)} personaKey={p.key} />
                 <div className="flex-1">
                   <p className="text-xs font-medium mb-1">{t(p.name)}</p>
                   {total > 0 ? (
