@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlignLeft, Sun, Moon } from "lucide-react";
+import { X, AlignLeft, Sun, Moon, Star } from "lucide-react";
+
+const LS_FAVORITES = "flux_template_favorites";
 
 type DocType = "text" | "spreadsheet";
 type PreviewTheme = "light" | "dark";
