@@ -210,13 +210,7 @@ const KanbanBoard = ({ folderId, tasks: propTasks }: KanbanBoardProps) => {
                         animate={{ opacity: isDragging ? 0.45 : 1, y: 0, scale: isDragging ? 1.04 : 1, rotate: isDragging ? 1 : 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: -8, transition: { duration: 0.18 } }}
                         transition={{ delay: i * 0.03, type: "spring", stiffness: 380, damping: 30 }}
-                        draggable
-                        onDragStart={(e: React.DragEvent<HTMLDivElement>) => {
-                          setDraggedId(task.id);
-                          e.dataTransfer.effectAllowed = "move";
-                        }}
-                        onDragEnd={() => { setDraggedId(null); setOverColumn(null); }}
-                        className="group relative rounded-xl p-3 cursor-grab active:cursor-grabbing border transition-all duration-150"
+                        className="group relative rounded-xl border transition-all duration-150"
                         style={{
                           background: isDragging ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
                           borderColor: isDragging ? `${col.color}50` : "rgba(255,255,255,0.06)",
