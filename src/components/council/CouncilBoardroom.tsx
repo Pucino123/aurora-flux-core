@@ -901,6 +901,8 @@ const CouncilBoardroom: React.FC<CouncilBoardroomProps> = ({ onRestoreIdea }) =>
   const [sharedByName, setSharedByName] = useState<string | null>(null);
   // Council Digest modal (shown after saving)
   const [showDigest, setShowDigest] = useState(false);
+  // Onboarding tour for first-time users
+  const [showTour, setShowTour] = useState(false);
   const sessionIdRef = useRef<string>(getOrCreateSessionId());
   const emojiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealedCountRef = useRef(0);
