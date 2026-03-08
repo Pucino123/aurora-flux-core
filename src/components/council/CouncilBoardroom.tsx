@@ -1379,9 +1379,49 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
 — Flux Boardroom · aurora-flux-core.lovable.app`;
 
+  // ── Notion-formatted digest ──
+  const notionText = `# 🏛️ Council Boardroom Analysis
+
+> **${idea || "Your Idea"}**
+
+---
+
+## 📊 Consensus Score: ${avgRing}% — ${consensus.label}
+
+*Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}*
+
+---
+
+## 🧠 Advisor Verdicts
+
+${PERSONAS.map(p => {
+    const r = responses[p.key];
+    if (!r) return "";
+    const voteEmoji = r.confidence >= 70 ? "✅" : r.confidence >= 40 ? "⚠️" : "❌";
+    return `### ${voteEmoji} ${p.name} — ${p.title} (${r.confidence}% confidence)\n\n${r.analysis}\n\n> 💬 **${p.name} asks:** ${r.question}`;
+  }).filter(Boolean).join("\n\n---\n\n")}
+
+---
+
+## 📋 Recommended Action Plan
+
+${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+---
+
+*Powered by Flux Boardroom · [aurora-flux-core.lovable.app](https://aurora-flux-core.lovable.app)*`;
+
   return (
     <div ref={boardroomRef} className="flex flex-col h-full min-h-0 gap-4">
-      {/* Shared session banner */}
+      {/* Onboarding tour */}
+      <AnimatePresence>
+        {showTour && (
+          <BoardroomOnboardingTour onDismiss={() => {
+            setShowTour(false);
+            localStorage.setItem("boardroom_tour_done", "1");
+          }} />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {isSharedView && (
           <motion.div
