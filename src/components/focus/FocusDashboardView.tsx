@@ -44,7 +44,7 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const BuildModeGrid = () => (
