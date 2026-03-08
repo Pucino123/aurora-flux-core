@@ -41,7 +41,7 @@ const FOLDER_COLORS = [
   { name: "Amber", value: "hsl(45 93% 50%)" },
 ];
 
-const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage, isPinned, onTogglePin }: DesktopFolderProps) => {
+const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState, onDragStateChange, onDocDropped, isMarqueeSelected, onGroupDragStart, onSingleSelect, onBulkContextMenu, positionOverride, onPositionChange, allPages, currentPageIndex, onMoveToPage, isPinned, onTogglePin }: DesktopFolderProps) => {
   const { setActiveFolder, setActiveView, updateFolder, removeFolder, createFolder, createBlock, moveFolder, getAllFoldersFlat, folderTree } = useFlux();
   const { user } = useAuth();
   const focusStore = useFocusStore();
