@@ -161,7 +161,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       )}
 
       <MobileNav />
-      {effectiveView !== "focus" && effectiveView !== "stream" && <TeamChatWidget />}
+      {effectiveView !== "focus" && effectiveView !== "stream" && <CommHub />}
 
       {/* Global Modals */}
       <UpgradeModal />
@@ -169,8 +169,6 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       <OnboardingFlow />
 
       <CreateFolderModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onCreate={handleCreateFolder} />
-      {/* Global Ask Aura floating AI panel */}
-      {effectiveView !== "focus" && effectiveView !== "stream" && <AskAura />}
     </motion.div>
   );
 };
