@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Flame, TrendingUp, BarChart3, Play, Pause, Square } from "lucide-react";
+import { Flame, TrendingUp, BarChart3, Play, Pause, Square, Target, Pencil, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DraggableWidget from "./DraggableWidget";
 import FocusReportModal from "./FocusReportModal";
