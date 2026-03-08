@@ -357,7 +357,10 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                           .map(p => (
                             <button
                               key={p.id}
-                              onClick={() => { onMoveToPage?.(doc.id, p.index); setContextMenu(null); }}
+                              onClick={() => {
+                                setContextMenu(null);
+                                triggerFlyOff(p.index, () => onMoveToPage?.(doc.id, p.index));
+                              }}
                               className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] text-foreground hover:bg-secondary/60 rounded-md transition-colors"
                             >
                               <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">{p.index + 1}</span>
@@ -367,6 +370,16 @@ const DesktopDocument = ({ doc, onOpen, onDelete, onDuplicate, onRefetch, dragSt
                       </div>
                     )}
                   </div>
+                )}
+                {/* Show on all pages pin toggle */}
+                {onTogglePin && (
+                  <button
+                    onClick={() => { onTogglePin(doc.id); setContextMenu(null); }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors ${isPinned ? "text-primary" : "text-foreground"}`}
+                  >
+                    {isPinned ? <PinOff size={13} className="text-primary" /> : <Pin size={13} className="text-muted-foreground" />}
+                    {isPinned ? "Unpin from all pages" : "Show on all pages"}
+                  </button>
                 )}
                 <div className="h-px bg-border mx-2 my-1" />
                 <button onClick={handleDelete} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-destructive hover:bg-destructive/10 transition-colors">
