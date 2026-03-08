@@ -867,6 +867,37 @@ const CouncilBoardroom: React.FC = () => {
     setIsConsulting(false);
   };
 
+  const handleSaveToCouncil = useCallback(async () => {
+    if (!user || !allRevealed || saveState !== "idle") return;
+    setSaveState("saving");
+    try {
+      // Insert idea
+      const { data: ideaData, error: ideaError } = await supabase
+        .from("council_ideas")
+        .insert({ content: idea || "Untitled Idea", user_id: user.id, consensus_score: avgRing })
+        .select("id")
+        .single();
+      if (ideaError || !ideaData) throw ideaError;
+
+      // Insert responses for each revealed persona
+      const inserts = PERSONAS
+        .filter(p => responses[p.key])
+        .map(p => ({
+          idea_id: ideaData.id,
+          user_id: user.id,
+          persona_key: p.key,
+          analysis: responses[p.key]!.analysis,
+          vote: responses[p.key]!.confidence >= 60 ? "yes" : responses[p.key]!.confidence >= 40 ? "maybe" : "no",
+          vote_score: responses[p.key]!.confidence,
+        }));
+      await supabase.from("council_responses").insert(inserts);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 3000);
+    } catch {
+      setSaveState("idle");
+    }
+  }, [user, allRevealed, saveState, idea, avgRing, responses]);
+
   const consensus = getConsensusLabel();
   const fullscreenP = fullscreenPersona ? PERSONAS.find(p => p.key === fullscreenPersona) : null;
   const fullscreenR = fullscreenPersona ? responses[fullscreenPersona] : null;
