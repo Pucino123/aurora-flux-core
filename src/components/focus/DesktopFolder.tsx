@@ -170,8 +170,8 @@ const DesktopFolder = ({ folder, onOpenModal, dragState, docDragState, onDragSta
   };
 
   const commitRename = () => {
-    if (renamingValue.trim()) {
-      updateFolder(folder.id, { title: renamingValue.trim() });
+    if (renameValue.trim()) {
+      updateFolder(folder.id, { title: renameValue.trim() });
     }
     setRenaming(false);
   };
