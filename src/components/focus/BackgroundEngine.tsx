@@ -756,22 +756,3 @@ const BackgroundEngine = ({
 };
 
 export default BackgroundEngine;
-
-
-            <AnimatePresence>
-              {menuOpen && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                  className="absolute bottom-14 left-0 w-80 max-h-[480px] rounded-2xl bg-black/60 backdrop-blur-[20px] border border-white/15 p-4 overflow-auto shadow-2xl">
-                  <CustomUploadSection customBgs={customBgs} onUpload={handleUpload} onAddYoutube={handleAddYoutube} onDelete={handleDeleteCustom}
-                    onSelect={(id) => { setCurrentBackground(id); setMenuOpen(false); }} currentBg={currentBackground} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </>
-      )}
-    </>
-  );
-};
-
-export default BackgroundEngine;
