@@ -17,7 +17,7 @@ interface DocumentViewProps {
   splitViewButton?: React.ReactNode;
 }
 
-const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false, onToggleLightMode }: DocumentViewProps) => {
+const DocumentView = ({ document, onBack, onUpdate, onDelete, lightMode = false, onToggleLightMode, splitViewButton }: DocumentViewProps) => {
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(document.title);
   const [confirmDelete, setConfirmDelete] = useState(false);
