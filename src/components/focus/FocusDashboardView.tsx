@@ -812,7 +812,7 @@ const FocusContent = () => {
     window.addEventListener("pointermove", onMouseMove);
     window.addEventListener("pointerup", onMouseUp);
     return () => { window.removeEventListener("pointermove", onMouseMove); window.removeEventListener("pointerup", onMouseUp); };
-  }, [folderTree, desktopDocs, desktopFolderPositions, desktopDocPositions, toCanvasCoords, updateDesktopFolderPosition, updateDesktopDocPosition, moveFolder, user, refetchDesktopDocs]);
+  }, [folderTree, desktopDocs, pageFolderPositions, pageDocPositions, toCanvasCoords, updatePageFolderPosition, updatePageDocPosition, moveFolder, user, refetchDesktopDocs]);
 
   const handleGroupDragStart = useCallback((e: React.PointerEvent, itemId: string) => {
     if (e.button !== 0) return false;
@@ -823,14 +823,14 @@ const FocusContent = () => {
     const positions: Record<string, { x: number; y: number }> = {};
     selectedIdsRef.current.forEach((id) => {
       if (folderTree.some(f => f.id === id)) {
-        positions[id] = desktopFolderPositions[id] || { x: 40, y: 40 };
+        positions[id] = pageFolderPositions[id] || { x: 40, y: 40 };
       } else {
-        positions[id] = desktopDocPositions[id] || { x: 0, y: 0 };
+        positions[id] = pageDocPositions[id] || { x: 0, y: 0 };
       }
     });
     groupDragStartPositions.current = positions;
     return true;
-  }, [folderTree, desktopFolderPositions, desktopDocPositions]);
+  }, [folderTree, pageFolderPositions, pageDocPositions]);
 
   // Single-click select: selects only this item, clears rest
   const handleSingleSelect = useCallback((id: string) => {
