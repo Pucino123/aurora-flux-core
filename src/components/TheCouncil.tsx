@@ -665,7 +665,7 @@ const TheCouncil = () => {
                     </div>
 
                     {/* ═══ MIDDLE COLUMN: Consensus + Radar ═══ */}
-                    <div className="space-y-4">
+                    <div className="space-y-4 overflow-y-auto council-hidden-scrollbar pb-4">
                       {/* Consensus Meter */}
                       <AnimatePresence>
                         {consensusScore !== null && (
