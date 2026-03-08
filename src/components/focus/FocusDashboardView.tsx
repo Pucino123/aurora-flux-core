@@ -2110,7 +2110,7 @@ const FocusContent = () => {
                 {dashboardPages.map((page, i) => {
                   const isActive = i === activePageIndex;
                   const thumb = pageThumbnails[page.id];
-                  const widgets = page.activeWidgets ?? activeWidgets;
+                  const widgets = page.activeWidgets ?? [];
                   const WC: Record<string, string> = { clock: "#a78bfa", timer: "#f472b6", music: "#34d399", planner: "#60a5fa", notes: "#fbbf24", crm: "#f87171", stats: "#818cf8", scratchpad: "#fb923c", quote: "#e879f9", breathing: "#22d3ee", council: "#a3e635", aura: "#c084fc" };
                   const WL: Record<string, string> = { clock: "🕐", timer: "⏱", music: "🎵", planner: "📋", notes: "📝", crm: "👥", stats: "📊", scratchpad: "✏️", quote: "💬", breathing: "🫁", council: "🤝", aura: "✨" };
                   return (
