@@ -449,6 +449,8 @@ const FocusContent = () => {
           docPositions: p.docPositions,
           visibleFolderIds: p.visibleFolderIds,
           visibleDocIds: p.visibleDocIds,
+          pinnedFolderIds: p.pinnedFolderIds,
+          pinnedDocIds: p.pinnedDocIds,
         })));
       }
     })();
