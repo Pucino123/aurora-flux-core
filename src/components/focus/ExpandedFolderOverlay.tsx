@@ -371,25 +371,61 @@ const ExpandedFolderOverlay = ({
             </button>
           </div>
 
-          {/* Layout pill — matching documents */}
-          <div className="flex items-center gap-1 ml-1" onPointerDown={e => e.stopPropagation()}>
+          {/* Single "Float" dropdown — matching document controls */}
+          <div className="relative ml-1" ref={layoutMenuRef} onPointerDown={e => e.stopPropagation()}>
             <button
-              onClick={() => openAsWindow("floating")}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide transition-opacity hover:opacity-100 opacity-80"
+              onClick={() => setShowLayoutMenu(v => !v)}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide transition-all hover:opacity-100 opacity-80"
               style={{ background: "hsl(142 71% 45%)", color: "rgba(0,0,0,0.75)" }}
-              title="Open as floating window"
+              title="Layout options"
             >
-              <Square size={7} /> float
+              <Square size={7} /> float <ChevronDown size={7} />
             </button>
-            <button
-              onClick={() => openAsWindow("split-right")}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide transition-opacity hover:opacity-100 opacity-60 hover:opacity-80"
-              style={{ background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
-              title="Open side-by-side (split right)"
-            >
-              split
-            </button>
+            <AnimatePresence>
+              {showLayoutMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.88, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.88 }}
+                  transition={{ duration: 0.1 }}
+                  className="absolute top-[calc(100%+6px)] left-0 z-[99999] rounded-xl overflow-hidden flex flex-col py-1"
+                  style={{ minWidth: 160, background: "rgba(10,6,28,0.98)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(28px)", boxShadow: "0 16px 48px rgba(0,0,0,0.8)" }}
+                >
+                  {[
+                    { layout: "floating" as const, icon: <Monitor size={11} />, label: "Float (drag)" },
+                    { layout: "split-left" as const, icon: <PanelLeft size={11} />, label: "Side left" },
+                    { layout: "split-right" as const, icon: <PanelRight size={11} />, label: "Side right" },
+                    { layout: "fullscreen" as const, icon: <Maximize2 size={11} />, label: "Fullscreen" },
+                  ].map(opt => (
+                    <button
+                      key={opt.layout}
+                      onClick={() => { openAsWindow(opt.layout); setShowLayoutMenu(false); }}
+                      className="flex items-center gap-2.5 px-3 py-1.5 text-[11px] font-medium transition-colors text-left w-full"
+                      style={{ color: "rgba(255,255,255,0.75)" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                    >
+                      <span className="opacity-70">{opt.icon}</span>
+                      {opt.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+
+          {/* Back button when doc is open inside overlay */}
+          {openDocInOverlay && (
+            <button
+              onClick={() => setOpenDocInOverlay(null)}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all hover:opacity-100 opacity-70"
+              style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.12)" }}
+              title="Back to folder"
+              onPointerDown={e => e.stopPropagation()}
+            >
+              <ArrowLeft size={8} /> Back
+            </button>
+          )}
 
           {/* Folder icon */}
           <div
