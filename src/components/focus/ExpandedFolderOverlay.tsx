@@ -35,6 +35,7 @@ function isOutsideRect(rect: DOMRect, x: number, y: number, margin = 40): boolea
 
 const MODAL_W = 640;
 const MODAL_MIN_H = 440;
+const MODAL_MIN_W = 420;
 
 const ICON_COLORS = [
   { name: "Blue", value: "hsl(217 91% 60%)" },
