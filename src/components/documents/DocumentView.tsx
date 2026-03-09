@@ -559,7 +559,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
       <div
         className="relative flex-1 min-h-0 overflow-y-auto"
         style={{
-          background: lm ? "hsl(var(--muted))" : "hsl(220 27% 8%)",
+          background: lm ? "hsl(220 15% 92%)" : "hsl(220 27% 8%)",
           padding: studioMode ? "0" : "24px 24px 48px",
         }}
       >
