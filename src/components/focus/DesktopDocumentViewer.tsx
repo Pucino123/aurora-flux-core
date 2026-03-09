@@ -105,7 +105,20 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
           className={`relative flex flex-col border rounded-2xl shadow-2xl pointer-events-auto overflow-hidden transition-all duration-300 ${
             expanded ? "w-full h-full max-w-none max-h-none rounded-none" : "w-full max-w-4xl max-h-[85vh]"
           } ${lightMode ? "" : "bg-card/80 border-border/50 backdrop-blur-2xl"}`}
-          style={lightMode ? { background: "#ffffff", borderColor: "rgba(0,0,0,0.12)", color: "#111" } : undefined}
+          style={lightMode ? {
+            background: "#ffffff",
+            borderColor: "rgba(0,0,0,0.12)",
+            color: "#111",
+            ["--background" as any]: "0 0% 99%",
+            ["--foreground" as any]: "220 20% 10%",
+            ["--card" as any]: "0 0% 100%",
+            ["--card-foreground" as any]: "220 20% 10%",
+            ["--muted" as any]: "220 15% 96%",
+            ["--muted-foreground" as any]: "220 10% 45%",
+            ["--border" as any]: "220 15% 88%",
+            ["--secondary" as any]: "220 15% 94%",
+            ["--secondary-foreground" as any]: "220 20% 20%",
+          } : undefined}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
