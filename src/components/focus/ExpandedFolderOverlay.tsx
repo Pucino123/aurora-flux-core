@@ -498,6 +498,25 @@ const ExpandedFolderOverlay = ({
           </div>
         </div>
 
+        {/* Content: either folder grid or inline document view */}
+        {openDocInOverlay ? (
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <DocumentView
+              document={openDocInOverlay}
+              onBack={() => setOpenDocInOverlay(null)}
+              onUpdate={(id, updates) => {
+                updateDocument(id, updates);
+                setOpenDocInOverlay(prev => prev && prev.id === id ? { ...prev, ...updates } : prev);
+              }}
+              onDelete={(id) => {
+                removeDocument(id);
+                setOpenDocInOverlay(null);
+              }}
+              lightMode={(() => { try { return localStorage.getItem(`flux_doc_light_${openDocInOverlay.id}`) === "1"; } catch { return false; } })()}
+            />
+          </div>
+        ) : (
+        <>
         {/* Drag-out hint */}
         <div className="px-6 pb-1.5">
           <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.18)" }}>
