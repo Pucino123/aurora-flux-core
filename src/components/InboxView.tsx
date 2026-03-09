@@ -371,17 +371,19 @@ const TasksTab = () => {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const isUpcoming = (t: { done: boolean; scheduled_date: string | null; status: string }) =>
-    !t.done && (
-      (t.scheduled_date && t.scheduled_date > today) ||
-      (!t.scheduled_date && (t.status === "todo" || t.status === "upcoming"))
-    );
+  // Mirror AITaskManager's deriveColumn logic exactly
+  const deriveColumn = (t: { done: boolean; scheduled_date: string | null; status: string; due_date?: string | null }) => {
+    if (t.done) return "completed";
+    if (t.status === "in_progress" || t.status === "blocked") return "in_progress";
+    if (t.scheduled_date === today || t.due_date === today) return "today";
+    return "upcoming";
+  };
 
   // "today" and "completed" use inboxTasks (no folder), "upcoming" uses all tasks
   const filtered = (filter === "upcoming" ? allTasks : inboxTasks).filter(item => {
     if (search && !item.title.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filter === "today") return item.scheduled_date === today || (!item.scheduled_date && !item.done);
-    if (filter === "upcoming") return isUpcoming(item);
+    if (filter === "today") return deriveColumn(item) === "today";
+    if (filter === "upcoming") return deriveColumn(item) === "upcoming";
     if (filter === "completed") return item.done;
     return true;
   });
@@ -408,9 +410,9 @@ const TasksTab = () => {
               className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${filter === f.key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"}`}>
               {f.label}
               <span className="ml-1 text-[10px] opacity-60">
-                {f.key === "today" ? inboxTasks.filter(t => t.scheduled_date === today || (!t.scheduled_date && !t.done)).length :
-                  f.key === "upcoming" ? allTasks.filter(t => isUpcoming(t)).length :
-                  inboxTasks.filter(t => t.done).length}
+                {f.key === "today" ? allTasks.filter(t => deriveColumn(t) === "today").length :
+                  f.key === "upcoming" ? allTasks.filter(t => deriveColumn(t) === "upcoming").length :
+                  allTasks.filter(t => t.done).length}
               </span>
             </button>
           ))}
