@@ -834,9 +834,9 @@ const ExpandedFolderOverlay = ({
 
   // Light mode derived styles
   const lm = lightMode;
-  const overlayBg = lm ? "rgba(250,249,255,0.97)" : "rgba(14, 11, 32, 0.94)";
+  const overlayBg = lm ? "#ffffff" : "rgba(14, 11, 32, 0.94)";
   const overlayBorder = lm ? "1px solid rgba(0,0,0,0.1)" : (isFullscreen ? "none" : "1px solid rgba(255,255,255,0.13)");
-  const headerBorder = lm ? "border-b border-black/8" : "";
+  const headerBorder = lm ? "border-b border-gray-200" : "border-b border-white/[0.06]";
   const titleColor = lm ? "rgba(20,10,40,0.92)" : "rgba(255,255,255,0.92)";
   const subtleColor = lm ? "rgba(60,40,80,0.45)" : "rgba(255,255,255,0.3)";
   const hintColor = lm ? "rgba(60,40,80,0.35)" : "rgba(255,255,255,0.18)";
@@ -881,6 +881,7 @@ const ExpandedFolderOverlay = ({
         <div
           className={`flex items-center gap-3 px-5 pt-4 pb-3.5 select-none ${headerBorder}`}
           style={{
+            background: lm ? "#ffffff" : undefined,
             borderRadius: isFullscreen ? 0 : "24px 24px 0 0",
             cursor: isFullscreen ? "default" : "grab",
             userSelect: "none",
@@ -956,47 +957,45 @@ const ExpandedFolderOverlay = ({
             </DropdownMenu>
           </div>
 
-          {/* Breadcrumb trail — shows full path when drilling into subfolders or viewing a doc */}
-          {(canGoBack || openDocInOverlay) && (
-            <div
-              className="flex items-center gap-0.5 min-w-0 overflow-hidden"
-              onPointerDown={e => e.stopPropagation()}
-            >
-              {folderStack.map((id, idx) => {
-                const node = idx === 0 ? findFolderNode(initialFolderId) : findFolderNode(id);
-                const label = node?.title ?? "Folder";
-                const isLast = idx === folderStack.length - 1 && !openDocInOverlay;
-                return (
-                  <React.Fragment key={id}>
-                    {idx > 0 && (
-                      <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
-                    )}
-                    <button
-                      onClick={() => { if (openDocInOverlay && isLast) return; navigateTo(idx); setOpenDocInOverlay(null); }}
-                      className={`text-[9px] font-medium truncate max-w-[72px] transition-opacity hover:opacity-100 ${isLast ? "opacity-80 cursor-default" : "opacity-50 hover:underline cursor-pointer"}`}
-                      style={{ color: isLast ? titleColor : subtleColor }}
-                      title={label}
-                    >
-                      {label}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-              {openDocInOverlay && (
-                <>
-                  <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
+          {/* Breadcrumb trail — always visible, shows path when drilling into subfolders */}
+          <div
+            className="flex items-center gap-0.5 min-w-0 overflow-hidden"
+            onPointerDown={e => e.stopPropagation()}
+          >
+            {folderStack.map((id, idx) => {
+              const node = findFolderNode(id);
+              const label = node?.title ?? "Folder";
+              const isLast = idx === folderStack.length - 1 && !openDocInOverlay;
+              return (
+                <React.Fragment key={id}>
+                  {idx > 0 && (
+                    <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
+                  )}
                   <button
-                    onClick={() => setOpenDocInOverlay(null)}
-                    className="text-[9px] font-medium truncate max-w-[72px] opacity-50 hover:opacity-100 hover:underline cursor-pointer"
-                    style={{ color: subtleColor }}
-                    title="Back to folder"
+                    onClick={() => { navigateTo(idx); setOpenDocInOverlay(null); }}
+                    className={`text-[9px] font-medium truncate max-w-[80px] transition-opacity ${isLast ? "opacity-80 cursor-default" : "opacity-50 hover:opacity-100 hover:underline cursor-pointer"}`}
+                    style={{ color: isLast ? titleColor : subtleColor }}
+                    title={label}
                   >
-                    {openDocInOverlay.title}
+                    {label}
                   </button>
-                </>
-              )}
-            </div>
-          )}
+                </React.Fragment>
+              );
+            })}
+            {openDocInOverlay && (
+              <>
+                <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
+                <button
+                  onClick={() => setOpenDocInOverlay(null)}
+                  className="text-[9px] font-medium truncate max-w-[80px] opacity-60 hover:opacity-100 hover:underline cursor-pointer"
+                  style={{ color: subtleColor }}
+                  title="Back to folder"
+                >
+                  {openDocInOverlay.title}
+                </button>
+              </>
+            )}
+          </div>
 
           {/* Light/dark mode toggle */}
           <button
@@ -1140,12 +1139,22 @@ const ExpandedFolderOverlay = ({
                 const subColor = sub.color || "hsl(var(--muted-foreground))";
                 const isTarget = overlayDropTarget === sub.id;
                 return (
-                  <div
+                  <motion.div
                     key={sub.id}
                     ref={(el: HTMLDivElement | null) => { subfolderElRefs.current[sub.id] = el; }}
-                    draggable
-                    onDragStart={e => { e.dataTransfer.setData("modal-subfolder-id", sub.id); e.dataTransfer.effectAllowed = "move"; }}
-                    onDragEnd={e => { if (e.dataTransfer.dropEffect === "none") handleSubfolderDragEnd(e as any, { point: { x: e.clientX, y: e.clientY } }, sub); }}
+                    drag
+                    dragMomentum={false}
+                    dragElastic={0.12}
+                    whileDrag={{ scale: 1.08, zIndex: 9999, opacity: 0.9, cursor: "grabbing" }}
+                    onDragEnd={(e, info) => {
+                      const rect = containerRef.current?.getBoundingClientRect();
+                      if (!rect) return;
+                      if (isOutsideRect(rect, info.point.x, info.point.y)) {
+                        moveFolder(sub.id, null as any);
+                        onMoveFolderToDesktop(sub.id, info.point.x, info.point.y);
+                        toast.success(`"${sub.title}" moved to desktop`);
+                      }
+                    }}
                     className={`flex flex-col items-center gap-2 cursor-pointer group transition-all select-none ${isTarget ? "scale-105" : ""}`}
                     onDoubleClick={() => navigateInto(sub.id)}
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setSubCtxMenu({ sub, x: e.clientX, y: e.clientY }); }}
@@ -1165,7 +1174,7 @@ const ExpandedFolderOverlay = ({
                     <span className="text-[11px] font-medium text-center leading-tight max-w-[72px] line-clamp-2" style={{ color: itemNameColor }}>
                       {sub.title}
                     </span>
-                  </div>
+                  </motion.div>
                 );
               })}
 
