@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Folder, FileText, Table, X, Pencil, FolderPlus, Plus, Minus, Maximize2, Square,
   Trash2, ExternalLink, ArrowLeft, ChevronDown,
-  PanelRight, PanelLeft, Monitor,
+  PanelRight, PanelLeft, Monitor, Copy, Share2, CalendarPlus, FolderInput,
+  Type, Upload, Palette, Search, Clock, BookCopy, Pin, PinOff,
 } from "lucide-react";
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { useDocuments, DbDocument } from "@/hooks/useDocuments";
@@ -13,6 +14,8 @@ import { FOLDER_ICONS } from "@/components/CreateFolderModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useWindowManager } from "@/context/WindowManagerContext";
+import { useFocusStore } from "@/context/FocusContext";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import TemplateChooserModal from "./TemplateChooserModal";
 import DocumentView from "@/components/documents/DocumentView";
