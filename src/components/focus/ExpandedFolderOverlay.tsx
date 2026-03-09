@@ -834,9 +834,9 @@ const ExpandedFolderOverlay = ({
 
   // Light mode derived styles
   const lm = lightMode;
-  const overlayBg = lm ? "rgba(250,249,255,0.97)" : "rgba(14, 11, 32, 0.94)";
+  const overlayBg = lm ? "#ffffff" : "rgba(14, 11, 32, 0.94)";
   const overlayBorder = lm ? "1px solid rgba(0,0,0,0.1)" : (isFullscreen ? "none" : "1px solid rgba(255,255,255,0.13)");
-  const headerBorder = lm ? "border-b border-black/8" : "";
+  const headerBorder = lm ? "border-b border-gray-200" : "border-b border-white/[0.06]";
   const titleColor = lm ? "rgba(20,10,40,0.92)" : "rgba(255,255,255,0.92)";
   const subtleColor = lm ? "rgba(60,40,80,0.45)" : "rgba(255,255,255,0.3)";
   const hintColor = lm ? "rgba(60,40,80,0.35)" : "rgba(255,255,255,0.18)";
