@@ -48,7 +48,15 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const [renameValue, setRenameValue] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [openDocument, setOpenDocument] = useState<DbDocument | null>(null);
-  const [lightMode, setLightMode] = useState(false);
+  const [lightMode, setLightMode] = useState(() => false);
+
+  // Sync lightMode from localStorage whenever openDocument changes
+  const handleSetOpenDocument = (doc: DbDocument | null) => {
+    setOpenDocument(doc);
+    if (doc) {
+      try { setLightMode(localStorage.getItem(`flux_doc_light_${doc.id}`) === "1"); } catch {}
+    }
+  };
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -174,7 +182,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
     onClose();
   };
   const handleOpenDocument = (doc: DbDocument) => {
-    setOpenDocument(doc);
+    handleSetOpenDocument(doc);
   };
   const handleMoveFolder = (draggedId: string, targetId: string) => {
     moveFolder(draggedId, targetId);
@@ -255,7 +263,13 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
               )}
             </div>
             <button
-              onClick={() => setLightMode(!lightMode)}
+              onClick={() => {
+                const next = !lightMode;
+                setLightMode(next);
+                if (openDocument) {
+                  try { localStorage.setItem(`flux_doc_light_${openDocument.id}`, next ? "1" : "0"); } catch {}
+                }
+              }}
               className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
               title={lightMode ? "Dark mode" : "Light mode"}
             >

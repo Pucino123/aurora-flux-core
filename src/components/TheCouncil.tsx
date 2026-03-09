@@ -234,8 +234,8 @@ const TheCouncil = () => {
       await supabase.from("council_ideas").delete().eq("id", ideaId).eq("user_id", user.id);
       if (activeIdeaId === ideaId) { setActiveIdeaId(null); setActiveIdeaContent(""); setResponses([]); setConsensusScore(null); setBiasData([]); setStickyNotes([]); }
       setIdeas((prev) => prev.filter((i) => i.id !== ideaId));
-      toast.success("Idé slettet");
-    } catch (e: any) { console.error("Delete idea error:", e); toast.error("Kunne ikke slette idé"); }
+      toast.success("Idea deleted");
+    } catch (e: any) { console.error("Delete idea error:", e); toast.error("Could not delete idea"); }
   };
 
   const handleAddStickyNote = async (parentId: string, color: string) => { if (!user) return; const { data } = await supabase.from("council_sticky_notes").insert({ user_id: user.id, parent_id: parentId, parent_type: "idea", color, content: "" }).select().single(); if (data) setStickyNotes((prev) => [...prev, data]); };
@@ -500,7 +500,7 @@ const TheCouncil = () => {
                       className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-black/8 text-foreground/70 hover:bg-black/12 backdrop-blur-md transition-all border border-black/10"
                     >
                       <Clock size={13} />
-                      {showPreviousIdeas ? "Skjul tidligere idéer" : `Tidligere idéer (${ideas.length})`}
+                      {showPreviousIdeas ? "Hide previous ideas" : `Previous ideas (${ideas.length})`}
                       <motion.div animate={{ rotate: showPreviousIdeas ? 180 : 0 }}>
                         <ChevronDown size={13} />
                       </motion.div>
@@ -544,7 +544,7 @@ const TheCouncil = () => {
                         style={{ background: "rgba(0,0,0,0.12)", borderColor: "rgba(0,0,0,0.1)", color: "hsl(var(--foreground)/0.7)" }}
                       >
                         <X size={12} />
-                        Ny idé
+                        New idea
                       </button>
                       <p className="text-sm font-semibold text-foreground/70 truncate min-w-0">{activeIdeaContent}</p>
                       {consensusScore !== null && (
@@ -568,7 +568,7 @@ const TheCouncil = () => {
                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
                            onFocus={() => setInputFocused(true)}
                            onBlur={() => setInputFocused(false)}
-                           placeholder="Ny idé eller opfølgning…"
+                          placeholder="New idea or follow-up…"
                            rows={2}
                            className="w-full rounded-xl px-3 py-2.5 outline-none text-sm resize-none border transition-all duration-300 text-slate-200 placeholder:text-slate-500"
                            style={{ background: "hsl(240 20% 10% / 0.8)", borderColor: "hsl(255 30% 50% / 0.2)" }}
@@ -582,7 +582,7 @@ const TheCouncil = () => {
                           className="w-full mt-2 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-all council-submit-btn"
                         >
                           {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                          Indsend <span className="opacity-60 font-normal">−5 ✨</span>
+                          Submit <span className="opacity-60 font-normal">−5 ✨</span>
                         </motion.button>
                       </div>
 
@@ -594,7 +594,7 @@ const TheCouncil = () => {
                             className="flex items-center gap-2 text-[11px] text-foreground/50 hover:text-foreground/80 transition-colors"
                           >
                             <Clock size={12} />
-                            {showPreviousIdeas ? "Skjul" : `Tidligere idéer (${ideas.length})`}
+                            {showPreviousIdeas ? "Hide" : `Previous ideas (${ideas.length})`}
                             <motion.div animate={{ rotate: showPreviousIdeas ? 180 : 0 }}><ChevronDown size={12} /></motion.div>
                           </button>
                           <AnimatePresence>
@@ -622,7 +622,7 @@ const TheCouncil = () => {
                             className="flex items-center gap-2 text-[11px] text-foreground/50 hover:text-foreground/80 transition-colors"
                           >
                             {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                            {showAdvanced ? "Skjul avancerede værktøjer" : "Avancerede værktøjer"}
+                            {showAdvanced ? "Hide advanced tools" : "Advanced tools"}
                           </button>
                           <AnimatePresence>
                             {showAdvanced && (
@@ -674,7 +674,7 @@ const TheCouncil = () => {
                             animate={{ opacity: 1, y: 0 }}
                             className="council-glass-card p-5"
                           >
-                            <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider mb-3">Konsensus</h3>
+                            <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider mb-3">Consensus</h3>
                             <div className="flex items-center gap-3 mb-3">
                               <motion.span
                                 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display"
@@ -730,7 +730,7 @@ const TheCouncil = () => {
                           {/* Council Summary */}
                           {responses.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-black/8 space-y-4">
-                              <h4 className="text-[11px] font-bold text-foreground/50 uppercase tracking-wider">Resumé</h4>
+                              <h4 className="text-[11px] font-bold text-foreground/50 uppercase tracking-wider">Summary</h4>
                               {(() => {
                                 const positives = responses.filter(r => r.voteScore >= 1);
                                 const negatives = responses.filter(r => r.voteScore <= -1);
@@ -754,7 +754,7 @@ const TheCouncil = () => {
                                             <div className="flex items-center gap-1.5 mb-0.5 flex-nowrap">
                                               <span className="text-[10px] font-bold whitespace-nowrap" style={{ color: r.color }}>{r.name}</span>
                                               <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap" style={{ backgroundColor: `${r.color}15`, color: r.color }}>
-                                                {r.vote === "GO" ? "Støtter" : r.vote === "EXPERIMENT" ? "Åben" : r.vote === "PIVOT" ? "Bekymret" : r.vote === "KILL" ? "Fraråder" : r.vote}
+                                                {r.vote === "GO" ? "Supports" : r.vote === "EXPERIMENT" ? "Open" : r.vote === "PIVOT" ? "Concerned" : r.vote === "KILL" ? "Against" : r.vote}
                                               </span>
                                             </div>
                                             <p className="text-[11px] text-foreground/65 leading-snug break-words">
@@ -771,7 +771,7 @@ const TheCouncil = () => {
                                   <>
                                     {renderGroup(positives, "▲", "text-[hsl(150_60%_45%)]", "Positive")}
                                     {renderGroup(negatives, "▼", "text-destructive", "Negative")}
-                                    {renderGroup(neutrals, "◆", "text-foreground/40", "Neutrale")}
+                                    {renderGroup(neutrals, "◆", "text-foreground/40", "Neutral")}
                                   </>
                                 );
                               })()}
@@ -797,7 +797,7 @@ const TheCouncil = () => {
                       {/* Loading state */}
                       {loading && (
                         <div className="council-glass-card p-4 space-y-3">
-                          <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider">Rådet tænker…</h3>
+                          <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider">Council is thinking…</h3>
                           {PERSONAS.map((p, i) => (
                             <motion.div
                               key={p.key}
@@ -821,7 +821,7 @@ const TheCouncil = () => {
                     {/* ═══ RIGHT COLUMN: Council Opinions ═══ */}
                     <div className="space-y-3 overflow-y-auto council-hidden-scrollbar pb-4">
                       {responses.length > 0 && (
-                        <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider px-1">Rådets vurderinger</h3>
+                        <h3 className="text-xs sm:text-sm font-bold text-foreground/50 uppercase tracking-wider px-1">Council Assessments</h3>
                       )}
                       {responses.length > 0 && !showDebatePanel && (
                         <motion.button
@@ -846,7 +846,7 @@ const TheCouncil = () => {
                           >
                             <Swords size={16} />
                           </motion.div>
-                          {hasStrongDisagreement ? "⚡ Stærk uenighed — Start Debate!" : "⚔️ Start Debate"}
+                          {hasStrongDisagreement ? "⚡ Strong disagreement — Start Debate!" : "⚔️ Start Debate"}
                         </motion.button>
                       )}
                       {filteredResponses.map((persona, i) => {
@@ -906,12 +906,12 @@ const TheCouncil = () => {
                                 <div className="flex flex-wrap gap-1.5 mb-3">
                                   {agreesWithKeys.length > 0 && (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-[hsl(150_60%_45%/0.12)] text-[hsl(150_60%_40%)]">
-                                      ✓ Enig med {agreesWithKeys.join(", ")}
+                                      ✓ Agrees with {agreesWithKeys.join(", ")}
                                     </span>
                                   )}
                                   {disagreesWithKeys.length > 0 && (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-[hsl(0_70%_55%/0.12)] text-[hsl(0_70%_50%)]">
-                                      ✗ Uenig med {disagreesWithKeys.join(", ")}
+                                      ✗ Disagrees with {disagreesWithKeys.join(", ")}
                                     </span>
                                   )}
                                 </div>

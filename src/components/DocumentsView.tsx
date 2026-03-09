@@ -122,9 +122,12 @@ const DocumentsView = () => {
         <Suspense fallback={null}>
           <TemplateChooserModal
             onClose={() => setShowTemplateChooser(false)}
-            onCreateDocument={async (title, type, content) => {
+            onCreateDocument={async (title, type, content, lightMode) => {
               const doc = await createDocument(title, type, undefined, content);
               if (doc) {
+                if (lightMode) {
+                  try { localStorage.setItem(`flux_doc_light_${doc.id}`, "1"); } catch {}
+                }
                 openInWorkspace(doc);
                 setActiveView("multitask" as any);
               }

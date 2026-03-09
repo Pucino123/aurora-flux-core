@@ -47,7 +47,9 @@ const ShortcutsPanel = ({ lightMode }: { lightMode: boolean }) => {
 };
 
 const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: Props) => {
-  const [lightMode, setLightMode] = useState(false);
+  const [lightMode, setLightMode] = useState(() => {
+    try { return localStorage.getItem(`flux_doc_light_${doc.id}`) === "1"; } catch { return false; }
+  });
   const [expanded, setExpanded] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date>(new Date());
@@ -159,7 +161,11 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
                 </Tooltip>
 
                 <button
-                  onClick={() => setLightMode(!lightMode)}
+                  onClick={() => {
+                    const next = !lightMode;
+                    setLightMode(next);
+                    try { localStorage.setItem(`flux_doc_light_${doc.id}`, next ? "1" : "0"); } catch {}
+                  }}
                   className={`p-2 rounded-lg transition-colors ${lightMode ? "hover:bg-gray-100 text-gray-500" : "hover:bg-secondary/60 text-muted-foreground"}`}
                 >
                   {lightMode ? <Moon size={16} /> : <Sun size={16} />}
