@@ -1622,6 +1622,7 @@ const FocusContent = () => {
                       onBack={() => closeWindow(win.id)}
                       onUpdate={(id, upd) => updateDesktopDoc(id, upd)}
                       onDelete={(id) => { removeDesktopDoc(id); closeWindow(win.id); }}
+                      onToggleLightMode={() => window.dispatchEvent(new CustomEvent("doc:toggle-light", { detail: { windowId: win.id } }))}
                     />
                   ) : folderWindowId ? (
                     <FolderWindowContent folderId={folderWindowId} />

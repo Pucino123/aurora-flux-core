@@ -156,14 +156,26 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const preFullscreenState = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
   // Per-document light/dark override (null = inherit system theme)
-  const [docTheme, setDocTheme] = useState<"light" | "dark" | null>(null);
+  const [docTheme, setDocTheme] = useState<"light" | "dark" | null>(() => {
+    try { return localStorage.getItem(`flux_win_light_${win.id}`) === "1" ? "light" : null; } catch { return null; }
+  });
   const toggleDocTheme = useCallback(() => {
     setDocTheme(prev => {
-      if (prev === null) return "light";
-      if (prev === "light") return "dark";
-      return null;
+      const next = prev === "light" ? null : "light";
+      try { localStorage.setItem(`flux_win_light_${win.id}`, next === "light" ? "1" : "0"); } catch {}
+      return next;
     });
-  }, []);
+  }, [win.id]);
+
+  // Listen for toggle events fired from DocumentView's toolbar
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      if (e.detail?.windowId && e.detail.windowId !== win.id) return;
+      toggleDocTheme();
+    };
+    window.addEventListener("doc:toggle-light" as any, handler);
+    return () => window.removeEventListener("doc:toggle-light" as any, handler);
+  }, [toggleDocTheme, win.id]);
 
   // ── Direct position (no spring during drag — pixel-perfect tracking) ────────
   const rawX = useRef(win.position.x);
@@ -488,7 +500,24 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
             layout={!isFloating}
             transition={{ type: "spring", stiffness: 340, damping: 34 }}
             className={`${layoutClasses} select-none`}
-            style={{ zIndex: effectiveZ, ...(isFloating ? { x: isDragging ? motionX : springX, y: isDragging ? motionY : springY, ...posStyle } : {}) }}
+            style={{
+              zIndex: effectiveZ,
+              ...(isFloating ? { x: isDragging ? motionX : springX, y: isDragging ? motionY : springY, ...posStyle } : {}),
+              ...(docTheme === "light" ? {
+                background: "#ffffff",
+                borderColor: "rgba(0,0,0,0.12)",
+                color: "#111",
+                ["--background" as any]: "0 0% 99%",
+                ["--foreground" as any]: "220 20% 10%",
+                ["--card" as any]: "0 0% 100%",
+                ["--card-foreground" as any]: "220 20% 10%",
+                ["--muted" as any]: "220 15% 96%",
+                ["--muted-foreground" as any]: "220 10% 45%",
+                ["--border" as any]: "220 15% 88%",
+                ["--secondary" as any]: "220 15% 94%",
+                ["--secondary-foreground" as any]: "220 20% 20%",
+              } : {}),
+            }}
             onPointerDownCapture={() => bringToFront(win.id)}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -497,14 +526,8 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
             {/* ── Header ────────────────────────────────────────────────── */}
             {headerContent}
 
-            {/* ── Content — wrapped in scoped theme class ──────────────── */}
-            <div
-              className={`flex-1 min-h-0 overflow-hidden select-text pointer-events-auto ${docTheme === "light" ? "light" : docTheme === "dark" ? "dark" : ""}`}
-              style={docTheme !== null ? {
-                colorScheme: docTheme,
-                background: docTheme === "light" ? "hsl(0 0% 98%)" : "hsl(222 47% 11%)",
-              } : undefined}
-            >
+            {/* ── Content ──────────────────────────────────────────────── */}
+            <div className="flex-1 min-h-0 overflow-hidden select-text pointer-events-auto">
               {children}
             </div>
 
