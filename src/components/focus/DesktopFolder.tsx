@@ -304,8 +304,9 @@ const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState,
             if (onSingleSelect) onSingleSelect(folder.id); 
             else setSelected(true); 
           }
-          // Clear selection ring after a very short delay (shorter than double-click threshold)
-          setTimeout(() => setSelected(false), 400);
+          // Clear selection ring after a short delay — cancel if double-click fires
+          if (selectedTimerRef.current) clearTimeout(selectedTimerRef.current);
+          selectedTimerRef.current = setTimeout(() => { setSelected(false); selectedTimerRef.current = null; }, 300);
         }}
         onContextMenu={handleContextMenu}
       >
