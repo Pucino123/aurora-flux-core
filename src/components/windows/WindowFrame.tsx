@@ -458,19 +458,6 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
       {/* Drag hint */}
       <div className="absolute left-1/2 -translate-x-1/2 top-[11px] w-8 h-1 rounded-full bg-foreground/15 pointer-events-none" />
 
-      {/* Right: theme toggle */}
-      <div className="flex items-center shrink-0" onPointerDown={e => e.stopPropagation()}>
-        <button
-          onClick={toggleDocTheme}
-          title={themeTitle}
-          className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-foreground/10 transition-colors"
-        >
-          <ThemeIcon
-            size={11}
-            className={docTheme === null ? "text-foreground/25" : "text-foreground/60"}
-          />
-        </button>
-      </div>
     </div>
   );
 

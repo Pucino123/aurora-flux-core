@@ -127,8 +127,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
     <motion.div
       className="relative z-10 flex min-h-screen w-full">
 
-      {/* Sidebar — smoothly collapses in Focus Mode */}
-      <div className="hidden md:block shrink-0">
+      {/* Sidebar — smoothly collapses in Focus Mode, must sit above windows */}
+      <div className="hidden md:block shrink-0 relative" style={{ zIndex: 10400 }}>
         <FluxSidebar visible={sidebarVisible && !isFocusModeActive} onToggle={onToggleSidebar} onRequestCreateFolder={() => setShowCreateModal(true)} />
       </div>
 
