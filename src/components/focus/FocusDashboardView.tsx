@@ -1756,6 +1756,10 @@ const FocusContent = () => {
                 ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
                 : p
               ));
+            }
+            contextMenuPosRef.current = null;
+            toast.success(`${title} created`);
+          }}
                 title: doc.title,
                 layout: "floating",
                 position: { x: Math.max(60, (window.innerWidth / 2) - 410 + Math.random() * 80), y: Math.max(40, (window.innerHeight / 2) - 310 + Math.random() * 60) },
