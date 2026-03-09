@@ -54,6 +54,12 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date>(new Date());
 
+  const toggleLightMode = () => {
+    const next = !lightMode;
+    setLightMode(next);
+    try { localStorage.setItem(`flux_doc_light_${doc.id}`, next ? "1" : "0"); } catch {}
+  };
+
   const wrappedOnUpdate = (id: string, updates: Partial<DbDocument>) => {
     onUpdate(id, updates);
     setLastSaved(new Date());
