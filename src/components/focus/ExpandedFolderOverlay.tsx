@@ -373,22 +373,38 @@ const ExpandedFolderOverlay = ({
 
 
 
-  // Modal drag — locked to pixel-based position
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  // Modal drag/resize state
+  const [modalRect, setModalRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const dragRef = useRef<{ startMx: number; startMy: number; startPx: number; startPy: number } | null>(null);
   const isDraggingRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const preFullscreenPos = useRef<{ x: number; y: number } | null>(null);
+  const preFullscreenRect = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
   const getCenter = useCallback(() => ({
     x: Math.round(window.innerWidth / 2 - MODAL_W / 2),
     y: Math.round(window.innerHeight / 2 - MODAL_MIN_H / 2),
+    w: MODAL_W,
+    h: Math.round(window.innerHeight * 0.6),
   }), []);
 
   // Set centered position on mount
   useEffect(() => {
-    setPos(getCenter());
+    setModalRect(getCenter());
   }, [getCenter]);
+
+  const { onPointerDownResize } = useResizable({
+    pos: modalRect ?? getCenter(),
+    minW: MODAL_MIN_W,
+    minH: MODAL_MIN_H,
+    onUpdate: (updates) => {
+      if (isFullscreen) return;
+      setModalRect(prev => ({ ...(prev ?? getCenter()), ...updates }));
+    },
+    enabled: !isFullscreen,
+  });
+
+  // Alias pos for code compatibility
+  const pos = modalRect ? { x: modalRect.x, y: modalRect.y } : null;
 
   const handleHeaderPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button,input")) return;
