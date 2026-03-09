@@ -426,9 +426,9 @@ const ExpandedFolderOverlay = ({
     if (!isDraggingRef.current) return;
     const nx = dragRef.current.startPx + dx;
     const ny = dragRef.current.startPy + dy;
-    const maxX = window.innerWidth - MODAL_W - 16;
+    const maxX = window.innerWidth - (modalRect?.w ?? MODAL_W) - 16;
     const maxY = window.innerHeight - 80;
-    setPos({ x: Math.max(8, Math.min(nx, maxX)), y: Math.max(8, Math.min(ny, maxY)) });
+    setModalRect(prev => prev ? { ...prev, x: Math.max(8, Math.min(nx, maxX)), y: Math.max(8, Math.min(ny, maxY)) } : prev);
   };
 
   const handleHeaderPointerUp = () => {
