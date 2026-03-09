@@ -1139,12 +1139,22 @@ const ExpandedFolderOverlay = ({
                 const subColor = sub.color || "hsl(var(--muted-foreground))";
                 const isTarget = overlayDropTarget === sub.id;
                 return (
-                  <div
+                  <motion.div
                     key={sub.id}
                     ref={(el: HTMLDivElement | null) => { subfolderElRefs.current[sub.id] = el; }}
-                    draggable
-                    onDragStart={e => { e.dataTransfer.setData("modal-subfolder-id", sub.id); e.dataTransfer.effectAllowed = "move"; }}
-                    onDragEnd={e => { if (e.dataTransfer.dropEffect === "none") handleSubfolderDragEnd(e as any, { point: { x: e.clientX, y: e.clientY } }, sub); }}
+                    drag
+                    dragMomentum={false}
+                    dragElastic={0.12}
+                    whileDrag={{ scale: 1.08, zIndex: 9999, opacity: 0.9, cursor: "grabbing" }}
+                    onDragEnd={(e, info) => {
+                      const rect = containerRef.current?.getBoundingClientRect();
+                      if (!rect) return;
+                      if (isOutsideRect(rect, info.point.x, info.point.y)) {
+                        moveFolder(sub.id, null as any);
+                        onMoveFolderToDesktop(sub.id, info.point.x, info.point.y);
+                        toast.success(`"${sub.title}" moved to desktop`);
+                      }
+                    }}
                     className={`flex flex-col items-center gap-2 cursor-pointer group transition-all select-none ${isTarget ? "scale-105" : ""}`}
                     onDoubleClick={() => navigateInto(sub.id)}
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setSubCtxMenu({ sub, x: e.clientX, y: e.clientY }); }}
