@@ -361,12 +361,15 @@ const FocusContent = () => {
           spaceSettings: p.spaceSettings,
           folderPositions: p.folderPositions,
           docPositions: p.docPositions,
-          // Migration: pages that have never had visibility lists stay undefined (migrated lazily below)
+          // Keep existing visibility lists — undefined means legacy "show all" for page-1 only
           visibleFolderIds: p.visibleFolderIds,
           visibleDocIds: p.visibleDocIds,
+          pinnedFolderIds: p.pinnedFolderIds,
+          pinnedDocIds: p.pinnedDocIds,
         }));
       }
     } catch {}
+    // First page: undefined = legacy mode (shows all folders). New pages always use explicit lists.
     return [{ id: "page-1", label: "Home", visibleFolderIds: undefined, visibleDocIds: undefined }];
   });
   const [activePageIndex, setActivePageIndex] = useState(0);
