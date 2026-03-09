@@ -455,7 +455,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   );
 
   return (
-    <>
+    <div style={isMinimized ? { display: "none" } : undefined}>
       {/* Snap zone overlay */}
       {snapZone && dragging.current && createPortal(
         <div className="fixed inset-0 pointer-events-none flex" style={{ zIndex: 10200 }}>
