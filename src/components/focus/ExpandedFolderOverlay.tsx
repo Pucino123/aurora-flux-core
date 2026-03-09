@@ -1235,7 +1235,7 @@ const ExpandedFolderOverlay = ({
                       }
                     }}
                     className="flex flex-col items-center gap-2 cursor-pointer group"
-                    onDoubleClick={() => setOpenDocInOverlay(doc)}
+                    onDoubleClick={() => { const lm = (() => { try { return localStorage.getItem(`flux_doc_light_${doc.id}`) === "1"; } catch { return false; } })(); setDocLightMode(lm); setOpenDocInOverlay(doc); }}
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setDocCtxMenu({ doc, x: e.clientX, y: e.clientY }); }}
                     style={{ opacity: draggingOutId === doc.id ? 0.3 : 1 }}
                   >
