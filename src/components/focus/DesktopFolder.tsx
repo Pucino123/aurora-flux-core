@@ -295,7 +295,15 @@ const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState,
         }}
         onPointerDown={handlePointerDown}
         onDoubleClick={handleDoubleClick}
-        onClick={(e) => { e.stopPropagation(); if (!didDrag.current && !isMarqueeSelected) { if (onSingleSelect) onSingleSelect(folder.id); else setSelected(true); } }}
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          if (!didDrag.current && !isMarqueeSelected) { 
+            if (onSingleSelect) onSingleSelect(folder.id); 
+            else setSelected(true); 
+          }
+          // Auto-clear selection ring after a short delay (so double-click still shows it briefly)
+          setTimeout(() => setSelected(false), 1200);
+        }}
         onContextMenu={handleContextMenu}
       >
         {/* Pin badge */}
