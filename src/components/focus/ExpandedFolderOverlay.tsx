@@ -1279,6 +1279,19 @@ const ExpandedFolderOverlay = ({
         )}
       </AnimatePresence>
 
+      {/* Subfolder right-click context menu */}
+      <AnimatePresence>
+        {subCtxMenu && (
+          <SubfolderContextMenu
+            sub={subCtxMenu.sub}
+            x={subCtxMenu.x}
+            y={subCtxMenu.y}
+            onOpen={() => { navigateInto(subCtxMenu.sub.id); setSubCtxMenu(null); }}
+            onClose={() => setSubCtxMenu(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Template chooser */}
       {showTemplateChooser && (
         <TemplateChooserModal
