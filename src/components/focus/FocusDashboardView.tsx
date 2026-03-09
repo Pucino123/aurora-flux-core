@@ -1474,9 +1474,9 @@ const FocusContent = () => {
                 .filter(doc => {
                   const pinned = dashboardPages.some(p => p.pinnedDocIds?.includes(doc.id));
                   if (pinned) return true;
-                  return currentPage?.visibleDocIds === undefined
-                    ? true
-                    : currentPage.visibleDocIds.includes(doc.id);
+                  // Legacy migration: first page with undefined visibleDocIds shows all docs
+                  if (currentPage?.visibleDocIds === undefined && activePageIndex === 0) return true;
+                  return (currentPage?.visibleDocIds ?? []).includes(doc.id);
                 })
                 .map((doc) => {
                   const isPinned = dashboardPages.some(p => p.pinnedDocIds?.includes(doc.id));
