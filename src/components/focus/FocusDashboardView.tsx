@@ -54,6 +54,7 @@ import WindowFrame from "@/components/windows/WindowFrame";
 import WindowDock from "@/components/windows/WindowDock";
 import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
+import FolderWindowContent from "./FolderWindowContent";
 import { useFocusMode } from "@/context/FocusModeContext";
 import { useTrash } from "@/context/TrashContext";
 import FocusIntentionModal from "./FocusIntentionModal";
