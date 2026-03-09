@@ -207,8 +207,10 @@ const FluxSidebar = ({ visible, onToggle, onRequestCreateFolder }: FluxSidebarPr
                     >
                       <BaymaxFace color={p.color} size={22} expression={expressions[p.key] || "straight"} />
                     </button>
-                    {/* Tooltip */}
-                    <div className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150 whitespace-nowrap">
+                    {/* Tooltip — last items anchor right to avoid clipping by sidebar */}
+                    <div className={`pointer-events-none absolute bottom-[calc(100%+6px)] z-50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150 whitespace-nowrap ${
+                      p.key === "growth" ? "right-0" : "left-1/2 -translate-x-1/2"
+                    }`}>
                       <div className="rounded-lg px-2.5 py-1.5 text-center shadow-xl"
                         style={{ background: "rgba(12,10,20,0.88)", backdropFilter: "blur(16px)", border: `1px solid ${p.color}40` }}>
                         <div className="text-[11px] font-semibold text-white leading-tight">{t(p.name)}</div>

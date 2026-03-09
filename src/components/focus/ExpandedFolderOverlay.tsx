@@ -635,7 +635,7 @@ const ExpandedFolderOverlay = ({
             doc={docCtxMenu.doc}
             x={docCtxMenu.x}
             y={docCtxMenu.y}
-            onOpen={() => { onOpenDocument(docCtxMenu.doc); onClose(); }}
+            onOpen={() => { setDocCtxMenu(null); setOpenDocInOverlay(docCtxMenu.doc); }}
             onDelete={() => handleDeleteDoc(docCtxMenu.doc)}
             onClose={() => setDocCtxMenu(null)}
           />
