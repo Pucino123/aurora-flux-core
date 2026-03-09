@@ -48,7 +48,15 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
   const [renameValue, setRenameValue] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [openDocument, setOpenDocument] = useState<DbDocument | null>(null);
-  const [lightMode, setLightMode] = useState(false);
+  const [lightMode, setLightMode] = useState(() => false);
+
+  // Sync lightMode from localStorage whenever openDocument changes
+  const handleSetOpenDocument = (doc: DbDocument | null) => {
+    setOpenDocument(doc);
+    if (doc) {
+      try { setLightMode(localStorage.getItem(`flux_doc_light_${doc.id}`) === "1"); } catch {}
+    }
+  };
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState("");
