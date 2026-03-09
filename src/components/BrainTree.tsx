@@ -342,14 +342,7 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
   // ── Aggregated inbox badge ──
   const unreadEmails = useMemo(() => MOCK_EMAILS.filter(e => !e.isRead).length, []);
   const pendingTodayTasks = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    return inboxTasks.filter(t => {
-      if (t.done) return false;
-      // Only count tasks that are explicitly due/scheduled today — not all undated tasks
-      const due = t.due_date || t.scheduled_date;
-      if (!due) return false;
-      return due === todayStr;
-    }).length;
+    return inboxTasks.filter(t => !t.done).length;
   }, [inboxTasks]);
   const totalInboxBadge = unreadEmails + pendingTodayTasks + unreadMessages;
 
