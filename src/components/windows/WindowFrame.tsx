@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useEffect, useCallback, useState } from "react"
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import {
-  X, Maximize2, PanelLeft, PanelRight, Square, Minus, Sun, Moon,
+  X, Maximize2, PanelLeft, PanelRight, Square, Minus,
   Copy, Group, Ungroup, Pencil, FolderOpen,
 } from "lucide-react";
 import { useWindowManager, AppWindow, WindowLayout } from "@/context/WindowManagerContext";
