@@ -131,7 +131,8 @@ const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState,
 
   const handleDoubleClick = () => {
     if (renaming) return;
-    setSelected(false); // clear selection ring on open
+    // Immediately clear selection — no timeout, no glow left behind
+    setSelected(false);
     dragging.current = false;
     if (onOpenModal) { onOpenModal(folder.id); } else { setActiveFolder(folder.id); setActiveView("canvas"); }
   };
