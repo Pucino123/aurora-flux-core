@@ -54,6 +54,12 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date>(new Date());
 
+  const toggleLightMode = () => {
+    const next = !lightMode;
+    setLightMode(next);
+    try { localStorage.setItem(`flux_doc_light_${doc.id}`, next ? "1" : "0"); } catch {}
+  };
+
   const wrappedOnUpdate = (id: string, updates: Partial<DbDocument>) => {
     onUpdate(id, updates);
     setLastSaved(new Date());
@@ -96,13 +102,10 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
         className="fixed inset-0 z-[102] flex items-center justify-center p-4 pointer-events-none"
       >
         <div
-          className={`relative flex flex-col backdrop-blur-2xl border rounded-2xl shadow-2xl pointer-events-auto overflow-hidden transition-all duration-300 ${
+          className={`relative flex flex-col border rounded-2xl shadow-2xl pointer-events-auto overflow-hidden transition-all duration-300 ${
             expanded ? "w-full h-full max-w-none max-h-none rounded-none" : "w-full max-w-4xl max-h-[85vh]"
-          } ${
-            lightMode
-              ? "bg-white/95 border-gray-200/60 text-gray-900"
-              : "bg-card/80 border-border/50"
-          }`}
+          } ${lightMode ? "" : "bg-card/80 border-border/50 backdrop-blur-2xl"}`}
+          style={lightMode ? { background: "#ffffff", borderColor: "rgba(0,0,0,0.12)", color: "#111" } : undefined}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -198,7 +201,7 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
                 onUpdate={wrappedOnUpdate}
                 onDelete={onDelete}
                 lightMode={lightMode}
-                onToggleLightMode={() => setLightMode(!lightMode)}
+                onToggleLightMode={toggleLightMode}
               />
             </div>
           </div>
