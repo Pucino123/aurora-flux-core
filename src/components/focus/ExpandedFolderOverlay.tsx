@@ -1140,21 +1140,19 @@ const ExpandedFolderOverlay = ({
                 const subColor = sub.color || "hsl(var(--muted-foreground))";
                 const isTarget = overlayDropTarget === sub.id;
                 return (
-                  <motion.div
+                  <div
                     key={sub.id}
                     ref={(el: HTMLDivElement | null) => { subfolderElRefs.current[sub.id] = el; }}
-                    drag
-                    dragMomentum={false}
-                    dragElastic={0.12}
-                    whileDrag={{ scale: 1.08, zIndex: 9999, opacity: 0.9, cursor: "grabbing" }}
-                    onDragEnd={(e, info) => handleSubfolderDragEnd(e as any, info, sub)}
-                    className={`flex flex-col items-center gap-2 cursor-pointer group transition-all ${isTarget ? "scale-105" : ""}`}
+                    draggable
+                    onDragStart={e => { e.dataTransfer.setData("modal-subfolder-id", sub.id); e.dataTransfer.effectAllowed = "move"; }}
+                    onDragEnd={e => { if (e.dataTransfer.dropEffect === "none") handleSubfolderDragEnd(e as any, { point: { x: e.clientX, y: e.clientY } }, sub); }}
+                    className={`flex flex-col items-center gap-2 cursor-pointer group transition-all select-none ${isTarget ? "scale-105" : ""}`}
                     onDoubleClick={() => navigateInto(sub.id)}
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setSubCtxMenu({ sub, x: e.clientX, y: e.clientY }); }}
                     style={{ opacity: draggingOutId === sub.id ? 0.3 : 1 }}
                   >
                     <div
-                      className="flex items-center justify-center rounded-2xl transition-all"
+                      className="flex items-center justify-center rounded-2xl transition-all group-hover:scale-105"
                       style={{
                         width: 64, height: 64,
                         background: isTarget ? `${subColor}28` : (lm ? `${subColor}20` : `${subColor}18`),
@@ -1167,7 +1165,7 @@ const ExpandedFolderOverlay = ({
                     <span className="text-[11px] font-medium text-center leading-tight max-w-[72px] line-clamp-2" style={{ color: itemNameColor }}>
                       {sub.title}
                     </span>
-                  </motion.div>
+                  </div>
                 );
               })}
 

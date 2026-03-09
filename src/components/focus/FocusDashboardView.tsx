@@ -361,12 +361,15 @@ const FocusContent = () => {
           spaceSettings: p.spaceSettings,
           folderPositions: p.folderPositions,
           docPositions: p.docPositions,
-          // Migration: pages that have never had visibility lists stay undefined (migrated lazily below)
+          // Keep existing visibility lists — undefined means legacy "show all" for page-1 only
           visibleFolderIds: p.visibleFolderIds,
           visibleDocIds: p.visibleDocIds,
+          pinnedFolderIds: p.pinnedFolderIds,
+          pinnedDocIds: p.pinnedDocIds,
         }));
       }
     } catch {}
+    // First page: undefined = legacy mode (shows all folders). New pages always use explicit lists.
     return [{ id: "page-1", label: "Home", visibleFolderIds: undefined, visibleDocIds: undefined }];
   });
   const [activePageIndex, setActivePageIndex] = useState(0);
@@ -446,6 +449,8 @@ const FocusContent = () => {
           docPositions: p.docPositions,
           visibleFolderIds: p.visibleFolderIds,
           visibleDocIds: p.visibleDocIds,
+          pinnedFolderIds: p.pinnedFolderIds,
+          pinnedDocIds: p.pinnedDocIds,
         })));
       }
     })();
@@ -1433,9 +1438,9 @@ const FocusContent = () => {
                 .filter(folder => {
                   const pinned = dashboardPages.some(p => p.pinnedFolderIds?.includes(folder.id));
                   if (pinned) return true;
-                  return currentPage?.visibleFolderIds === undefined
-                    ? true
-                    : currentPage.visibleFolderIds.includes(folder.id);
+                  // Legacy migration: first page with undefined visibleFolderIds shows all folders
+                  if (currentPage?.visibleFolderIds === undefined && activePageIndex === 0) return true;
+                  return (currentPage?.visibleFolderIds ?? []).includes(folder.id);
                 })
                 .map((folder) => {
                   const isPinned = dashboardPages.some(p => p.pinnedFolderIds?.includes(folder.id));
@@ -1469,9 +1474,9 @@ const FocusContent = () => {
                 .filter(doc => {
                   const pinned = dashboardPages.some(p => p.pinnedDocIds?.includes(doc.id));
                   if (pinned) return true;
-                  return currentPage?.visibleDocIds === undefined
-                    ? true
-                    : currentPage.visibleDocIds.includes(doc.id);
+                  // Legacy migration: first page with undefined visibleDocIds shows all docs
+                  if (currentPage?.visibleDocIds === undefined && activePageIndex === 0) return true;
+                  return (currentPage?.visibleDocIds ?? []).includes(doc.id);
                 })
                 .map((doc) => {
                   const isPinned = dashboardPages.some(p => p.pinnedDocIds?.includes(doc.id));

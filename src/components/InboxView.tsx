@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useFlux } from "@/context/FluxContext";
 import { useTrash } from "@/context/TrashContext";
 import { Check, Trash2, AlertTriangle, Calendar, ListTodo, Mail, MessageSquare, Search, Plus, Reply, Forward, Archive, Users, MailPlus, Send, Users2 } from "lucide-react";
@@ -460,10 +460,11 @@ const TasksTab = () => {
 const InboxView = () => {
   const { inboxTasks } = useFlux();
   const [activeTab, setActiveTab] = useState<TabKey>("tasks");
+  const unreadMailCount = useMemo(() => MOCK_EMAILS.filter(e => !e.isRead).length, []);
 
   const TABS = [
     { key: "chat" as TabKey, label: "Chat", icon: MessageSquare },
-    { key: "mail" as TabKey, label: "Mail", icon: Mail, badge: 2 },
+    { key: "mail" as TabKey, label: "Mail", icon: Mail, badge: unreadMailCount },
     { key: "tasks" as TabKey, label: "Tasks", icon: ListTodo, badge: inboxTasks.filter(i => !i.done).length },
   ];
 
