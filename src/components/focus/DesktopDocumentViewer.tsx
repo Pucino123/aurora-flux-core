@@ -47,7 +47,9 @@ const ShortcutsPanel = ({ lightMode }: { lightMode: boolean }) => {
 };
 
 const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: Props) => {
-  const [lightMode, setLightMode] = useState(false);
+  const [lightMode, setLightMode] = useState(() => {
+    try { return localStorage.getItem(`flux_doc_light_${doc.id}`) === "1"; } catch { return false; }
+  });
   const [expanded, setExpanded] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date>(new Date());
