@@ -263,7 +263,13 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
               )}
             </div>
             <button
-              onClick={() => setLightMode(!lightMode)}
+              onClick={() => {
+                const next = !lightMode;
+                setLightMode(next);
+                if (openDocument) {
+                  try { localStorage.setItem(`flux_doc_light_${openDocument.id}`, next ? "1" : "0"); } catch {}
+                }
+              }}
               className="p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground"
               title={lightMode ? "Dark mode" : "Light mode"}
             >
