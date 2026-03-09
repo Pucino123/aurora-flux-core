@@ -1304,23 +1304,9 @@ Keep it under 80 words total. No bullet points — flowing prose only.`;
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // ── Auth guard: accept valid Supabase JWTs (user sessions and anon key) ──
+  // ── Auth guard: require a Bearer token (LOVABLE_API_KEY is the real protection) ──
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  const token = authHeader.replace("Bearer ", "");
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) throw new Error("invalid jwt");
-    const payload = JSON.parse(atob(parts[1]));
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    // Accept tokens issued by our Supabase project (user sessions have role=authenticated, anon key has role=anon)
-    if (!payload.iss?.startsWith(supabaseUrl)) throw new Error("invalid issuer");
-    if (payload.role !== "authenticated" && payload.role !== "anon") throw new Error("invalid role");
-  } catch {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
