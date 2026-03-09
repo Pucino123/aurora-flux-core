@@ -345,10 +345,10 @@ const BrainTree = ({ onRequestCreateFolder }: { onRequestCreateFolder?: () => vo
     const todayStr = new Date().toISOString().slice(0, 10);
     return inboxTasks.filter(t => {
       if (t.done) return false;
-      // Count tasks due/scheduled today, OR tasks with NO date at all (generic pending)
+      // Only count tasks that are explicitly due/scheduled today — not all undated tasks
       const due = t.due_date || t.scheduled_date;
-      if (!due) return true; // undated tasks = always pending
-      return due === todayStr; // exact date match — no parseISO needed
+      if (!due) return false;
+      return due === todayStr;
     }).length;
   }, [inboxTasks]);
   const totalInboxBadge = unreadEmails + pendingTodayTasks + unreadMessages;

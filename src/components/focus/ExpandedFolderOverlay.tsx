@@ -7,6 +7,7 @@ import {
   PanelRight, PanelLeft, Monitor, Copy, Share2, CalendarPlus, FolderInput,
   Type, Upload, Palette, Search, Clock, BookCopy, Pin, PinOff,
 } from "lucide-react";
+import { useResizable } from "@/hooks/useResizable";
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { useDocuments, DbDocument } from "@/hooks/useDocuments";
 import { useTrash } from "@/context/TrashContext";
@@ -34,6 +35,7 @@ function isOutsideRect(rect: DOMRect, x: number, y: number, margin = 40): boolea
 
 const MODAL_W = 640;
 const MODAL_MIN_H = 440;
+const MODAL_MIN_W = 420;
 
 const ICON_COLORS = [
   { name: "Blue", value: "hsl(217 91% 60%)" },
@@ -371,22 +373,38 @@ const ExpandedFolderOverlay = ({
 
 
 
-  // Modal drag — locked to pixel-based position
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  // Modal drag/resize state
+  const [modalRect, setModalRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const dragRef = useRef<{ startMx: number; startMy: number; startPx: number; startPy: number } | null>(null);
   const isDraggingRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const preFullscreenPos = useRef<{ x: number; y: number } | null>(null);
+  const preFullscreenRect = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
   const getCenter = useCallback(() => ({
     x: Math.round(window.innerWidth / 2 - MODAL_W / 2),
     y: Math.round(window.innerHeight / 2 - MODAL_MIN_H / 2),
+    w: MODAL_W,
+    h: Math.round(window.innerHeight * 0.6),
   }), []);
 
   // Set centered position on mount
   useEffect(() => {
-    setPos(getCenter());
+    setModalRect(getCenter());
   }, [getCenter]);
+
+  const { onPointerDownResize } = useResizable({
+    pos: modalRect ?? getCenter(),
+    minW: MODAL_MIN_W,
+    minH: MODAL_MIN_H,
+    onUpdate: (updates) => {
+      if (isFullscreen) return;
+      setModalRect(prev => ({ ...(prev ?? getCenter()), ...updates }));
+    },
+    enabled: !isFullscreen,
+  });
+
+  // Alias pos for code compatibility
+  const pos = modalRect ? { x: modalRect.x, y: modalRect.y } : null;
 
   const handleHeaderPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button,input")) return;
@@ -408,9 +426,9 @@ const ExpandedFolderOverlay = ({
     if (!isDraggingRef.current) return;
     const nx = dragRef.current.startPx + dx;
     const ny = dragRef.current.startPy + dy;
-    const maxX = window.innerWidth - MODAL_W - 16;
+    const maxX = window.innerWidth - (modalRect?.w ?? MODAL_W) - 16;
     const maxY = window.innerHeight - 80;
-    setPos({ x: Math.max(8, Math.min(nx, maxX)), y: Math.max(8, Math.min(ny, maxY)) });
+    setModalRect(prev => prev ? { ...prev, x: Math.max(8, Math.min(nx, maxX)), y: Math.max(8, Math.min(ny, maxY)) } : prev);
   };
 
   const handleHeaderPointerUp = () => {
@@ -487,10 +505,10 @@ const ExpandedFolderOverlay = ({
       layout,
       minimized: false,
       position: pos ?? getCenter(),
-      size: { w: MODAL_W, h: 560 },
+      size: { w: modalRect?.w ?? MODAL_W, h: modalRect?.h ?? 560 },
     });
     onClose();
-  }, [folder, folderId, openWindow, pos, getCenter, onClose]);
+  }, [folder, folderId, openWindow, pos, getCenter, onClose, modalRect]);
 
   // Minimize directly to toolbar (no popup, just close the overlay and open minimized)
   const handleMinimize = useCallback(() => {
@@ -502,21 +520,21 @@ const ExpandedFolderOverlay = ({
       layout: "floating",
       minimized: true,
       position: pos ?? getCenter(),
-      size: { w: MODAL_W, h: 560 },
+      size: { w: modalRect?.w ?? MODAL_W, h: modalRect?.h ?? 560 },
     });
     onClose();
-  }, [folder, folderId, openWindow, pos, getCenter, onClose]);
+  }, [folder, folderId, openWindow, pos, getCenter, onClose, modalRect]);
 
   // Toggle fullscreen for the overlay itself
   const handleFullscreen = useCallback(() => {
     if (isFullscreen) {
       setIsFullscreen(false);
-      if (preFullscreenPos.current) setPos(preFullscreenPos.current);
+      if (preFullscreenRect.current) setModalRect(preFullscreenRect.current);
     } else {
-      preFullscreenPos.current = pos ?? getCenter();
+      preFullscreenRect.current = modalRect ?? getCenter();
       setIsFullscreen(true);
     }
-  }, [isFullscreen, pos, getCenter]);
+  }, [isFullscreen, modalRect, getCenter]);
 
   const handleDeleteDoc = useCallback(async (doc: DbDocument) => {
     await removeDocument(doc.id);
@@ -530,12 +548,17 @@ const ExpandedFolderOverlay = ({
   const IconComp = customIcon ? customIcon.icon : Folder;
   const iconColor = folder.color || "hsl(var(--muted-foreground))";
 
+  const rect = modalRect ?? getCenter();
   // Modal style: fullscreen or positioned
   const modalStyle: React.CSSProperties = isFullscreen
     ? { position: "fixed", inset: 0, width: "100vw", height: "100vh", maxHeight: "100vh", zIndex: 8001, borderRadius: 0 }
-    : pos
-      ? { position: "fixed", top: pos.y, left: pos.x, width: MODAL_W, minHeight: MODAL_MIN_H, maxHeight: "82vh", zIndex: 8001 }
-      : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: MODAL_W, minHeight: MODAL_MIN_H, maxHeight: "82vh", zIndex: 8001 };
+    : { position: "fixed", top: rect.y, left: rect.x, width: rect.w, height: rect.h, zIndex: 8001 };
+
+  // Resize handle cursor mapping
+  const RESIZE_CURSORS: Record<string, string> = {
+    n:"ns-resize", s:"ns-resize", e:"ew-resize", w:"ew-resize",
+    ne:"nesw-resize", nw:"nwse-resize", se:"nwse-resize", sw:"nesw-resize",
+  };
 
   return createPortal(
     <>
@@ -553,7 +576,7 @@ const ExpandedFolderOverlay = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.93, y: 8 }}
         transition={{ type: "spring", bounce: 0.12, duration: 0.32 }}
-        className="flex flex-col"
+        className="flex flex-col overflow-hidden"
         style={{
           ...modalStyle,
           background: "rgba(14, 11, 32, 0.94)",
@@ -919,6 +942,25 @@ const ExpandedFolderOverlay = ({
         </div>
         </>
         )}
+
+        {/* Resize handles — corners + edges */}
+        {!isFullscreen && ([
+          { dir: "se" as const, style: { bottom: 0, right: 0, width: 18, height: 18, cursor: RESIZE_CURSORS.se } },
+          { dir: "sw" as const, style: { bottom: 0, left: 0, width: 18, height: 18, cursor: RESIZE_CURSORS.sw } },
+          { dir: "ne" as const, style: { top: 0, right: 0, width: 18, height: 18, cursor: RESIZE_CURSORS.ne } },
+          { dir: "nw" as const, style: { top: 0, left: 0, width: 18, height: 18, cursor: RESIZE_CURSORS.nw } },
+          { dir: "e" as const, style: { top: "50%", right: 0, width: 8, height: 40, transform: "translateY(-50%)", cursor: RESIZE_CURSORS.e } },
+          { dir: "w" as const, style: { top: "50%", left: 0, width: 8, height: 40, transform: "translateY(-50%)", cursor: RESIZE_CURSORS.w } },
+          { dir: "s" as const, style: { bottom: 0, left: "50%", width: 40, height: 8, transform: "translateX(-50%)", cursor: RESIZE_CURSORS.s } },
+          { dir: "n" as const, style: { top: 0, left: "50%", width: 40, height: 8, transform: "translateX(-50%)", cursor: RESIZE_CURSORS.n } },
+        ]).map(({ dir, style }) => (
+          <div
+            key={dir}
+            className="absolute z-[9999]"
+            style={{ ...style, position: "absolute" }}
+            onPointerDown={(e) => { e.stopPropagation(); onPointerDownResize(e, dir); }}
+          />
+        ))}
       </motion.div>
 
       {/* Document right-click context menu */}
