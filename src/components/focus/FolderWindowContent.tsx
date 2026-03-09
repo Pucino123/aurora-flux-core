@@ -379,7 +379,7 @@ const FolderWindowContent: React.FC<Props> = ({ folderId }) => {
                   key={doc.id}
                   draggable
                   className="flex flex-col items-center gap-1.5 p-2 rounded-2xl cursor-pointer group select-none hover:bg-secondary/40 hover:scale-[1.03] transition-all"
-                  onDoubleClick={() => setOpenDoc(doc)}
+                  onDoubleClick={() => setOpenDocPersisted(doc)}
                   onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setDocCtx({ doc, x: e.clientX, y: e.clientY }); }}
                   onDragStart={e => { draggingDocId.current = doc.id; e.dataTransfer.effectAllowed = "move"; }}
                   onPointerMove={e => { if (draggingDocId.current === doc.id) { dragPosRef.current = { x: e.clientX, y: e.clientY }; const hit = Object.entries(subfolderRefs.current).find(([sid, el]) => { if (!el) return false; const r = el.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom; }); setDropTargetId(hit ? hit[0] : null); } }}
