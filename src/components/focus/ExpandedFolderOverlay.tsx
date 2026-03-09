@@ -572,8 +572,11 @@ const ExpandedFolderOverlay = ({
       {showTemplateChooser && (
         <TemplateChooserModal
           onClose={() => setShowTemplateChooser(false)}
-          onCreateDocument={async (title, type, content) => {
-            await createDocument(title, type, folderId, content);
+          onCreateDocument={async (title, type, content, lightMode) => {
+            const doc = await createDocument(title, type, folderId, content);
+            if (doc && lightMode) {
+              try { localStorage.setItem(`flux_doc_light_${doc.id}`, "1"); } catch {}
+            }
             refetch();
             setShowTemplateChooser(false);
           }}
