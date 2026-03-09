@@ -7,6 +7,7 @@ import {
   PanelRight, PanelLeft, Monitor, Copy, Share2, CalendarPlus, FolderInput,
   Type, Upload, Palette, Search, Clock, BookCopy, Pin, PinOff,
 } from "lucide-react";
+import { useResizable } from "@/hooks/useResizable";
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { useDocuments, DbDocument } from "@/hooks/useDocuments";
 import { useTrash } from "@/context/TrashContext";
