@@ -1712,10 +1712,13 @@ const FocusContent = () => {
       {/* Template Chooser Modal */}
       {showTemplateChooser && (
         <TemplateChooserModal
-          onCreateDocument={async (title, type, content) => {
+          onCreateDocument={async (title, type, content, lightMode) => {
             const pos = contextMenuPosRef.current;
             const doc = await createDocument(title, type, null, content);
             if (doc) {
+              if (lightMode) {
+                try { localStorage.setItem(`flux_doc_light_${doc.id}`, "1"); } catch {}
+              }
               if (pos) updatePageDocPosition(doc.id, pos);
               setPages(prev => prev.map((p, i) => i === activePageIndex
                 ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
