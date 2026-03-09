@@ -340,6 +340,7 @@ const ExpandedFolderOverlay = ({
   const { moveToTrash } = useTrash();
   const { user } = useAuth();
   const { openWindow } = useWindowManager();
+  const store = useFocusStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [renaming, setRenaming] = useState(false);
