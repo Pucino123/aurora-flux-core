@@ -364,13 +364,15 @@ const MailTab = () => {
 
 /* ─── TASKS TAB ─── */
 const TasksTab = () => {
-  const { inboxTasks, updateTask, removeTask, createTask } = useFlux();
+  const { inboxTasks, tasks: allTasks, updateTask, removeTask, createTask } = useFlux();
   const { moveToTrash } = useTrash();
   const [filter, setFilter] = useState<TaskFilter>("today");
   const [search, setSearch] = useState("");
 
   const today = new Date().toISOString().slice(0, 10);
-  const filtered = inboxTasks.filter(item => {
+
+  // "today" and "completed" use inboxTasks (no folder), "upcoming" uses all tasks
+  const filtered = (filter === "upcoming" ? allTasks : inboxTasks).filter(item => {
     if (search && !item.title.toLowerCase().includes(search.toLowerCase())) return false;
     if (filter === "today") return item.scheduled_date === today || (!item.scheduled_date && !item.done);
     if (filter === "upcoming") return !item.done && item.scheduled_date && item.scheduled_date > today;
