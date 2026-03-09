@@ -2,7 +2,7 @@ import React, { useRef, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Folder, FileText, Table, X, Pencil, FolderPlus, Plus, Minus, Maximize2, Square,
+  Folder, FolderOpen, FileText, Table, X, Pencil, FolderPlus, Plus, Minus, Maximize2, Square,
   Trash2, ExternalLink, ArrowLeft, ChevronDown,
   PanelRight, PanelLeft, Monitor, Copy, Share2, CalendarPlus, FolderInput,
   Type, Upload, Palette, Search, Clock, BookCopy, Pin, PinOff,
