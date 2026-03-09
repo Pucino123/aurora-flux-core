@@ -787,23 +787,25 @@ const ExpandedFolderOverlay = ({
               {/* Subfolders */}
               {folder.children.map(sub => {
                 const subIcon = sub.icon ? FOLDER_ICONS.find(i => i.name === sub.icon) : null;
-                const SubIcon = subIcon ? subIcon.icon : Folder;
+                const SubIcon = subIcon ? subIcon.icon : (overlayDropTarget === sub.id ? FolderOpen : Folder);
                 const subColor = sub.color || "hsl(var(--muted-foreground))";
+                const isTarget = overlayDropTarget === sub.id;
                 return (
                   <motion.div
                     key={sub.id}
+                    ref={(el: HTMLDivElement | null) => { subfolderElRefs.current[sub.id] = el; }}
                     drag
                     dragMomentum={false}
                     dragElastic={0.12}
                     whileDrag={{ scale: 1.08, zIndex: 9999, opacity: 0.9, cursor: "grabbing" }}
                     onDragEnd={(e, info) => handleSubfolderDragEnd(e as any, info, sub)}
-                    className="flex flex-col items-center gap-2 cursor-pointer group"
+                    className={`flex flex-col items-center gap-2 cursor-pointer group transition-all ${isTarget ? "scale-105" : ""}`}
                     onDoubleClick={() => onClose()}
                     style={{ opacity: draggingOutId === sub.id ? 0.3 : 1 }}
                   >
                     <div
-                      className="flex items-center justify-center rounded-2xl transition-transform group-hover:scale-105"
-                      style={{ width: 64, height: 64, background: `${subColor}18`, border: `1px solid ${subColor}28` }}
+                      className="flex items-center justify-center rounded-2xl transition-all"
+                      style={{ width: 64, height: 64, background: isTarget ? `${subColor}28` : `${subColor}18`, border: isTarget ? `2px solid ${subColor}80` : `1px solid ${subColor}28`, boxShadow: isTarget ? `0 0 18px ${subColor}40` : undefined }}
                     >
                       <SubIcon size={28} style={{ color: subColor }} strokeWidth={1.5} />
                     </div>
@@ -839,7 +841,44 @@ const ExpandedFolderOverlay = ({
                     dragMomentum={false}
                     dragElastic={0.12}
                     whileDrag={{ scale: 1.08, zIndex: 9999, opacity: 0.9, cursor: "grabbing" }}
-                    onDragEnd={(e, info) => handleDocDragEnd(e as any, info, doc)}
+                    onDrag={(e, info) => {
+                      // Track position for subfolder drop detection
+                      overlayDragPosRef.current = info.point;
+                      const hit = Object.entries(subfolderElRefs.current).find(([, el]) => {
+                        if (!el) return false;
+                        const r = el.getBoundingClientRect();
+                        return info.point.x > r.left && info.point.x < r.right && info.point.y > r.top && info.point.y < r.bottom;
+                      });
+                      setOverlayDropTarget(hit ? hit[0] : null);
+                    }}
+                    onDragEnd={(e, info) => {
+                      // Check if dropped on a subfolder
+                      const hit = Object.entries(subfolderElRefs.current).find(([, el]) => {
+                        if (!el) return false;
+                        const r = el.getBoundingClientRect();
+                        return info.point.x > r.left && info.point.x < r.right && info.point.y > r.top && info.point.y < r.bottom;
+                      });
+                      setOverlayDropTarget(null);
+                      if (hit) {
+                        const targetSubId = hit[0];
+                        if (user) {
+                          (supabase as any).from("documents").update({ folder_id: targetSubId }).eq("id", doc.id).then(() => {
+                            refetch(); toast.success("Moved into subfolder");
+                          });
+                        } else {
+                          try {
+                            const LS_KEY = "flux_local_documents";
+                            const raw = localStorage.getItem(LS_KEY);
+                            const docs = raw ? JSON.parse(raw) : [];
+                            localStorage.setItem(LS_KEY, JSON.stringify(docs.map((d: any) => d.id === doc.id ? { ...d, folder_id: targetSubId } : d)));
+                            refetch();
+                            toast.success("Moved into subfolder");
+                          } catch {}
+                        }
+                      } else {
+                        handleDocDragEnd(e as any, info, doc);
+                      }
+                    }}
                     className="flex flex-col items-center gap-2 cursor-pointer group"
                     onDoubleClick={() => setOpenDocInOverlay(doc)}
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setDocCtxMenu({ doc, x: e.clientX, y: e.clientY }); }}
