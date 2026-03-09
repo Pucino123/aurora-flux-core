@@ -410,7 +410,7 @@ const FolderWindowContent: React.FC<Props> = ({ folderId }) => {
           <DocCtxMenu
             doc={docCtx.doc}
             x={docCtx.x} y={docCtx.y}
-            onOpen={() => { setDocCtx(null); setOpenDoc(docCtx.doc); }}
+            onOpen={() => { setDocCtx(null); setOpenDocPersisted(docCtx.doc); }}
             onDelete={async () => { await removeDocument(docCtx.doc.id); refetch(); setDocCtx(null); }}
             onClose={() => setDocCtx(null)}
           />
