@@ -881,6 +881,7 @@ const ExpandedFolderOverlay = ({
         <div
           className={`flex items-center gap-3 px-5 pt-4 pb-3.5 select-none ${headerBorder}`}
           style={{
+            background: lm ? "#ffffff" : undefined,
             borderRadius: isFullscreen ? 0 : "24px 24px 0 0",
             cursor: isFullscreen ? "default" : "grab",
             userSelect: "none",
