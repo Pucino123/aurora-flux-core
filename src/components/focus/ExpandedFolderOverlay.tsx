@@ -588,7 +588,7 @@ const ExpandedFolderOverlay = ({
                     whileDrag={{ scale: 1.08, zIndex: 9999, opacity: 0.9, cursor: "grabbing" }}
                     onDragEnd={(e, info) => handleDocDragEnd(e as any, info, doc)}
                     className="flex flex-col items-center gap-2 cursor-pointer group"
-                    onDoubleClick={() => { onOpenDocument(doc); onClose(); }}
+                    onDoubleClick={() => setOpenDocInOverlay(doc)}
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setDocCtxMenu({ doc, x: e.clientX, y: e.clientY }); }}
                     style={{ opacity: draggingOutId === doc.id ? 0.3 : 1 }}
                   >
