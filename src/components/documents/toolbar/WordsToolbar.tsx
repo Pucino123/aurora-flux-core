@@ -184,7 +184,7 @@ const WordsToolbar = ({
       layout
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={`flex flex-wrap items-center gap-1 px-2 py-2 border-b transition-colors ${
-        lm ? "border-gray-200 bg-transparent" : "border-white/[0.08] bg-transparent"
+        lm ? "border-gray-200 bg-white" : "border-white/[0.08] bg-transparent"
       }`}
     >
       {toolbarContent}
