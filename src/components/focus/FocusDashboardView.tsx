@@ -1438,9 +1438,9 @@ const FocusContent = () => {
                 .filter(folder => {
                   const pinned = dashboardPages.some(p => p.pinnedFolderIds?.includes(folder.id));
                   if (pinned) return true;
-                  return currentPage?.visibleFolderIds === undefined
-                    ? true
-                    : currentPage.visibleFolderIds.includes(folder.id);
+                  // Legacy migration: first page with undefined visibleFolderIds shows all folders
+                  if (currentPage?.visibleFolderIds === undefined && activePageIndex === 0) return true;
+                  return (currentPage?.visibleFolderIds ?? []).includes(folder.id);
                 })
                 .map((folder) => {
                   const isPinned = dashboardPages.some(p => p.pinnedFolderIds?.includes(folder.id));
