@@ -351,6 +351,10 @@ const ExpandedFolderOverlay = ({
   const [openDocInOverlay, setOpenDocInOverlay] = useState<DbDocument | null>(null);
   const [showLayoutMenu, setShowLayoutMenu] = useState(false);
   const layoutMenuRef = useRef<HTMLDivElement>(null);
+  // Subfolder drop targets inside overlay
+  const subfolderElRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [overlayDropTarget, setOverlayDropTarget] = useState<string | null>(null);
+  const overlayDragPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Close layout menu when clicking outside
   useEffect(() => {
