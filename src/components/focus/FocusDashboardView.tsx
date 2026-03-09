@@ -1598,6 +1598,8 @@ const FocusContent = () => {
                       onUpdate={(id, upd) => updateDesktopDoc(id, upd)}
                       onDelete={(id) => { removeDesktopDoc(id); closeWindow(win.id); }}
                     />
+                  ) : folderWindowId ? (
+                    <FolderWindowContent folderId={folderWindowId} />
                   ) : win.type === "widget" && WIDGET_MAP[win.contentId] ? (
                     <div className="w-full h-full overflow-auto relative">
                       {WIDGET_MAP[win.contentId]}
