@@ -358,13 +358,6 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const layoutPillBg = LAYOUT_PILL_BG[win.layout];
   const layoutLabel  = LAYOUT_LABEL[win.layout];
 
-  const ThemeIcon = docTheme === "dark" ? Moon : Sun;
-  const themeTitle = docTheme === null
-    ? "Theme: system (click for light)"
-    : docTheme === "light"
-    ? "Theme: light (click for dark)"
-    : "Theme: dark (click for system)";
-
   // Windows available to group with (same layout, not self, not already grouped with this window)
   const groupCandidates = windows.filter(
     w => w.id !== win.id && !w.minimized && w.layout === "floating" &&
