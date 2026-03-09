@@ -114,6 +114,21 @@ const ExpandedFolderOverlay = ({
   const [draggingOutId, setDraggingOutId] = useState<string | null>(null);
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [docCtxMenu, setDocCtxMenu] = useState<{ doc: DbDocument; x: number; y: number } | null>(null);
+  const [openDocInOverlay, setOpenDocInOverlay] = useState<DbDocument | null>(null);
+  const [showLayoutMenu, setShowLayoutMenu] = useState(false);
+  const layoutMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close layout menu when clicking outside
+  useEffect(() => {
+    if (!showLayoutMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (layoutMenuRef.current && !layoutMenuRef.current.contains(e.target as Node)) {
+        setShowLayoutMenu(false);
+      }
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [showLayoutMenu]);
 
 
 
