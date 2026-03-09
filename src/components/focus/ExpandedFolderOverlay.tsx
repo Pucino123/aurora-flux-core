@@ -1,11 +1,12 @@
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Folder, FolderOpen, FileText, Table, X, Pencil, FolderPlus, Plus, Minus, Maximize2, Square,
-  Trash2, ExternalLink, ArrowLeft, ChevronDown,
-  PanelRight, PanelLeft, Monitor, Copy, Share2, CalendarPlus, FolderInput,
+  Trash2, ArrowLeft, ChevronDown,
+  PanelRight, PanelLeft, Copy, Share2, CalendarPlus, FolderInput,
   Type, Upload, Palette, Search, Clock, BookCopy, Pin, PinOff, Sun, Moon,
+  LayoutDashboard, FileEdit,
 } from "lucide-react";
 import { useResizable } from "@/hooks/useResizable";
 import { useFlux, FolderNode } from "@/context/FluxContext";
@@ -14,12 +15,19 @@ import { useTrash } from "@/context/TrashContext";
 import { FOLDER_ICONS } from "@/components/CreateFolderModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useWindowManager } from "@/context/WindowManagerContext";
+import { useWindowManager, WindowLayout } from "@/context/WindowManagerContext";
 import { useFocusStore } from "@/context/FocusContext";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import TemplateChooserModal from "./TemplateChooserModal";
 import DocumentView from "@/components/documents/DocumentView";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ExpandedFolderOverlayProps {
   folderId: string;
@@ -331,6 +339,248 @@ const DocContextMenu: React.FC<DocContextMenuProps> = ({ doc, x, y, onOpen, onDe
   );
 };
 
+// Full customization context menu for subfolders inside overlay — mirrors DesktopFolder
+const SUBFOLDER_BG_COLORS = [
+  { name: "Blue", value: "hsl(217 91% 60%)" },
+  { name: "Violet", value: "hsl(270 76% 65%)" },
+  { name: "Pink", value: "hsl(330 80% 65%)" },
+  { name: "Green", value: "hsl(150 60% 45%)" },
+  { name: "Orange", value: "hsl(30 90% 55%)" },
+  { name: "Teal", value: "hsl(175 60% 42%)" },
+  { name: "Red", value: "hsl(0 72% 55%)" },
+  { name: "Amber", value: "hsl(45 93% 50%)" },
+];
+
+interface SubCtxMenuProps {
+  sub: FolderNode;
+  x: number;
+  y: number;
+  onOpen: () => void;
+  onClose: () => void;
+}
+const SubfolderContextMenu: React.FC<SubCtxMenuProps> = ({ sub, x, y, onOpen, onClose }) => {
+  const { updateFolder, removeFolder, getAllFoldersFlat, folderTree, createBlock } = useFlux();
+  const focusStore = useFocusStore();
+  const { user } = useAuth();
+  const ref = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const titleSize = focusStore.desktopFolderTitleSizes?.[sub.id] ?? 11;
+  const titleGap = focusStore.desktopFolderTitleGaps?.[sub.id] ?? 2;
+  const iconFillOp = focusStore.desktopFolderIconFillOpacities?.[sub.id] ?? 0.75;
+  const iconStrokeOp = focusStore.desktopFolderIconStrokeOpacities?.[sub.id] ?? 1;
+  const folderBgColor = focusStore.desktopFolderBgColors?.[sub.id] ?? "";
+  const folderOpacity = focusStore.desktopFolderOpacities?.[sub.id] ?? 1;
+  const customIconUrl = focusStore.desktopFolderCustomIcons?.[sub.id] ?? "";
+
+  const [showAllIcons, setShowAllIcons] = useState(false);
+  const [iconSearch, setIconSearch] = useState("");
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calTime, setCalTime] = useState("09:00");
+  const [renaming, setRenaming] = useState(false);
+  const [renameVal, setRenameVal] = useState(sub.title);
+
+  const filteredIcons = useMemo(() => {
+    if (!iconSearch.trim()) return FOLDER_ICONS;
+    return FOLDER_ICONS.filter(i => i.name.toLowerCase().includes(iconSearch.toLowerCase()));
+  }, [iconSearch]);
+  const displayedIcons = showAllIcons ? filteredIcons : filteredIcons.slice(0, 12);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  const handleUploadIcon = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/${sub.id}.${ext}`;
+    const { error } = await supabase.storage.from("folder-icons").upload(path, file, { upsert: true });
+    if (error) { toast.error("Upload failed"); return; }
+    const { data } = supabase.storage.from("folder-icons").getPublicUrl(path);
+    focusStore.updateDesktopFolderCustomIcon(sub.id, data.publicUrl);
+    toast.success("Custom icon uploaded");
+  };
+
+  const commitRename = () => {
+    if (renameVal.trim() && renameVal.trim() !== sub.title) updateFolder(sub.id, { title: renameVal.trim() });
+    setRenaming(false); onClose();
+  };
+
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-[99997]" onClick={onClose} />
+      <div
+        ref={ref}
+        className="fixed z-[99999] bg-popover/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl overflow-hidden"
+        style={{ left: Math.min(x + 100, window.innerWidth - 560), top: Math.min(y, window.innerHeight - 520), width: 540 }}
+        onPointerDown={e => e.stopPropagation()}
+      >
+        {/* Title size */}
+        <div className="px-4 py-2.5 border-b border-border/30 flex items-center gap-3">
+          <p className="text-[10px] text-muted-foreground uppercase shrink-0 flex items-center gap-1"><Type size={10} /> Title</p>
+          <input type="range" min="9" max="20" step="1" value={titleSize}
+            onChange={e => { e.stopPropagation(); focusStore.updateDesktopFolderTitleSize(sub.id, parseInt(e.target.value)); }}
+            onPointerDown={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}
+            className="flex-1 h-1 rounded-full appearance-none bg-secondary cursor-pointer accent-primary" />
+          <span className="text-[10px] text-muted-foreground tabular-nums w-7 text-right">{titleSize}px</span>
+        </div>
+        {/* Spacing */}
+        <div className="px-4 py-2 border-b border-border/30 flex items-center gap-3">
+          <p className="text-[10px] text-muted-foreground uppercase shrink-0">Spacing</p>
+          <div className="flex gap-1">
+            {([{ label: "Tight", val: 0 }, { label: "Normal", val: 4 }, { label: "Wide", val: 10 }] as const).map(opt => (
+              <button key={opt.label} onClick={e => { e.stopPropagation(); focusStore.updateDesktopFolderTitleGap(sub.id, opt.val); }}
+                onPointerDown={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}
+                className={`px-2 py-0.5 rounded text-[10px] transition-colors border ${titleGap === opt.val ? "bg-primary/15 text-primary border-primary/30" : "text-muted-foreground border-border/30 hover:bg-secondary"}`}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-0">
+          {/* Column 1 — Actions */}
+          <div className="flex-1 border-r border-border/30 py-2">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-3 pb-1.5">Actions</p>
+            <button onClick={() => { onOpen(); onClose(); }} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-foreground hover:bg-secondary transition-colors">
+              <FileEdit size={13} className="text-muted-foreground" /> Open
+            </button>
+            {renaming ? (
+              <div className="px-3 py-1">
+                <input value={renameVal} onChange={e => setRenameVal(e.target.value)}
+                  onBlur={commitRename} onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { setRenaming(false); } }}
+                  autoFocus className="w-full text-[12px] bg-secondary rounded px-2 py-1 outline-none border border-primary/30"
+                  onPointerDown={e => e.stopPropagation()} />
+              </div>
+            ) : (
+              <button onClick={() => setRenaming(true)} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-foreground hover:bg-secondary transition-colors">
+                <Pencil size={13} className="text-muted-foreground" /> Rename
+              </button>
+            )}
+            <button onClick={async () => {
+              const today = new Date().toISOString().split("T")[0];
+              await createBlock({ title: sub.title, time: calTime, duration: "60m", type: "folder", scheduled_date: today });
+              toast.success(`Added to calendar`); onClose();
+            }} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-foreground hover:bg-secondary transition-colors">
+              <CalendarPlus size={13} className="text-muted-foreground" /> Add to Calendar
+            </button>
+            <div className="h-px bg-border mx-2 my-1" />
+            <button onClick={async () => { await removeFolder(sub.id); toast.success("Folder deleted"); onClose(); }}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-destructive hover:bg-destructive/10 transition-colors">
+              <Trash2 size={13} /> Delete
+            </button>
+          </div>
+          {/* Column 2 — Icon */}
+          <div className="flex-1 border-r border-border/30 py-3 overflow-hidden">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-4 pb-2">Icon</p>
+            <div className="px-4 pb-2">
+              <div className="relative">
+                <Search size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
+                <input type="text" value={iconSearch}
+                  onChange={e => { setIconSearch(e.target.value); if (e.target.value) setShowAllIcons(true); }}
+                  placeholder="Search icons..."
+                  className="w-full h-6 pl-6 pr-2 rounded-md bg-secondary/40 border border-border/30 text-[10px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:ring-1 focus:ring-primary/20"
+                  onPointerDown={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} />
+              </div>
+            </div>
+            <div className="px-4 pb-2">
+              <div className={`grid grid-cols-6 gap-1.5 ${showAllIcons ? 'max-h-[140px] overflow-y-auto' : ''}`}>
+                {displayedIcons.map(item => {
+                  const IC = item.icon;
+                  const isActive = sub.icon === item.name && !customIconUrl;
+                  return (
+                    <button key={item.name} onClick={() => { updateFolder(sub.id, { icon: item.name }); focusStore.updateDesktopFolderCustomIcon(sub.id, ""); }}
+                      className={`p-1.5 rounded-md transition-all hover:scale-110 ${isActive ? "bg-primary/15" : "hover:bg-secondary/60"}`} title={item.name}>
+                      <IC size={13} className={isActive ? "text-primary" : "text-muted-foreground"} />
+                    </button>
+                  );
+                })}
+              </div>
+              {!iconSearch && filteredIcons.length > 12 && (
+                <button onClick={() => setShowAllIcons(!showAllIcons)}
+                  className="mt-1.5 w-full flex items-center justify-center gap-1 px-2 py-0.5 text-[9px] text-muted-foreground hover:text-foreground transition-colors">
+                  <ChevronDown size={10} className={`transition-transform ${showAllIcons ? 'rotate-180' : ''}`} />
+                  {showAllIcons ? 'Show less' : `Show all (${filteredIcons.length})`}
+                </button>
+              )}
+            </div>
+            <div className="px-4 pb-1">
+              <button onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center gap-1.5 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary rounded-md transition-colors">
+                <Upload size={10} /> Upload
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUploadIcon} />
+            </div>
+            <div className="px-4 pb-4">
+              <p className="text-[10px] text-muted-foreground uppercase mb-2.5 flex items-center gap-1"><Palette size={10} /> Color</p>
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {SUBFOLDER_BG_COLORS.map(c => (
+                  <button key={c.name} onClick={e => { e.stopPropagation(); updateFolder(sub.id, { color: c.value }); }}
+                    className={`rounded-full border-2 transition-all hover:scale-125 ${sub.color === c.value ? "border-foreground/40 scale-110" : "border-transparent"}`}
+                    style={{ backgroundColor: c.value, width: 18, height: 18 }} title={c.name} />
+                ))}
+                <label className="rounded-full border-2 border-dashed border-muted-foreground/40 cursor-pointer hover:scale-125 transition-all relative overflow-hidden"
+                  style={{ width: 18, height: 18 }} onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
+                  <input type="color" value={sub.color?.startsWith('#') ? sub.color : "#8b5cf6"}
+                    onChange={e => { e.stopPropagation(); updateFolder(sub.id, { color: e.target.value }); }}
+                    onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                </label>
+              </div>
+            </div>
+            <div className="px-4 py-1.5 flex items-center gap-2 overflow-hidden">
+              <p className="text-[10px] text-muted-foreground uppercase w-8 shrink-0">Fill</p>
+              <input type="range" min="0" max="1" step="0.05" value={iconFillOp}
+                onChange={e => { e.stopPropagation(); focusStore.updateDesktopFolderIconFillOpacity(sub.id, parseFloat(e.target.value)); }}
+                onPointerDown={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}
+                className="flex-1 min-w-0 h-1.5 rounded-full appearance-none bg-secondary cursor-pointer accent-primary" />
+              <span className="text-[10px] text-muted-foreground tabular-nums w-7 text-right shrink-0">{Math.round(iconFillOp * 100)}%</span>
+            </div>
+            <div className="px-4 py-1.5 flex items-center gap-2 overflow-hidden">
+              <p className="text-[10px] text-muted-foreground uppercase w-8 shrink-0">Stroke</p>
+              <input type="range" min="0" max="1" step="0.05" value={iconStrokeOp}
+                onChange={e => { e.stopPropagation(); focusStore.updateDesktopFolderIconStrokeOpacity(sub.id, parseFloat(e.target.value)); }}
+                onPointerDown={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}
+                className="flex-1 min-w-0 h-1.5 rounded-full appearance-none bg-secondary cursor-pointer accent-primary" />
+              <span className="text-[10px] text-muted-foreground tabular-nums w-7 text-right shrink-0">{Math.round(iconStrokeOp * 100)}%</span>
+            </div>
+          </div>
+          {/* Column 3 — Background */}
+          <div className="flex-1 py-3 min-w-0">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-4 pb-3">Background</p>
+            <div className="px-4 pb-4">
+              <p className="text-[10px] text-muted-foreground uppercase mb-2.5">Color</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                <button onClick={e => { e.stopPropagation(); focusStore.updateDesktopFolderBgColor(sub.id, ""); }}
+                  className={`rounded-full border-2 transition-all hover:scale-125 ${!folderBgColor ? "border-foreground/40 scale-110" : "border-transparent"}`}
+                  style={{ background: "rgba(22,22,26,0.65)", width: 18, height: 18 }} title="Default" />
+                {SUBFOLDER_BG_COLORS.map(c => (
+                  <button key={c.name} onClick={e => { e.stopPropagation(); focusStore.updateDesktopFolderBgColor(sub.id, c.value); }}
+                    className={`rounded-full border-2 transition-all hover:scale-125 ${folderBgColor === c.value ? "border-foreground/40 scale-110" : "border-transparent"}`}
+                    style={{ backgroundColor: c.value, width: 18, height: 18 }} title={c.name} />
+                ))}
+              </div>
+            </div>
+            <div className="px-4 py-2 flex items-center gap-2 overflow-hidden">
+              <p className="text-[10px] text-muted-foreground uppercase w-10 shrink-0">Opacity</p>
+              <input type="range" min="0" max="1" step="0.05" value={folderOpacity}
+                onChange={e => { e.stopPropagation(); focusStore.updateDesktopFolderOpacity(sub.id, parseFloat(e.target.value)); }}
+                onPointerDown={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}
+                className="flex-1 min-w-0 h-1.5 rounded-full appearance-none bg-secondary cursor-pointer accent-primary" />
+              <span className="text-[10px] text-muted-foreground tabular-nums w-7 text-right shrink-0">{Math.round(folderOpacity * 100)}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+};
+
 const ExpandedFolderOverlay = ({
   folderId: initialFolderId,
   onClose,
@@ -363,9 +613,8 @@ const ExpandedFolderOverlay = ({
   const [draggingOutId, setDraggingOutId] = useState<string | null>(null);
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [docCtxMenu, setDocCtxMenu] = useState<{ doc: DbDocument; x: number; y: number } | null>(null);
+  const [subCtxMenu, setSubCtxMenu] = useState<{ sub: FolderNode; x: number; y: number } | null>(null);
   const [openDocInOverlay, setOpenDocInOverlay] = useState<DbDocument | null>(null);
-  const [showLayoutMenu, setShowLayoutMenu] = useState(false);
-  const layoutMenuRef = useRef<HTMLDivElement>(null);
   // Subfolder drop targets inside overlay
   const subfolderElRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [overlayDropTarget, setOverlayDropTarget] = useState<string | null>(null);
@@ -383,18 +632,6 @@ const ExpandedFolderOverlay = ({
       return next;
     });
   }, [folderId]);
-
-  // Close layout menu when clicking outside
-  useEffect(() => {
-    if (!showLayoutMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (layoutMenuRef.current && !layoutMenuRef.current.contains(e.target as Node)) {
-        setShowLayoutMenu(false);
-      }
-    };
-    window.addEventListener("mousedown", handler);
-    return () => window.removeEventListener("mousedown", handler);
-  }, [showLayoutMenu]);
 
   // Reset rename state when navigating to a different folder
   useEffect(() => {
@@ -678,47 +915,40 @@ const ExpandedFolderOverlay = ({
             </button>
           </div>
 
-          {/* Single "Float" dropdown — matching document controls */}
-          <div className="relative ml-1" ref={layoutMenuRef} onPointerDown={e => e.stopPropagation()}>
-            <button
-              onClick={() => setShowLayoutMenu(v => !v)}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide transition-all hover:opacity-100 opacity-80"
-              style={{ background: "hsl(142 71% 45%)", color: "rgba(0,0,0,0.75)" }}
-              title="Layout options"
-            >
-              <Square size={7} /> float <ChevronDown size={7} />
-            </button>
-            <AnimatePresence>
-              {showLayoutMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.88, y: -4 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.88 }}
-                  transition={{ duration: 0.1 }}
-                  className="absolute top-[calc(100%+6px)] left-0 z-[99999] rounded-xl overflow-hidden flex flex-col py-1"
-                  style={{ minWidth: 160, background: "rgba(10,6,28,0.98)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(28px)", boxShadow: "0 16px 48px rgba(0,0,0,0.8)" }}
+          {/* Layout dropdown — identical to WindowFrame's FLOAT pill */}
+          <div className="ml-1" onPointerDown={e => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
+                  style={{ background: "hsl(142 71% 45%)", color: "rgba(0,0,0,0.75)" }}
+                  title="Change layout"
                 >
-                  {[
-                    { layout: "floating" as const, icon: <Monitor size={11} />, label: "Float (drag)" },
-                    { layout: "split-left" as const, icon: <PanelLeft size={11} />, label: "Side left" },
-                    { layout: "split-right" as const, icon: <PanelRight size={11} />, label: "Side right" },
-                    { layout: "fullscreen" as const, icon: <Maximize2 size={11} />, label: "Fullscreen" },
-                  ].map(opt => (
-                    <button
-                      key={opt.layout}
-                      onClick={() => { openAsWindow(opt.layout); setShowLayoutMenu(false); }}
-                      className="flex items-center gap-2.5 px-3 py-1.5 text-[11px] font-medium transition-colors text-left w-full"
-                      style={{ color: "rgba(255,255,255,0.75)" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                    >
-                      <span className="opacity-70">{opt.icon}</span>
-                      {opt.label}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  float
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={8} style={{ zIndex: 10999 }} className="min-w-[160px]">
+                <DropdownMenuItem onClick={() => openAsWindow("floating")} className="flex items-center gap-2.5 text-xs">
+                  <Square size={13} /> Float
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openAsWindow("fullscreen")} className="flex items-center gap-2.5 text-xs">
+                  <Maximize2 size={13} /> Full Screen
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openAsWindow("split-left")} className="flex items-center gap-2.5 text-xs">
+                  <PanelLeft size={13} /> Split Left
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openAsWindow("split-right")} className="flex items-center gap-2.5 text-xs">
+                  <PanelRight size={13} /> Split Right
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleMinimize} className="flex items-center gap-2.5 text-xs">
+                  <Minus size={13} /> Minimize <span className="ml-auto text-foreground/30">⌘M</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onClose} className="flex items-center gap-2.5 text-xs text-destructive focus:text-destructive">
+                  <X size={13} /> Close <span className="ml-auto text-foreground/30">⌘W</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Back button when navigating subfolder or when doc is open */}
@@ -890,6 +1120,7 @@ const ExpandedFolderOverlay = ({
                     onDragEnd={(e, info) => handleSubfolderDragEnd(e as any, info, sub)}
                     className={`flex flex-col items-center gap-2 cursor-pointer group transition-all ${isTarget ? "scale-105" : ""}`}
                     onDoubleClick={() => navigateInto(sub.id)}
+                    onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setSubCtxMenu({ sub, x: e.clientX, y: e.clientY }); }}
                     style={{ opacity: draggingOutId === sub.id ? 0.3 : 1 }}
                   >
                     <div
@@ -1044,6 +1275,19 @@ const ExpandedFolderOverlay = ({
             onOpen={() => { setDocCtxMenu(null); setOpenDocInOverlay(docCtxMenu.doc); }}
             onDelete={() => handleDeleteDoc(docCtxMenu.doc)}
             onClose={() => setDocCtxMenu(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Subfolder right-click context menu */}
+      <AnimatePresence>
+        {subCtxMenu && (
+          <SubfolderContextMenu
+            sub={subCtxMenu.sub}
+            x={subCtxMenu.x}
+            y={subCtxMenu.y}
+            onOpen={() => { navigateInto(subCtxMenu.sub.id); setSubCtxMenu(null); }}
+            onClose={() => setSubCtxMenu(null)}
           />
         )}
       </AnimatePresence>
