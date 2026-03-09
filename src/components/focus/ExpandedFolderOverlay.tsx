@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Folder, FileText, Table, X, Pencil, FolderPlus, Plus, Minus, Maximize2, Square,
-  Trash2, Copy, ExternalLink,
+  Trash2, ExternalLink, ArrowLeft, ChevronDown,
+  PanelRight, PanelLeft, Monitor,
 } from "lucide-react";
 import { useFlux, FolderNode } from "@/context/FluxContext";
 import { useDocuments, DbDocument } from "@/hooks/useDocuments";
@@ -14,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWindowManager } from "@/context/WindowManagerContext";
 import { toast } from "sonner";
 import TemplateChooserModal from "./TemplateChooserModal";
+import DocumentView from "@/components/documents/DocumentView";
 
 interface ExpandedFolderOverlayProps {
   folderId: string;
