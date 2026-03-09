@@ -1,11 +1,12 @@
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Folder, FolderOpen, FileText, Table, X, Pencil, FolderPlus, Plus, Minus, Maximize2, Square,
-  Trash2, ExternalLink, ArrowLeft, ChevronDown,
-  PanelRight, PanelLeft, Monitor, Copy, Share2, CalendarPlus, FolderInput,
+  Trash2, ArrowLeft, ChevronDown,
+  PanelRight, PanelLeft, Copy, Share2, CalendarPlus, FolderInput,
   Type, Upload, Palette, Search, Clock, BookCopy, Pin, PinOff, Sun, Moon,
+  LayoutDashboard, FileEdit,
 } from "lucide-react";
 import { useResizable } from "@/hooks/useResizable";
 import { useFlux, FolderNode } from "@/context/FluxContext";
@@ -14,12 +15,19 @@ import { useTrash } from "@/context/TrashContext";
 import { FOLDER_ICONS } from "@/components/CreateFolderModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useWindowManager } from "@/context/WindowManagerContext";
+import { useWindowManager, WindowLayout } from "@/context/WindowManagerContext";
 import { useFocusStore } from "@/context/FocusContext";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import TemplateChooserModal from "./TemplateChooserModal";
 import DocumentView from "@/components/documents/DocumentView";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ExpandedFolderOverlayProps {
   folderId: string;
