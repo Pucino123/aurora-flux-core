@@ -54,6 +54,7 @@ import WindowFrame from "@/components/windows/WindowFrame";
 import WindowDock from "@/components/windows/WindowDock";
 import WindowSwitcher from "@/components/windows/WindowSwitcher";
 import DocumentView from "@/components/documents/DocumentView";
+import FolderWindowContent from "./FolderWindowContent";
 import { useFocusMode } from "@/context/FocusModeContext";
 import { useTrash } from "@/context/TrashContext";
 import FocusIntentionModal from "./FocusIntentionModal";
@@ -1584,6 +1585,10 @@ const FocusContent = () => {
                 gamification: <FocusGamificationWidget />,
               };
 
+              // Resolve folder content for widget windows with contentId "folder-{id}"
+              const isFolderWindow = win.type === "widget" && win.contentId.startsWith("folder-");
+              const folderWindowId = isFolderWindow ? win.contentId.replace(/^folder-/, "") : null;
+
               return (
                 <WindowFrame key={win.id} window={win} focused={focusedId === win.id}>
                   {win.type === "document" && winDoc ? (
@@ -1593,6 +1598,8 @@ const FocusContent = () => {
                       onUpdate={(id, upd) => updateDesktopDoc(id, upd)}
                       onDelete={(id) => { removeDesktopDoc(id); closeWindow(win.id); }}
                     />
+                  ) : folderWindowId ? (
+                    <FolderWindowContent folderId={folderWindowId} />
                   ) : win.type === "widget" && WIDGET_MAP[win.contentId] ? (
                     <div className="w-full h-full overflow-auto relative">
                       {WIDGET_MAP[win.contentId]}
