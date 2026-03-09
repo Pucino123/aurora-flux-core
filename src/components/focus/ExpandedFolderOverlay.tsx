@@ -548,12 +548,17 @@ const ExpandedFolderOverlay = ({
   const IconComp = customIcon ? customIcon.icon : Folder;
   const iconColor = folder.color || "hsl(var(--muted-foreground))";
 
+  const rect = modalRect ?? getCenter();
   // Modal style: fullscreen or positioned
   const modalStyle: React.CSSProperties = isFullscreen
     ? { position: "fixed", inset: 0, width: "100vw", height: "100vh", maxHeight: "100vh", zIndex: 8001, borderRadius: 0 }
-    : pos
-      ? { position: "fixed", top: pos.y, left: pos.x, width: MODAL_W, minHeight: MODAL_MIN_H, maxHeight: "82vh", zIndex: 8001 }
-      : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: MODAL_W, minHeight: MODAL_MIN_H, maxHeight: "82vh", zIndex: 8001 };
+    : { position: "fixed", top: rect.y, left: rect.x, width: rect.w, height: rect.h, zIndex: 8001 };
+
+  // Resize handle cursor mapping
+  const RESIZE_CURSORS: Record<string, string> = {
+    n:"ns-resize", s:"ns-resize", e:"ew-resize", w:"ew-resize",
+    ne:"nesw-resize", nw:"nwse-resize", se:"nwse-resize", sw:"nesw-resize",
+  };
 
   return createPortal(
     <>
