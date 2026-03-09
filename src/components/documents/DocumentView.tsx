@@ -506,8 +506,24 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const charCount = editorRef.current?.innerText?.length || 0;
 
   return (
-    <div className={`flex flex-col h-full relative ${studioMode ? "z-[150] overflow-visible" : ""}`}
-      style={{ background: lm ? "#ffffff" : undefined }}
+    <div
+      className={`flex flex-col h-full relative ${studioMode ? "z-[150] overflow-visible" : ""}`}
+      style={lm ? {
+        // Override CSS tokens to proper light values so all semantic colors work correctly
+        ["--background" as any]: "0 0% 99%",
+        ["--foreground" as any]: "220 20% 10%",
+        ["--card" as any]: "0 0% 100%",
+        ["--card-foreground" as any]: "220 20% 10%",
+        ["--popover" as any]: "0 0% 100%",
+        ["--popover-foreground" as any]: "220 20% 10%",
+        ["--muted" as any]: "220 15% 96%",
+        ["--muted-foreground" as any]: "220 10% 45%",
+        ["--border" as any]: "220 15% 88%",
+        ["--secondary" as any]: "220 15% 94%",
+        ["--secondary-foreground" as any]: "220 20% 20%",
+        background: "hsl(0 0% 99%)",
+        color: "hsl(220 20% 10%)",
+      } : undefined}
     >
       <StudioModeOverlay active={studioMode} onClose={() => setStudioMode(false)} />
       <WordsToolbar
@@ -543,7 +559,7 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
       <div
         className="relative flex-1 min-h-0 overflow-y-auto"
         style={{
-          background: lm ? "hsl(var(--muted))" : "hsl(220 27% 8%)",
+          background: lm ? "hsl(220 15% 92%)" : "hsl(220 27% 8%)",
           padding: studioMode ? "0" : "24px 24px 48px",
         }}
       >
