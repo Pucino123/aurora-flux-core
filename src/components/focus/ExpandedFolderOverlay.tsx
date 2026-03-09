@@ -607,6 +607,10 @@ const ExpandedFolderOverlay = ({
     setFolderStack(prev => (prev.length > 1 ? prev.slice(0, -1) : prev));
   }, []);
 
+  const navigateTo = useCallback((index: number) => {
+    setFolderStack(prev => prev.slice(0, index + 1));
+  }, []);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -615,6 +619,7 @@ const ExpandedFolderOverlay = ({
   const [docCtxMenu, setDocCtxMenu] = useState<{ doc: DbDocument; x: number; y: number } | null>(null);
   const [subCtxMenu, setSubCtxMenu] = useState<{ sub: FolderNode; x: number; y: number } | null>(null);
   const [openDocInOverlay, setOpenDocInOverlay] = useState<DbDocument | null>(null);
+  const [docLightMode, setDocLightMode] = useState(false);
   // Subfolder drop targets inside overlay
   const subfolderElRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [overlayDropTarget, setOverlayDropTarget] = useState<string | null>(null);
@@ -951,20 +956,46 @@ const ExpandedFolderOverlay = ({
             </DropdownMenu>
           </div>
 
-          {/* Back button when navigating subfolder or when doc is open */}
+          {/* Breadcrumb trail — shows full path when drilling into subfolders or viewing a doc */}
           {(canGoBack || openDocInOverlay) && (
-            <button
-              onClick={() => {
-                if (openDocInOverlay) { setOpenDocInOverlay(null); }
-                else { navigateBack(); }
-              }}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all hover:opacity-100 opacity-70"
-              style={{ background: lm ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)", color: lm ? "rgba(30,15,50,0.7)" : "rgba(255,255,255,0.75)", border: `1px solid ${lm ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)"}` }}
-              title="Back"
+            <div
+              className="flex items-center gap-0.5 min-w-0 overflow-hidden"
               onPointerDown={e => e.stopPropagation()}
             >
-              <ArrowLeft size={8} /> Back
-            </button>
+              {folderStack.map((id, idx) => {
+                const node = idx === 0 ? findFolderNode(initialFolderId) : findFolderNode(id);
+                const label = node?.title ?? "Folder";
+                const isLast = idx === folderStack.length - 1 && !openDocInOverlay;
+                return (
+                  <React.Fragment key={id}>
+                    {idx > 0 && (
+                      <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
+                    )}
+                    <button
+                      onClick={() => { if (openDocInOverlay && isLast) return; navigateTo(idx); setOpenDocInOverlay(null); }}
+                      className={`text-[9px] font-medium truncate max-w-[72px] transition-opacity hover:opacity-100 ${isLast ? "opacity-80 cursor-default" : "opacity-50 hover:underline cursor-pointer"}`}
+                      style={{ color: isLast ? titleColor : subtleColor }}
+                      title={label}
+                    >
+                      {label}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+              {openDocInOverlay && (
+                <>
+                  <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
+                  <button
+                    onClick={() => setOpenDocInOverlay(null)}
+                    className="text-[9px] font-medium truncate max-w-[72px] opacity-50 hover:opacity-100 hover:underline cursor-pointer"
+                    style={{ color: subtleColor }}
+                    title="Back to folder"
+                  >
+                    {openDocInOverlay.title}
+                  </button>
+                </>
+              )}
+            </div>
           )}
 
           {/* Light/dark mode toggle */}
@@ -1065,12 +1096,11 @@ const ExpandedFolderOverlay = ({
                 removeDocument(id);
                 setOpenDocInOverlay(null);
               }}
-              lightMode={(() => { try { return localStorage.getItem(`flux_doc_light_${openDocInOverlay.id}`) === "1"; } catch { return false; } })()}
+              lightMode={docLightMode}
               onToggleLightMode={() => {
-                const cur = (() => { try { return localStorage.getItem(`flux_doc_light_${openDocInOverlay.id}`) === "1"; } catch { return false; } })();
-                try { localStorage.setItem(`flux_doc_light_${openDocInOverlay.id}`, (!cur) ? "1" : "0"); } catch {}
-                // Force re-render by toggling a dummy state
-                setOpenDocInOverlay(prev => prev ? { ...prev } : null);
+                const next = !docLightMode;
+                setDocLightMode(next);
+                try { localStorage.setItem(`flux_doc_light_${openDocInOverlay.id}`, next ? "1" : "0"); } catch {}
               }}
             />
           </div>
@@ -1205,7 +1235,7 @@ const ExpandedFolderOverlay = ({
                       }
                     }}
                     className="flex flex-col items-center gap-2 cursor-pointer group"
-                    onDoubleClick={() => setOpenDocInOverlay(doc)}
+                    onDoubleClick={() => { const lm = (() => { try { return localStorage.getItem(`flux_doc_light_${doc.id}`) === "1"; } catch { return false; } })(); setDocLightMode(lm); setOpenDocInOverlay(doc); }}
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setDocCtxMenu({ doc, x: e.clientX, y: e.clientY }); }}
                     style={{ opacity: draggingOutId === doc.id ? 0.3 : 1 }}
                   >
@@ -1272,7 +1302,7 @@ const ExpandedFolderOverlay = ({
             doc={docCtxMenu.doc}
             x={docCtxMenu.x}
             y={docCtxMenu.y}
-            onOpen={() => { setDocCtxMenu(null); setOpenDocInOverlay(docCtxMenu.doc); }}
+            onOpen={() => { const lm = (() => { try { return localStorage.getItem(`flux_doc_light_${docCtxMenu.doc.id}`) === "1"; } catch { return false; } })(); setDocLightMode(lm); setDocCtxMenu(null); setOpenDocInOverlay(docCtxMenu.doc); }}
             onDelete={() => handleDeleteDoc(docCtxMenu.doc)}
             onClose={() => setDocCtxMenu(null)}
           />
