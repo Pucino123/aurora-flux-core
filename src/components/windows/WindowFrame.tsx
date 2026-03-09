@@ -352,8 +352,8 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
     return { width: size.w, height: size.h };
   }, [win.layout, size.w, size.h]);
 
-  // ── Minimized: render nothing — toolbar chip owns the layoutId ────────────
-  if (win.minimized) return null;
+  // ── Minimized: hide (don't unmount) so child state like openDoc is preserved
+  const isMinimized = !!win.minimized;
 
   const layoutPillBg = LAYOUT_PILL_BG[win.layout];
   const layoutLabel  = LAYOUT_LABEL[win.layout];
