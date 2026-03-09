@@ -607,6 +607,10 @@ const ExpandedFolderOverlay = ({
     setFolderStack(prev => (prev.length > 1 ? prev.slice(0, -1) : prev));
   }, []);
 
+  const navigateTo = useCallback((index: number) => {
+    setFolderStack(prev => prev.slice(0, index + 1));
+  }, []);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");

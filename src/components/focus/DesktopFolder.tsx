@@ -76,6 +76,7 @@ const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState,
   const customIconUrl = customIcons[folder.id] ?? null;
   const folderBgColor = bgColors[folder.id] ?? "";
   const [selected, setSelected] = useState(false);
+  const selectedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const [showMoveToPageMenu, setShowMoveToPageMenu] = useState(false);
