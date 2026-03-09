@@ -1302,7 +1302,7 @@ const ExpandedFolderOverlay = ({
             doc={docCtxMenu.doc}
             x={docCtxMenu.x}
             y={docCtxMenu.y}
-            onOpen={() => { setDocCtxMenu(null); setOpenDocInOverlay(docCtxMenu.doc); }}
+            onOpen={() => { const lm = (() => { try { return localStorage.getItem(`flux_doc_light_${docCtxMenu.doc.id}`) === "1"; } catch { return false; } })(); setDocLightMode(lm); setDocCtxMenu(null); setOpenDocInOverlay(docCtxMenu.doc); }}
             onDelete={() => handleDeleteDoc(docCtxMenu.doc)}
             onClose={() => setDocCtxMenu(null)}
           />
