@@ -810,9 +810,24 @@ const ExpandedFolderOverlay = ({
                 );
               })}
 
-              {/* Documents */}
+              {/* Documents — uses same icon/color as desktop (FocusStore) */}
               {documents.map(doc => {
                 const isSheet = doc.type === "spreadsheet";
+                const storedIconName = store.desktopDocCustomIcons?.[doc.id] ?? "";
+                const customIconColor = store.desktopDocIconColors?.[doc.id] ?? "";
+                const customBgColor = store.desktopDocBgColors?.[doc.id] ?? "";
+                const docOpacity = store.desktopDocOpacities?.[doc.id] ?? 1;
+                const lucideIcon = storedIconName && !storedIconName.startsWith("http")
+                  ? FOLDER_ICONS.find(i => i.name === storedIconName)
+                  : null;
+                const defaultColor = isSheet ? "rgba(52,211,153,0.85)" : "rgba(147,197,253,0.85)";
+                const resolvedColor = customIconColor || defaultColor;
+                const defaultBg = isSheet ? "rgba(52,211,153,0.1)" : "rgba(147,197,253,0.1)";
+                const resolvedBg = customBgColor
+                  ? (customBgColor.startsWith('#')
+                    ? (() => { const hex = customBgColor.replace('#',''); const r=parseInt(hex.substring(0,2),16); const g=parseInt(hex.substring(2,4),16); const b=parseInt(hex.substring(4,6),16); return `rgba(${r},${g},${b},${docOpacity})`; })()
+                    : `color-mix(in srgb, ${customBgColor} ${Math.round(docOpacity*100)}%, transparent)`)
+                  : defaultBg;
                 return (
                   <motion.div
                     key={doc.id}
@@ -828,16 +843,17 @@ const ExpandedFolderOverlay = ({
                   >
                     <div
                       className="flex items-center justify-center rounded-2xl transition-transform group-hover:scale-105"
-                      style={{
-                        width: 64, height: 64,
-                        background: isSheet ? "rgba(52,211,153,0.1)" : "rgba(147,197,253,0.1)",
-                        border: isSheet ? "1px solid rgba(52,211,153,0.2)" : "1px solid rgba(147,197,253,0.2)",
-                      }}
+                      style={{ width: 64, height: 64, background: resolvedBg }}
                     >
-                      {isSheet
-                        ? <Table size={26} style={{ color: "rgba(52,211,153,0.8)" }} strokeWidth={1.5} />
-                        : <FileText size={26} style={{ color: "rgba(147,197,253,0.8)" }} strokeWidth={1.5} />
-                      }
+                      {storedIconName && storedIconName.startsWith("http") ? (
+                        <img src={storedIconName} alt="" className="rounded-lg object-cover" style={{ width: 32, height: 32 }} />
+                      ) : lucideIcon ? (
+                        <lucideIcon.icon size={28} style={{ color: resolvedColor }} strokeWidth={1.5} />
+                      ) : isSheet ? (
+                        <Table size={28} style={{ color: resolvedColor }} strokeWidth={1.5} />
+                      ) : (
+                        <FileText size={28} style={{ color: resolvedColor }} strokeWidth={1.5} />
+                      )}
                     </div>
                     <span className="text-[11px] font-medium text-center leading-tight max-w-[72px] line-clamp-2" style={{ color: "rgba(255,255,255,0.7)" }}>
                       {doc.title}
