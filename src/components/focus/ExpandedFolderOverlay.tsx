@@ -957,47 +957,45 @@ const ExpandedFolderOverlay = ({
             </DropdownMenu>
           </div>
 
-          {/* Breadcrumb trail — shows full path when drilling into subfolders or viewing a doc */}
-          {(canGoBack || openDocInOverlay) && (
-            <div
-              className="flex items-center gap-0.5 min-w-0 overflow-hidden"
-              onPointerDown={e => e.stopPropagation()}
-            >
-              {folderStack.map((id, idx) => {
-                const node = idx === 0 ? findFolderNode(initialFolderId) : findFolderNode(id);
-                const label = node?.title ?? "Folder";
-                const isLast = idx === folderStack.length - 1 && !openDocInOverlay;
-                return (
-                  <React.Fragment key={id}>
-                    {idx > 0 && (
-                      <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
-                    )}
-                    <button
-                      onClick={() => { if (openDocInOverlay && isLast) return; navigateTo(idx); setOpenDocInOverlay(null); }}
-                      className={`text-[9px] font-medium truncate max-w-[72px] transition-opacity hover:opacity-100 ${isLast ? "opacity-80 cursor-default" : "opacity-50 hover:underline cursor-pointer"}`}
-                      style={{ color: isLast ? titleColor : subtleColor }}
-                      title={label}
-                    >
-                      {label}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-              {openDocInOverlay && (
-                <>
-                  <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
+          {/* Breadcrumb trail — always visible, shows path when drilling into subfolders */}
+          <div
+            className="flex items-center gap-0.5 min-w-0 overflow-hidden"
+            onPointerDown={e => e.stopPropagation()}
+          >
+            {folderStack.map((id, idx) => {
+              const node = findFolderNode(id);
+              const label = node?.title ?? "Folder";
+              const isLast = idx === folderStack.length - 1 && !openDocInOverlay;
+              return (
+                <React.Fragment key={id}>
+                  {idx > 0 && (
+                    <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
+                  )}
                   <button
-                    onClick={() => setOpenDocInOverlay(null)}
-                    className="text-[9px] font-medium truncate max-w-[72px] opacity-50 hover:opacity-100 hover:underline cursor-pointer"
-                    style={{ color: subtleColor }}
-                    title="Back to folder"
+                    onClick={() => { navigateTo(idx); setOpenDocInOverlay(null); }}
+                    className={`text-[9px] font-medium truncate max-w-[80px] transition-opacity ${isLast ? "opacity-80 cursor-default" : "opacity-50 hover:opacity-100 hover:underline cursor-pointer"}`}
+                    style={{ color: isLast ? titleColor : subtleColor }}
+                    title={label}
                   >
-                    {openDocInOverlay.title}
+                    {label}
                   </button>
-                </>
-              )}
-            </div>
-          )}
+                </React.Fragment>
+              );
+            })}
+            {openDocInOverlay && (
+              <>
+                <span className="text-[9px] mx-0.5 shrink-0" style={{ color: subtleColor }}>›</span>
+                <button
+                  onClick={() => setOpenDocInOverlay(null)}
+                  className="text-[9px] font-medium truncate max-w-[80px] opacity-60 hover:opacity-100 hover:underline cursor-pointer"
+                  style={{ color: subtleColor }}
+                  title="Back to folder"
+                >
+                  {openDocInOverlay.title}
+                </button>
+              </>
+            )}
+          </div>
 
           {/* Light/dark mode toggle */}
           <button
