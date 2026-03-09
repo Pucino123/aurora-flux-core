@@ -460,10 +460,11 @@ const TasksTab = () => {
 const InboxView = () => {
   const { inboxTasks } = useFlux();
   const [activeTab, setActiveTab] = useState<TabKey>("tasks");
+  const unreadMailCount = useMemo(() => MOCK_EMAILS.filter(e => !e.isRead).length, []);
 
   const TABS = [
     { key: "chat" as TabKey, label: "Chat", icon: MessageSquare },
-    { key: "mail" as TabKey, label: "Mail", icon: Mail, badge: 2 },
+    { key: "mail" as TabKey, label: "Mail", icon: Mail, badge: unreadMailCount },
     { key: "tasks" as TabKey, label: "Tasks", icon: ListTodo, badge: inboxTasks.filter(i => !i.done).length },
   ];
 
