@@ -100,11 +100,21 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
     const id = `win-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const boost = payload.type === 'document' ? DOC_Z_BOOST : 0;
     const now = new Date().toISOString();
+    const shouldMinimize = payload.minimized === true;
     setWindows(prev => {
       const maxZ = prev.reduce((m, w) => Math.max(m, w.zIndex), counterRef.current);
       counterRef.current = maxZ + 1;
       const existing = prev.find(w => w.contentId === payload.contentId && w.type === payload.type);
       if (existing) {
+        // If caller wants to minimize an existing window, respect that
+        if (shouldMinimize) {
+          const next = prev.map(w =>
+            w.id === existing.id ? { ...w, minimized: true, lastActiveAt: now } : w
+          );
+          const visible = next.filter(w => !w.minimized);
+          setFocusedId(visible.length ? visible.reduce((a, b) => a.zIndex > b.zIndex ? a : b).id : null);
+          return next;
+        }
         setFocusedId(existing.id);
         return prev.map(w =>
           w.id === existing.id
@@ -112,8 +122,8 @@ export const WindowManagerProvider = ({ children }: { children: ReactNode }) => 
             : w
         );
       }
-      setFocusedId(id);
-      return [...prev, { ...payload, id, zIndex: counterRef.current + boost, minimized: false, lastActiveAt: now }];
+      if (!shouldMinimize) setFocusedId(id);
+      return [...prev, { ...payload, id, zIndex: counterRef.current + boost, minimized: shouldMinimize, lastActiveAt: now }];
     });
     return id;
   }, []);
