@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, FileText, Table, Sun, Moon, Clock, Keyboard, Maximize2, Minimize2 } from "lucide-react";
+import { X, FileText, Table, Clock, Keyboard, Maximize2, Minimize2 } from "lucide-react";
 import { DbDocument } from "@/hooks/useDocuments";
 import DocumentView from "@/components/documents/DocumentView";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -160,16 +160,6 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
                   <TooltipContent side="bottom" className="text-xs">Keyboard shortcuts</TooltipContent>
                 </Tooltip>
 
-                <button
-                  onClick={() => {
-                    const next = !lightMode;
-                    setLightMode(next);
-                    try { localStorage.setItem(`flux_doc_light_${doc.id}`, next ? "1" : "0"); } catch {}
-                  }}
-                  className={`p-2 rounded-lg transition-colors ${lightMode ? "hover:bg-gray-100 text-gray-500" : "hover:bg-secondary/60 text-muted-foreground"}`}
-                >
-                  {lightMode ? <Moon size={16} /> : <Sun size={16} />}
-                </button>
 
                 <button
                   onClick={() => setExpanded(!expanded)}
