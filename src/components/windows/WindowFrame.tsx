@@ -156,14 +156,26 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const preFullscreenState = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
   // Per-document light/dark override (null = inherit system theme)
-  const [docTheme, setDocTheme] = useState<"light" | "dark" | null>(null);
+  const [docTheme, setDocTheme] = useState<"light" | "dark" | null>(() => {
+    try { return localStorage.getItem(`flux_win_light_${win.id}`) === "1" ? "light" : null; } catch { return null; }
+  });
   const toggleDocTheme = useCallback(() => {
     setDocTheme(prev => {
-      if (prev === null) return "light";
-      if (prev === "light") return "dark";
-      return null;
+      const next = prev === "light" ? null : "light";
+      try { localStorage.setItem(`flux_win_light_${win.id}`, next === "light" ? "1" : "0"); } catch {}
+      return next;
     });
-  }, []);
+  }, [win.id]);
+
+  // Listen for toggle events fired from DocumentView's toolbar
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      if (e.detail?.windowId && e.detail.windowId !== win.id) return;
+      toggleDocTheme();
+    };
+    window.addEventListener("doc:toggle-light" as any, handler);
+    return () => window.removeEventListener("doc:toggle-light" as any, handler);
+  }, [toggleDocTheme, win.id]);
 
   // ── Direct position (no spring during drag — pixel-perfect tracking) ────────
   const rawX = useRef(win.position.x);
