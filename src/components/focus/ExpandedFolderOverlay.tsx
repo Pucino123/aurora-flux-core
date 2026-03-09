@@ -371,9 +371,8 @@ const ExpandedFolderOverlay = ({
   const [draggingOutId, setDraggingOutId] = useState<string | null>(null);
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [docCtxMenu, setDocCtxMenu] = useState<{ doc: DbDocument; x: number; y: number } | null>(null);
+  const [subCtxMenu, setSubCtxMenu] = useState<{ sub: FolderNode; x: number; y: number } | null>(null);
   const [openDocInOverlay, setOpenDocInOverlay] = useState<DbDocument | null>(null);
-  const [showLayoutMenu, setShowLayoutMenu] = useState(false);
-  const layoutMenuRef = useRef<HTMLDivElement>(null);
   // Subfolder drop targets inside overlay
   const subfolderElRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [overlayDropTarget, setOverlayDropTarget] = useState<string | null>(null);
@@ -391,18 +390,6 @@ const ExpandedFolderOverlay = ({
       return next;
     });
   }, [folderId]);
-
-  // Close layout menu when clicking outside
-  useEffect(() => {
-    if (!showLayoutMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (layoutMenuRef.current && !layoutMenuRef.current.contains(e.target as Node)) {
-        setShowLayoutMenu(false);
-      }
-    };
-    window.addEventListener("mousedown", handler);
-    return () => window.removeEventListener("mousedown", handler);
-  }, [showLayoutMenu]);
 
   // Reset rename state when navigating to a different folder
   useEffect(() => {
