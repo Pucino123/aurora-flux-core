@@ -1120,6 +1120,7 @@ const ExpandedFolderOverlay = ({
                     onDragEnd={(e, info) => handleSubfolderDragEnd(e as any, info, sub)}
                     className={`flex flex-col items-center gap-2 cursor-pointer group transition-all ${isTarget ? "scale-105" : ""}`}
                     onDoubleClick={() => navigateInto(sub.id)}
+                    onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setSubCtxMenu({ sub, x: e.clientX, y: e.clientY }); }}
                     style={{ opacity: draggingOutId === sub.id ? 0.3 : 1 }}
                   >
                     <div
