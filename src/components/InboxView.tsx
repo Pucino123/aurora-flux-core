@@ -403,7 +403,7 @@ const TasksTab = () => {
               {f.label}
               <span className="ml-1 text-[10px] opacity-60">
                 {f.key === "today" ? inboxTasks.filter(t => t.scheduled_date === today || (!t.scheduled_date && !t.done)).length :
-                  f.key === "upcoming" ? inboxTasks.filter(t => !t.done && t.scheduled_date && t.scheduled_date > today).length :
+                  f.key === "upcoming" ? allTasks.filter(t => !t.done && t.scheduled_date && t.scheduled_date > today).length :
                   inboxTasks.filter(t => t.done).length}
               </span>
             </button>
