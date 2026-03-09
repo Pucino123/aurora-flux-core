@@ -1763,61 +1763,6 @@ const FocusContent = () => {
           onClose={() => setShowTemplateChooser(false)}
         />
       )}
-      {showTemplateChooser && (
-        <TemplateChooserModal
-          onCreateDocument={async (title, type, content, lightMode) => {
-            const pos = contextMenuPosRef.current;
-            const doc = await createDocument(title, type, null, content);
-            if (doc) {
-              if (lightMode) {
-                try { localStorage.setItem(`flux_doc_light_${doc.id}`, "1"); } catch {}
-              }
-              if (pos) updatePageDocPosition(doc.id, pos);
-              setPages(prev => prev.map((p, i) => i === activePageIndex
-                ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
-                : p
-              ));
-            }
-            contextMenuPosRef.current = null;
-            toast.success(`${title} created`);
-          }}
-          onClose={() => setShowTemplateChooser(false)}
-        />
-      )}
-      {showTemplateChooser && (
-        <TemplateChooserModal
-          onCreateDocument={async (title, type, content, lightMode) => {
-            const pos = contextMenuPosRef.current;
-            const doc = await createDocument(title, type, null, content);
-            if (doc) {
-              if (lightMode) {
-                try { localStorage.setItem(`flux_doc_light_${doc.id}`, "1"); } catch {}
-              }
-              if (pos) updatePageDocPosition(doc.id, pos);
-              setPages(prev => prev.map((p, i) => i === activePageIndex
-                ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
-                : p
-              ));
-            }
-            contextMenuPosRef.current = null;
-            toast.success(`${title} created`);
-          }}
-            }
-            contextMenuPosRef.current = null;
-            toast.success(`${title} created`);
-          }}
-                title: doc.title,
-                layout: "floating",
-                position: { x: Math.max(60, (window.innerWidth / 2) - 410 + Math.random() * 80), y: Math.max(40, (window.innerHeight / 2) - 310 + Math.random() * 60) },
-              });
-            }
-            contextMenuPosRef.current = null;
-            toast.success(`${title} created`);
-          }}
-          onClose={() => setShowTemplateChooser(false)}
-        />
-      )}
-
 
       {/* Clock editor */}
       {clockEditorOpen && (
