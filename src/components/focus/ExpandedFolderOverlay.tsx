@@ -1096,12 +1096,11 @@ const ExpandedFolderOverlay = ({
                 removeDocument(id);
                 setOpenDocInOverlay(null);
               }}
-              lightMode={(() => { try { return localStorage.getItem(`flux_doc_light_${openDocInOverlay.id}`) === "1"; } catch { return false; } })()}
+              lightMode={docLightMode}
               onToggleLightMode={() => {
-                const cur = (() => { try { return localStorage.getItem(`flux_doc_light_${openDocInOverlay.id}`) === "1"; } catch { return false; } })();
-                try { localStorage.setItem(`flux_doc_light_${openDocInOverlay.id}`, (!cur) ? "1" : "0"); } catch {}
-                // Force re-render by toggling a dummy state
-                setOpenDocInOverlay(prev => prev ? { ...prev } : null);
+                const next = !docLightMode;
+                setDocLightMode(next);
+                try { localStorage.setItem(`flux_doc_light_${openDocInOverlay.id}`, next ? "1" : "0"); } catch {}
               }}
             />
           </div>
