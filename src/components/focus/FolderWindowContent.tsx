@@ -282,9 +282,9 @@ const FolderWindowContent: React.FC<Props> = ({ folderId }) => {
       <div className="flex flex-col w-full h-full">
         <DocumentView
           document={openDoc}
-          onBack={() => setOpenDoc(null)}
+          onBack={() => setOpenDocPersisted(null)}
           onUpdate={(id, updates) => { updateDocument(id, updates); setOpenDoc(prev => prev?.id === id ? { ...prev, ...updates } : prev); }}
-          onDelete={(id) => { removeDocument(id); setOpenDoc(null); }}
+          onDelete={(id) => { removeDocument(id); setOpenDocPersisted(null); }}
           lightMode={(() => { try { return localStorage.getItem(`flux_doc_light_${openDoc.id}`) === "1"; } catch { return false; } })()}
         />
       </div>
