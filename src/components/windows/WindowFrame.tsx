@@ -650,7 +650,7 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-    </>
+    </div>
   );
 };
 
