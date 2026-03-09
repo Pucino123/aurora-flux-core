@@ -450,7 +450,7 @@ const AITaskManager = () => {
     }
   }, [tasks, deriveColumn]);
 
-  // Keep new tasks added elsewhere in sync
+  // Keep new tasks added elsewhere in sync; also prune done tasks from columns
   React.useEffect(() => {
     if (!initialized.current) return;
     setTaskColumnMap(prev => {
@@ -460,6 +460,19 @@ const AITaskManager = () => {
         next[t.id] = col;
         setColumnOrder(o => ({ ...o, [col]: [t.id, ...(o[col] || [])] }));
       });
+      // Remove done task IDs from all columns
+      const doneIds = new Set(tasks.filter(t => t.done).map(t => t.id));
+      if (doneIds.size > 0) {
+        setColumnOrder(o => {
+          const updated = { ...o };
+          for (const col of Object.keys(updated)) {
+            if (updated[col].some(id => doneIds.has(id))) {
+              updated[col] = updated[col].filter(id => !doneIds.has(id));
+            }
+          }
+          return updated;
+        });
+      }
       return next;
     });
   }, [tasks, deriveColumn]);
