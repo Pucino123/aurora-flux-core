@@ -942,6 +942,25 @@ const ExpandedFolderOverlay = ({
         </div>
         </>
         )}
+
+        {/* Resize handles — corners + edges */}
+        {!isFullscreen && ([
+          { dir: "se" as const, style: { bottom: 0, right: 0, width: 18, height: 18, cursor: RESIZE_CURSORS.se } },
+          { dir: "sw" as const, style: { bottom: 0, left: 0, width: 18, height: 18, cursor: RESIZE_CURSORS.sw } },
+          { dir: "ne" as const, style: { top: 0, right: 0, width: 18, height: 18, cursor: RESIZE_CURSORS.ne } },
+          { dir: "nw" as const, style: { top: 0, left: 0, width: 18, height: 18, cursor: RESIZE_CURSORS.nw } },
+          { dir: "e" as const, style: { top: "50%", right: 0, width: 8, height: 40, transform: "translateY(-50%)", cursor: RESIZE_CURSORS.e } },
+          { dir: "w" as const, style: { top: "50%", left: 0, width: 8, height: 40, transform: "translateY(-50%)", cursor: RESIZE_CURSORS.w } },
+          { dir: "s" as const, style: { bottom: 0, left: "50%", width: 40, height: 8, transform: "translateX(-50%)", cursor: RESIZE_CURSORS.s } },
+          { dir: "n" as const, style: { top: 0, left: "50%", width: 40, height: 8, transform: "translateX(-50%)", cursor: RESIZE_CURSORS.n } },
+        ]).map(({ dir, style }) => (
+          <div
+            key={dir}
+            className="absolute z-[9999]"
+            style={{ ...style, position: "absolute" }}
+            onPointerDown={(e) => { e.stopPropagation(); onPointerDownResize(e, dir); }}
+          />
+        ))}
       </motion.div>
 
       {/* Document right-click context menu */}
