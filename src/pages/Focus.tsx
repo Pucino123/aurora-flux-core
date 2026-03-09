@@ -1,9 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import Dashboard from "@/components/Dashboard";
 import SEO from "@/components/SEO";
 
+const SettingsModal = lazy(() => import("@/components/settings/SettingsModal"));
+
 const Focus = () => {
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setSettingsOpen(true);
+    window.addEventListener("open-settings", handler);
+    return () => window.removeEventListener("open-settings", handler);
+  }, []);
 
   return (
     <>
@@ -18,6 +27,9 @@ const Focus = () => {
         onToggleSidebar={() => setSidebarVisible(v => !v)}
         focusMode={false}
       />
+      <Suspense fallback={null}>
+        {settingsOpen && <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />}
+      </Suspense>
     </>
   );
 };
