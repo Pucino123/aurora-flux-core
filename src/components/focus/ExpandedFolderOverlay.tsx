@@ -505,10 +505,10 @@ const ExpandedFolderOverlay = ({
       layout,
       minimized: false,
       position: pos ?? getCenter(),
-      size: { w: MODAL_W, h: 560 },
+      size: { w: modalRect?.w ?? MODAL_W, h: modalRect?.h ?? 560 },
     });
     onClose();
-  }, [folder, folderId, openWindow, pos, getCenter, onClose]);
+  }, [folder, folderId, openWindow, pos, getCenter, onClose, modalRect]);
 
   // Minimize directly to toolbar (no popup, just close the overlay and open minimized)
   const handleMinimize = useCallback(() => {
@@ -520,21 +520,22 @@ const ExpandedFolderOverlay = ({
       layout: "floating",
       minimized: true,
       position: pos ?? getCenter(),
-      size: { w: MODAL_W, h: 560 },
+      size: { w: modalRect?.w ?? MODAL_W, h: modalRect?.h ?? 560 },
     });
     onClose();
-  }, [folder, folderId, openWindow, pos, getCenter, onClose]);
+  }, [folder, folderId, openWindow, pos, getCenter, onClose, modalRect]);
 
   // Toggle fullscreen for the overlay itself
+  const preFullscreenRect = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const handleFullscreen = useCallback(() => {
     if (isFullscreen) {
       setIsFullscreen(false);
-      if (preFullscreenPos.current) setPos(preFullscreenPos.current);
+      if (preFullscreenRect.current) setModalRect(preFullscreenRect.current);
     } else {
-      preFullscreenPos.current = pos ?? getCenter();
+      preFullscreenRect.current = modalRect ?? getCenter();
       setIsFullscreen(true);
     }
-  }, [isFullscreen, pos, getCenter]);
+  }, [isFullscreen, modalRect, getCenter]);
 
   const handleDeleteDoc = useCallback(async (doc: DbDocument) => {
     await removeDocument(doc.id);
