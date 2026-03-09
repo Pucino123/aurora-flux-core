@@ -182,7 +182,7 @@ const FolderModal = ({ folderId, onClose }: FolderModalProps) => {
     onClose();
   };
   const handleOpenDocument = (doc: DbDocument) => {
-    setOpenDocument(doc);
+    handleSetOpenDocument(doc);
   };
   const handleMoveFolder = (draggedId: string, targetId: string) => {
     moveFolder(draggedId, targetId);
