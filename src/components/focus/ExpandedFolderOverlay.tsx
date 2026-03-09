@@ -1174,7 +1174,7 @@ const ExpandedFolderOverlay = ({
                     <span className="text-[11px] font-medium text-center leading-tight max-w-[72px] line-clamp-2" style={{ color: itemNameColor }}>
                       {sub.title}
                     </span>
-                  </div>
+                  </motion.div>
                 );
               })}
 
