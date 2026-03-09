@@ -506,7 +506,9 @@ const TextEditor = ({ document: doc, onUpdate, onDelete, renaming, setRenaming, 
   const charCount = editorRef.current?.innerText?.length || 0;
 
   return (
-    <div className={`flex flex-col h-full relative ${studioMode ? "z-[150] overflow-visible" : ""}`}>
+    <div className={`flex flex-col h-full relative ${studioMode ? "z-[150] overflow-visible" : ""}`}
+      style={{ background: lm ? "#ffffff" : undefined }}
+    >
       <StudioModeOverlay active={studioMode} onClose={() => setStudioMode(false)} />
       <WordsToolbar
         editorRef={editorRef as React.RefObject<HTMLDivElement>}
