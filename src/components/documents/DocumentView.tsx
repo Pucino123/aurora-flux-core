@@ -877,7 +877,9 @@ const SpreadsheetEditor = ({ document: doc, onUpdate, onDelete, renaming, setRen
   const ctxHover = lm ? "hover:bg-gray-100" : "hover:bg-secondary/50";
 
   return (
-    <div className={`flex flex-col h-full relative ${studioMode ? "z-[150] overflow-visible" : ""}`}>
+    <div className={`flex flex-col h-full relative ${studioMode ? "z-[150] overflow-visible" : ""}`}
+      style={{ background: lm ? "#ffffff" : undefined }}
+    >
       <StudioModeOverlay active={studioMode} onClose={() => setStudioMode(false)} />
       <SheetsToolbar
         onBoldToggle={() => updateCellFormat({ bold: !getCellFormat(getCellKey() || "").bold })}
