@@ -1585,6 +1585,10 @@ const FocusContent = () => {
                 gamification: <FocusGamificationWidget />,
               };
 
+              // Resolve folder content for widget windows with contentId "folder-{id}"
+              const isFolderWindow = win.type === "widget" && win.contentId.startsWith("folder-");
+              const folderWindowId = isFolderWindow ? win.contentId.replace(/^folder-/, "") : null;
+
               return (
                 <WindowFrame key={win.id} window={win} focused={focusedId === win.id}>
                   {win.type === "document" && winDoc ? (
