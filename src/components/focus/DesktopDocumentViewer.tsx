@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, FileText, Table, Sun, Moon, Clock, Keyboard, Maximize2, Minimize2 } from "lucide-react";
+import { X, FileText, Table, Clock, Keyboard, Maximize2, Minimize2 } from "lucide-react";
 import { DbDocument } from "@/hooks/useDocuments";
 import DocumentView from "@/components/documents/DocumentView";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
