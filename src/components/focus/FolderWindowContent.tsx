@@ -215,7 +215,20 @@ const FolderWindowContent: React.FC<Props> = ({ folderId }) => {
   const folder = findFolderNode(folderId);
   const { documents, loading, createDocument, updateDocument, removeDocument, refetch } = useDocuments(folderId, moveToTrash);
 
-  const [openDoc, setOpenDoc] = useState<DbDocument | null>(null);
+  // openDoc persisted so minimize→restore brings back the open document
+  const [openDoc, setOpenDoc] = useState<DbDocument | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(`flux_folder_opendoc_${folderId}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const setOpenDocPersisted = useCallback((doc: DbDocument | null) => {
+    setOpenDoc(doc);
+    try {
+      if (doc) sessionStorage.setItem(`flux_folder_opendoc_${folderId}`, JSON.stringify(doc));
+      else sessionStorage.removeItem(`flux_folder_opendoc_${folderId}`);
+    } catch {}
+  }, [folderId]);
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [docCtx, setDocCtx] = useState<{ doc: DbDocument; x: number; y: number } | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -269,9 +282,9 @@ const FolderWindowContent: React.FC<Props> = ({ folderId }) => {
       <div className="flex flex-col w-full h-full">
         <DocumentView
           document={openDoc}
-          onBack={() => setOpenDoc(null)}
+          onBack={() => setOpenDocPersisted(null)}
           onUpdate={(id, updates) => { updateDocument(id, updates); setOpenDoc(prev => prev?.id === id ? { ...prev, ...updates } : prev); }}
-          onDelete={(id) => { removeDocument(id); setOpenDoc(null); }}
+          onDelete={(id) => { removeDocument(id); setOpenDocPersisted(null); }}
           lightMode={(() => { try { return localStorage.getItem(`flux_doc_light_${openDoc.id}`) === "1"; } catch { return false; } })()}
         />
       </div>
@@ -366,7 +379,7 @@ const FolderWindowContent: React.FC<Props> = ({ folderId }) => {
                   key={doc.id}
                   draggable
                   className="flex flex-col items-center gap-1.5 p-2 rounded-2xl cursor-pointer group select-none hover:bg-secondary/40 hover:scale-[1.03] transition-all"
-                  onDoubleClick={() => setOpenDoc(doc)}
+                  onDoubleClick={() => setOpenDocPersisted(doc)}
                   onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setDocCtx({ doc, x: e.clientX, y: e.clientY }); }}
                   onDragStart={e => { draggingDocId.current = doc.id; e.dataTransfer.effectAllowed = "move"; }}
                   onPointerMove={e => { if (draggingDocId.current === doc.id) { dragPosRef.current = { x: e.clientX, y: e.clientY }; const hit = Object.entries(subfolderRefs.current).find(([sid, el]) => { if (!el) return false; const r = el.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom; }); setDropTargetId(hit ? hit[0] : null); } }}
@@ -397,7 +410,7 @@ const FolderWindowContent: React.FC<Props> = ({ folderId }) => {
           <DocCtxMenu
             doc={docCtx.doc}
             x={docCtx.x} y={docCtx.y}
-            onOpen={() => { setDocCtx(null); setOpenDoc(docCtx.doc); }}
+            onOpen={() => { setDocCtx(null); setOpenDocPersisted(docCtx.doc); }}
             onDelete={async () => { await removeDocument(docCtx.doc.id); refetch(); setDocCtx(null); }}
             onClose={() => setDocCtx(null)}
           />
