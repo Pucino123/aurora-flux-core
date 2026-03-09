@@ -208,7 +208,7 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
                 onUpdate={wrappedOnUpdate}
                 onDelete={onDelete}
                 lightMode={lightMode}
-                onToggleLightMode={() => setLightMode(!lightMode)}
+                onToggleLightMode={toggleLightMode}
               />
             </div>
           </div>
