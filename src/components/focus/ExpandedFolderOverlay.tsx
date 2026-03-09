@@ -576,7 +576,7 @@ const ExpandedFolderOverlay = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.93, y: 8 }}
         transition={{ type: "spring", bounce: 0.12, duration: 0.32 }}
-        className="flex flex-col"
+        className="flex flex-col overflow-hidden"
         style={{
           ...modalStyle,
           background: "rgba(14, 11, 32, 0.94)",
