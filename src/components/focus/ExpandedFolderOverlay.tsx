@@ -5,7 +5,7 @@ import {
   Folder, FolderOpen, FileText, Table, X, Pencil, FolderPlus, Plus, Minus, Maximize2, Square,
   Trash2, ExternalLink, ArrowLeft, ChevronDown,
   PanelRight, PanelLeft, Monitor, Copy, Share2, CalendarPlus, FolderInput,
-  Type, Upload, Palette, Search, Clock, BookCopy, Pin, PinOff,
+  Type, Upload, Palette, Search, Clock, BookCopy, Pin, PinOff, Sun, Moon,
 } from "lucide-react";
 import { useResizable } from "@/hooks/useResizable";
 import { useFlux, FolderNode } from "@/context/FluxContext";
@@ -332,7 +332,7 @@ const DocContextMenu: React.FC<DocContextMenuProps> = ({ doc, x, y, onOpen, onDe
 };
 
 const ExpandedFolderOverlay = ({
-  folderId,
+  folderId: initialFolderId,
   onClose,
   onOpenDocument,
   onMoveDocToDesktop,
@@ -343,6 +343,19 @@ const ExpandedFolderOverlay = ({
   const { user } = useAuth();
   const { openWindow } = useWindowManager();
   const store = useFocusStore();
+
+  // ── Folder navigation (supports drilling into subfolders) ──────────────────
+  const [folderStack, setFolderStack] = useState<string[]>([initialFolderId]);
+  const folderId = folderStack[folderStack.length - 1];
+  const canGoBack = folderStack.length > 1;
+
+  const navigateInto = useCallback((subId: string) => {
+    setFolderStack(prev => [...prev, subId]);
+  }, []);
+
+  const navigateBack = useCallback(() => {
+    setFolderStack(prev => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [renaming, setRenaming] = useState(false);
@@ -358,6 +371,19 @@ const ExpandedFolderOverlay = ({
   const [overlayDropTarget, setOverlayDropTarget] = useState<string | null>(null);
   const overlayDragPosRef = useRef<{ x: number; y: number } | null>(null);
 
+  // ── Per-folder light/dark mode (individual, persisted in localStorage) ─────
+  const [lightMode, setLightMode] = useState(() => {
+    try { return localStorage.getItem(`flux_folder_light_${initialFolderId}`) === "1"; } catch { return false; }
+  });
+
+  const toggleLightMode = useCallback(() => {
+    setLightMode(prev => {
+      const next = !prev;
+      try { localStorage.setItem(`flux_folder_light_${folderId}`, next ? "1" : "0"); } catch {}
+      return next;
+    });
+  }, [folderId]);
+
   // Close layout menu when clicking outside
   useEffect(() => {
     if (!showLayoutMenu) return;
@@ -370,8 +396,12 @@ const ExpandedFolderOverlay = ({
     return () => window.removeEventListener("mousedown", handler);
   }, [showLayoutMenu]);
 
-
-
+  // Reset rename state when navigating to a different folder
+  useEffect(() => {
+    setRenaming(false);
+    setRenameValue("");
+    setOpenDocInOverlay(null);
+  }, [folderId]);
 
   // Modal drag/resize state
   const [modalRect, setModalRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -515,7 +545,7 @@ const ExpandedFolderOverlay = ({
     if (!folder) return;
     openWindow({
       type: "widget",
-      contentId: `folder-${folderId}`,
+      contentId: `folder-${initialFolderId}`,
       title: folder.title,
       layout: "floating",
       minimized: true,
@@ -523,7 +553,7 @@ const ExpandedFolderOverlay = ({
       size: { w: modalRect?.w ?? MODAL_W, h: modalRect?.h ?? 560 },
     });
     onClose();
-  }, [folder, folderId, openWindow, pos, getCenter, onClose, modalRect]);
+  }, [folder, initialFolderId, openWindow, pos, getCenter, onClose, modalRect]);
 
   // Toggle fullscreen for the overlay itself
   const handleFullscreen = useCallback(() => {
@@ -560,18 +590,31 @@ const ExpandedFolderOverlay = ({
     ne:"nesw-resize", nw:"nwse-resize", se:"nwse-resize", sw:"nesw-resize",
   };
 
+  // Light mode derived styles
+  const lm = lightMode;
+  const overlayBg = lm ? "rgba(250,249,255,0.97)" : "rgba(14, 11, 32, 0.94)";
+  const overlayBorder = lm ? "1px solid rgba(0,0,0,0.1)" : (isFullscreen ? "none" : "1px solid rgba(255,255,255,0.13)");
+  const headerBorder = lm ? "border-b border-black/8" : "";
+  const titleColor = lm ? "rgba(20,10,40,0.92)" : "rgba(255,255,255,0.92)";
+  const subtleColor = lm ? "rgba(60,40,80,0.45)" : "rgba(255,255,255,0.3)";
+  const hintColor = lm ? "rgba(60,40,80,0.35)" : "rgba(255,255,255,0.18)";
+  const itemNameColor = lm ? "rgba(30,15,50,0.75)" : "rgba(255,255,255,0.7)";
+  const emptyColor = lm ? "rgba(60,40,80,0.3)" : "rgba(255,255,255,0.2)";
+  const footerBorder = lm ? "border-t border-black/8" : "border-top: 1px solid rgba(255,255,255,0.06)";
+  const backdrp = lm ? "blur(56px)" : "blur(56px)";
+
   return createPortal(
     <>
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-[8000]"
-        style={{ background: "rgba(0,0,0,0.28)", backdropFilter: "blur(4px)" }}
+        style={{ background: lm ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.28)", backdropFilter: "blur(4px)" }}
         onClick={onClose}
       />
 
       {/* Folder window */}
       <motion.div
-        key={`expanded-folder-${folderId}`}
+        key={`expanded-folder-${initialFolderId}`}
         initial={{ opacity: 0, scale: 0.93, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.93, y: 8 }}
@@ -579,19 +622,22 @@ const ExpandedFolderOverlay = ({
         className="flex flex-col overflow-hidden"
         style={{
           ...modalStyle,
-          background: "rgba(14, 11, 32, 0.94)",
-          backdropFilter: "blur(56px)",
-          WebkitBackdropFilter: "blur(56px)",
-          border: isFullscreen ? "none" : "1px solid rgba(255,255,255,0.13)",
+          background: overlayBg,
+          backdropFilter: backdrp,
+          WebkitBackdropFilter: backdrp,
+          border: overlayBorder,
           borderRadius: isFullscreen ? 0 : 24,
-          boxShadow: isFullscreen ? "none" : "0 40px 120px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08)",
+          boxShadow: isFullscreen ? "none" : lm
+            ? "0 40px 120px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.9)"
+            : "0 40px 120px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08)",
+          transition: "background 0.25s ease, box-shadow 0.25s ease",
         }}
         onClick={e => e.stopPropagation()}
         ref={containerRef}
       >
         {/* Header — drag handle */}
         <div
-          className="flex items-center gap-3 px-5 pt-4 pb-3.5 select-none"
+          className={`flex items-center gap-3 px-5 pt-4 pb-3.5 select-none ${headerBorder}`}
           style={{
             borderRadius: isFullscreen ? 0 : "24px 24px 0 0",
             cursor: isFullscreen ? "default" : "grab",
@@ -675,18 +721,34 @@ const ExpandedFolderOverlay = ({
             </AnimatePresence>
           </div>
 
-          {/* Back button when doc is open inside overlay */}
-          {openDocInOverlay && (
+          {/* Back button when navigating subfolder or when doc is open */}
+          {(canGoBack || openDocInOverlay) && (
             <button
-              onClick={() => setOpenDocInOverlay(null)}
+              onClick={() => {
+                if (openDocInOverlay) { setOpenDocInOverlay(null); }
+                else { navigateBack(); }
+              }}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold transition-all hover:opacity-100 opacity-70"
-              style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.12)" }}
-              title="Back to folder"
+              style={{ background: lm ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)", color: lm ? "rgba(30,15,50,0.7)" : "rgba(255,255,255,0.75)", border: `1px solid ${lm ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)"}` }}
+              title="Back"
               onPointerDown={e => e.stopPropagation()}
             >
               <ArrowLeft size={8} /> Back
             </button>
           )}
+
+          {/* Light/dark mode toggle */}
+          <button
+            onClick={toggleLightMode}
+            className="p-1.5 rounded-lg transition-colors ml-1"
+            style={{ color: lm ? "rgba(30,15,50,0.55)" : "rgba(255,255,255,0.4)" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = lm ? "rgba(30,15,50,0.85)" : "rgba(255,255,255,0.8)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = lm ? "rgba(30,15,50,0.55)" : "rgba(255,255,255,0.4)"; }}
+            title={lm ? "Switch to dark mode" : "Switch to light mode"}
+            onPointerDown={e => e.stopPropagation()}
+          >
+            {lm ? <Moon size={14} /> : <Sun size={14} />}
+          </button>
 
           {/* Folder icon */}
           <div
@@ -708,13 +770,13 @@ const ExpandedFolderOverlay = ({
               }}
               onPointerDown={e => e.stopPropagation()}
               className="flex-1 text-[19px] font-semibold bg-transparent border-b-2 outline-none"
-              style={{ color: "rgba(255,255,255,0.92)", borderColor: "rgba(99,102,241,0.6)" }}
+              style={{ color: titleColor, borderColor: "rgba(99,102,241,0.6)" }}
               autoFocus
             />
           ) : (
             <h2
               className="flex-1 text-[19px] font-semibold cursor-pointer select-none truncate"
-              style={{ color: "rgba(255,255,255,0.92)" }}
+              style={{ color: titleColor }}
               onClick={e => { e.stopPropagation(); setRenameValue(folder.title); setRenaming(true); }}
               title="Click to rename"
             >
@@ -727,9 +789,9 @@ const ExpandedFolderOverlay = ({
             <button
               onClick={() => { setRenameValue(folder.title); setRenaming(true); }}
               className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "rgba(255,255,255,0.3)" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+              style={{ color: subtleColor }}
+              onMouseEnter={e => (e.currentTarget.style.color = lm ? "rgba(30,15,50,0.8)" : "rgba(255,255,255,0.7)")}
+              onMouseLeave={e => (e.currentTarget.style.color = subtleColor)}
               title="Rename folder"
             >
               <Pencil size={13} />
@@ -737,9 +799,9 @@ const ExpandedFolderOverlay = ({
             <button
               onClick={() => setShowTemplateChooser(true)}
               className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "rgba(255,255,255,0.3)" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+              style={{ color: subtleColor }}
+              onMouseEnter={e => (e.currentTarget.style.color = lm ? "rgba(30,15,50,0.8)" : "rgba(255,255,255,0.7)")}
+              onMouseLeave={e => (e.currentTarget.style.color = subtleColor)}
               title="New document"
             >
               <FileText size={13} />
@@ -749,9 +811,9 @@ const ExpandedFolderOverlay = ({
                 await createFolder({ parent_id: folderId, title: "New Folder", type: "folder" });
               }}
               className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "rgba(255,255,255,0.3)" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+              style={{ color: subtleColor }}
+              onMouseEnter={e => (e.currentTarget.style.color = lm ? "rgba(30,15,50,0.8)" : "rgba(255,255,255,0.7)")}
+              onMouseLeave={e => (e.currentTarget.style.color = subtleColor)}
               title="New subfolder"
             >
               <FolderPlus size={13} />
@@ -774,13 +836,19 @@ const ExpandedFolderOverlay = ({
                 setOpenDocInOverlay(null);
               }}
               lightMode={(() => { try { return localStorage.getItem(`flux_doc_light_${openDocInOverlay.id}`) === "1"; } catch { return false; } })()}
+              onToggleLightMode={() => {
+                const cur = (() => { try { return localStorage.getItem(`flux_doc_light_${openDocInOverlay.id}`) === "1"; } catch { return false; } })();
+                try { localStorage.setItem(`flux_doc_light_${openDocInOverlay.id}`, (!cur) ? "1" : "0"); } catch {}
+                // Force re-render by toggling a dummy state
+                setOpenDocInOverlay(prev => prev ? { ...prev } : null);
+              }}
             />
           </div>
         ) : (
         <>
         {/* Drag-out hint */}
         <div className="px-6 pb-1.5">
-          <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.18)" }}>
+          <p className="text-[10px]" style={{ color: hintColor }}>
             Drag items outside to move to desktop · Right-click documents for options
           </p>
         </div>
@@ -792,15 +860,13 @@ const ExpandedFolderOverlay = ({
               <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
             </div>
           ) : folder.children.length === 0 && documents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 gap-3 text-white/20">
+            <div className="flex flex-col items-center justify-center h-48 gap-3" style={{ color: emptyColor }}>
               <Folder size={40} style={{ color: iconColor, opacity: 0.4 }} />
               <p className="text-sm">This folder is empty</p>
               <button
                 onClick={() => setShowTemplateChooser(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
-                style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+                style={{ background: lm ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.07)", color: lm ? "rgba(30,15,50,0.5)" : "rgba(255,255,255,0.5)", border: `1px solid ${lm ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.1)"}` }}
               >
                 <Plus size={14} /> New Document
               </button>
@@ -823,16 +889,21 @@ const ExpandedFolderOverlay = ({
                     whileDrag={{ scale: 1.08, zIndex: 9999, opacity: 0.9, cursor: "grabbing" }}
                     onDragEnd={(e, info) => handleSubfolderDragEnd(e as any, info, sub)}
                     className={`flex flex-col items-center gap-2 cursor-pointer group transition-all ${isTarget ? "scale-105" : ""}`}
-                    onDoubleClick={() => onClose()}
+                    onDoubleClick={() => navigateInto(sub.id)}
                     style={{ opacity: draggingOutId === sub.id ? 0.3 : 1 }}
                   >
                     <div
                       className="flex items-center justify-center rounded-2xl transition-all"
-                      style={{ width: 64, height: 64, background: isTarget ? `${subColor}28` : `${subColor}18`, border: isTarget ? `2px solid ${subColor}80` : `1px solid ${subColor}28`, boxShadow: isTarget ? `0 0 18px ${subColor}40` : undefined }}
+                      style={{
+                        width: 64, height: 64,
+                        background: isTarget ? `${subColor}28` : (lm ? `${subColor}20` : `${subColor}18`),
+                        border: isTarget ? `2px solid ${subColor}80` : `1px solid ${lm ? subColor + "30" : subColor + "28"}`,
+                        boxShadow: isTarget ? `0 0 18px ${subColor}40` : undefined
+                      }}
                     >
                       <SubIcon size={28} style={{ color: subColor }} strokeWidth={1.5} />
                     </div>
-                    <span className="text-[11px] font-medium text-center leading-tight max-w-[72px] line-clamp-2" style={{ color: "rgba(255,255,255,0.7)" }}>
+                    <span className="text-[11px] font-medium text-center leading-tight max-w-[72px] line-clamp-2" style={{ color: itemNameColor }}>
                       {sub.title}
                     </span>
                   </motion.div>
@@ -856,7 +927,7 @@ const ExpandedFolderOverlay = ({
                   ? (customBgColor.startsWith('#')
                     ? (() => { const hex = customBgColor.replace('#',''); const r=parseInt(hex.substring(0,2),16); const g=parseInt(hex.substring(2,4),16); const b=parseInt(hex.substring(4,6),16); return `rgba(${r},${g},${b},${docOpacity})`; })()
                     : `color-mix(in srgb, ${customBgColor} ${Math.round(docOpacity*100)}%, transparent)`)
-                  : defaultBg;
+                  : (lm ? (isSheet ? "rgba(52,211,153,0.15)" : "rgba(99,102,241,0.1)") : defaultBg);
                 return (
                   <motion.div
                     key={doc.id}
@@ -921,7 +992,7 @@ const ExpandedFolderOverlay = ({
                         <FileText size={28} style={{ color: resolvedColor }} strokeWidth={1.5} />
                       )}
                     </div>
-                    <span className="text-[11px] font-medium text-center leading-tight max-w-[72px] line-clamp-2" style={{ color: "rgba(255,255,255,0.7)" }}>
+                    <span className="text-[11px] font-medium text-center leading-tight max-w-[72px] line-clamp-2" style={{ color: itemNameColor }}>
                       {doc.title}
                     </span>
                   </motion.div>
@@ -934,9 +1005,9 @@ const ExpandedFolderOverlay = ({
         {/* Footer */}
         <div
           className="px-6 py-3 flex items-center justify-between"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.06)", borderRadius: isFullscreen ? 0 : "0 0 24px 24px" }}
+          style={{ borderTop: lm ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.06)", borderRadius: isFullscreen ? 0 : "0 0 24px 24px" }}
         >
-          <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.22)" }}>
+          <span className="text-[10px]" style={{ color: hintColor }}>
             {folder.children.length + documents.length} item{folder.children.length + documents.length !== 1 ? "s" : ""}
           </span>
         </div>

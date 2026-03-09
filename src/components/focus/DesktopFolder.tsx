@@ -131,7 +131,8 @@ const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState,
 
   const handleDoubleClick = () => {
     if (renaming) return;
-    setSelected(false); // clear selection ring on open
+    // Immediately clear selection — no timeout, no glow left behind
+    setSelected(false);
     dragging.current = false;
     if (onOpenModal) { onOpenModal(folder.id); } else { setActiveFolder(folder.id); setActiveView("canvas"); }
   };
@@ -301,8 +302,8 @@ const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState,
             if (onSingleSelect) onSingleSelect(folder.id); 
             else setSelected(true); 
           }
-          // Auto-clear selection ring after a short delay (so double-click still shows it briefly)
-          setTimeout(() => setSelected(false), 1200);
+          // Clear selection ring after a very short delay (shorter than double-click threshold)
+          setTimeout(() => setSelected(false), 400);
         }}
         onContextMenu={handleContextMenu}
       >

@@ -867,6 +867,26 @@ const FocusContent = () => {
   }, [refetchDesktopDocs]);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
+
+  // Intercept folder window restores: when a folder- window becomes non-minimized,
+  // close it and open the ExpandedFolderOverlay instead (so it restores as an overlay, not a WindowFrame).
+  const prevWindowsRef = useRef<typeof windows>([]);
+  useEffect(() => {
+    const prev = prevWindowsRef.current;
+    for (const win of windows) {
+      if (win.type === "widget" && win.contentId.startsWith("folder-") && !win.minimized) {
+        const prevWin = prev.find(w => w.id === win.id);
+        // Was previously minimized (or didn't exist) and is now restored
+        if (prevWin && prevWin.minimized) {
+          const folderId = win.contentId.replace(/^folder-/, "");
+          closeWindow(win.id);
+          setOpenFolderId(folderId);
+          break;
+        }
+      }
+    }
+    prevWindowsRef.current = windows;
+  }, [windows, closeWindow]);
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
