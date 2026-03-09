@@ -624,6 +624,8 @@ const ExpandedFolderOverlay = ({
             {folder.children.length + documents.length} item{folder.children.length + documents.length !== 1 ? "s" : ""}
           </span>
         </div>
+        </>
+        )}
       </motion.div>
 
       {/* Document right-click context menu */}
