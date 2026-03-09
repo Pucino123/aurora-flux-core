@@ -131,6 +131,7 @@ const DesktopFolder = ({ folder, onOpenModal, layoutId, dragState, docDragState,
 
   const handleDoubleClick = () => {
     if (renaming) return;
+    setSelected(false); // clear selection ring on open
     if (onOpenModal) { onOpenModal(folder.id); } else { setActiveFolder(folder.id); setActiveView("canvas"); }
   };
 
