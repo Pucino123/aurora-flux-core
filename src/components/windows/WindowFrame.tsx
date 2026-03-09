@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useEffect, useCallback, useState } from "react"
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import {
-  X, Maximize2, PanelLeft, PanelRight, Square, Minus, Sun, Moon,
+  X, Maximize2, PanelLeft, PanelRight, Square, Minus,
   Copy, Group, Ungroup, Pencil, FolderOpen,
 } from "lucide-react";
 import { useWindowManager, AppWindow, WindowLayout } from "@/context/WindowManagerContext";
@@ -358,13 +358,6 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
   const layoutPillBg = LAYOUT_PILL_BG[win.layout];
   const layoutLabel  = LAYOUT_LABEL[win.layout];
 
-  const ThemeIcon = docTheme === "dark" ? Moon : Sun;
-  const themeTitle = docTheme === null
-    ? "Theme: system (click for light)"
-    : docTheme === "light"
-    ? "Theme: light (click for dark)"
-    : "Theme: dark (click for system)";
-
   // Windows available to group with (same layout, not self, not already grouped with this window)
   const groupCandidates = windows.filter(
     w => w.id !== win.id && !w.minimized && w.layout === "floating" &&
@@ -458,19 +451,6 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
       {/* Drag hint */}
       <div className="absolute left-1/2 -translate-x-1/2 top-[11px] w-8 h-1 rounded-full bg-foreground/15 pointer-events-none" />
 
-      {/* Right: theme toggle */}
-      <div className="flex items-center shrink-0" onPointerDown={e => e.stopPropagation()}>
-        <button
-          onClick={toggleDocTheme}
-          title={themeTitle}
-          className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-foreground/10 transition-colors"
-        >
-          <ThemeIcon
-            size={11}
-            className={docTheme === null ? "text-foreground/25" : "text-foreground/60"}
-          />
-        </button>
-      </div>
     </div>
   );
 
