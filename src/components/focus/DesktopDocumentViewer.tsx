@@ -102,13 +102,17 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
         className="fixed inset-0 z-[102] flex items-center justify-center p-4 pointer-events-none"
       >
         <div
-          className={`relative flex flex-col backdrop-blur-2xl border rounded-2xl shadow-2xl pointer-events-auto overflow-hidden transition-all duration-300 ${
+          className={`relative flex flex-col border rounded-2xl shadow-2xl pointer-events-auto overflow-hidden transition-all duration-300 ${
             expanded ? "w-full h-full max-w-none max-h-none rounded-none" : "w-full max-w-4xl max-h-[85vh]"
-          } ${
-            lightMode
-              ? "bg-white/95 border-gray-200/60 text-gray-900"
-              : "bg-card/80 border-border/50"
           }`}
+          style={{
+            background: lightMode ? "#ffffff" : undefined,
+            backdropFilter: lightMode ? undefined : "blur(40px)",
+            WebkitBackdropFilter: lightMode ? undefined : "blur(40px)",
+            borderColor: lightMode ? "rgba(0,0,0,0.12)" : undefined,
+            color: lightMode ? "#111" : undefined,
+            ...(lightMode ? {} : {}),
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
