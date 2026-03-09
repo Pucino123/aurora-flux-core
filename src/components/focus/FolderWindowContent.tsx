@@ -215,7 +215,20 @@ const FolderWindowContent: React.FC<Props> = ({ folderId }) => {
   const folder = findFolderNode(folderId);
   const { documents, loading, createDocument, updateDocument, removeDocument, refetch } = useDocuments(folderId, moveToTrash);
 
-  const [openDoc, setOpenDoc] = useState<DbDocument | null>(null);
+  // openDoc persisted so minimize→restore brings back the open document
+  const [openDoc, setOpenDoc] = useState<DbDocument | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(`flux_folder_opendoc_${folderId}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const setOpenDocPersisted = useCallback((doc: DbDocument | null) => {
+    setOpenDoc(doc);
+    try {
+      if (doc) sessionStorage.setItem(`flux_folder_opendoc_${folderId}`, JSON.stringify(doc));
+      else sessionStorage.removeItem(`flux_folder_opendoc_${folderId}`);
+    } catch {}
+  }, [folderId]);
   const [showTemplateChooser, setShowTemplateChooser] = useState(false);
   const [docCtx, setDocCtx] = useState<{ doc: DbDocument; x: number; y: number } | null>(null);
   const [renaming, setRenaming] = useState(false);

@@ -373,7 +373,10 @@ const WindowFrame = ({ window: win, children, focused = false }: WindowFrameProp
 
   const headerContent = (
     <div
-      className={`relative flex items-center justify-between px-3 py-2 border-b border-border/20 shrink-0 h-9 ${isFloating ? "cursor-grab active:cursor-grabbing" : ""}`}
+      className={`relative flex items-center justify-between px-3 py-2 border-b shrink-0 h-9 ${isFloating ? "cursor-grab active:cursor-grabbing" : ""}`}
+      style={docTheme === "light"
+        ? { background: "#f9f9f9", borderColor: "rgba(0,0,0,0.1)", color: "#111" }
+        : { borderColor: "hsl(var(--border) / 0.2)" }}
       onPointerDown={handleHeaderPointerDown}
       onPointerMove={handleHeaderPointerMove}
       onPointerUp={handleHeaderPointerUp}
