@@ -106,7 +106,7 @@ const DesktopDocumentViewer = ({ document: doc, onClose, onUpdate, onDelete }: P
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className={`flex items-center gap-3 px-5 pt-4 pb-2 border-b ${lightMode ? "border-gray-200/60" : "border-border/30"}`}>
+          <div className={`flex items-center gap-3 px-5 pt-4 pb-2 border-b ${lightMode ? "border-gray-200/60" : "border-border/30"}`} style={lightMode ? { background: "#ffffff" } : undefined}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {doc.type === "spreadsheet" ? (
                 <Table size={18} className="text-emerald-500 shrink-0" />
