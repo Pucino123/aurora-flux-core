@@ -410,9 +410,9 @@ const TasksTab = () => {
               className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${filter === f.key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"}`}>
               {f.label}
               <span className="ml-1 text-[10px] opacity-60">
-                {f.key === "today" ? inboxTasks.filter(t => t.scheduled_date === today || (!t.scheduled_date && !t.done)).length :
-                  f.key === "upcoming" ? allTasks.filter(t => isUpcoming(t)).length :
-                  inboxTasks.filter(t => t.done).length}
+                {f.key === "today" ? allTasks.filter(t => deriveColumn(t) === "today").length :
+                  f.key === "upcoming" ? allTasks.filter(t => deriveColumn(t) === "upcoming").length :
+                  allTasks.filter(t => t.done).length}
               </span>
             </button>
           ))}
