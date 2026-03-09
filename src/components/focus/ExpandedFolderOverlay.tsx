@@ -619,6 +619,7 @@ const ExpandedFolderOverlay = ({
   const [docCtxMenu, setDocCtxMenu] = useState<{ doc: DbDocument; x: number; y: number } | null>(null);
   const [subCtxMenu, setSubCtxMenu] = useState<{ sub: FolderNode; x: number; y: number } | null>(null);
   const [openDocInOverlay, setOpenDocInOverlay] = useState<DbDocument | null>(null);
+  const [docLightMode, setDocLightMode] = useState(false);
   // Subfolder drop targets inside overlay
   const subfolderElRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [overlayDropTarget, setOverlayDropTarget] = useState<string | null>(null);
