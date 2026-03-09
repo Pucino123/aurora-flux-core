@@ -526,7 +526,6 @@ const ExpandedFolderOverlay = ({
   }, [folder, folderId, openWindow, pos, getCenter, onClose, modalRect]);
 
   // Toggle fullscreen for the overlay itself
-  const preFullscreenRect = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const handleFullscreen = useCallback(() => {
     if (isFullscreen) {
       setIsFullscreen(false);
