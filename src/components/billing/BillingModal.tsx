@@ -4,8 +4,9 @@
  */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Download, CreditCard, ChevronRight, Sparkles } from "lucide-react";
+import { X, Check, CreditCard, ChevronRight, Sparkles, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
+import { useStripeSubscription } from "@/hooks/useStripeSubscription";
 
 const PLANS = [
   {
@@ -39,18 +40,16 @@ const PLANS = [
   },
 ];
 
-const MOCK_INVOICES = [
-  { date: "Mar 1, 2026", amount: "$19.00", plan: "Pro", status: "Paid" },
-  { date: "Feb 1, 2026", amount: "$19.00", plan: "Pro", status: "Paid" },
-  { date: "Jan 1, 2026", amount: "$19.00", plan: "Pro", status: "Paid" },
-  { date: "Dec 1, 2025", amount: "$19.00", plan: "Pro", status: "Paid" },
-];
-
 interface Props { open: boolean; onClose: () => void }
 
 const BillingModal = ({ open, onClose }: Props) => {
-  const { userPlan, setUserPlan, sparksBalance } = useMonetization();
+  const { userPlan, sparksBalance } = useMonetization();
+  const { subscription, loading, startCheckout, openPortal } = useStripeSubscription();
   const [tab, setTab] = useState<"plan" | "history">("plan");
+
+  const periodEnd = subscription?.current_period_end
+    ? new Date(subscription.current_period_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : "April 1, 2026";
 
   return (
     <AnimatePresence>
@@ -99,7 +98,7 @@ const BillingModal = ({ open, onClose }: Props) => {
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                       />
                     )}
-                    <span className="relative z-10">{t === "plan" ? "My Plan" : "Billing History"}</span>
+                    <span className="relative z-10">{t === "plan" ? "My Plan" : "Billing Portal"}</span>
                   </button>
                 ))}
               </div>
@@ -128,10 +127,23 @@ const BillingModal = ({ open, onClose }: Props) => {
                           </div>
                           <div>
                             <p className="text-sm font-bold text-foreground">Current Plan: {userPlan}</p>
-                            <p className="text-xs text-muted-foreground">{sparksBalance} Sparks remaining · Renews April 1, 2026</p>
+                            <p className="text-xs text-muted-foreground">
+                              {sparksBalance} Sparks remaining · {subscription?.cancel_at_period_end ? `Cancels ${periodEnd}` : `Renews ${periodEnd}`}
+                            </p>
                           </div>
                         </div>
-                        <button className="text-xs text-muted-foreground hover:text-destructive transition-colors">Cancel Subscription</button>
+                        {subscription ? (
+                          <button
+                            onClick={() => { onClose(); openPortal(); }}
+                            disabled={loading}
+                            className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
+                          >
+                            {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                            Manage
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Free plan</span>
+                        )}
                       </div>
 
                       {/* Plan cards */}
@@ -172,12 +184,22 @@ const BillingModal = ({ open, onClose }: Props) => {
                                 <div className="w-full py-2 rounded-xl text-center text-xs font-semibold text-emerald-500 border border-emerald-500/30 bg-emerald-500/5">
                                   ✓ Current Plan
                                 </div>
+                              ) : plan.name === "Starter" ? (
+                                <button
+                                  onClick={() => { onClose(); openPortal(); }}
+                                  disabled={loading}
+                                  className="w-full py-2 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                                >
+                                  Downgrade via Portal
+                                </button>
                               ) : (
                                 <button
-                                  onClick={() => setUserPlan(plan.name)}
-                                  className="w-full py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1"
+                                  onClick={() => { onClose(); startCheckout("plan", { plan: plan.name }); }}
+                                  disabled={loading}
+                                  className="w-full py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
                                 >
-                                  {plan.name === "Starter" ? "Downgrade" : "Upgrade"} <ChevronRight size={12} />
+                                  {loading ? <Loader2 size={12} className="animate-spin" /> : <ChevronRight size={12} />}
+                                  Upgrade
                                 </button>
                               )}
                             </div>
@@ -185,53 +207,46 @@ const BillingModal = ({ open, onClose }: Props) => {
                         })}
                       </div>
 
-                      {/* Payment method */}
+                      {/* Payment method / portal */}
                       <div className="p-5 rounded-2xl bg-secondary/30 border border-border/30 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
                             <CreditCard size={16} className="text-muted-foreground" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-foreground">Visa ending in 4242</p>
-                            <p className="text-xs text-muted-foreground">Expires 12/27</p>
+                            <p className="text-sm font-medium text-foreground">Payment & Invoices</p>
+                            <p className="text-xs text-muted-foreground">Manage cards & download invoices</p>
                           </div>
                         </div>
-                        <button className="text-xs text-primary hover:underline transition-colors">Update Payment Method</button>
+                        <button
+                          onClick={() => { onClose(); openPortal(); }}
+                          disabled={loading}
+                          className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
+                        >
+                          {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                          Stripe Portal
+                        </button>
                       </div>
                     </div>
                   )}
 
                   {tab === "history" && (
-                    <div>
-                      <div className="rounded-2xl border border-border/40 overflow-hidden">
-                        <div className="grid grid-cols-4 bg-secondary/40 px-5 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                          <span>Date</span>
-                          <span>Amount</span>
-                          <span>Plan</span>
-                          <span>Status</span>
-                        </div>
-                        {MOCK_INVOICES.map((inv, i) => (
-                          <div
-                            key={i}
-                            className="grid grid-cols-4 items-center px-5 py-3.5 border-t border-border/20 hover:bg-secondary/20 transition-colors group"
-                          >
-                            <span className="text-sm text-foreground">{inv.date}</span>
-                            <span className="text-sm font-semibold text-foreground">{inv.amount}</span>
-                            <span className="text-sm text-muted-foreground">{inv.plan}</span>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-500">
-                                {inv.status}
-                              </span>
-                              <button
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
-                                title="Download invoice"
-                              >
-                                <Download size={13} />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                    <div className="flex flex-col items-center justify-center py-12 gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                        <ShieldCheck size={24} className="text-primary" />
                       </div>
+                      <h3 className="text-base font-semibold text-foreground">Billing History via Stripe</h3>
+                      <p className="text-sm text-muted-foreground text-center max-w-xs">
+                        View and download all invoices securely in the Stripe customer portal.
+                      </p>
+                      <button
+                        onClick={() => { onClose(); openPortal(); }}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                      >
+                        {loading ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+                        Open Billing Portal
+                      </button>
                     </div>
                   )}
                 </motion.div>
