@@ -77,7 +77,8 @@ export function useStripeSubscription() {
         body: { type, ...options },
       });
       if (error || !data?.url) throw new Error(error?.message || "Kunne ikke oprette checkout session");
-      window.location.href = data.url;
+      // Open in new tab so Stripe Checkout works outside the iframe
+      window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (err) {
       toast.error((err as Error).message);
       setLoading(false);
