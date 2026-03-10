@@ -3,6 +3,7 @@ import SEO from "./SEO";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 import { useTheme } from "next-themes";
 import {
   Settings, User, Palette, LogOut, Brain, Pencil, Trash2, Check, X,
@@ -375,11 +376,19 @@ const SettingsView = () => {
               <p className="text-sm font-semibold text-foreground mb-3">Spark Costs</p>
               <div className="space-y-2">
                 {[
-                  { action: "Aura AI message", cost: 1 },
-                  { action: "Document AI tools (Rewrite, Expand)", cost: 2 },
-                  { action: "Document Translate", cost: 3 },
-                  { action: "Full Council Consult", cost: 5 },
-                  { action: "1-on-1 Council Deep Dive / msg", cost: 1 },
+                  { action: "Aura AI message",                      cost: SPARKS_COSTS.aura_message },
+                  { action: "Stream classify",                       cost: SPARKS_COSTS.stream_classify },
+                  { action: "Document AI (Rewrite / Expand)",        cost: SPARKS_COSTS.doc_rewrite },
+                  { action: "Document AI (Improve / Summarize)",     cost: SPARKS_COSTS.doc_improve },
+                  { action: "Document Translate",                    cost: SPARKS_COSTS.doc_translate },
+                  { action: "Full Council Consult",                  cost: SPARKS_COSTS.council_analysis },
+                  { action: "Council Quick reply",                   cost: SPARKS_COSTS.council_quick },
+                  { action: "1-on-1 Council thread reply",           cost: SPARKS_COSTS.council_thread },
+                  { action: "Council Execution Pipeline",            cost: SPARKS_COSTS.council_execute },
+                  { action: "Council Simulation",                    cost: SPARKS_COSTS.council_simulate },
+                  { action: "Council Debate",                        cost: SPARKS_COSTS.council_debate },
+                  { action: "Boardroom Consult",                     cost: SPARKS_COSTS.boardroom_consult },
+                  { action: "AI Daily Plan",                         cost: SPARKS_COSTS.ai_daily_plan },
                 ].map(item => (
                   <div key={item.action} className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{item.action}</span>

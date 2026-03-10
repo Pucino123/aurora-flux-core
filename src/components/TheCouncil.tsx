@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from "recharts";
 import ReactMarkdown from "react-markdown";
 import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { useFlux } from "@/context/FluxContext";
 import CouncilAvatar from "./council/CouncilAvatar";
@@ -486,7 +487,7 @@ const TheCouncil = () => {
                         className="w-full mt-4 flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-40 transition-all shadow-lg council-submit-btn"
                       >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                        {t("council.submit") || "Consult the Board"} <span className="opacity-70 font-normal">−5 ✨</span>
+                        {t("council.submit") || "Consult the Board"} <span className="opacity-70 font-normal">−{SPARKS_COSTS.council_analysis} ✨</span>
                       </motion.button>
                     </div>
                   </motion.div>
@@ -583,7 +584,7 @@ const TheCouncil = () => {
                           className="w-full mt-2 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-all council-submit-btn"
                         >
                           {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                          Submit <span className="opacity-60 font-normal">−5 ✨</span>
+                          Submit <span className="opacity-60 font-normal">−{SPARKS_COSTS.council_analysis} ✨</span>
                         </motion.button>
                       </div>
 

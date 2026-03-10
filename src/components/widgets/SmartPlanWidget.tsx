@@ -19,6 +19,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -614,7 +615,7 @@ const SmartPlanWidget = () => {
 
       {/* Suggestion chips + Focus Block shortcut */}
       <div className="flex gap-1.5 shrink-0 flex-wrap">
-        {[{ label: "✨ Optimize Schedule", cost: "−1 ✨" }, { label: "✨ Find Focus Time", cost: "−1 ✨" }, { label: "+ Add Break", cost: null }].map(chip => (
+        {[{ label: "✨ Optimize Schedule", cost: `−${SPARKS_COSTS.smart_plan} ✨` }, { label: "✨ Find Focus Time", cost: `−${SPARKS_COSTS.smart_plan} ✨` }, { label: "+ Add Break", cost: null }].map(chip => (
           <button
             key={chip.label}
             onClick={() => chip.label.startsWith("✨ Opt") && optimize()}
@@ -639,7 +640,7 @@ const SmartPlanWidget = () => {
               title="AI summary of today's blocks"
               className="flex items-center gap-1 px-2 py-1 rounded-full bg-violet-500/15 border border-violet-400/20 text-[10px] text-violet-300 hover:bg-violet-500/30 hover:border-violet-400/40 transition-all"
             >
-              <FileText size={9} /> Daily Summary <span className="opacity-60">−2 ✨</span>
+              <FileText size={9} /> Daily Summary <span className="opacity-60">−{SPARKS_COSTS.daily_summary} ✨</span>
             </button>
           </PopoverTrigger>
           <PopoverContent

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import CouncilAvatar from "./CouncilAvatar";
 import {
@@ -679,7 +680,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
             </div>
             {state === "revealed" && !isExpanded && (
               <>
-                <button onClick={onExpand} title="1-on-1 Deep Dive (−1 ✨)" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
+                <button onClick={onExpand} title={`1-on-1 Deep Dive (−${SPARKS_COSTS.council_thread} ✨)`} className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <MessageSquare size={12} />
                 </button>
                 <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
@@ -728,7 +729,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
                 animate={{ opacity: 1, height: "auto" }}
                 className="mt-3 border-t border-border/40 pt-3 flex flex-col gap-2"
               >
-                <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">1-on-1 Deep Dive with {persona.name.split(" ")[0]} (−1 ✨ / msg)</p>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">1-on-1 Deep Dive with {persona.name.split(" ")[0]} (−{SPARKS_COSTS.council_thread} ✨ / msg)</p>
                 <div className="max-h-[140px] overflow-y-auto council-hidden-scrollbar space-y-2">
                   {chatMessages.map((m, i) => (
                     <div
@@ -1596,7 +1597,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
           style={{ background: "linear-gradient(135deg, hsl(270 70% 55%), hsl(310 70% 55%), hsl(200 80% 55%))", boxShadow: "0 4px 20px rgba(139,92,246,0.35)" }}
         >
           {isConsulting ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-          {isConsulting ? "Consulting…" : "Consult Board (−5 ✨)"}
+          {isConsulting ? "Consulting…" : `Consult Board (−${SPARKS_COSTS.boardroom_consult} ✨)`}
         </motion.button>
         <button onClick={handleExportPDF} disabled={isExportingPDF || !allRevealed} title="Export PDF"
           className="w-9 h-9 flex items-center justify-center rounded-xl bg-secondary border border-border text-muted-foreground hover:text-foreground transition-colors shrink-0 disabled:opacity-30">
