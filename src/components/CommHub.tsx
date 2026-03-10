@@ -123,7 +123,7 @@ const AuraTab = () => {
             className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-white text-[11px] font-semibold disabled:opacity-40 transition-all"
             style={{ background: "linear-gradient(135deg, hsl(var(--aurora-violet,270 70% 55%)), hsl(var(--aurora-blue,220 80% 55%)))" }}
           >
-            {loading ? <Loader2 size={12} className="animate-spin" /> : <><Send size={11} /><span>−1 ✨</span></>}
+            {loading ? <Loader2 size={12} className="animate-spin" /> : <><Send size={11} /><span>−{SPARKS_COSTS.message_action} ✨</span></>}
           </button>
         </div>
       </div>

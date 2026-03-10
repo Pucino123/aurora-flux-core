@@ -23,10 +23,12 @@ const PACKAGES: Package[] = [
 ];
 
 const VALUE_ITEMS = [
-  { icon: "🧠", label: "Ask Aura AI",       cost: "1–3 Sparks" },
-  { icon: "⚖️", label: "Council Session",   cost: "5 Sparks" },
-  { icon: "📄", label: "AI Document Draft", cost: "4 Sparks" },
-  { icon: "📊", label: "Smart Plan",        cost: "2 Sparks" },
+  { icon: "🧠", label: "Ask Aura AI",        cost: `${SPARKS_COSTS.aura_message} Sparks` },
+  { icon: "⚖️", label: "Council Analysis",   cost: `${SPARKS_COSTS.council_analysis} Sparks` },
+  { icon: "⚡", label: "Council Quick Reply", cost: `${SPARKS_COSTS.council_quick} Sparks` },
+  { icon: "📄", label: "AI Document Rewrite", cost: `${SPARKS_COSTS.doc_rewrite} Sparks` },
+  { icon: "📊", label: "AI Daily Plan",       cost: `${SPARKS_COSTS.ai_daily_plan} Sparks` },
+  { icon: "🌐", label: "Document Translate",  cost: `${SPARKS_COSTS.doc_translate} Sparks` },
 ];
 
 interface Props {
