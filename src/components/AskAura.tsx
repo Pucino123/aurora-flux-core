@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { format, addDays, parseISO } from "date-fns";
 import { parseIntent, pushHistory, popHistory } from "@/lib/auraAgent";
 import AuraActionCard from "@/components/aura/AuraActionCard";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 interface Message {
   role: "user" | "assistant";
