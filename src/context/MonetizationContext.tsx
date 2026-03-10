@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export type UserPlan = "Starter" | "Pro" | "Team";
 
@@ -27,21 +29,21 @@ interface MonetizationContextValue {
   showOutOfSparks: boolean;
   closeOutOfSparks: () => void;
   canAccess: (feature: "split-view" | "mail" | "team-chat" | "full-council") => boolean;
+  refetchSparks: () => void;
 }
 
 const LS_PLAN = "flux_user_plan";
-const LS_SPARKS = "flux_sparks_balance";
 const LS_BYOK = "flux_has_byok";
 
 const MonetizationContext = createContext<MonetizationContextValue | null>(null);
 
 export function MonetizationProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+
   const [userPlan, setUserPlanState] = useState<UserPlan>(() => {
     return (localStorage.getItem(LS_PLAN) as UserPlan) || "Starter";
   });
-  const [sparksBalance, setSparksBalance] = useState<number>(() => {
-    return parseInt(localStorage.getItem(LS_SPARKS) || "50", 10);
-  });
+  const [sparksBalance, setSparksBalanceState] = useState<number>(50);
   const [hasBYOK, setHasBYOKState] = useState(() => localStorage.getItem(LS_BYOK) === "true");
   const [billingOpen, setBillingOpen] = useState(false);
   const [upgradeTarget, setUpgradeTarget] = useState<string | null>(null);
@@ -49,6 +51,33 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
   const [floatAnims, setFloatAnims] = useState<FloatAnim[]>([]);
   const animRef = useRef(0);
 
+  // ── DB sync helpers ────────────────────────────────────────────────────────
+  const fetchSparks = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("sparks_balance")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (data && typeof (data as any).sparks_balance === "number") {
+      setSparksBalanceState((data as any).sparks_balance);
+    }
+  }, [user]);
+
+  const persistSparks = useCallback(async (newBalance: number) => {
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({ sparks_balance: newBalance } as any)
+      .eq("id", user.id);
+  }, [user]);
+
+  // Load from DB on mount / user change
+  useEffect(() => {
+    fetchSparks();
+  }, [fetchSparks]);
+
+  // ── Plan ───────────────────────────────────────────────────────────────────
   const setUserPlan = useCallback((plan: UserPlan) => {
     setUserPlanState(plan);
     localStorage.setItem(LS_PLAN, plan);
@@ -59,23 +88,24 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LS_BYOK, String(value));
   }, []);
 
+  // ── Sparks ─────────────────────────────────────────────────────────────────
   const addSparks = useCallback((amount: number) => {
-    setSparksBalance((prev) => {
+    setSparksBalanceState((prev) => {
       const next = prev + amount;
-      localStorage.setItem(LS_SPARKS, String(next));
+      persistSparks(next);
       return next;
     });
-  }, []);
+  }, [persistSparks]);
 
   const consumeSparks = useCallback((cost: number, _featureName?: string): boolean => {
     if (hasBYOK) return true;
     if (sparksBalance >= cost) {
-      setSparksBalance((prev) => {
+      setSparksBalanceState((prev) => {
         const next = prev - cost;
-        localStorage.setItem(LS_SPARKS, String(next));
+        persistSparks(next);
         return next;
       });
-      // Trigger float animation near center of screen
+      // Float animation
       const id = `anim-${animRef.current++}`;
       const x = window.innerWidth / 2 + (Math.random() - 0.5) * 100;
       const y = window.innerHeight / 2 + (Math.random() - 0.5) * 60;
@@ -85,12 +115,12 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
     }
     setShowOutOfSparks(true);
     return false;
-  }, [sparksBalance, hasBYOK]);
+  }, [sparksBalance, hasBYOK, persistSparks]);
 
   const canAccess = useCallback((feature: "split-view" | "mail" | "team-chat" | "full-council"): boolean => {
     if (userPlan === "Pro" || userPlan === "Team") return true;
     if (feature === "team-chat") return (userPlan as string) === "Team";
-    return false; // Starter cannot access split-view, mail, full-council
+    return false;
   }, [userPlan]);
 
   const openBilling = useCallback(() => setBillingOpen(true), []);
@@ -106,6 +136,7 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
       openBilling, closeBilling, billingOpen,
       showUpgradeModal, upgradeTarget, closeUpgradeModal,
       showOutOfSparks, closeOutOfSparks, canAccess,
+      refetchSparks: fetchSparks,
     }}>
       {children}
       {/* Float animations */}
