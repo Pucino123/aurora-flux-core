@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, User, Link, Zap, Palette, LogOut, CheckCheck, Loader2,
   Globe, Sun, Moon, Monitor, Camera, Check, ChevronRight, Sparkles, CreditCard,
-  Building2, Upload,
+  Building2, Upload, RefreshCw, ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import SparksCheckoutModal from "@/components/billing/SparksCheckoutModal";
 import { useAvatar } from "@/context/AvatarContext";
+import { useStripeSubscription } from "@/hooks/useStripeSubscription";
 
 type Tab = "account" | "company" | "integrations" | "sparks" | "appearance";
 
@@ -101,6 +102,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
   const { sparksBalance, userPlan, setUserPlan } = useMonetization();
   const { avatarUrl, uploadAvatar, uploading } = useAvatar();
   const { theme, setTheme } = useTheme();
+  const { subscription, loading: stripeLoading, startCheckout, openPortal, syncFromStripe } = useStripeSubscription();
   const [tab, setTab] = useState<Tab>("account");
   const [connectedProviders, setConnectedProviders] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(LS_INTEGRATIONS) || "[]"); } catch { return []; }
@@ -109,8 +111,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
   const [displayName, setDisplayName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [sparksCheckoutOpen, setSparksCheckoutOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    await syncFromStripe(false);
+    setSyncing(false);
+  };
 
   // Company profile state
   const [company, setCompany] = useState({
@@ -490,25 +499,41 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                   {/* ── SPARKS & BILLING ── */}
                   {tab === "sparks" && (
                     <motion.div key="sparks" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
-                      <h2 className="text-base font-bold text-foreground mb-1">Sparks & Billing</h2>
-                      <p className="text-xs text-muted-foreground mb-4">Sparks are your AI credits. Each Aura interaction uses 1 Spark.</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <h2 className="text-base font-bold text-foreground">Sparks & Billing</h2>
+                        <button
+                          onClick={handleSync}
+                          disabled={syncing}
+                          className="flex items-center gap-1 text-[10px] text-primary hover:underline disabled:opacity-50 px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors"
+                        >
+                          {syncing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
+                          Sync
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-4">Sparks are your AI credits.</p>
 
                       {/* Balance card */}
-                      <div className="p-4 rounded-2xl border border-border/30 mb-5" style={{ background: "hsl(var(--card) / 0.6)" }}>
+                      <div className="p-4 rounded-2xl border border-border/30 mb-5 bg-card/60">
                         <div className="flex items-center justify-between mb-3">
                           <div>
-                            <p className="text-sm font-bold text-foreground">{sparksBalance} Sparks remaining</p>
-                            <p className="text-xs text-muted-foreground">Used {sparksUsed} of 500 this month</p>
+                            <p className="text-sm font-bold text-foreground">{sparksBalance} ✨ remaining</p>
+                            {subscription && (
+                              <p className="text-xs text-muted-foreground">
+                                {subscription.plan} plan · {subscription.cancel_at_period_end ? "cancels" : "renews"}{" "}
+                                {subscription.current_period_end
+                                  ? new Date(subscription.current_period_end).toLocaleDateString()
+                                  : "—"}
+                              </p>
+                            )}
                           </div>
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                            style={{ background: "linear-gradient(135deg, hsl(265 60% 60% / 0.2), hsl(160 84% 39% / 0.2))", border: "1px solid hsl(265 60% 60% / 0.3)" }}>
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                             <Zap size={18} className="text-primary" />
                           </div>
                         </div>
-                        <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: "hsl(var(--secondary))" }}>
+                        <div className="h-2 w-full rounded-full overflow-hidden bg-secondary">
                           <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${sparksPercent}%`, background: "linear-gradient(90deg, hsl(265 60% 60%), hsl(160 84% 39%))" }}
+                            className="h-full rounded-full bg-primary transition-all duration-500"
+                            style={{ width: `${Math.min((sparksBalance / 500) * 100, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -517,14 +542,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                       <p className="text-xs font-semibold text-foreground mb-2">Top Up Sparks</p>
                       <div className="grid grid-cols-3 gap-2.5 mb-6">
                         {[
-                          { sparks: 50, price: "$5", label: "Starter Pack" },
-                          { sparks: 120, price: "$10", label: "Power Pack", best: true },
-                          { sparks: 300, price: "$20", label: "Pro Bundle" },
+                          { id: "sparks_50", sparks: 50, price: "$5", label: "Starter Pack" },
+                          { id: "sparks_120", sparks: 120, price: "$10", label: "Power Pack", best: true },
+                          { id: "sparks_300", sparks: 300, price: "$20", label: "Pro Bundle" },
                         ].map(pack => (
                           <button
                             key={pack.sparks}
-                            onClick={() => setSparksCheckoutOpen(true)}
-                            className="relative flex flex-col items-center p-3 rounded-2xl border border-border/30 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                            onClick={() => startCheckout("sparks", { sparkPackId: pack.id })}
+                            disabled={stripeLoading}
+                            className="relative flex flex-col items-center p-3 rounded-2xl border border-border/30 hover:border-primary/40 hover:bg-primary/5 transition-all group disabled:opacity-50"
                           >
                             {pack.best && (
                               <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground whitespace-nowrap">
@@ -539,23 +565,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                         ))}
                       </div>
 
-                      {/* Plan upgrade/downgrade */}
+                      {/* Plan upgrade/downgrade — real Stripe checkout */}
                       <p className="text-xs font-semibold text-foreground mb-2">Workspace Plan</p>
                       <div className="grid grid-cols-3 gap-2.5">
                         {PLANS.map(plan => {
                           const isCurrent = userPlan === plan.name;
                           const isDowngrade = plan.name === "Starter" && userPlan !== "Starter";
+                          const isUpgrade = !isCurrent && !isDowngrade;
                           return (
                             <div
                               key={plan.name}
                               className={`relative flex flex-col p-3.5 rounded-2xl border transition-all ${
                                 isCurrent
-                                  ? "border-emerald-500/40 bg-emerald-500/5"
+                                  ? "border-primary/40 bg-primary/5"
                                   : "border-border/30 bg-card/50 hover:border-border/60"
                               }`}
                             >
                               {(plan as any).badge && !isCurrent && (
-                                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white whitespace-nowrap">
+                                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground whitespace-nowrap">
                                   {(plan as any).badge}
                                 </span>
                               )}
@@ -566,21 +593,43 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                               </div>
                               <p className="text-[10px] text-muted-foreground mb-2 leading-tight">{plan.description}</p>
                               {isCurrent ? (
-                                <div className="mt-auto w-full py-1.5 rounded-xl text-center text-[11px] font-semibold text-emerald-500 border border-emerald-500/30 bg-emerald-500/5">
+                                <div className="mt-auto w-full py-1.5 rounded-xl text-center text-[11px] font-semibold text-primary border border-primary/30 bg-primary/5">
                                   ✓ Current
                                 </div>
+                              ) : isDowngrade ? (
+                                <button
+                                  onClick={openPortal}
+                                  disabled={stripeLoading}
+                                  className="mt-auto w-full py-1.5 rounded-xl border border-border text-muted-foreground text-[11px] font-semibold hover:text-foreground hover:border-border/80 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+                                >
+                                  {stripeLoading ? <Loader2 size={10} className="animate-spin" /> : <ExternalLink size={10} />}
+                                  Downgrade
+                                </button>
                               ) : (
                                 <button
-                                  onClick={() => { setUserPlan(plan.name); toast.success(`Switched to ${plan.name} plan`); }}
-                                  className="mt-auto w-full py-1.5 rounded-xl bg-primary text-primary-foreground text-[11px] font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1"
+                                  onClick={() => startCheckout("plan", { plan: plan.name })}
+                                  disabled={stripeLoading}
+                                  className="mt-auto w-full py-1.5 rounded-xl bg-primary text-primary-foreground text-[11px] font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
                                 >
-                                  {isDowngrade ? "Downgrade" : "Upgrade"} <ChevronRight size={11} />
+                                  {stripeLoading ? <Loader2 size={10} className="animate-spin" /> : <ExternalLink size={10} />}
+                                  Upgrade
                                 </button>
                               )}
                             </div>
                           );
                         })}
                       </div>
+
+                      {/* Manage via portal */}
+                      {subscription && (
+                        <button
+                          onClick={openPortal}
+                          disabled={stripeLoading}
+                          className="mt-4 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border/30 text-xs text-muted-foreground hover:text-foreground hover:border-border/60 transition-colors disabled:opacity-50"
+                        >
+                          <CreditCard size={12} /> Manage billing & invoices
+                        </button>
+                      )}
                     </motion.div>
                   )}
 
