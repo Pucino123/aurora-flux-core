@@ -11,6 +11,7 @@ import { useFlux } from "@/context/FluxContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useStripeSubscription } from "@/hooks/useStripeSubscription";
 
 // Lazy-load heavy modals to improve initial page load / Core Web Vitals
 const SettingsModal = lazy(() => import("../components/settings/SettingsModal"));
@@ -19,6 +20,8 @@ const Index = () => {
   const { user } = useAuth();
   const { loading } = useFlux();
   const { setTheme } = useTheme();
+  // Initialize Stripe checkout result handler
+  useStripeSubscription();
 
   const [view, setView] = useState<"landing" | "dashboard">("dashboard");
   const [prompt, setPrompt] = useState<string | undefined>();

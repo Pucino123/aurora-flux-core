@@ -1,13 +1,14 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState } from "react";
 import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Users, LayoutGrid, Zap, X, ArrowRight, ChevronRight, Check, ArrowLeft } from "lucide-react";
+import { Sparkles, Zap, X, ArrowRight, Check, ArrowLeft, ExternalLink, Loader2, CreditCard, ShieldCheck } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
+import { useStripeSubscription } from "@/hooks/useStripeSubscription";
 import SparksCheckoutModal from "./SparksCheckoutModal";
 
 /* ─── Upgrade Modal ─── */
 export function UpgradeModal() {
-  const { upgradeTarget, closeUpgradeModal, setUserPlan, openBilling } = useMonetization();
+  const { upgradeTarget, closeUpgradeModal, openBilling } = useMonetization();
 
   if (!upgradeTarget) return null;
 
@@ -69,110 +70,29 @@ export function UpgradeModal() {
   );
 }
 
-/* ─── Out Of Sparks Modal — uses premium SparksCheckoutModal ─── */
+/* ─── Out Of Sparks Modal ─── */
 export function OutOfSparksModal() {
   const { showOutOfSparks, closeOutOfSparks } = useMonetization();
   return <SparksCheckoutModal open={showOutOfSparks} onClose={closeOutOfSparks} />;
 }
 
-/* ─── Checkout Overlay (simulated) ─── */
-export function CheckoutOverlay({ plan, onClose, onSuccess }: {
-  plan: { name: string; price: string };
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [card, setCard] = useState({ num: "", exp: "", cvv: "", name: "" });
-  const [processing, setProcessing] = useState(false);
-
-  const handlePay = async () => {
-    if (!card.num || !card.exp || !card.cvv || !card.name) return;
-    setProcessing(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setProcessing(false);
-    onSuccess();
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9100] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(16px)" }}
-    >
-      <motion.div
-        initial={{ scale: 0.92, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.92, y: 20 }}
-        className="relative w-full max-w-sm rounded-3xl p-7 shadow-2xl"
-        style={{ background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))" }}
-      >
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-secondary/60 text-muted-foreground">
-          <X size={16} />
-        </button>
-        <div className="text-sm font-medium text-muted-foreground mb-1">Upgrading to</div>
-        <div className="text-xl font-bold text-foreground mb-5">{plan.name} — {plan.price}</div>
-        <div className="space-y-3 mb-5">
-          <input
-            placeholder="Cardholder name"
-            value={card.name}
-            onChange={(e) => setCard((p) => ({ ...p, name: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-xl border border-border bg-secondary/30 text-sm outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground"
-          />
-          <input
-            placeholder="Card number"
-            value={card.num}
-            onChange={(e) => setCard((p) => ({ ...p, num: e.target.value }))}
-            maxLength={19}
-            className="w-full px-4 py-2.5 rounded-xl border border-border bg-secondary/30 text-sm outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground"
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <input placeholder="MM/YY" value={card.exp} onChange={(e) => setCard((p) => ({ ...p, exp: e.target.value }))}
-              maxLength={5} className="px-4 py-2.5 rounded-xl border border-border bg-secondary/30 text-sm outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground" />
-            <input placeholder="CVV" value={card.cvv} onChange={(e) => setCard((p) => ({ ...p, cvv: e.target.value }))}
-              maxLength={4} type="password" className="px-4 py-2.5 rounded-xl border border-border bg-secondary/30 text-sm outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground" />
-          </div>
-        </div>
-        <button
-          onClick={handlePay}
-          disabled={processing || !card.num || !card.exp || !card.cvv || !card.name}
-          className="w-full py-3 rounded-2xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-primary/90 transition-colors"
-        >
-          {processing ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground animate-spin" />
-              Processing…
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">🔒 Pay {plan.price}</span>
-          )}
-        </button>
-        <p className="text-[10px] text-center text-muted-foreground mt-3">Simulated checkout — no real payment</p>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 /* ─── Billing View ─── */
 const BillingView = () => {
-  const { userPlan, sparksBalance, setUserPlan, addSparks, hasBYOK, setBYOK, closeBilling } = useMonetization();
+  const { userPlan, sparksBalance, hasBYOK, setBYOK, closeBilling } = useMonetization();
+  const { subscription, loading, startCheckout, openPortal } = useStripeSubscription();
   const [billingTab, setBillingTab] = useState<"plans" | "sparks">("plans");
-  const [checkout, setCheckout] = useState<{ name: string; price: string } | null>(null);
-  const [checkoutType, setCheckoutType] = useState<"plan" | "sparks">("plan");
-  const [pendingPlan, setPendingPlan] = useState<UserPlan | null>(null);
-  const [pendingSparks, setPendingSparks] = useState(0);
   const [byokInput, setByokInput] = useState("");
 
-  const PLANS = [
+  const PLANS: { name: UserPlan; price: string; description: string; features: string[]; missing: string[]; highlight?: boolean; sparkPackId?: string }[] = [
     {
-      name: "Starter" as UserPlan,
+      name: "Starter",
       price: "Free",
       description: "50 Sparks/month, core tools",
       features: ["50 ✨ Sparks/month", "1 Council Advisor", "Basic Dashboard", "Core Tasks & Calendar"],
       missing: ["Split-View", "Mail Sync", "Team Chat", "Full Council"],
     },
     {
-      name: "Pro" as UserPlan,
+      name: "Pro",
       price: "$19/mo",
       description: "500 Sparks/month, all features",
       features: ["500 ✨ Sparks/month", "Full Council (4 Advisors)", "Split-View Multitasking", "Mail Sync", "Priority Support"],
@@ -180,7 +100,7 @@ const BillingView = () => {
       highlight: true,
     },
     {
-      name: "Team" as UserPlan,
+      name: "Team",
       price: "$12/user/mo",
       description: "Pro + collaboration",
       features: ["Everything in Pro", "Team Chat", "Shared Folders", "Team Analytics", "Admin Dashboard"],
@@ -189,9 +109,9 @@ const BillingView = () => {
   ];
 
   const SPARK_PACKS = [
-    { sparks: 50, price: "$5.00", label: "Starter", bonus: 0, rate: "10¢ / Spark" },
-    { sparks: 120, price: "$10.00", label: "Most Popular", bonus: 20, highlight: true, rate: "8¢ / Spark" },
-    { sparks: 300, price: "$20.00", label: "Mega", bonus: 100, rate: "6.7¢ / Spark" },
+    { id: "sparks_50", sparks: 50, price: "$5.00", label: "Starter", bonus: 0, rate: "10¢ / Spark" },
+    { id: "sparks_120", sparks: 120, price: "$10.00", label: "Most Popular", bonus: 20, highlight: true, rate: "8¢ / Spark" },
+    { id: "sparks_300", sparks: 300, price: "$20.00", label: "Mega", bonus: 100, rate: "6.7¢ / Spark" },
   ];
 
   const SPARK_ACTIONS = [
@@ -200,6 +120,10 @@ const BillingView = () => {
     { cost: 3, label: "Deep Document Analysis / Smart Plan" },
     { cost: 5, label: "Full Council Consult (4 Advisors)" },
   ];
+
+  const periodEnd = subscription?.current_period_end
+    ? new Date(subscription.current_period_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : null;
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
@@ -222,13 +146,42 @@ const BillingView = () => {
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
               billingTab === tab ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}>
-            {tab === "plans" ? "Workspace Plans" : "Spark Store & BYOK"}
+            {tab === "plans" ? "Workspace Plans" : "Spark Store"}
           </button>
         ))}
       </div>
 
       {billingTab === "plans" && (
         <div className="space-y-6">
+          {/* Current subscription status */}
+          {subscription && (
+            <div className="flex items-center justify-between p-5 rounded-2xl bg-secondary/40 border border-border/40">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <ShieldCheck size={18} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">
+                    {subscription.plan} — <span className={`text-xs font-normal ${subscription.status === "active" ? "text-emerald-500" : "text-yellow-500"}`}>{subscription.status}</span>
+                  </p>
+                  {periodEnd && (
+                    <p className="text-xs text-muted-foreground">
+                      {subscription.cancel_at_period_end ? `Cancels ${periodEnd}` : `Renews ${periodEnd}`}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={openPortal}
+                disabled={loading}
+                className="flex items-center gap-1.5 text-xs text-primary hover:underline transition-colors disabled:opacity-50"
+              >
+                {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                Manage Subscription
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {PLANS.map((plan) => (
               <div
@@ -263,16 +216,48 @@ const BillingView = () => {
                   <div className="w-full py-2.5 rounded-2xl text-center text-sm font-medium text-primary border border-primary/30">
                     Current Plan
                   </div>
+                ) : plan.name === "Starter" ? (
+                  <button
+                    onClick={openPortal}
+                    disabled={loading}
+                    className="w-full py-2.5 rounded-2xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {loading ? <Loader2 size={14} className="animate-spin" /> : null}
+                    Downgrade via Portal
+                  </button>
                 ) : (
                   <button
-                    onClick={() => { setPendingPlan(plan.name); setCheckoutType("plan"); setCheckout({ name: plan.name, price: plan.price }); }}
-                    className="w-full py-2.5 rounded-2xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                    onClick={() => startCheckout("plan", { plan: plan.name })}
+                    disabled={loading}
+                    className="w-full py-2.5 rounded-2xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                   >
-                    {plan.name === "Starter" ? "Downgrade" : "Upgrade"} to {plan.name}
+                    {loading ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+                    Upgrade to {plan.name}
                   </button>
                 )}
               </div>
             ))}
+          </div>
+
+          {/* Manage via portal */}
+          <div className="p-5 rounded-2xl bg-secondary/30 border border-border/30 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
+                <CreditCard size={16} className="text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Payment & Invoices</p>
+                <p className="text-xs text-muted-foreground">Manage cards, download invoices via Stripe portal</p>
+              </div>
+            </div>
+            <button
+              onClick={openPortal}
+              disabled={loading}
+              className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
+            >
+              {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+              Open Portal
+            </button>
           </div>
         </div>
       )}
@@ -306,9 +291,10 @@ const BillingView = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               {SPARK_PACKS.map((pack) => (
                 <button
-                  key={pack.sparks}
-                  onClick={() => { setPendingSparks(pack.sparks + (pack.bonus || 0)); setCheckoutType("sparks"); setCheckout({ name: `${pack.sparks}${pack.bonus ? ` + ${pack.bonus} Bonus` : ""} Sparks`, price: pack.price }); }}
-                  className={`relative pt-6 pb-5 px-5 rounded-3xl border text-left transition-all hover:scale-[1.01] ${
+                  key={pack.id}
+                  onClick={() => startCheckout("sparks", { sparkPackId: pack.id })}
+                  disabled={loading}
+                  className={`relative pt-6 pb-5 px-5 rounded-3xl border text-left transition-all hover:scale-[1.01] disabled:opacity-50 ${
                     pack.highlight ? "border-primary/50 ring-2 ring-primary/20 bg-primary/5" : "border-border bg-card hover:border-primary/40"
                   }`}
                 >
@@ -330,6 +316,11 @@ const BillingView = () => {
                     <span className="text-xs text-muted-foreground">{pack.label}</span>
                     <span className="text-[10px] text-muted-foreground/60 bg-secondary/50 px-1.5 py-0.5 rounded">{pack.rate}</span>
                   </div>
+                  {loading && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-background/50">
+                      <Loader2 size={20} className="animate-spin text-primary" />
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
@@ -377,25 +368,6 @@ const BillingView = () => {
           </div>
         </div>
       )}
-
-      {/* Checkout overlay */}
-      <AnimatePresence>
-        {checkout && (
-          <CheckoutOverlay
-            plan={checkout}
-            onClose={() => setCheckout(null)}
-            onSuccess={() => {
-              if (checkoutType === "plan" && pendingPlan) {
-                setUserPlan(pendingPlan);
-                if (pendingPlan === "Pro") addSparks(500);
-                if (pendingPlan === "Team") addSparks(500);
-              }
-              if (checkoutType === "sparks") addSparks(pendingSparks);
-              setCheckout(null);
-            }}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 };
