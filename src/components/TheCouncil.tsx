@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from "recharts";
 import ReactMarkdown from "react-markdown";
 import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { useFlux } from "@/context/FluxContext";
 import CouncilAvatar from "./council/CouncilAvatar";
