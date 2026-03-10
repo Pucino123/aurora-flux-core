@@ -1,7 +1,7 @@
 import { useState } from "react";
 import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Zap, X, ArrowRight, Check, ArrowLeft, ExternalLink, Loader2, CreditCard, ShieldCheck, Ban } from "lucide-react";
+import { Zap, X, ArrowRight, Check, ArrowLeft, ExternalLink, Loader2, CreditCard, ShieldCheck, Ban } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
 import { useStripeSubscription } from "@/hooks/useStripeSubscription";
 import SparksCheckoutModal from "./SparksCheckoutModal";
@@ -85,7 +85,7 @@ const BillingView = () => {
   const [byokInput, setByokInput] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
 
-  const PLANS: { name: UserPlan; price: string; description: string; features: string[]; missing: string[]; highlight?: boolean; sparkPackId?: string }[] = [
+  const PLANS: { name: UserPlan; price: string; description: string; features: string[]; missing: string[]; highlight?: boolean }[] = [
     {
       name: "Starter",
       price: "Free",
@@ -370,7 +370,7 @@ const BillingView = () => {
                   value={byokInput}
                   onChange={(e) => setByokInput(e.target.value)}
                   className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-secondary/30 text-sm outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground"
-                 />
+                />
                 <button
                   onClick={() => { if (byokInput.startsWith("sk-")) { setBYOK(true); setByokInput(""); } }}
                   className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium"
@@ -380,21 +380,18 @@ const BillingView = () => {
           </div>
         </div>
       )}
-    </div>
 
-    {/* Cancel Subscription Dialog */}
-    {subscription?.stripe_subscription_id && (
-      <CancelSubscriptionDialog
-        open={cancelOpen}
-        onClose={() => setCancelOpen(false)}
-        subscriptionId={subscription.stripe_subscription_id}
-        periodEnd={periodEnd ?? "your current period end"}
-      />
-    )}
-  </>
+      {/* Cancel Subscription Dialog */}
+      {subscription?.stripe_subscription_id && (
+        <CancelSubscriptionDialog
+          open={cancelOpen}
+          onClose={() => setCancelOpen(false)}
+          subscriptionId={subscription.stripe_subscription_id}
+          periodEnd={periodEnd ?? "your current period end"}
+        />
+      )}
+    </div>
   );
 };
-
-export default BillingView;
 
 export default BillingView;
