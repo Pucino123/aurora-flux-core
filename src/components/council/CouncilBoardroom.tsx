@@ -728,7 +728,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
                 animate={{ opacity: 1, height: "auto" }}
                 className="mt-3 border-t border-border/40 pt-3 flex flex-col gap-2"
               >
-                <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">1-on-1 Deep Dive with {persona.name.split(" ")[0]} (−1 ✨ / msg)</p>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">1-on-1 Deep Dive with {persona.name.split(" ")[0]} (−{SPARKS_COSTS.council_thread} ✨ / msg)</p>
                 <div className="max-h-[140px] overflow-y-auto council-hidden-scrollbar space-y-2">
                   {chatMessages.map((m, i) => (
                     <div
