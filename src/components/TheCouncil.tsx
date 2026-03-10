@@ -92,6 +92,7 @@ const TheCouncil = () => {
   const { filterPersona } = useFlux();
   const { consumeSparks } = useMonetization();
   const isMobile = useIsMobile();
+  // Spark costs are centralized in src/lib/sparksConfig.ts
   const [activeTab, setActiveTab] = useState<"council" | "boardroom" | "analytics">("council");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
