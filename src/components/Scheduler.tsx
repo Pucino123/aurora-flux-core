@@ -363,6 +363,7 @@ const Scheduler = ({ onOpenFullCalendar }: { onOpenFullCalendar?: () => void } =
   };
 
   const runAIPlan = async (silent = false) => {
+    if (!consumeSparks(SPARKS_COSTS.ai_daily_plan, "ai_daily_plan")) return;
     setAiLoading(true);
     try {
       const today = new Date().toISOString().split("T")[0];
