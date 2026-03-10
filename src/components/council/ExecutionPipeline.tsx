@@ -40,9 +40,11 @@ const ExecutionPipeline = ({ ideaId, ideaContent, userId, onCreateTasks }: Execu
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<ExecutionPlan | null>(null);
+  const { consumeSparks } = useMonetization();
 
   const generate = async () => {
     if (loading) return;
+    if (!consumeSparks(SPARKS_COSTS.council_execute, "council_execute")) return;
     setLoading(true);
     setOpen(true);
 
