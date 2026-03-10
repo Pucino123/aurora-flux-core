@@ -1596,7 +1596,7 @@ ${actionPlan.map((s, i) => `${i + 1}. ${s}`).join("\n")}
           style={{ background: "linear-gradient(135deg, hsl(270 70% 55%), hsl(310 70% 55%), hsl(200 80% 55%))", boxShadow: "0 4px 20px rgba(139,92,246,0.35)" }}
         >
           {isConsulting ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-          {isConsulting ? "Consulting…" : "Consult Board (−5 ✨)"}
+          {isConsulting ? "Consulting…" : `Consult Board (−${SPARKS_COSTS.boardroom_consult} ✨)`}
         </motion.button>
         <button onClick={handleExportPDF} disabled={isExportingPDF || !allRevealed} title="Export PDF"
           className="w-9 h-9 flex items-center justify-center rounded-xl bg-secondary border border-border text-muted-foreground hover:text-foreground transition-colors shrink-0 disabled:opacity-30">
