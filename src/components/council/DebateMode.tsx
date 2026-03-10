@@ -350,6 +350,7 @@ const DebateMode = ({ ideaId, ideaContent, userId, responses, personas }: Debate
   const executeDebate = async (mode: "normal" | "push" | "force_vote" = "normal") => {
     if (debateStarted.current && mode === "normal" && rounds.length === 0) return;
     if (mode === "normal" && rounds.length === 0) debateStarted.current = true;
+    if (!consumeSparks(SPARKS_COSTS.council_debate, "council_debate")) return;
     setLoading(true);
     setOpen(true);
 
