@@ -145,7 +145,18 @@ const BillingView = () => {
           <ArrowLeft size={14} /> Back
         </button>
       </div>
-      <h2 className="text-2xl font-bold text-foreground mb-1">Billing & Plans</h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-2xl font-bold text-foreground">Billing & Plans</h2>
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          title="Sync subscription status from Stripe and claim any pending Sparks"
+          className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50 px-3 py-1.5 rounded-xl hover:bg-primary/10 transition-colors"
+        >
+          {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+          Sync from Stripe
+        </button>
+      </div>
       <p className="text-sm text-muted-foreground mb-6">Manage your subscription and Sparks balance.</p>
 
       {/* Tabs */}
