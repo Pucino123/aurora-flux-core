@@ -80,17 +80,24 @@ export function OutOfSparksModal() {
 /* ─── Billing View ─── */
 const BillingView = () => {
   const { userPlan, sparksBalance, hasBYOK, setBYOK, closeBilling } = useMonetization();
-  const { subscription, loading, startCheckout, openPortal } = useStripeSubscription();
+  const { subscription, loading, startCheckout, openPortal, syncFromStripe } = useStripeSubscription();
   const [billingTab, setBillingTab] = useState<"plans" | "sparks">("plans");
   const [byokInput, setByokInput] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    await syncFromStripe(false);
+    setSyncing(false);
+  };
 
   const PLANS: { name: UserPlan; price: string; description: string; features: string[]; missing: string[]; highlight?: boolean }[] = [
     {
       name: "Starter",
       price: "Free",
-      description: "50 Sparks/month, core tools",
-      features: ["50 ✨ Sparks/month", "1 Council Advisor", "Basic Dashboard", "Core Tasks & Calendar"],
+      description: "50 Sparks one-time, core tools",
+      features: ["50 ✨ Sparks (one-time)", "1 Council Advisor", "Basic Dashboard", "Core Tasks & Calendar"],
       missing: ["Split-View", "Mail Sync", "Team Chat", "Full Council"],
     },
     {
@@ -104,8 +111,8 @@ const BillingView = () => {
     {
       name: "Team",
       price: "$12/user/mo",
-      description: "Pro + collaboration",
-      features: ["Everything in Pro", "Team Chat", "Shared Folders", "Team Analytics", "Admin Dashboard"],
+      description: "400 Sparks/seat/month → shared pool",
+      features: ["400 ✨ Sparks/seat → team pool", "Everything in Pro", "Team Chat", "Shared Folders", "Team Analytics", "Admin Dashboard"],
       missing: [],
     },
   ];
