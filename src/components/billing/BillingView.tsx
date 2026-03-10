@@ -2,7 +2,7 @@ import { useState } from "react";
 import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, X, ArrowRight, Check, ArrowLeft, ExternalLink, Loader2, CreditCard, ShieldCheck, Ban, RefreshCw } from "lucide-react";
-import { useMonetization } from "@/context/MonetizationContext";
+import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
 import { SPARKS_COSTS } from "@/lib/sparksConfig";
 import { useStripeSubscription } from "@/hooks/useStripeSubscription";
 import SparksCheckoutModal from "./SparksCheckoutModal";
