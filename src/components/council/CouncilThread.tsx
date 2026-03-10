@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 const db = supabase as any;
 
