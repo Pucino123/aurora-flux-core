@@ -47,6 +47,7 @@ const BillingModal = ({ open, onClose }: Props) => {
   const { userPlan, sparksBalance } = useMonetization();
   const { subscription, loading, startCheckout, openPortal } = useStripeSubscription();
   const [tab, setTab] = useState<"plan" | "history">("plan");
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const periodEnd = subscription?.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
