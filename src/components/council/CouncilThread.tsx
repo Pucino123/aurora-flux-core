@@ -36,9 +36,11 @@ const CouncilThread = ({
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const { consumeSparks } = useMonetization();
 
   const handleReply = async () => {
     if (!input.trim() || loading) return;
+    if (!consumeSparks(SPARKS_COSTS.council_thread, "council_thread")) return;
     setLoading(true);
 
     try {
