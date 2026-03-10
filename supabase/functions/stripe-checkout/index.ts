@@ -6,16 +6,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Price IDs — we create them on first call if they don't exist, then cache in env
-const PLAN_PRICES: Record<string, { unit_amount: number; interval?: string; product_name: string }> = {
-  Pro: { unit_amount: 1900, interval: "month", product_name: "Flux Pro Plan" },
-  Team: { unit_amount: 1200, interval: "month", product_name: "Flux Team Plan (per user)" },
+// Hardcoded Dashiii Stripe price IDs
+const PLAN_PRICE_IDS: Record<string, string> = {
+  Pro:  "price_1T9UkXF0hqqlAweiLbmVm7vx",
+  Team: "price_1T9UlDF0hqqlAweiCkwyllMT",
 };
 
-const SPARK_PRICES: Record<string, { unit_amount: number; sparks: number; product_name: string }> = {
-  sparks_50: { unit_amount: 500, sparks: 50, product_name: "50 Sparks Pack" },
-  sparks_120: { unit_amount: 1000, sparks: 120, product_name: "120 Sparks Pack (Best Value)" },
-  sparks_300: { unit_amount: 2000, sparks: 300, product_name: "300 Sparks Pack (Mega)" },
+const SPARK_PRICE_IDS: Record<string, { priceId: string; sparks: number }> = {
+  sparks_50:  { priceId: "price_1T9UlkF0hqqlAweiqwfntOCw", sparks: 50 },
+  sparks_120: { priceId: "price_1T9UmQF0hqqlAweijz0qPOu0", sparks: 120 },
+  sparks_300: { priceId: "price_1T9UmxF0hqqlAwei0v6yimCZ", sparks: 300 },
 };
 
 Deno.serve(async (req) => {
@@ -30,16 +30,14 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2024-04-10" });
+    const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" as any });
 
-    // Get auth user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header");
 
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Verify JWT and get user
     const anonSupabase = createClient(
       SUPABASE_URL!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -49,7 +47,7 @@ Deno.serve(async (req) => {
     if (userError || !user) throw new Error("Unauthorized");
 
     const body = await req.json();
-    const { type, plan, sparkPackId } = body; // type: "plan" | "sparks"
+    const { type, plan, sparkPackId } = body;
 
     const origin = req.headers.get("origin") || "https://aurora-flux-core.lovable.app";
 
@@ -85,76 +83,28 @@ Deno.serve(async (req) => {
 
     let session: Stripe.Checkout.Session;
 
-    if (type === "plan" && plan && PLAN_PRICES[plan]) {
-      const planConfig = PLAN_PRICES[plan];
-
-      // Find or create price
-      const prices = await stripe.prices.list({
-        active: true,
-        lookup_keys: [`flux_${plan.toLowerCase()}_monthly`],
-        limit: 1,
-      });
-
-      let priceId: string;
-      if (prices.data.length > 0) {
-        priceId = prices.data[0].id;
-      } else {
-        // Create product + price
-        const product = await stripe.products.create({
-          name: planConfig.product_name,
-          metadata: { plan },
-        });
-        const price = await stripe.prices.create({
-          product: product.id,
-          unit_amount: planConfig.unit_amount,
-          currency: "usd",
-          recurring: { interval: "month" },
-          lookup_key: `flux_${plan.toLowerCase()}_monthly`,
-        });
-        priceId = price.id;
-      }
-
-      session = await stripe.checkout.sessions.create({
+    if (type === "plan" && plan && PLAN_PRICE_IDS[plan]) {
+      session = await (stripe.checkout.sessions as any).create({
         customer: stripeCustomerId,
         mode: "subscription",
-        line_items: [{ price: priceId, quantity: 1 }],
+        line_items: [{ price: PLAN_PRICE_IDS[plan], quantity: 1 }],
         success_url: `${origin}/?checkout=success&plan=${plan}`,
         cancel_url: `${origin}/?checkout=cancelled`,
         metadata: { user_id: user.id, plan, type: "plan" },
         subscription_data: {
           metadata: { user_id: user.id, plan },
         },
+        payment_settings: {
+          save_default_payment_method: "on_subscription",
+        },
       });
-    } else if (type === "sparks" && sparkPackId && SPARK_PRICES[sparkPackId]) {
-      const packConfig = SPARK_PRICES[sparkPackId];
+    } else if (type === "sparks" && sparkPackId && SPARK_PRICE_IDS[sparkPackId]) {
+      const packConfig = SPARK_PRICE_IDS[sparkPackId];
 
-      const prices = await stripe.prices.list({
-        active: true,
-        lookup_keys: [`flux_${sparkPackId}`],
-        limit: 1,
-      });
-
-      let priceId: string;
-      if (prices.data.length > 0) {
-        priceId = prices.data[0].id;
-      } else {
-        const product = await stripe.products.create({
-          name: packConfig.product_name,
-          metadata: { sparkPackId, sparks: String(packConfig.sparks) },
-        });
-        const price = await stripe.prices.create({
-          product: product.id,
-          unit_amount: packConfig.unit_amount,
-          currency: "usd",
-          lookup_key: `flux_${sparkPackId}`,
-        });
-        priceId = price.id;
-      }
-
-      session = await stripe.checkout.sessions.create({
+      session = await (stripe.checkout.sessions as any).create({
         customer: stripeCustomerId,
         mode: "payment",
-        line_items: [{ price: priceId, quantity: 1 }],
+        line_items: [{ price: packConfig.priceId, quantity: 1 }],
         success_url: `${origin}/?checkout=success&sparks=${packConfig.sparks}`,
         cancel_url: `${origin}/?checkout=cancelled`,
         metadata: {
