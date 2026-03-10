@@ -20,6 +20,8 @@ const Index = () => {
   const { user } = useAuth();
   const { loading } = useFlux();
   const { setTheme } = useTheme();
+  // Initialize Stripe checkout result handler
+  useStripeSubscription();
 
   const [view, setView] = useState<"landing" | "dashboard">("dashboard");
   const [prompt, setPrompt] = useState<string | undefined>();
