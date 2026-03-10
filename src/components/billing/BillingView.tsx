@@ -83,6 +83,7 @@ const BillingView = () => {
   const { subscription, loading, startCheckout, openPortal } = useStripeSubscription();
   const [billingTab, setBillingTab] = useState<"plans" | "sparks">("plans");
   const [byokInput, setByokInput] = useState("");
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const PLANS: { name: UserPlan; price: string; description: string; features: string[]; missing: string[]; highlight?: boolean; sparkPackId?: string }[] = [
     {
