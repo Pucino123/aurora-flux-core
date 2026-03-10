@@ -102,6 +102,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
   const { sparksBalance, userPlan, setUserPlan } = useMonetization();
   const { avatarUrl, uploadAvatar, uploading } = useAvatar();
   const { theme, setTheme } = useTheme();
+  const { subscription, loading: stripeLoading, startCheckout, openPortal, syncFromStripe } = useStripeSubscription();
   const [tab, setTab] = useState<Tab>("account");
   const [connectedProviders, setConnectedProviders] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(LS_INTEGRATIONS) || "[]"); } catch { return []; }
@@ -110,8 +111,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
   const [displayName, setDisplayName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [sparksCheckoutOpen, setSparksCheckoutOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    await syncFromStripe(false);
+    setSyncing(false);
+  };
 
   // Company profile state
   const [company, setCompany] = useState({
