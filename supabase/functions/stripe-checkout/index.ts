@@ -104,8 +104,12 @@ serve(async (req) => {
         success_url: `${origin}/?checkout=success&plan=${plan}`,
         cancel_url: `${origin}/?checkout=cancelled`,
         metadata: { user_id: user.id, plan, type: "plan" },
+        // Collect payment method upfront and run 3D Secure so all future
+        // recurring charges are authorized automatically (off-session)
+        payment_method_collection: "always",
         subscription_data: {
           metadata: { user_id: user.id, plan },
+          default_tax_rates: [],
         },
       });
     } else if (type === "sparks" && sparkPackId && SPARK_PRICE_IDS[sparkPackId]) {
