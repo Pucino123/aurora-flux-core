@@ -3,6 +3,7 @@ import SEO from "./SEO";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 import { useTheme } from "next-themes";
 import {
   Settings, User, Palette, LogOut, Brain, Pencil, Trash2, Check, X,

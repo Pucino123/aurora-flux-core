@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import CouncilAvatar from "./CouncilAvatar";
 import {
