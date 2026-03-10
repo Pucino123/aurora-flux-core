@@ -267,6 +267,20 @@ const BillingModal = ({ open, onClose }: Props) => {
           </motion.div>
         </motion.div>
       )}
+
+      {/* Cancel Subscription Dialog */}
+      {subscription?.stripe_subscription_id && (
+        <CancelSubscriptionDialog
+          open={cancelOpen}
+          onClose={() => setCancelOpen(false)}
+          subscriptionId={subscription.stripe_subscription_id}
+          periodEnd={
+            subscription.current_period_end
+              ? new Date(subscription.current_period_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+              : "your current period end"
+          }
+        />
+      )}
     </AnimatePresence>
   );
 };
