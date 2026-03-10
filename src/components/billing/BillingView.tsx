@@ -381,6 +381,16 @@ const BillingView = () => {
         </div>
       )}
     </div>
+
+    {/* Cancel Subscription Dialog */}
+    {subscription?.stripe_subscription_id && (
+      <CancelSubscriptionDialog
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        subscriptionId={subscription.stripe_subscription_id}
+        periodEnd={periodEnd ?? "your current period end"}
+      />
+    )}
   );
 };
 
