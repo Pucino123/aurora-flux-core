@@ -1,6 +1,6 @@
-// Use Stripe via npm: specifier which avoids Node.js compat issues in Deno edge runtime
-import Stripe from "https://esm.sh/stripe@14.21.0?target=deno&no-dts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@18.5.0";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,10 +29,10 @@ async function incrementSparks(
     .from("profiles")
     .update({ sparks_balance: current + amount })
     .eq("id", userId);
-  console.log(`Sparks: +${amount} for user ${userId} (new balance: ${current + amount})`);
+  console.log(`[STRIPE-WEBHOOK] Sparks: +${amount} for user ${userId} (new: ${current + amount})`);
 }
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -47,8 +47,7 @@ Deno.serve(async (req) => {
   }
 
   const stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2023-10-16" as any,
-    httpClient: Stripe.createFetchHttpClient(),
+    apiVersion: "2025-08-27.basil" as any,
   });
   const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -67,17 +66,17 @@ Deno.serve(async (req) => {
         undefined,
         cryptoProvider
       );
-      console.log("Webhook signature verified ✓");
+      console.log("[STRIPE-WEBHOOK] Signature verified ✓");
     } else {
-      console.warn("No STRIPE_WEBHOOK_SECRET — skipping signature verification");
+      console.warn("[STRIPE-WEBHOOK] No STRIPE_WEBHOOK_SECRET — skipping signature verification");
       event = JSON.parse(body);
     }
   } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+    console.error("[STRIPE-WEBHOOK] Signature verification failed:", err);
     return new Response(`Webhook Error: ${(err as Error).message}`, { status: 400 });
   }
 
-  console.log("Stripe event:", event.type);
+  console.log("[STRIPE-WEBHOOK] Event:", event.type);
 
   try {
     switch (event.type) {
@@ -85,7 +84,7 @@ Deno.serve(async (req) => {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.user_id;
         if (!userId) {
-          console.warn("No user_id in session metadata");
+          console.warn("[STRIPE-WEBHOOK] No user_id in session metadata");
           break;
         }
 
@@ -110,12 +109,11 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           }, { onConflict: "stripe_subscription_id" });
 
-          // Award initial Sparks for new subscription
           const sparksToAdd = PLAN_SPARKS[plan] ?? 0;
           if (sparksToAdd > 0) {
             await incrementSparks(supabase, userId, sparksToAdd);
           }
-          console.log(`New ${plan} subscription for user ${userId}`);
+          console.log(`[STRIPE-WEBHOOK] New ${plan} subscription for user ${userId}`);
         } else if (session.mode === "payment") {
           const sparksAmount = parseInt(session.metadata?.sparks_amount || "0", 10);
           if (sparksAmount > 0) {
@@ -131,7 +129,7 @@ Deno.serve(async (req) => {
             });
 
             await incrementSparks(supabase, userId, sparksAmount);
-            console.log(`Sparks purchase: ${sparksAmount} for user ${userId}`);
+            console.log(`[STRIPE-WEBHOOK] Sparks purchase: ${sparksAmount} for user ${userId}`);
           }
         }
         break;
@@ -171,7 +169,7 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         }, { onConflict: "stripe_subscription_id" });
 
-        console.log(`Subscription ${event.type} for user ${userId}: ${subscription.status}`);
+        console.log(`[STRIPE-WEBHOOK] ${event.type} for user ${userId}: ${subscription.status}`);
         break;
       }
 
@@ -211,31 +209,28 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           }, { onConflict: "stripe_subscription_id" });
 
-          // Award monthly Sparks only on renewal cycles
           if ((invoice as any).billing_reason === "subscription_cycle") {
             const sparksToAdd = PLAN_SPARKS[plan] ?? 0;
             if (sparksToAdd > 0) {
               await incrementSparks(supabase, userId, sparksToAdd);
-              console.log(`Monthly Sparks renewal: +${sparksToAdd} for user ${userId}`);
+              console.log(`[STRIPE-WEBHOOK] Monthly Sparks renewal: +${sparksToAdd} for user ${userId}`);
             }
           }
         }
-
-        console.log(`Invoice payment_succeeded for customer ${customerId}`);
         break;
       }
 
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
-        console.warn(`Invoice payment_failed for customer ${invoice.customer}`);
+        console.warn(`[STRIPE-WEBHOOK] invoice.payment_failed for customer ${invoice.customer}`);
         break;
       }
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        console.log(`[STRIPE-WEBHOOK] Unhandled event type: ${event.type}`);
     }
   } catch (err) {
-    console.error("Error processing webhook event:", err);
+    console.error("[STRIPE-WEBHOOK] Error processing event:", err);
     return new Response(`Handler error: ${(err as Error).message}`, { status: 500 });
   }
 
