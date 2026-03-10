@@ -8,6 +8,8 @@ import DraggableWidget from "./DraggableWidget";
 import { toast } from "sonner";
 import { t } from "@/lib/i18n";
 import CouncilAvatar from "../council/CouncilAvatar";
+import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 type CouncilMode = "full" | "single" | "debate";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
