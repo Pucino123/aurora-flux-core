@@ -4,9 +4,10 @@
  */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, CreditCard, ChevronRight, Sparkles, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
+import { X, Check, CreditCard, ChevronRight, Sparkles, ExternalLink, Loader2, ShieldCheck, Ban } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
 import { useStripeSubscription } from "@/hooks/useStripeSubscription";
+import CancelSubscriptionDialog from "./CancelSubscriptionDialog";
 
 const PLANS = [
   {
@@ -46,6 +47,7 @@ const BillingModal = ({ open, onClose }: Props) => {
   const { userPlan, sparksBalance } = useMonetization();
   const { subscription, loading, startCheckout, openPortal } = useStripeSubscription();
   const [tab, setTab] = useState<"plan" | "history">("plan");
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const periodEnd = subscription?.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
@@ -133,14 +135,24 @@ const BillingModal = ({ open, onClose }: Props) => {
                           </div>
                         </div>
                         {subscription ? (
-                          <button
-                            onClick={() => { onClose(); openPortal(); }}
-                            disabled={loading}
-                            className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
-                          >
-                            {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
-                            Manage
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => { onClose(); openPortal(); }}
+                              disabled={loading}
+                              className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
+                            >
+                              {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                              Manage
+                            </button>
+                            {!subscription.cancel_at_period_end && subscription.stripe_subscription_id && (
+                              <button
+                                onClick={() => setCancelOpen(true)}
+                                className="flex items-center gap-1.5 text-xs text-destructive hover:underline transition-colors"
+                              >
+                                <Ban size={12} /> Cancel
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">Free plan</span>
                         )}
@@ -254,6 +266,20 @@ const BillingModal = ({ open, onClose }: Props) => {
             </div>
           </motion.div>
         </motion.div>
+      )}
+
+      {/* Cancel Subscription Dialog */}
+      {subscription?.stripe_subscription_id && (
+        <CancelSubscriptionDialog
+          open={cancelOpen}
+          onClose={() => setCancelOpen(false)}
+          subscriptionId={subscription.stripe_subscription_id}
+          periodEnd={
+            subscription.current_period_end
+              ? new Date(subscription.current_period_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+              : "your current period end"
+          }
+        />
       )}
     </AnimatePresence>
   );

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Zap, X, ArrowRight, Check, ArrowLeft, ExternalLink, Loader2, CreditCard, ShieldCheck } from "lucide-react";
+import { Zap, X, ArrowRight, Check, ArrowLeft, ExternalLink, Loader2, CreditCard, ShieldCheck, Ban } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
 import { useStripeSubscription } from "@/hooks/useStripeSubscription";
 import SparksCheckoutModal from "./SparksCheckoutModal";
+import CancelSubscriptionDialog from "./CancelSubscriptionDialog";
 
 /* ─── Upgrade Modal ─── */
 export function UpgradeModal() {
@@ -82,8 +83,9 @@ const BillingView = () => {
   const { subscription, loading, startCheckout, openPortal } = useStripeSubscription();
   const [billingTab, setBillingTab] = useState<"plans" | "sparks">("plans");
   const [byokInput, setByokInput] = useState("");
+  const [cancelOpen, setCancelOpen] = useState(false);
 
-  const PLANS: { name: UserPlan; price: string; description: string; features: string[]; missing: string[]; highlight?: boolean; sparkPackId?: string }[] = [
+  const PLANS: { name: UserPlan; price: string; description: string; features: string[]; missing: string[]; highlight?: boolean }[] = [
     {
       name: "Starter",
       price: "Free",
@@ -171,14 +173,24 @@ const BillingView = () => {
                   )}
                 </div>
               </div>
-              <button
-                onClick={openPortal}
-                disabled={loading}
-                className="flex items-center gap-1.5 text-xs text-primary hover:underline transition-colors disabled:opacity-50"
-              >
-                {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
-                Manage Subscription
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={openPortal}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline transition-colors disabled:opacity-50"
+                >
+                  {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                  Manage Subscription
+                </button>
+                {!subscription.cancel_at_period_end && subscription.stripe_subscription_id && (
+                  <button
+                    onClick={() => setCancelOpen(true)}
+                    className="flex items-center gap-1.5 text-xs text-destructive hover:underline transition-colors"
+                  >
+                    <Ban size={12} /> Cancel
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -367,6 +379,16 @@ const BillingView = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Cancel Subscription Dialog */}
+      {subscription?.stripe_subscription_id && (
+        <CancelSubscriptionDialog
+          open={cancelOpen}
+          onClose={() => setCancelOpen(false)}
+          subscriptionId={subscription.stripe_subscription_id}
+          periodEnd={periodEnd ?? "your current period end"}
+        />
       )}
     </div>
   );
