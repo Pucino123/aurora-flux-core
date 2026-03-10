@@ -311,6 +311,7 @@ const DebateMode = ({ ideaId, ideaContent, userId, responses, personas }: Debate
   const autoStartDone = useRef(false);
   const debateStarted = useRef(false);
   const sfx = useFightSFX();
+  const { consumeSparks } = useMonetization();
 
   // Detect disagreement
   const votes = responses.map((r) => r.voteScore);
