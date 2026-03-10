@@ -639,7 +639,7 @@ const SmartPlanWidget = () => {
               title="AI summary of today's blocks"
               className="flex items-center gap-1 px-2 py-1 rounded-full bg-violet-500/15 border border-violet-400/20 text-[10px] text-violet-300 hover:bg-violet-500/30 hover:border-violet-400/40 transition-all"
             >
-              <FileText size={9} /> Daily Summary <span className="opacity-60">−2 ✨</span>
+              <FileText size={9} /> Daily Summary <span className="opacity-60">−{SPARKS_COSTS.daily_summary} ✨</span>
             </button>
           </PopoverTrigger>
           <PopoverContent

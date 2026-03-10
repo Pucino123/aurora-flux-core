@@ -125,10 +125,14 @@ const BillingView = () => {
   ];
 
   const SPARK_ACTIONS = [
-    { cost: 1, label: "Quick AI Answer / Basic Generation" },
-    { cost: 2, label: "Live Council Context Review" },
-    { cost: 3, label: "Deep Document Analysis / Smart Plan" },
-    { cost: 5, label: "Full Council Consult (4 Advisors)" },
+    { cost: SPARKS_COSTS.aura_message,      label: "Aura message" },
+    { cost: SPARKS_COSTS.council_thread,    label: "Council thread reply" },
+    { cost: SPARKS_COSTS.council_quick,     label: "Council quick reply (single persona)" },
+    { cost: SPARKS_COSTS.boardroom_consult, label: "Boardroom consult" },
+    { cost: SPARKS_COSTS.council_analysis,  label: "Full Council analysis (all advisors)" },
+    { cost: SPARKS_COSTS.doc_rewrite,       label: "Document AI – Rewrite / Expand" },
+    { cost: SPARKS_COSTS.doc_translate,     label: "Document AI – Translate" },
+    { cost: SPARKS_COSTS.ai_daily_plan,     label: "AI Daily Plan generation" },
   ];
 
   const periodEnd = subscription?.current_period_end
