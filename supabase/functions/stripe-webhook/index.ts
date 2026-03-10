@@ -1,4 +1,5 @@
-import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+// Use Stripe via npm: specifier which avoids Node.js compat issues in Deno edge runtime
+import Stripe from "https://esm.sh/stripe@14.21.0?target=deno&no-dts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -9,9 +10,27 @@ const corsHeaders = {
 
 // Monthly Sparks awarded per plan renewal
 const PLAN_SPARKS: Record<string, number> = {
-  Pro:  500,
+  Pro: 500,
   Team: 1500,
 };
+
+async function incrementSparks(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  amount: number
+) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("sparks_balance")
+    .eq("id", userId)
+    .maybeSingle();
+  const current = (data as any)?.sparks_balance ?? 50;
+  await supabase
+    .from("profiles")
+    .update({ sparks_balance: current + amount })
+    .eq("id", userId);
+  console.log(`Sparks: +${amount} for user ${userId} (new balance: ${current + amount})`);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,11 +45,11 @@ Deno.serve(async (req) => {
   if (!STRIPE_SECRET_KEY) {
     return new Response("STRIPE_SECRET_KEY not configured", { status: 500 });
   }
-  if (!STRIPE_WEBHOOK_SECRET) {
-    console.warn("STRIPE_WEBHOOK_SECRET not set — webhook signature verification skipped (not safe for production)");
-  }
 
-  const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" as any });
+  const stripe = new Stripe(STRIPE_SECRET_KEY, {
+    apiVersion: "2023-10-16" as any,
+    httpClient: Stripe.createFetchHttpClient(),
+  });
   const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
   const body = await req.text();
@@ -40,9 +59,17 @@ Deno.serve(async (req) => {
 
   try {
     if (STRIPE_WEBHOOK_SECRET && signature) {
-      event = await stripe.webhooks.constructEventAsync(body, signature, STRIPE_WEBHOOK_SECRET);
+      const cryptoProvider = Stripe.createSubtleCryptoProvider();
+      event = await stripe.webhooks.constructEventAsync(
+        body,
+        signature,
+        STRIPE_WEBHOOK_SECRET,
+        undefined,
+        cryptoProvider
+      );
+      console.log("Webhook signature verified ✓");
     } else {
-      // Fallback for initial setup (add STRIPE_WEBHOOK_SECRET to lock this down)
+      console.warn("No STRIPE_WEBHOOK_SECRET — skipping signature verification");
       event = JSON.parse(body);
     }
   } catch (err) {
@@ -57,7 +84,10 @@ Deno.serve(async (req) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.user_id;
-        if (!userId) break;
+        if (!userId) {
+          console.warn("No user_id in session metadata");
+          break;
+        }
 
         if (session.mode === "subscription" && session.subscription) {
           const plan = session.metadata?.plan || "Pro";
@@ -83,29 +113,9 @@ Deno.serve(async (req) => {
           // Award initial Sparks for new subscription
           const sparksToAdd = PLAN_SPARKS[plan] ?? 0;
           if (sparksToAdd > 0) {
-            await supabase.rpc("increment_sparks", { p_user_id: userId, p_amount: sparksToAdd } as any)
-              .then(() => {}) // best-effort, handled by SQL function below
-              .catch(() => {
-                // Fallback: direct update
-                return supabase
-                  .from("profiles")
-                  .update({ sparks_balance: supabase.rpc as any })
-                  .eq("id", userId);
-              });
-            // Direct increment via raw update
-            await supabase
-              .from("profiles")
-              .select("sparks_balance")
-              .eq("id", userId)
-              .maybeSingle()
-              .then(async ({ data }) => {
-                const current = (data as any)?.sparks_balance ?? 50;
-                await supabase
-                  .from("profiles")
-                  .update({ sparks_balance: current + sparksToAdd })
-                  .eq("id", userId);
-              });
+            await incrementSparks(supabase, userId, sparksToAdd);
           }
+          console.log(`New ${plan} subscription for user ${userId}`);
         } else if (session.mode === "payment") {
           const sparksAmount = parseInt(session.metadata?.sparks_amount || "0", 10);
           if (sparksAmount > 0) {
@@ -120,17 +130,8 @@ Deno.serve(async (req) => {
               price_paid_cents: session.amount_total || 0,
             });
 
-            // Add Sparks to profile balance
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("sparks_balance")
-              .eq("id", userId)
-              .maybeSingle();
-            const current = (profileData as any)?.sparks_balance ?? 50;
-            await supabase
-              .from("profiles")
-              .update({ sparks_balance: current + sparksAmount })
-              .eq("id", userId);
+            await incrementSparks(supabase, userId, sparksAmount);
+            console.log(`Sparks purchase: ${sparksAmount} for user ${userId}`);
           }
         }
         break;
@@ -141,7 +142,6 @@ Deno.serve(async (req) => {
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
 
-        // Find user_id
         let userId = subscription.metadata?.user_id;
         if (!userId) {
           const customerId = typeof subscription.customer === "string"
@@ -170,6 +170,8 @@ Deno.serve(async (req) => {
           cancel_at_period_end: subscription.cancel_at_period_end,
           updated_at: new Date().toISOString(),
         }, { onConflict: "stripe_subscription_id" });
+
+        console.log(`Subscription ${event.type} for user ${userId}: ${subscription.status}`);
         break;
       }
 
@@ -181,7 +183,6 @@ Deno.serve(async (req) => {
 
         if (!customerId) break;
 
-        // Find user
         const { data: customerRow } = await supabase
           .from("stripe_customers")
           .select("user_id")
@@ -191,7 +192,6 @@ Deno.serve(async (req) => {
 
         const userId = customerRow.user_id;
 
-        // Update subscription period end
         if ((invoice as any).subscription) {
           const subId = typeof (invoice as any).subscription === "string"
             ? (invoice as any).subscription
@@ -211,20 +211,12 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           }, { onConflict: "stripe_subscription_id" });
 
-          // Award monthly Sparks on renewal (only for renewal invoices, not the first)
+          // Award monthly Sparks only on renewal cycles
           if ((invoice as any).billing_reason === "subscription_cycle") {
             const sparksToAdd = PLAN_SPARKS[plan] ?? 0;
             if (sparksToAdd > 0) {
-              const { data: profileData } = await supabase
-                .from("profiles")
-                .select("sparks_balance")
-                .eq("id", userId)
-                .maybeSingle();
-              const current = (profileData as any)?.sparks_balance ?? 50;
-              await supabase
-                .from("profiles")
-                .update({ sparks_balance: current + sparksToAdd })
-                .eq("id", userId);
+              await incrementSparks(supabase, userId, sparksToAdd);
+              console.log(`Monthly Sparks renewal: +${sparksToAdd} for user ${userId}`);
             }
           }
         }
@@ -236,9 +228,11 @@ Deno.serve(async (req) => {
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         console.warn(`Invoice payment_failed for customer ${invoice.customer}`);
-        // Optionally notify user or downgrade plan here
         break;
       }
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
     }
   } catch (err) {
     console.error("Error processing webhook event:", err);
