@@ -228,6 +228,7 @@ const SortableBlock = ({
 // ── Main Scheduler ──
 const Scheduler = ({ onOpenFullCalendar }: { onOpenFullCalendar?: () => void } = {}) => {
   const { scheduleBlocks, tasks, folders, createBlock, updateBlock, removeBlock, replaceBlocksForDate, setActiveFolder, setActiveView } = useFlux();
+  const { consumeSparks } = useMonetization();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
 
