@@ -20,8 +20,8 @@
 
 export const PLAN_SPARKS: Record<string, number> = {
   Starter: 50,   // one-time signup gift
-  Pro: 500,      // monthly
-  Team: 1500,    // monthly
+  Pro: 500,      // monthly per user
+  Team: 400,     // per seat/month → deposited into shared team pool
 };
 
 /**
