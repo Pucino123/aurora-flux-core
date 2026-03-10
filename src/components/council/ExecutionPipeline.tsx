@@ -4,6 +4,8 @@ import { Rocket, Loader2, CheckSquare, Calendar, DollarSign, Target } from "luci
 import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n";
 import { toast } from "sonner";
+import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 interface ExecutionStep {
   title: string;
