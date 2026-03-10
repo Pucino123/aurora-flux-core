@@ -294,7 +294,7 @@ const AskAura = () => {
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
-    if (!consumeSparks(1, "Aura AI message")) return;
+    if (!consumeSparks(SPARKS_COSTS.aura_message, "aura_message")) return;
 
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";
