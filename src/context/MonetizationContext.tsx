@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef, useEffect, Re
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { SPARKS_COSTS, SparksAction } from "@/lib/sparksConfig";
 
 export type UserPlan = "Starter" | "Pro" | "Team";
 
@@ -19,6 +20,7 @@ interface MonetizationContextValue {
   setUserPlan: (plan: UserPlan) => void;
   setBYOK: (value: boolean) => void;
   consumeSparks: (cost: number, featureName?: string) => boolean;
+  consumeSparksForAction: (action: SparksAction) => boolean;
   addSparks: (amount: number) => void;
   openBilling: () => void;
   closeBilling: () => void;
@@ -64,12 +66,23 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  const persistSparks = useCallback(async (newBalance: number) => {
+  const persistSparks = useCallback(async (newBalance: number, reason: string, cost: number) => {
     if (!user) return;
+    // Update balance
     await supabase
       .from("profiles")
       .update({ sparks_balance: newBalance } as any)
       .eq("id", user.id);
+    // Log transaction
+    await (supabase as any)
+      .from("sparks_transactions")
+      .insert({
+        user_id: user.id,
+        amount: -cost,
+        balance_after: newBalance,
+        reason,
+        feature: reason,
+      });
   }, [user]);
 
   // Load from DB on mount / user change
@@ -92,17 +105,30 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
   const addSparks = useCallback((amount: number) => {
     setSparksBalanceState((prev) => {
       const next = prev + amount;
-      persistSparks(next);
+      // Log earn transaction
+      if (user) {
+        supabase
+          .from("profiles")
+          .update({ sparks_balance: next } as any)
+          .eq("id", user.id);
+        (supabase as any).from("sparks_transactions").insert({
+          user_id: user.id,
+          amount,
+          balance_after: next,
+          reason: "Manual top-up",
+          feature: "billing",
+        });
+      }
       return next;
     });
-  }, [persistSparks]);
+  }, [user]);
 
-  const consumeSparks = useCallback((cost: number, _featureName?: string): boolean => {
+  const consumeSparks = useCallback((cost: number, featureName?: string): boolean => {
     if (hasBYOK) return true;
     if (sparksBalance >= cost) {
       setSparksBalanceState((prev) => {
         const next = prev - cost;
-        persistSparks(next);
+        persistSparks(next, featureName || "AI feature", cost);
         return next;
       });
       // Float animation
@@ -116,6 +142,12 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
     setShowOutOfSparks(true);
     return false;
   }, [sparksBalance, hasBYOK, persistSparks]);
+
+  /** Convenience: consume by action key from sparksConfig */
+  const consumeSparksForAction = useCallback((action: SparksAction): boolean => {
+    const cost = SPARKS_COSTS[action];
+    return consumeSparks(cost, action);
+  }, [consumeSparks]);
 
   const canAccess = useCallback((feature: "split-view" | "mail" | "team-chat" | "full-council"): boolean => {
     if (userPlan === "Pro" || userPlan === "Team") return true;
@@ -132,7 +164,7 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
   return (
     <MonetizationContext.Provider value={{
       userPlan, sparksBalance, hasBYOK,
-      setUserPlan, setBYOK, consumeSparks, addSparks,
+      setUserPlan, setBYOK, consumeSparks, consumeSparksForAction, addSparks,
       openBilling, closeBilling, billingOpen,
       showUpgradeModal, upgradeTarget, closeUpgradeModal,
       showOutOfSparks, closeOutOfSparks, canAccess,
