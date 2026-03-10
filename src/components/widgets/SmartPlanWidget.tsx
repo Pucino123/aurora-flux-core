@@ -614,7 +614,7 @@ const SmartPlanWidget = () => {
 
       {/* Suggestion chips + Focus Block shortcut */}
       <div className="flex gap-1.5 shrink-0 flex-wrap">
-        {[{ label: "✨ Optimize Schedule", cost: "−1 ✨" }, { label: "✨ Find Focus Time", cost: "−1 ✨" }, { label: "+ Add Break", cost: null }].map(chip => (
+        {[{ label: "✨ Optimize Schedule", cost: `−${SPARKS_COSTS.smart_plan} ✨` }, { label: "✨ Find Focus Time", cost: `−${SPARKS_COSTS.smart_plan} ✨` }, { label: "+ Add Break", cost: null }].map(chip => (
           <button
             key={chip.label}
             onClick={() => chip.label.startsWith("✨ Opt") && optimize()}
