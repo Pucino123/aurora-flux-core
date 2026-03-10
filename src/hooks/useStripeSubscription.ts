@@ -31,8 +31,8 @@ export function useStripeSubscription() {
       .maybeSingle();
 
     if (data) {
-      setSubscription(data as StripeSubscription);
-      const planName = (data as any).plan as UserPlan;
+      setSubscription(data as unknown as StripeSubscription);
+      const planName = (data as unknown as any).plan as UserPlan;
       if (planName === "Pro" || planName === "Team") {
         setUserPlan(planName);
       }
