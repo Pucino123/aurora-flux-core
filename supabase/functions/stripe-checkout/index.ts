@@ -97,8 +97,8 @@ Deno.serve(async (req) => {
         subscription_data: {
           metadata: { user_id: user.id, plan },
         },
-        payment_settings: {
-          save_default_payment_method: "on_subscription",
+        payment_method_options: {
+          card: { request_three_d_secure: "automatic" },
         },
       });
     } else if (type === "sparks" && sparkPackId && SPARK_PRICE_IDS[sparkPackId]) {
