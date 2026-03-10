@@ -1087,6 +1087,7 @@ export type Database = {
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          team_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1099,6 +1100,7 @@ export type Database = {
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          team_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1111,10 +1113,19 @@ export type Database = {
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          team_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stripe_subscriptions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
@@ -1298,6 +1309,79 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "team_messages_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_sparks_pool: {
+        Row: {
+          id: string
+          seats: number
+          sparks_balance: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          seats?: number
+          sparks_balance?: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          seats?: number
+          sparks_balance?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_sparks_pool_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_sparks_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          feature: string | null
+          id: string
+          reason: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          feature?: string | null
+          id?: string
+          reason: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          feature?: string | null
+          id?: string
+          reason?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_sparks_transactions_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"

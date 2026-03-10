@@ -15,7 +15,7 @@ export interface StripeSubscription {
 
 export function useStripeSubscription() {
   const { user } = useAuth();
-  const { setUserPlan, addSparks } = useMonetization();
+  const { setUserPlan, refetchSparks } = useMonetization();
   const [subscription, setSubscription] = useState<StripeSubscription | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +39,26 @@ export function useStripeSubscription() {
     }
   }, [user, setUserPlan]);
 
+  /** Call the sync-subscription edge function to pull fresh state from Stripe
+   *  and grant any Sparks that the webhook may have missed.
+   */
+  const syncFromStripe = useCallback(async (silent = false) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-subscription");
+      if (error) throw error;
+      if (data?.synced) {
+        await fetchSubscription();
+        refetchSparks();
+        if (!silent && data.sparksGranted > 0) {
+          toast.success(`✨ ${data.sparksGranted} Sparks credited to your account!`);
+        }
+      }
+    } catch (err) {
+      if (!silent) console.error("sync-subscription error:", err);
+    }
+  }, [user, fetchSubscription, refetchSparks]);
+
   // Handle ?checkout=success on page load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -51,18 +71,20 @@ export function useStripeSubscription() {
       if (plan) {
         toast.success(`🎉 Velkommen til ${plan}! Din plan er nu aktiv.`);
         setUserPlan(plan as UserPlan);
-        fetchSubscription();
+        // Give Stripe a moment, then sync to grant Sparks
+        setTimeout(() => syncFromStripe(false), 2000);
       } else if (sparks) {
         const amount = parseInt(sparks, 10);
         if (!isNaN(amount) && amount > 0) {
-          addSparks(amount);
-          toast.success(`✨ ${amount} Sparks tilføjet til din konto!`);
+          // Sync will pick up the sparks from the purchase
+          setTimeout(() => syncFromStripe(false), 2000);
         }
       }
     } else if (checkoutResult === "cancelled") {
       window.history.replaceState({}, "", window.location.pathname);
       toast.info("Checkout annulleret.");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -81,6 +103,7 @@ export function useStripeSubscription() {
       window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (err) {
       toast.error((err as Error).message);
+    } finally {
       setLoading(false);
     }
   }, [user]);
@@ -91,13 +114,13 @@ export function useStripeSubscription() {
     try {
       const { data, error } = await supabase.functions.invoke("stripe-portal");
       if (error || !data?.url) throw new Error(error?.message || "Ingen Stripe-kunde fundet. Køb et abonnement først.");
-      // Open portal in new tab so it works outside the iframe
       window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (err) {
       toast.error((err as Error).message);
+    } finally {
       setLoading(false);
     }
   }, [user]);
 
-  return { subscription, loading, startCheckout, openPortal, refetch: fetchSubscription };
+  return { subscription, loading, startCheckout, openPortal, refetch: fetchSubscription, syncFromStripe };
 }
