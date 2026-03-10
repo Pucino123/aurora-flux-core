@@ -8,6 +8,8 @@ import DraggableWidget from "./DraggableWidget";
 import { toast } from "sonner";
 import { t } from "@/lib/i18n";
 import CouncilAvatar from "../council/CouncilAvatar";
+import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 type CouncilMode = "full" | "single" | "debate";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -121,6 +123,7 @@ const parsePersonaSegments = (text: string) => {
 
 const FocusCouncilWidget = () => {
   const { setActiveView, setActiveFolder } = useFlux();
+  const { consumeSparks } = useMonetization();
   const [mode, setMode] = useState<CouncilMode>("full");
   const [selectedPersona, setSelectedPersona] = useState(-1);
   const [input, setInput] = useState("Review my car budget spreadsheet.");
@@ -136,6 +139,8 @@ const FocusCouncilWidget = () => {
     const question = input.trim();
     if (!question || loading) return;
     if (mode === "single" && selectedPersona < 0) { toast.info("Tap a persona to choose who to talk to"); return; }
+    const sparkKey = mode === "single" ? "council_quick" : "council_analysis";
+    if (!consumeSparks(SPARKS_COSTS[sparkKey], sparkKey)) return;
 
     // Show scanning animation first
     setShowMock(false);

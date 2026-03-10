@@ -5,6 +5,7 @@ import MiniAuraOrb from "./MiniAuraOrb";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 interface AiToolsPanelProps {
   editorRef: React.RefObject<HTMLDivElement>;
@@ -15,12 +16,12 @@ interface AiToolsPanelProps {
 }
 
 const AI_ACTIONS = [
-  { key: "rewrite",   label: "AI Rewrite",   spark: 2, icon: <RefreshCw size={13} /> },
-  { key: "improve",   label: "Improve Tone", spark: 1, icon: <Sparkles size={13} /> },
-  { key: "summarize", label: "Summarize",    spark: 1, icon: <Minimize2 size={13} /> },
-  { key: "expand",    label: "Expand",       spark: 2, icon: <Maximize2 size={13} /> },
-  { key: "shorten",   label: "Shorten",      spark: 1, icon: <Minimize2 size={13} /> },
-  { key: "translate", label: "Translate",    spark: 3, icon: <Languages size={13} /> },
+  { key: "rewrite",   label: "AI Rewrite",   sparkKey: "doc_rewrite"   as const, icon: <RefreshCw size={13} /> },
+  { key: "improve",   label: "Improve Tone", sparkKey: "doc_improve"   as const, icon: <Sparkles size={13} /> },
+  { key: "summarize", label: "Summarize",    sparkKey: "doc_summarize" as const, icon: <Minimize2 size={13} /> },
+  { key: "expand",    label: "Expand",       sparkKey: "doc_expand"    as const, icon: <Maximize2 size={13} /> },
+  { key: "shorten",   label: "Shorten",      sparkKey: "doc_shorten"   as const, icon: <Minimize2 size={13} /> },
+  { key: "translate", label: "Translate",    sparkKey: "doc_translate" as const, icon: <Languages size={13} /> },
 ];
 
 const FLUX_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flux-ai`;
@@ -35,20 +36,15 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
     return selection?.toString() || "";
   };
 
-  const handleAiAction = async (action: string) => {
+  const handleAiAction = async (action: string, sparkKey: keyof typeof SPARKS_COSTS) => {
     const text = getSelectedText();
     if (!text) {
       toast.info("Select some text first to use AI tools");
       return;
     }
 
-    const actionMeta = AI_ACTIONS.find(a => a.key === action);
-    const sparkCost = actionMeta?.spark ?? 1;
-
-    // Deduct sparks before calling API
-    if (!consumeSparks(sparkCost, `Document AI — ${action}`)) {
-      return; // Out of sparks modal shown
-    }
+    const sparkCost = SPARKS_COSTS[sparkKey];
+    if (!consumeSparks(sparkCost, `Document AI — ${action}`)) return;
 
     setLoading(action);
     try {
@@ -105,8 +101,8 @@ const AiToolsPanel = ({ editorRef, onContentChange, lightMode = false, documentT
         <ToolbarButton
           key={a.key}
           icon={loading === a.key ? <Loader2 size={13} className="animate-spin" /> : a.icon}
-          label={`${a.label} (−${a.spark} ✨)`}
-          onClick={() => handleAiAction(a.key)}
+          label={`${a.label} (−${SPARKS_COSTS[a.sparkKey]} ✨)`}
+          onClick={() => handleAiAction(a.key, a.sparkKey)}
           disabled={loading !== null}
           lightMode={lm}
         />

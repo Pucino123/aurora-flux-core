@@ -6,6 +6,8 @@ import { t } from "@/lib/i18n";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import CouncilAvatar from "./CouncilAvatar";
+import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 const db = supabase as any;
 
@@ -38,9 +40,11 @@ const SimulationPanel = ({ ideaId, ideaContent, userId, personas }: SimulationPa
   const [loading, setLoading] = useState(false);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [activeScenario, setActiveScenario] = useState<"best" | "worst" | "realistic">("realistic");
+  const { consumeSparks } = useMonetization();
 
   const runSimulation = async () => {
     if (loading) return;
+    if (!consumeSparks(SPARKS_COSTS.council_simulate, "council_simulate")) return;
     setLoading(true);
     setOpen(true);
 

@@ -4,6 +4,8 @@ import { Rocket, Loader2, CheckSquare, Calendar, DollarSign, Target } from "luci
 import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n";
 import { toast } from "sonner";
+import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 interface ExecutionStep {
   title: string;
@@ -38,9 +40,11 @@ const ExecutionPipeline = ({ ideaId, ideaContent, userId, onCreateTasks }: Execu
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<ExecutionPlan | null>(null);
+  const { consumeSparks } = useMonetization();
 
   const generate = async () => {
     if (loading) return;
+    if (!consumeSparks(SPARKS_COSTS.council_execute, "council_execute")) return;
     setLoading(true);
     setOpen(true);
 

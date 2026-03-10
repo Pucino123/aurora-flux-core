@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 const db = supabase as any;
 
@@ -34,9 +36,11 @@ const CouncilThread = ({
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const { consumeSparks } = useMonetization();
 
   const handleReply = async () => {
     if (!input.trim() || loading) return;
+    if (!consumeSparks(SPARKS_COSTS.council_thread, "council_thread")) return;
     setLoading(true);
 
     try {

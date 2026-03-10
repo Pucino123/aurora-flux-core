@@ -24,6 +24,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 const typeClassMap: Record<string, string> = {
   meeting: "schedule-meeting",
@@ -226,6 +228,7 @@ const SortableBlock = ({
 // ── Main Scheduler ──
 const Scheduler = ({ onOpenFullCalendar }: { onOpenFullCalendar?: () => void } = {}) => {
   const { scheduleBlocks, tasks, folders, createBlock, updateBlock, removeBlock, replaceBlocksForDate, setActiveFolder, setActiveView } = useFlux();
+  const { consumeSparks } = useMonetization();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -360,6 +363,7 @@ const Scheduler = ({ onOpenFullCalendar }: { onOpenFullCalendar?: () => void } =
   };
 
   const runAIPlan = async (silent = false) => {
+    if (!consumeSparks(SPARKS_COSTS.ai_daily_plan, "ai_daily_plan")) return;
     setAiLoading(true);
     try {
       const today = new Date().toISOString().split("T")[0];

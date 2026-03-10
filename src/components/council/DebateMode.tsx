@@ -6,6 +6,8 @@ import { t } from "@/lib/i18n";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import CouncilAvatar from "./CouncilAvatar";
+import { useMonetization } from "@/context/MonetizationContext";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 const db = supabase as any;
 
@@ -309,6 +311,7 @@ const DebateMode = ({ ideaId, ideaContent, userId, responses, personas }: Debate
   const autoStartDone = useRef(false);
   const debateStarted = useRef(false);
   const sfx = useFightSFX();
+  const { consumeSparks } = useMonetization();
 
   // Detect disagreement
   const votes = responses.map((r) => r.voteScore);
@@ -347,6 +350,7 @@ const DebateMode = ({ ideaId, ideaContent, userId, responses, personas }: Debate
   const executeDebate = async (mode: "normal" | "push" | "force_vote" = "normal") => {
     if (debateStarted.current && mode === "normal" && rounds.length === 0) return;
     if (mode === "normal" && rounds.length === 0) debateStarted.current = true;
+    if (!consumeSparks(SPARKS_COSTS.council_debate, "council_debate")) return;
     setLoading(true);
     setOpen(true);
 

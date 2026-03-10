@@ -8,16 +8,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
 
-// Monthly Sparks awarded per plan renewal
+// Monthly Sparks awarded per plan — must match src/lib/sparksConfig.ts
 const PLAN_SPARKS: Record<string, number> = {
+  Starter: 50,
   Pro: 500,
   Team: 1500,
 };
 
+/** Safely convert a Stripe unix timestamp (seconds) to ISO string. */
+function toISO(unixSeconds: number | null | undefined): string | null {
+  if (!unixSeconds || typeof unixSeconds !== "number" || isNaN(unixSeconds)) {
+    return null;
+  }
+  const d = new Date(unixSeconds * 1000);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+/** Increment sparks in DB and log transaction. */
 async function incrementSparks(
   supabase: ReturnType<typeof createClient>,
   userId: string,
-  amount: number
+  amount: number,
+  reason: string
 ) {
   const { data } = await supabase
     .from("profiles")
@@ -25,11 +38,23 @@ async function incrementSparks(
     .eq("id", userId)
     .maybeSingle();
   const current = (data as any)?.sparks_balance ?? 50;
+  const newBalance = current + amount;
+
   await supabase
     .from("profiles")
-    .update({ sparks_balance: current + amount })
+    .update({ sparks_balance: newBalance })
     .eq("id", userId);
-  console.log(`[STRIPE-WEBHOOK] Sparks: +${amount} for user ${userId} (new: ${current + amount})`);
+
+  // Log the transaction
+  await supabase.from("sparks_transactions").insert({
+    user_id: userId,
+    amount,
+    balance_after: newBalance,
+    reason,
+    feature: "subscription",
+  });
+
+  console.log(`[STRIPE-WEBHOOK] Sparks: +${amount} for user ${userId} (${current} → ${newBalance}) — ${reason}`);
 }
 
 serve(async (req) => {
@@ -80,6 +105,8 @@ serve(async (req) => {
 
   try {
     switch (event.type) {
+
+      // ── Checkout completed ──────────────────────────────────────────────────
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.user_id;
@@ -95,26 +122,37 @@ serve(async (req) => {
             : (session.subscription as any).id;
 
           const subscription = await stripe.subscriptions.retrieve(subId);
+          const customerId = typeof session.customer === "string"
+            ? session.customer
+            : (session.customer as any)?.id;
+
+          // Upsert stripe_customers table for fast reverse-lookup
+          if (customerId) {
+            await supabase.from("stripe_customers").upsert(
+              { user_id: userId, stripe_customer_id: customerId },
+              { onConflict: "stripe_customer_id" }
+            );
+          }
 
           await supabase.from("stripe_subscriptions").upsert({
             user_id: userId,
             stripe_subscription_id: subId,
-            stripe_customer_id: typeof session.customer === "string"
-              ? session.customer
-              : (session.customer as any)?.id,
+            stripe_customer_id: customerId,
             status: subscription.status,
             plan,
-            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+            current_period_end: toISO((subscription as any).current_period_end),
             cancel_at_period_end: subscription.cancel_at_period_end,
             updated_at: new Date().toISOString(),
           }, { onConflict: "stripe_subscription_id" });
 
           const sparksToAdd = PLAN_SPARKS[plan] ?? 0;
           if (sparksToAdd > 0) {
-            await incrementSparks(supabase, userId, sparksToAdd);
+            await incrementSparks(supabase, userId, sparksToAdd, `${plan} plan — initial subscription`);
           }
-          console.log(`[STRIPE-WEBHOOK] New ${plan} subscription for user ${userId}`);
+          console.log(`[STRIPE-WEBHOOK] New ${plan} subscription for user ${userId} — granted ${sparksToAdd} Sparks`);
+
         } else if (session.mode === "payment") {
+          // One-off Sparks purchase
           const sparksAmount = parseInt(session.metadata?.sparks_amount || "0", 10);
           if (sparksAmount > 0) {
             const paymentIntentId = typeof session.payment_intent === "string"
@@ -128,35 +166,36 @@ serve(async (req) => {
               price_paid_cents: session.amount_total || 0,
             });
 
-            await incrementSparks(supabase, userId, sparksAmount);
-            console.log(`[STRIPE-WEBHOOK] Sparks purchase: ${sparksAmount} for user ${userId}`);
+            await incrementSparks(supabase, userId, sparksAmount, `Sparks pack purchase (${sparksAmount} Sparks)`);
+            console.log(`[STRIPE-WEBHOOK] Sparks purchase: +${sparksAmount} for user ${userId}`);
           }
         }
         break;
       }
 
+      // ── Subscription lifecycle events ───────────────────────────────────────
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
 
         let userId = subscription.metadata?.user_id;
+        const customerId = typeof subscription.customer === "string"
+          ? subscription.customer
+          : (subscription.customer as any).id;
+
         if (!userId) {
-          const customerId = typeof subscription.customer === "string"
-            ? subscription.customer
-            : (subscription.customer as any).id;
           const { data } = await supabase
             .from("stripe_customers")
             .select("user_id")
             .eq("stripe_customer_id", customerId)
             .maybeSingle();
-          if (!data?.user_id) break;
+          if (!data?.user_id) {
+            console.warn(`[STRIPE-WEBHOOK] No user found for customer ${customerId}`);
+            break;
+          }
           userId = data.user_id;
         }
-
-        const customerId = typeof subscription.customer === "string"
-          ? subscription.customer
-          : (subscription.customer as any).id;
 
         await supabase.from("stripe_subscriptions").upsert({
           user_id: userId,
@@ -164,7 +203,7 @@ serve(async (req) => {
           stripe_customer_id: customerId,
           status: subscription.status,
           plan: subscription.metadata?.plan || "Pro",
-          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          current_period_end: toISO((subscription as any).current_period_end),
           cancel_at_period_end: subscription.cancel_at_period_end,
           updated_at: new Date().toISOString(),
         }, { onConflict: "stripe_subscription_id" });
@@ -173,6 +212,7 @@ serve(async (req) => {
         break;
       }
 
+      // ── Invoice payment succeeded (renewals) ────────────────────────────────
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = typeof invoice.customer === "string"
@@ -186,15 +226,17 @@ serve(async (req) => {
           .select("user_id")
           .eq("stripe_customer_id", customerId)
           .maybeSingle();
-        if (!customerRow?.user_id) break;
+        if (!customerRow?.user_id) {
+          console.warn(`[STRIPE-WEBHOOK] invoice.payment_succeeded: no user for customer ${customerId}`);
+          break;
+        }
 
         const userId = customerRow.user_id;
+        const subId = typeof (invoice as any).subscription === "string"
+          ? (invoice as any).subscription
+          : (invoice as any).subscription?.id;
 
-        if ((invoice as any).subscription) {
-          const subId = typeof (invoice as any).subscription === "string"
-            ? (invoice as any).subscription
-            : (invoice as any).subscription?.id;
-
+        if (subId) {
           const sub = await stripe.subscriptions.retrieve(subId);
           const plan = sub.metadata?.plan || "Pro";
 
@@ -204,16 +246,18 @@ serve(async (req) => {
             stripe_customer_id: customerId,
             status: sub.status,
             plan,
-            current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
+            current_period_end: toISO((sub as any).current_period_end),
             cancel_at_period_end: sub.cancel_at_period_end,
             updated_at: new Date().toISOString(),
           }, { onConflict: "stripe_subscription_id" });
 
-          if ((invoice as any).billing_reason === "subscription_cycle") {
+          // Only grant Sparks on renewal, not on first payment (checkout.session.completed handles that)
+          const billingReason = (invoice as any).billing_reason;
+          if (billingReason === "subscription_cycle") {
             const sparksToAdd = PLAN_SPARKS[plan] ?? 0;
             if (sparksToAdd > 0) {
-              await incrementSparks(supabase, userId, sparksToAdd);
-              console.log(`[STRIPE-WEBHOOK] Monthly Sparks renewal: +${sparksToAdd} for user ${userId}`);
+              await incrementSparks(supabase, userId, sparksToAdd, `${plan} plan — monthly renewal`);
+              console.log(`[STRIPE-WEBHOOK] Monthly renewal: +${sparksToAdd} Sparks for user ${userId}`);
             }
           }
         }

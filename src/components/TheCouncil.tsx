@@ -92,6 +92,7 @@ const TheCouncil = () => {
   const { filterPersona } = useFlux();
   const { consumeSparks } = useMonetization();
   const isMobile = useIsMobile();
+  // Spark costs are centralized in src/lib/sparksConfig.ts
   const [activeTab, setActiveTab] = useState<"council" | "boardroom" | "analytics">("council");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -178,7 +179,7 @@ const TheCouncil = () => {
 
   const handleSubmit = async () => {
     if (!input.trim() || loading || !user) return;
-    if (!consumeSparks(5, "Council AI consult")) return;
+    if (!consumeSparks(15, "council_analysis")) return;
     setLoading(true);
     setResponses([]);
     setConsensusScore(null);
