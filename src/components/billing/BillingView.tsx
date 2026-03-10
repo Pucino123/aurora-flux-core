@@ -370,7 +370,7 @@ const BillingView = () => {
                   value={byokInput}
                   onChange={(e) => setByokInput(e.target.value)}
                   className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-secondary/30 text-sm outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground"
-                />
+                 />
                 <button
                   onClick={() => { if (byokInput.startsWith("sk-")) { setBYOK(true); setByokInput(""); } }}
                   className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium"
@@ -391,7 +391,10 @@ const BillingView = () => {
         periodEnd={periodEnd ?? "your current period end"}
       />
     )}
+  </>
   );
 };
+
+export default BillingView;
 
 export default BillingView;
