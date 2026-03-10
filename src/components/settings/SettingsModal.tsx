@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, User, Link, Zap, Palette, LogOut, CheckCheck, Loader2,
   Globe, Sun, Moon, Monitor, Camera, Check, ChevronRight, Sparkles, CreditCard,
-  Building2, Upload,
+  Building2, Upload, RefreshCw, ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import SparksCheckoutModal from "@/components/billing/SparksCheckoutModal";
 import { useAvatar } from "@/context/AvatarContext";
+import { useStripeSubscription } from "@/hooks/useStripeSubscription";
 
 type Tab = "account" | "company" | "integrations" | "sparks" | "appearance";
 
