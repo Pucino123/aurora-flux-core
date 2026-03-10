@@ -921,6 +921,7 @@ export type Database = {
           email: string | null
           id: string
           settings: Json | null
+          sparks_balance: number
           updated_at: string
         }
         Insert: {
@@ -930,6 +931,7 @@ export type Database = {
           email?: string | null
           id: string
           settings?: Json | null
+          sparks_balance?: number
           updated_at?: string
         }
         Update: {
@@ -939,6 +941,7 @@ export type Database = {
           email?: string | null
           id?: string
           settings?: Json | null
+          sparks_balance?: number
           updated_at?: string
         }
         Relationships: []

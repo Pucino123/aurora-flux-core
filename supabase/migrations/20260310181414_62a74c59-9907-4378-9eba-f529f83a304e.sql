@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS sparks_balance integer NOT NULL DEFAULT 50;
