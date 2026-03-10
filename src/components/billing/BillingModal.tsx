@@ -4,9 +4,10 @@
  */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, CreditCard, ChevronRight, Sparkles, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
+import { X, Check, CreditCard, ChevronRight, Sparkles, ExternalLink, Loader2, ShieldCheck, Ban } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
 import { useStripeSubscription } from "@/hooks/useStripeSubscription";
+import CancelSubscriptionDialog from "./CancelSubscriptionDialog";
 
 const PLANS = [
   {

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Zap, X, ArrowRight, Check, ArrowLeft, ExternalLink, Loader2, CreditCard, ShieldCheck } from "lucide-react";
+import { Sparkles, Zap, X, ArrowRight, Check, ArrowLeft, ExternalLink, Loader2, CreditCard, ShieldCheck, Ban } from "lucide-react";
 import { useMonetization, type UserPlan } from "@/context/MonetizationContext";
 import { useStripeSubscription } from "@/hooks/useStripeSubscription";
 import SparksCheckoutModal from "./SparksCheckoutModal";
+import CancelSubscriptionDialog from "./CancelSubscriptionDialog";
 
 /* ─── Upgrade Modal ─── */
 export function UpgradeModal() {
