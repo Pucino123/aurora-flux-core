@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, Sparkles, Zap, Loader2 } from "lucide-react";
 import { useMonetization } from "@/context/MonetizationContext";
 import { useStripeSubscription } from "@/hooks/useStripeSubscription";
+import { SPARKS_COSTS } from "@/lib/sparksConfig";
 
 interface Package {
   id: string;
