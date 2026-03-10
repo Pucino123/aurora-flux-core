@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, X, Send, Loader2, MessageSquare } from "lucide-react";
 import { useTeamChat } from "@/hooks/useTeamChat";
+import { useFlux } from "@/context/FluxContext";
 import { useMonetization } from "@/context/MonetizationContext";
 import { SPARKS_COSTS } from "@/lib/sparksConfig";
 import { supabase } from "@/integrations/supabase/client";
