@@ -135,14 +135,24 @@ const BillingModal = ({ open, onClose }: Props) => {
                           </div>
                         </div>
                         {subscription ? (
-                          <button
-                            onClick={() => { onClose(); openPortal(); }}
-                            disabled={loading}
-                            className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
-                          >
-                            {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
-                            Manage
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => { onClose(); openPortal(); }}
+                              disabled={loading}
+                              className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
+                            >
+                              {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                              Manage
+                            </button>
+                            {!subscription.cancel_at_period_end && subscription.stripe_subscription_id && (
+                              <button
+                                onClick={() => setCancelOpen(true)}
+                                className="flex items-center gap-1.5 text-xs text-destructive hover:underline transition-colors"
+                              >
+                                <Ban size={12} /> Cancel
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">Free plan</span>
                         )}
