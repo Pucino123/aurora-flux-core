@@ -91,7 +91,8 @@ export function useStripeSubscription() {
     try {
       const { data, error } = await supabase.functions.invoke("stripe-portal");
       if (error || !data?.url) throw new Error(error?.message || "Ingen Stripe-kunde fundet. Køb et abonnement først.");
-      window.location.href = data.url;
+      // Open portal in new tab so it works outside the iframe
+      window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (err) {
       toast.error((err as Error).message);
       setLoading(false);
