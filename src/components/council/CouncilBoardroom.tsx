@@ -679,7 +679,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
             </div>
             {state === "revealed" && !isExpanded && (
               <>
-                <button onClick={onExpand} title="1-on-1 Deep Dive (−1 ✨)" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
+                <button onClick={onExpand} title={`1-on-1 Deep Dive (−${SPARKS_COSTS.council_thread} ✨)`} className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
                   <MessageSquare size={12} />
                 </button>
                 <button onClick={onFullscreen} title="Full View" className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors">
