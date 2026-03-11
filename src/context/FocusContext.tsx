@@ -102,7 +102,7 @@ const DEFAULT_STATE: FocusState = {
   clockShowSeconds: false,
   clockShowGreeting: false,
   clockSecondaryTz: "",
-  clockGlassEffect: false,
+  clockGlassEffect: true,
   clockDepthShadow: false,
   systemMode: "focus",
   desktopFolderPositions: {},
@@ -165,13 +165,14 @@ function loadState(): FocusState {
       // Users can move them in build mode; default positions are set in the widget components.
       delete merged.widgetPositions.clock;
       delete merged.widgetPositions.planner;
-      // Clear saved clock widget style so it defaults to transparent (floating text over bg)
+      // Force glass effect on for all users
+      merged.clockGlassEffect = true;
+      // Clear saved clock widget style so it defaults to transparent/borderless (floating text over bg)
       try {
         const styles = JSON.parse(localStorage.getItem("flux-widget-styles") || "{}");
-        if (styles.clock) {
-          delete styles.clock;
-          localStorage.setItem("flux-widget-styles", JSON.stringify(styles));
-        }
+        // Always clear clock style overrides so WIDGET_DEFAULTS (borderWidth:0, bgOpacity:0) apply
+        delete styles.clock;
+        localStorage.setItem("flux-widget-styles", JSON.stringify(styles));
       } catch {}
       return merged;
     }
