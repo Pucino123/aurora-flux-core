@@ -389,7 +389,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
 
   const posStyle: React.CSSProperties = toolbarPos
     ? { left: toolbarPos.x, top: toolbarPos.y, bottom: "auto", transform: "none" }
-    : { left: "50%", bottom: "28px", top: "auto", transform: "translateX(-50%)" };
+    : { left: "50%", bottom: "88px", top: "auto", transform: "translateX(-50%)" };
 
   const isBuild = systemMode === "build";
 
