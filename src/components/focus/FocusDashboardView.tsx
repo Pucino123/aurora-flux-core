@@ -1881,12 +1881,8 @@ const FocusContent = () => {
 
 
 
-      {/* ── Bottom Pill Navigation ── */}
+      {/* ── Bottom Pill Navigation ── screenshot-accurate design ── */}
       {paginationSettings.showPagination && (() => {
-        const pillBg = hexToRgbaPill(pillStyle.bgColor || "#0f0c19", pillStyle.bgOpacity / 100);
-        const pillBorder = pillStyle.borderWidth > 0
-          ? `${pillStyle.borderWidth}px solid ${hexToRgbaPill(pillStyle.borderColor, pillStyle.borderOpacity / 100)}`
-          : "none";
         const pillTextAlpha = pillStyle.textOpacity / 100;
         const pillTextRgba = hexToRgbaPill(pillStyle.textColor || "#ffffff", pillTextAlpha);
         const pillSharedStyle: React.CSSProperties = {
