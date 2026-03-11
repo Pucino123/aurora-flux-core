@@ -125,7 +125,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
 
   return (
     <motion.div
-      className="relative z-10 flex min-h-screen w-full">
+      className="relative z-10 flex w-full"
+      style={{ minHeight: "100dvh" }}>
 
       {/* Sidebar — smoothly collapses in Focus Mode, must sit above windows */}
       <div className="hidden md:block shrink-0 relative" style={{ zIndex: 10400 }}>
@@ -133,7 +134,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       </div>
 
       {/* Center stage */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-[64px] md:pb-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 pb-[64px] md:pb-0 overflow-hidden" style={{ minHeight: "100dvh" }}>
 
         {/* Control Center trigger button — only on focus dashboard */}
         {effectiveView === "focus" && (
