@@ -87,13 +87,15 @@ const DEFAULT_TOOLBAR_STYLE: ToolbarStyle = {
 };
 
 function loadToolbarPos(): { x: number; y: number } | null {
-  try {
-    const raw = localStorage.getItem(TOOLBAR_POS_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  // Always return null — toolbar defaults to centered bottom position
+  return null;
 }
 function saveToolbarPos(pos: { x: number; y: number }) {
   localStorage.setItem(TOOLBAR_POS_KEY, JSON.stringify(pos));
+}
+// Clear any previously saved toolbar position so it always starts centered
+if (typeof window !== "undefined") {
+  localStorage.removeItem(TOOLBAR_POS_KEY);
 }
 
 function loadToolbarStyle(): ToolbarStyle {
