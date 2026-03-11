@@ -353,7 +353,7 @@ const PillStylePanel = ({ style, onUpdate, onReset, onClose, showLabel, onToggle
 };
 
 const FocusContent = () => {
-  const { activeWidgets, systemMode, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();
+  const { activeWidgets, systemMode, setSystemMode, updateDesktopFolderPosition, updateDesktopDocPosition, desktopFolderPositions, desktopDocPositions, focusStickyNotes } = useFocusStore();
   const { folderTree, createFolder, moveFolder, removeFolder, createBlock } = useFlux();
   const { user } = useAuth();
   const { isFocusModeActive, disableFocusMode, enableFocusMode } = useFocusMode();
