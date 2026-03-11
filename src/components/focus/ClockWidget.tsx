@@ -35,9 +35,12 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
   const defaultClockPos = React.useMemo(() => {
     const w = typeof window !== 'undefined' ? window.innerWidth : 1280;
     const h = typeof window !== 'undefined' ? window.innerHeight : 800;
-    // Center horizontally, 4% from top
+    // Sidebar is ~260px wide — center in the remaining visible area
+    const sidebarW = w > 768 ? 260 : 0;
+    const canvasW = w - sidebarW;
+    const clockW = 400;
     return {
-      x: Math.round((w - 400) / 2),
+      x: Math.round(sidebarW + (canvasW - clockW) / 2),
       y: Math.round(h * 0.04),
     };
   }, []);
