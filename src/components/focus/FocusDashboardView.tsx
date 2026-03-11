@@ -2017,11 +2017,11 @@ const FocusContent = () => {
                 <button
                   onPointerDown={e => e.stopPropagation()}
                   onClick={() => setShowPillSettings(v => !v)}
-                  className="flex items-center justify-center transition-all"
-                  style={{ color: showPillSettings ? textRgba(0.9) : textRgba(0.3), marginLeft: 2 }}
+                  className="flex items-center justify-center p-1 rounded-lg transition-colors bg-white/10 hover:bg-white/20"
+                  style={{ color: showPillSettings ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.5)" }}
                   title="Pill style"
                 >
-                  <LayoutGrid size={13} />
+                  <Settings2 size={13} />
                 </button>
               )}
             </div>
