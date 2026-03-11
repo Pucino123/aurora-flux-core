@@ -133,11 +133,12 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
       id="clock"
       title="Clock"
       defaultPosition={defaultClockPos}
-      defaultSize={{ w: 460, h: 180 }}
+      defaultSize={{ w: 460, h: 160 }}
       fontSizeControl={{ value: clockFontSize, set: setClockFontSize, min: 40, max: 140, step: 10 }}
       onEditAction={onOpenEditor}
       containerStyle={editorOpen ? { zIndex: 70, position: 'relative' } : undefined}
       fixedPosition
+      autoHeight
     >
       <div className="relative flex flex-col items-center justify-center h-full gap-1.5 group">
 
