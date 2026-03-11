@@ -47,7 +47,7 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X, Focus, Sparkles } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, Settings2, X, Focus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
 import WindowFrame from "@/components/windows/WindowFrame";
