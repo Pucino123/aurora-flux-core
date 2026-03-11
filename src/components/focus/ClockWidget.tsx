@@ -92,12 +92,12 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
   } catch {}
 
   const fontFamily = FONT_MAP[clockFont] || FONT_MAP.inter;
-  const secondsSize = Math.max(16, clockFontSize * 0.5);
-  const greetingSize = Math.max(11, clockFontSize * 0.22);
-  const dateSize = Math.max(11, clockFontSize * 0.18);
+  const secondsSize = Math.max(16, clockFontSize * 0.45);
+  const greetingSize = Math.max(11, clockFontSize * 0.18);
+  const dateSize = Math.max(11, clockFontSize * 0.14);
 
   const textShadow = clockDepthShadow
-    ? `0 4px 20px rgba(0,0,0,0.5), 0 0 40px rgba(0,0,0,0.3)`
+    ? `0 2px 12px rgba(0,0,0,0.3)`
     : "none";
 
   const glassTextStyle: React.CSSProperties = clockGlassEffect
