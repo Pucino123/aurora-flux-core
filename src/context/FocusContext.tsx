@@ -161,6 +161,16 @@ function loadState(): FocusState {
       if (bp && (isNaN(bp.x) || isNaN(bp.y) || !isFinite(bp.x) || !isFinite(bp.y) || bp.x < -50 || bp.y < -50 || bp.x > 3000 || bp.y > 3000)) {
         delete merged.widgetPositions.breathing;
       }
+      // Reset clock position to new centered default (clear old off-center saved positions)
+      const cp = merged.widgetPositions?.clock;
+      if (cp) {
+        const screenW = typeof window !== "undefined" ? window.innerWidth : 1280;
+        const expectedCenterX = Math.round((screenW - 400) / 2);
+        const isOldDefault = Math.abs(cp.x - Math.round(screenW * 0.35)) < 60;
+        if (isOldDefault) {
+          delete merged.widgetPositions.clock;
+        }
+      }
       return merged;
     }
   } catch {}
