@@ -161,9 +161,10 @@ function loadState(): FocusState {
       if (bp && (isNaN(bp.x) || isNaN(bp.y) || !isFinite(bp.x) || !isFinite(bp.y) || bp.x < -50 || bp.y < -50 || bp.x > 3000 || bp.y > 3000)) {
         delete merged.widgetPositions.breathing;
       }
-      // Always reset clock to centered default — the new top-center layout is the standard.
-      // Users can move it in build mode; the defaultPosition in ClockWidget handles centering.
+      // Always reset clock + planner to default — they use fixed viewport positioning.
+      // Users can move them in build mode; default positions are set in the widget components.
       delete merged.widgetPositions.clock;
+      delete merged.widgetPositions.planner;
       return merged;
     }
   } catch {}

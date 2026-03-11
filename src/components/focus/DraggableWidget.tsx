@@ -32,6 +32,8 @@ interface DraggableWidgetProps {
   containerStyle?: React.CSSProperties;
   headerActions?: React.ReactNode;
   overflowVisible?: boolean;
+  /** Use position:fixed (viewport coords) instead of position:absolute (canvas coords) */
+  fixedPosition?: boolean;
 }
 
 const GRID = 40;
