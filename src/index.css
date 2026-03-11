@@ -237,11 +237,26 @@
     @apply border-border;
   }
 
+  html {
+    /* Ensures 100dvh works correctly on iOS Safari */
+    height: -webkit-fill-available;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
     font-size: 15px;
     line-height: 1.6;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+    /* Prevent white flash on mobile when app loads */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  /* Safe area support for iPhone notch/home indicator */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   h1, h2, h3, h4, h5, h6 {

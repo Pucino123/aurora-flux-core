@@ -66,25 +66,6 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  const persistSparks = useCallback(async (newBalance: number, reason: string, cost: number) => {
-    if (!user) return;
-    // Update balance
-    await supabase
-      .from("profiles")
-      .update({ sparks_balance: newBalance } as any)
-      .eq("id", user.id);
-    // Log transaction
-    await (supabase as any)
-      .from("sparks_transactions")
-      .insert({
-        user_id: user.id,
-        amount: -cost,
-        balance_after: newBalance,
-        reason,
-        feature: reason,
-      });
-  }, [user]);
-
   // Load from DB on mount / user change
   useEffect(() => {
     fetchSparks();
@@ -105,7 +86,6 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
   const addSparks = useCallback((amount: number) => {
     setSparksBalanceState((prev) => {
       const next = prev + amount;
-      // Log earn transaction
       if (user) {
         supabase
           .from("profiles")
@@ -123,25 +103,45 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
     });
   }, [user]);
 
+  /**
+   * consumeSparks — optimistic client-side guard only.
+   * The REAL deduction happens server-side in the edge function.
+   * This just prevents UI from even attempting if balance is visibly zero.
+   * After the server call completes, always re-fetch the real balance.
+   */
   const consumeSparks = useCallback((cost: number, featureName?: string): boolean => {
     if (hasBYOK) return true;
     if (sparksBalance >= cost) {
-      setSparksBalanceState((prev) => {
-        const next = prev - cost;
-        persistSparks(next, featureName || "AI feature", cost);
-        return next;
-      });
+      // Optimistic UI update — server will do the real atomic deduction
+      setSparksBalanceState((prev) => Math.max(0, prev - cost));
+
       // Float animation
       const id = `anim-${animRef.current++}`;
       const x = window.innerWidth / 2 + (Math.random() - 0.5) * 100;
       const y = window.innerHeight / 2 + (Math.random() - 0.5) * 60;
       setFloatAnims((prev) => [...prev, { id, cost, x, y }]);
       setTimeout(() => setFloatAnims((prev) => prev.filter((a) => a.id !== id)), 1500);
+
+      // Re-sync from DB after 3s to reflect true server balance
+      if (user) {
+        setTimeout(() => {
+          supabase
+            .from("profiles")
+            .select("sparks_balance")
+            .eq("id", user.id)
+            .maybeSingle()
+            .then(({ data }) => {
+              if (data && typeof (data as any).sparks_balance === "number") {
+                setSparksBalanceState((data as any).sparks_balance);
+              }
+            });
+        }, 3000);
+      }
       return true;
     }
     setShowOutOfSparks(true);
     return false;
-  }, [sparksBalance, hasBYOK, persistSparks]);
+  }, [sparksBalance, hasBYOK, user]);
 
   /** Convenience: consume by action key from sparksConfig */
   const consumeSparksForAction = useCallback((action: SparksAction): boolean => {

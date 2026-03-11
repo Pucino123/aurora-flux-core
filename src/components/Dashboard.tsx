@@ -125,7 +125,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
 
   return (
     <motion.div
-      className="relative z-10 flex min-h-screen w-full">
+      className="relative z-10 flex w-full"
+      style={{ minHeight: "100dvh" }}>
 
       {/* Sidebar — smoothly collapses in Focus Mode, must sit above windows */}
       <div className="hidden md:block shrink-0 relative" style={{ zIndex: 10400 }}>
@@ -133,7 +134,7 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
       </div>
 
       {/* Center stage */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 pb-[64px] md:pb-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 pb-[64px] md:pb-0 overflow-hidden" style={{ minHeight: "100dvh" }}>
 
         {/* Control Center trigger button — only on focus dashboard */}
         {effectiveView === "focus" && (
@@ -150,35 +151,30 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
         </div>
         )}
 
-        {/* View switcher */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={effectiveView}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="flex-1 flex flex-col h-full min-h-screen"
-          >
-            {effectiveView === "focus"                       && <FocusDashboardView />}
-            {effectiveView === "calendar"                    && <FullCalendarView />}
-            {effectiveView === "tasks"                       && <AITaskManager />}
-            {effectiveView === "analytics"                   && <AnalyticsView />}
-            {effectiveView === "projects"                    && <ProjectsOverview />}
-            {effectiveView === "documents"                   && <DocumentsView />}
-            {effectiveView === "settings"                    && <SettingsView />}
-            {effectiveView === "council"                     && <TheCouncil />}
-            {effectiveView === "canvas"                      && <Canvas />}
-            {(effectiveView as string) === "multitask"       && <MultitaskingView />}
-            {(effectiveView as string) === "thinkpad"         && <IdeapadView />}
-            {(effectiveView as string) === "community"       && <CommunityBoardView />}
-            {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
-            {(effectiveView as string) === "crm"             && <CRMPage />}
-            {(effectiveView as string) === "inbox"           && <InboxView />}
-            {effectiveView === "billing"                     && <BillingView />}
-            {!VIEWS_WITHOUT_SCHEDULER.includes(effectiveView as string) && <Scheduler />}
-          </motion.div>
-        </AnimatePresence>
+        {/* View switcher — no AnimatePresence on mobile to prevent white flash */}
+        <div
+          key={effectiveView}
+          className="flex-1 flex flex-col"
+          style={{ minHeight: "100dvh" }}
+        >
+          {effectiveView === "focus"                       && <FocusDashboardView />}
+          {effectiveView === "calendar"                    && <FullCalendarView />}
+          {effectiveView === "tasks"                       && <AITaskManager />}
+          {effectiveView === "analytics"                   && <AnalyticsView />}
+          {effectiveView === "projects"                    && <ProjectsOverview />}
+          {effectiveView === "documents"                   && <DocumentsView />}
+          {effectiveView === "settings"                    && <SettingsView />}
+          {effectiveView === "council"                     && <TheCouncil />}
+          {effectiveView === "canvas"                      && <Canvas />}
+          {(effectiveView as string) === "multitask"       && <MultitaskingView />}
+          {(effectiveView as string) === "thinkpad"         && <IdeapadView />}
+          {(effectiveView as string) === "community"       && <CommunityBoardView />}
+          {(effectiveView as string) === "community-admin" && <CommunityAdminView />}
+          {(effectiveView as string) === "crm"             && <CRMPage />}
+          {(effectiveView as string) === "inbox"           && <InboxView />}
+          {effectiveView === "billing"                     && <BillingView />}
+          {!VIEWS_WITHOUT_SCHEDULER.includes(effectiveView as string) && <Scheduler />}
+        </div>
 
         {/* Mobile nav */}
         <MobileNav />

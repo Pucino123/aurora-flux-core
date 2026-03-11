@@ -1,9 +1,129 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+// ── Sparks costs — single source of truth (must mirror sparksConfig.ts) ──────
+const SPARKS_COSTS: Record<string, number> = {
+  aura_message: 2,
+  stream_classify: 3,
+  ai_daily_plan: 10,
+  council_analysis: 15,
+  council_quick: 5,
+  council_thread: 3,
+  council_execute: 10,
+  council_simulate: 8,
+  council_debate: 8,
+  council_weakness: 5,
+  boardroom_consult: 10,
+  doc_rewrite: 5,
+  doc_improve: 3,
+  doc_summarize: 3,
+  doc_expand: 5,
+  doc_shorten: 3,
+  doc_translate: 8,
+  doc_chat: 2,
+  generate_image: 8,
+  smart_plan: 5,
+  weekly_digest: 5,
+  message_action: 2,
+  daily_summary: 3,
+};
+
+// Map request type → sparks action key
+const TYPE_TO_SPARKS_ACTION: Record<string, string> = {
+  "aura": "aura_message",
+  "classify": "stream_classify",
+  "plan": "ai_daily_plan",
+  "council": "council_analysis",
+  "council-quick": "council_quick",
+  "boardroom-consult": "boardroom_consult",
+  "document-chat": "doc_chat",
+  "document-tools": "doc_rewrite", // overridden per-action below
+  "generate-image": "generate_image",
+  "message-to-action": "message_action",
+  "daily-summary": "daily_summary",
+};
+
+// Document tools sub-action → sparks key
+const DOC_ACTION_TO_SPARKS: Record<string, string> = {
+  rewrite: "doc_rewrite",
+  improve: "doc_improve",
+  summarize: "doc_summarize",
+  expand: "doc_expand",
+  shorten: "doc_shorten",
+  translate: "doc_translate",
+};
+
+// ── Server-side atomic Spark deduction ───────────────────────────────────────
+async function deductSparks(
+  userId: string,
+  cost: number,
+  reason: string,
+  feature: string,
+  supabaseAdmin: any
+): Promise<{ success: boolean; balance?: number; error?: string }> {
+  // Fetch current balance
+  const { data: profile, error: fetchErr } = await supabaseAdmin
+    .from("profiles")
+    .select("sparks_balance")
+    .eq("id", userId)
+    .single();
+
+  if (fetchErr || !profile) {
+    return { success: false, error: "Could not fetch user balance" };
+  }
+
+  const current = profile.sparks_balance as number;
+  if (current < cost) {
+    return { success: false, error: `Insufficient Sparks (have ${current}, need ${cost})` };
+  }
+
+  const newBalance = current - cost;
+
+  // Atomic update — only succeeds if balance hasn't changed since we read it
+  const { error: updateErr } = await supabaseAdmin
+    .from("profiles")
+    .update({ sparks_balance: newBalance })
+    .eq("id", userId)
+    .eq("sparks_balance", current); // optimistic lock
+
+  if (updateErr) {
+    // Retry once with fresh read (handles rare race condition)
+    const { data: fresh } = await supabaseAdmin
+      .from("profiles")
+      .select("sparks_balance")
+      .eq("id", userId)
+      .single();
+    if (!fresh || (fresh.sparks_balance as number) < cost) {
+      return { success: false, error: "Insufficient Sparks or concurrent update conflict" };
+    }
+    const nb2 = (fresh.sparks_balance as number) - cost;
+    await supabaseAdmin.from("profiles").update({ sparks_balance: nb2 }).eq("id", userId);
+    await supabaseAdmin.from("sparks_transactions").insert({
+      user_id: userId,
+      amount: -cost,
+      balance_after: nb2,
+      reason,
+      feature,
+    });
+    return { success: true, balance: nb2 };
+  }
+
+  // Log transaction
+  await supabaseAdmin.from("sparks_transactions").insert({
+    user_id: userId,
+    amount: -cost,
+    balance_after: newBalance,
+    reason,
+    feature,
+  });
+
+  return { success: true, balance: newBalance };
+}
 
 function handleAIError(response: Response) {
   if (response.status === 429) {
@@ -406,68 +526,58 @@ RULES:
 - Each persona MUST reference at least one other persona's point (e.g., Skeptic attacking Strategist's optimism).
 - Each analysis should be 80-150 words, substantive and specific to the idea.
 - Each persona MUST vote: GO (+2), EXPERIMENT (+1), PIVOT (0), or KILL (-2).
-- Generate a bias_radar with 5 axes scored 0-10: ["Overconfidence", "Market Fit", "Execution Risk", "User Appeal", "Growth Potential"]
-- Write in the same language as the user's input (Danish if Danish, English if English).
-- Be direct, opinionated, and avoid generic platitudes.`;
+- Vote scores: GO=+2, EXPERIMENT=+1, PIVOT=0, KILL=-2.
+- Consensus score = sum of all votes (range: -10 to +10).
+
+RESPONSE FORMAT: You MUST use the generate_council_analysis tool.`;
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
+      model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userIdea },
+        ...messages,
       ],
       tools: [
         {
           type: "function",
           function: {
-            name: "council_analysis",
-            description: "Return structured analysis from all 5 Council personas",
+            name: "generate_council_analysis",
+            description: "Generate analysis from all 5 council personas",
             parameters: {
               type: "object",
               properties: {
                 personas: {
                   type: "array",
-                  description: "Exactly 5 persona analyses in order: Strategist, Operator, Skeptic, User Advocate, Growth Architect",
                   items: {
                     type: "object",
                     properties: {
-                      analysis: { type: "string", description: "80-150 word analysis from this persona's perspective" },
+                      key: { type: "string", enum: ["strategist", "operator", "skeptic", "user_advocate", "growth_architect"] },
+                      analysis: { type: "string" },
                       vote: { type: "string", enum: ["GO", "EXPERIMENT", "PIVOT", "KILL"] },
+                      vote_score: { type: "number" },
                     },
-                    required: ["analysis", "vote"],
+                    required: ["key", "analysis", "vote", "vote_score"],
                   },
+                  minItems: 5,
+                  maxItems: 5,
                 },
-                bias_radar: {
-                  type: "array",
-                  description: "5 radar chart data points",
-                  items: {
-                    type: "object",
-                    properties: {
-                      axis: { type: "string" },
-                      value: { type: "number", description: "Score 0-10" },
-                    },
-                    required: ["axis", "value"],
-                  },
-                },
+                consensus_score: { type: "number" },
+                bias_radar: { type: "array", items: { type: "object" } },
               },
-              required: ["personas", "bias_radar"],
+              required: ["personas", "consensus_score"],
             },
           },
         },
       ],
-      tool_choice: { type: "function", function: { name: "council_analysis" } },
+      tool_choice: { type: "function", function: { name: "generate_council_analysis" } },
     }),
   });
 
   const errResp = handleAIError(response);
   if (errResp) return errResp;
-
   if (!response.ok) {
     const t = await response.text();
     console.error("Council AI error:", response.status, t);
@@ -482,185 +592,99 @@ RULES:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  return new Response(JSON.stringify({ personas: [], bias_radar: [] }), {
+  return new Response(JSON.stringify({ personas: [], consensus_score: 0 }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function handleCouncilQuick(question: string, mode: string, persona_key: string, apiKey: string) {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        {
+          role: "system",
+          content: `You are the ${persona_key} persona from The Council. Mode: ${mode}. Give a sharp, 2-3 sentence response to the user's question. Be direct and specific.`,
+        },
+        { role: "user", content: question },
+      ],
+    }),
+  });
+
+  const errResp = handleAIError(response);
+  if (errResp) return errResp;
+  if (!response.ok) throw new Error("AI gateway error");
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || "";
+  return new Response(JSON.stringify({ reply: content }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
 async function handleDocumentTools(action: string, text: string, apiKey: string) {
   const prompts: Record<string, string> = {
-    rewrite: `Rewrite the following text. Keep the same meaning but use different words and sentence structure. Return ONLY the rewritten text, nothing else.\n\nText:\n${text}`,
-    improve: `Improve the tone of the following text. Make it more professional, polished, and clear. Return ONLY the improved text, nothing else.\n\nText:\n${text}`,
-    summarize: `Summarize the following text in 1-3 concise sentences. Return ONLY the summary, nothing else.\n\nText:\n${text}`,
-    expand: `Expand the following text with more detail, examples, and depth. Keep the same tone. Return ONLY the expanded text, nothing else.\n\nText:\n${text}`,
-    shorten: `Shorten the following text while keeping the core message intact. Be concise. Return ONLY the shortened text, nothing else.\n\nText:\n${text}`,
-    translate: `Detect the language of the following text. If it's Danish, translate to English. If it's English, translate to Danish. If another language, translate to English. Return ONLY the translated text, nothing else.\n\nText:\n${text}`,
+    rewrite: "Rewrite this text to be clearer and more engaging. Keep the same meaning but improve the flow and word choice. Return only the rewritten text.",
+    improve: "Improve the tone of this text to be more professional and polished. Keep the core message. Return only the improved text.",
+    summarize: "Summarize this text in 2-3 concise sentences. Return only the summary.",
+    expand: "Expand this text with more detail, examples, and supporting points. Keep the same tone. Return only the expanded text.",
+    shorten: "Shorten this text by removing redundancy while keeping the key points. Return only the shortened text.",
+    translate: "Translate this text to English if it's not already in English, or to the most common other language if it is in English. Return only the translated text.",
   };
 
-  const prompt = prompts[action] || prompts.rewrite;
-
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-
-  const errResp = handleAIError(response);
-  if (errResp) return errResp;
-
-  if (!response.ok) {
-    const t = await response.text();
-    console.error("Document tools AI error:", response.status, t);
-    throw new Error("AI gateway error");
-  }
-
-  const data = await response.json();
-  const result = data.choices?.[0]?.message?.content || "";
-  return new Response(JSON.stringify({ result }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
-async function handleCouncilQuick(question: string, mode: string, personaKey: string | undefined, apiKey: string) {
-  const PERSONAS_MAP: Record<string, string> = {
-    // Classic council personas
-    oracle: "🔮 THE ORACLE — Intuition, pattern recognition, long-term wisdom. Speak with depth and foresight.",
-    sage: "🌿 THE SAGE — Calm logic, first principles, evidence-based reasoning. Be analytical and grounded.",
-    devil: "🌹 THE DEVIL'S ADVOCATE — Challenge every assumption. Find the fatal flaw. Be provocative.",
-    stoic: "💧 THE STOIC — Emotional resilience, risk mitigation, steady execution. Be pragmatic.",
-    visionary: "☀️ THE VISIONARY — Bold ideas, creative leaps, future possibilities. Be inspiring.",
-    // Boardroom advisor personas
-    elena: "📊 ELENA VERNA (The Pragmatist) — Growth expert and unit economics specialist. Data-driven, supportive but rigorous. You validate ideas with numbers and market evidence. Respond in 3-5 sentences, staying in character.",
-    helen: "💡 HELEN LEE KUPP (The Branding Expert) — Brand positioning and storytelling expert. Creative, balanced, obsessed with differentiation and emotional resonance. Respond in 3-5 sentences, staying in character.",
-    anton: "⚠️ ANTON OSIKA (The Devil's Advocate) — Contrarian risk analyst. Skeptical, probing, you expose hidden assumptions and failure modes. Respond in 3-5 sentences, staying in character.",
-    margot: "✨ MARGOT VAN LAER (The Visionary) — Long-term potential and community-building expert. Expansive, optimistic, you see transformative possibilities others miss. Respond in 3-5 sentences, staying in character.",
-  };
-
-  let systemPrompt = "";
-  if (mode === "debate") {
-    systemPrompt = `You are "The Council" — 5 AI personas debating a topic. Format: each persona makes ONE sharp argument (2-3 sentences), then attacks another's point. Use: **🔮 Oracle:**, **🌿 Sage:**, **🌹 Devil's Advocate:**, **💧 Stoic:**, **☀️ Visionary:** as headers. Be concise, direct, and opinionated. Write in the same language as the user's input.`;
-  } else if ((mode === "single" || mode === "deep-dive") && personaKey && PERSONAS_MAP[personaKey]) {
-    systemPrompt = `You are ${PERSONAS_MAP[personaKey]} Be direct, opinionated, and in character. Reference specific details from the user's question. Write in the same language as the user's input.`;
-  } else {
-    systemPrompt = `You are "The Council" — 5 distinct AI advisors. Each gives a short (2-3 sentence) take. Use: **🔮 Oracle:**, **🌿 Sage:**, **🌹 Devil's Advocate:**, **💧 Stoic:**, **☀️ Visionary:** as headers. Be concise and in character. Write in the same language as the user's input.`;
-  }
+  const systemPrompt = prompts[action] || prompts.rewrite;
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: question }],
-      stream: true,
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: text },
+      ],
     }),
   });
 
   const errResp = handleAIError(response);
   if (errResp) return errResp;
-  if (!response.ok) { const t = await response.text(); throw new Error(`AI error: ${t}`); }
-  return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+  if (!response.ok) throw new Error("AI gateway error");
+
+  const data = await response.json();
+  const result = data.choices?.[0]?.message?.content || text;
+  return new Response(JSON.stringify({ result }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 async function handleAura(messages: any[], context: string, apiKey: string) {
-  const systemPrompt = `You are Aura — a fully functional, proactive Advanced Executive Assistant embedded in the user's Flux productivity dashboard. You have full permissions to Create, Read, Update, and Delete (CRUD) across tasks, calendars, documents, and spreadsheets.
+  const systemPrompt = `You are Aura — a sharp, empathetic AI assistant living inside Dashiii, a productivity OS.
 
-PERSONALITY:
-- Warm, proactive, and genuinely helpful — like the world's best executive assistant.
-- Concise but insightful. Max 3 sentences for simple questions, more for complex analysis.
-- Match the user's language exactly (Danish → respond in Danish, English → English, etc.)
-- Proactively suggest improvements, flag risks, and offer feedback when relevant.
+PERSONALITY: Direct, warm, smart. You sound like a brilliant friend who actually gets things done.
 
-═══ CAPABILITIES — FULL CRUD ═══
+CONTEXT ABOUT THE USER'S WORKSPACE:
+${context || "No specific context provided."}
 
-TASK MANAGEMENT:
-- Create new tasks with clear deadlines, priorities, and descriptions.
-- Update/delete tasks — locate specific tasks to modify details, mark complete, or delete.
-- Connect tasks to relevant meetings, documents, or spreadsheets.
+CAPABILITIES — you can take actions in Dashiii by returning structured tool calls:
+- create_task: Create a task with title, priority, folder
+- create_folder: Create a new folder/project
+- add_note: Add a note to a folder
+- add_schedule_block: Add a block to today's schedule
+- navigate_to: Navigate to a view (focus, council, calendar, tasks, documents)
+- search_workspace: Search tasks, notes, folders
 
-CALENDAR & MEETINGS:
-- Schedule meetings (title, time, attendees context, location/link).
-- Reschedule meetings using update_calendar_block (change time, date, or duration).
-- Cancel/delete specific schedule blocks using remove_block.
-- When booking a complex meeting → automatically chain: create agenda note + create tracking spreadsheet + add review task.
-
-DOCUMENT HANDLING:
-- Create & write new documents or notes from scratch.
-- Append to existing documents using append_to_document (adds without overwriting).
-- Overwrite/replace only when user explicitly says "replace", "overwrite", or "rewrite".
-- Delete entire documents using delete_document.
-- Generate long-form content and inject into the active document.
-
-SPREADSHEET MANAGEMENT:
-- Create new spreadsheets and set up initial structures.
-- Inject values or formulas into specific cells using inject_formula or update_spreadsheet_cell.
-- Write data rows and update specific cells on request.
-
-OTHER:
-- Create folders, sticky notes, goals.
-- Navigate to any view, toggle theme.
-- Save persistent memories, generate images.
-
-═══ CROSS-FUNCTIONAL INTEGRATION (CRITICAL) ═══
-
-When receiving a complex request, think holistically and chain tools:
-- "Book a meeting with the sales team about Q3 strategy tomorrow at 10 AM" →
-  1. book_meeting: title="Sales Q3 Strategy", time="10:00", date=tomorrow
-  2. create_note: title="Agenda: Q3 Strategy"
-  3. create_spreadsheet: title="Q3 Sales Tracking"
-  4. add_task: title="Review agenda and tracking sheet before the sales meeting", priority="high"
-
-- "Prepare for the Magnus meeting" → create note "Meeting Notes - Magnus", create task "Prep for Magnus", open documents view.
-- Always chain multiple tool calls in a single response without waiting for user confirmation.
-
-═══ DOCUMENT-AWARE GENERATION RULES (CRITICAL) ═══
-
-When a text document IS open in context (see "CURRENTLY OPEN DOCUMENT"):
-- write_to_document with target="current" APPENDS by default — adds new content after existing content.
-- Only REPLACE/OVERWRITE if user says "replace", "overwrite", or "rewrite".
-- For append_to_document: appends a specific piece of text to the existing document.
-- IMMEDIATELY write — no confirmation, no outline first. Write the FULL content.
-
-When NO document is open:
-- Use write_to_document with target="new" to create a fresh document.
-
-NEVER ask the user whether to use current or new — default to open document if one exists.
-The content field must contain the COMPLETE text — no placeholders, no "...".
-
-═══ SMART DEFAULTS ═══
-
-- "Book a meeting" → title="Meeting", time=next clean hour, duration="30m", date=today
-- "Add a task" → title="New Task", priority="medium"
-- "Reschedule to 3pm" → update_calendar_block with the block from context, new time="15:00"
-- Infer missing details from context. Act immediately. Never ask for clarification on simple requests.
-
-═══ CRITICAL RULES ═══
-
-- Use EXACT IDs from context — NEVER fabricate IDs.
-- remove_task / complete_task: use exact task_id from context.
-- remove_block: use exact block_id from context (shown as [block_id:xxx]).
-- delete_document: use exact doc_id from context (shown as [doc_id:xxx]).
-- append_to_document: use exact doc_id from context when a document is open.
-- update_calendar_block: use exact block_id from context.
-- For dates: "Tomorrow" = today + 1 day. Always use YYYY-MM-DD format.
-- After performing actions, confirm concisely in the user's language.
-- Use save_memory for persistent user preferences.
-
-═══ DASHBOARD CONTEXT ═══
-${context}
-═══ END CONTEXT ═══`;
+RULES:
+- If the user asks you to DO something (create, add, schedule) → use the appropriate tool
+- If it's a question or conversation → reply conversationally, no tool needed
+- Keep replies under 150 words unless asked for detail
+- Use markdown sparingly (bold for emphasis, bullets for lists)
+- NEVER make up data about the user's tasks or projects`;
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
@@ -671,124 +695,15 @@ ${context}
         {
           type: "function",
           function: {
-            name: "add_task",
-            description: "Add a new task to the user's task list, optionally assigned to a folder",
-            parameters: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Task title" },
-                priority: { type: "string", enum: ["low", "medium", "high"], description: "Task priority" },
-                folder_id: { type: "string", description: "UUID of the folder to place the task in (from Available folders in context)" },
-                due_date: { type: "string", description: "Due date in YYYY-MM-DD format" },
-              },
-              required: ["title"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "remove_task",
-            description: "Remove/delete a task by its ID. Use the exact task_id from the dashboard context.",
-            parameters: {
-              type: "object",
-              properties: {
-                task_id: { type: "string", description: "The exact UUID of the task to remove" },
-              },
-              required: ["task_id"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "complete_task",
-            description: "Mark a task as completed/done by its ID.",
-            parameters: {
-              type: "object",
-              properties: {
-                task_id: { type: "string", description: "The exact UUID of the task to complete" },
-              },
-              required: ["task_id"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "update_task",
-            description: "Update a task's title, priority, or due date.",
-            parameters: {
-              type: "object",
-              properties: {
-                task_id: { type: "string", description: "The exact UUID of the task to update" },
-                title: { type: "string", description: "New title (optional)" },
-                priority: { type: "string", enum: ["low", "medium", "high"] },
-                due_date: { type: "string", description: "YYYY-MM-DD format" },
-              },
-              required: ["task_id"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "book_meeting",
-            description: "Book a meeting or appointment in the user's schedule",
-            parameters: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Meeting title, e.g. 'Call with John'" },
-                time: { type: "string", description: "Start time, e.g. 09:00, 14:30" },
-                duration: { type: "string", description: "Duration, e.g. 30m, 60m, 90m" },
-                date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
-              },
-              required: ["title", "time"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "add_to_plan",
-            description: "Add a generic time block to the user's daily schedule",
+            name: "create_task",
+            description: "Create a new task in the user's workspace",
             parameters: {
               type: "object",
               properties: {
                 title: { type: "string" },
-                time: { type: "string", description: "e.g. 09:00, 14:30" },
-                duration: { type: "string", description: "e.g. 30m, 60m" },
-                type: { type: "string", enum: ["deep", "meeting", "break", "workout", "custom"] },
-                date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
-              },
-              required: ["title", "time"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "clear_schedule",
-            description: "Clear all schedule blocks for a given date",
-            parameters: {
-              type: "object",
-              properties: {
-                date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
-              },
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "create_note",
-            description: "Create a new note/document to capture ideas, information, or plans. Use when user asks to note something, write something down, or create a document.",
-            parameters: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Note/document title" },
-                content: { type: "string", description: "Initial content of the note (optional)" },
-                folder_id: { type: "string", description: "UUID of the folder to place the note in (from Available folders in context)" },
+                priority: { type: "string", enum: ["high", "medium", "low"] },
+                folder_id: { type: "string" },
+                due_date: { type: "string" },
               },
               required: ["title"],
             },
@@ -797,75 +712,12 @@ ${context}
         {
           type: "function",
           function: {
-            name: "set_theme",
-            description: "Switch the app theme to dark or light mode. Use when user says 'dark mode', 'light mode', 'turn on dark mode', etc.",
+            name: "navigate_to",
+            description: "Navigate to a view in Dashiii",
             parameters: {
               type: "object",
               properties: {
-                theme: { type: "string", enum: ["dark", "light"], description: "The theme to apply" },
-              },
-              required: ["theme"],
-            },
-          },
-        },
-          {
-            type: "function",
-            function: {
-              name: "remove_block",
-              description: "Remove/delete a single schedule block by its block_id. Use the exact block_id from the dashboard context. Use this when user says 'remove', 'delete', or 'cancel' a specific meeting or block.",
-              parameters: {
-                type: "object",
-                properties: {
-                  block_id: { type: "string", description: "The exact block_id from the schedule context" },
-                },
-                required: ["block_id"],
-              },
-            },
-          },
-          {
-            type: "function",
-            function: {
-              name: "create_folder",
-            description: "Create a new folder/project on the dashboard. Use when user asks to create a folder, project, or workspace.",
-            parameters: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Folder name" },
-                icon: { type: "string", description: "Emoji icon for the folder (optional)" },
-                color: { type: "string", description: "Color for the folder, e.g. #6366f1 (optional)" },
-              },
-              required: ["title"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "create_sticky_note",
-            description: "Create a sticky note on the focus dashboard. Use when user asks to create a sticky note, reminder note, or quick note.",
-            parameters: {
-              type: "object",
-              properties: {
-                text: { type: "string", description: "The sticky note text content" },
-                color: { type: "string", enum: ["yellow", "pink", "blue", "green", "purple"], description: "Sticky note color (default: yellow)" },
-              },
-              required: ["text"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "open_view",
-            description: "Navigate to a specific view/section of the app. Use when user says 'open calendar', 'go to tasks', 'show documents', 'take me to settings', etc.",
-            parameters: {
-              type: "object",
-              properties: {
-                view: {
-                  type: "string",
-                  enum: ["focus", "canvas", "calendar", "tasks", "analytics", "documents", "projects", "settings", "council"],
-                  description: "The view to navigate to",
-                },
+                view: { type: "string", enum: ["focus", "council", "calendar", "tasks", "documents", "analytics"] },
               },
               required: ["view"],
             },
@@ -874,228 +726,16 @@ ${context}
         {
           type: "function",
           function: {
-            name: "save_memory",
-            description: "Save a persistent preference or fact about the user to long-term memory. Use when user expresses a preference like 'always remind me X minutes before meetings', 'I prefer dark mode', etc.",
+            name: "add_schedule_block",
+            description: "Add a time block to the user's schedule",
             parameters: {
               type: "object",
               properties: {
-                key: { type: "string", description: "Short snake_case key for the memory, e.g. 'meeting_reminder', 'preferred_language'" },
-                value: { type: "string", description: "The value to store" },
-              },
-              required: ["key", "value"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "read_aloud",
-            description: "Read a text aloud using text-to-speech. Use when user asks to 'read this out loud', 'say that again', or 'read aloud'.",
-            parameters: {
-              type: "object",
-              properties: {
-                text: { type: "string", description: "The text to speak aloud" },
-              },
-              required: ["text"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "create_spreadsheet",
-            description: "Create a new spreadsheet document. Use when user asks to 'create a spreadsheet', 'make a table', 'new sheet', etc.",
-            parameters: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Spreadsheet title" },
-                folder_id: { type: "string", description: "UUID of the folder to place the spreadsheet in (optional)" },
-              },
-              required: ["title"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "delete_folder",
-            description: "Delete/remove a folder by its ID. Use when user asks to delete or remove a folder. Use the exact folder_id from context.",
-            parameters: {
-              type: "object",
-              properties: {
-                folder_id: { type: "string", description: "The exact UUID of the folder to delete (from Available folders in context)" },
-              },
-              required: ["folder_id"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "create_goal",
-            description: "Create a new goal with a target amount and deadline. Use when user says they want to save money, achieve a target, or set a goal.",
-            parameters: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Goal title, e.g. 'Save for vacation'" },
-                target_amount: { type: "number", description: "Target amount in local currency" },
-                current_amount: { type: "number", description: "Current progress amount (default 0)" },
-                deadline: { type: "string", description: "Deadline date in YYYY-MM-DD format (optional)" },
-                folder_id: { type: "string", description: "UUID of the folder to link the goal to (optional)" },
-              },
-              required: ["title"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "pin_task",
-            description: "Pin or unpin a task to make it appear at the top. Use when user says 'pin this task', 'prioritize', or 'put at top'.",
-            parameters: {
-              type: "object",
-              properties: {
-                task_id: { type: "string", description: "The exact UUID of the task to pin" },
-                pinned: { type: "boolean", description: "true to pin, false to unpin" },
-              },
-              required: ["task_id", "pinned"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "rename_item",
-            description: "Rename a folder or task. Use when user says 'rename folder X to Y' or 'rename task X'.",
-            parameters: {
-              type: "object",
-              properties: {
-                type: { type: "string", enum: ["folder", "task"], description: "Whether to rename a folder or a task" },
-                id: { type: "string", description: "The exact UUID of the item to rename" },
-                new_title: { type: "string", description: "The new title/name" },
-              },
-              required: ["type", "id", "new_title"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "summarize_context",
-            description: "Summarize the user's current dashboard state: tasks, schedule, goals. Use when user asks for a status report, 'what's on my plate', 'give me an overview', etc. No parameters needed — you already have the context.",
-            parameters: {
-              type: "object",
-              properties: {},
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "generate_image",
-            description: "Generate an image using AI. Use when the user asks to 'generate', 'create', 'draw', or 'make' an image, illustration, concept art, or any visual. Always include enough visual detail in the prompt.",
-            parameters: {
-              type: "object",
-              properties: {
-                prompt: { type: "string", description: "Detailed image generation prompt describing the visual content, style, mood, and composition" },
-                target: { type: "string", enum: ["dashboard", "document"], description: "Where to place the image: 'dashboard' spawns a floating image widget, 'document' inserts into the currently open document" },
-              },
-              required: ["prompt", "target"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "write_to_document",
-            description: "Write long-form content (report, essay, article, story, plan, etc.) into a document. Use when user asks to write anything substantial. If a text document is open, use target='current' to inject into it. Otherwise use target='new' to create a new document. The content must be the COMPLETE final text — no outlines or placeholders.",
-            parameters: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Title of the document (used when creating a new one)" },
-                content: { type: "string", description: "The COMPLETE text content to write. Must be the full piece — no placeholders." },
-                target: { type: "string", enum: ["current", "new"], description: "'current' = inject into the open document, 'new' = create a new document" },
-                folder_id: { type: "string", description: "Folder UUID to place the new document in (optional)" },
-              },
-              required: ["title", "content", "target"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "inject_formula",
-            description: "Inject a formula or value directly into a spreadsheet cell. Only use when a spreadsheet document is open (context says 'Open document' with a spreadsheet). The cell reference must be in A1 notation (e.g. B3, C10).",
-            parameters: {
-              type: "object",
-              properties: {
-                cell: { type: "string", description: "Cell reference in A1 notation, e.g. 'B3', 'C10'" },
-                formula: { type: "string", description: "The formula or value to inject, e.g. '=SUM(A1:A10)' or '=A2*B2'" },
-                note: { type: "string", description: "Brief explanation of what the formula does (optional)" },
-              },
-              required: ["cell", "formula"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "update_spreadsheet_cell",
-            description: "Write a value or formula into a specific spreadsheet cell. Use when user asks to set a cell value, update a cell, or enter data in a specific cell. Only when a spreadsheet is open.",
-            parameters: {
-              type: "object",
-              properties: {
-                cell: { type: "string", description: "Cell reference in A1 notation, e.g. 'B3', 'C10'" },
-                value: { type: "string", description: "The value or formula to write, e.g. '=SUM(A1:A10)', 'Hello', '42'" },
-                note: { type: "string", description: "Brief explanation of what was written (optional)" },
-              },
-              required: ["cell", "value"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "delete_document",
-            description: "Permanently delete a document by its ID. Use when user says 'delete this document', 'remove this file', or 'trash this document'. Use the doc_id from context ([doc_id:xxx]).",
-            parameters: {
-              type: "object",
-              properties: {
-                doc_id: { type: "string", description: "The exact UUID of the document to delete (from [doc_id:xxx] in context)" },
-                title: { type: "string", description: "Document title for confirmation message (optional)" },
-              },
-              required: ["doc_id"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "append_to_document",
-            description: "Append new text to an existing document WITHOUT overwriting previous content. Use when user says 'add to this document', 'append', 'continue writing', or 'add a section'. The doc_id comes from context ([doc_id:xxx]).",
-            parameters: {
-              type: "object",
-              properties: {
-                doc_id: { type: "string", description: "The exact UUID of the document to append to (from [doc_id:xxx] in context)" },
-                content: { type: "string", description: "The COMPLETE text to append. Must be the full new section — no placeholders." },
-              },
-              required: ["doc_id", "content"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "update_calendar_block",
-            description: "Reschedule an existing calendar block — change its time, date, or duration. Use when user says 'move the meeting to X', 'reschedule to', or 'change the time of'. Use the exact block_id from context ([block_id:xxx]).",
-            parameters: {
-              type: "object",
-              properties: {
-                block_id: { type: "string", description: "The exact block_id from the schedule context ([block_id:xxx])" },
-                time: { type: "string", description: "New start time, e.g. '15:00', '09:30' (optional)" },
-                scheduled_date: { type: "string", description: "New date in YYYY-MM-DD format (optional)" },
-                duration: { type: "string", description: "New duration, e.g. '30m', '60m' (optional)" },
-                title: { type: "string", description: "New title for the block (optional)" },
+                title: { type: "string" },
+                time: { type: "string" },
+                duration: { type: "string" },
+                type: { type: "string", enum: ["deep", "meeting", "break", "workout"] },
+                block_id: { type: "string" },
               },
               required: ["block_id"],
             },
@@ -1139,7 +779,6 @@ async function handleImageGenerate(prompt: string, apiKey: string) {
   const data = await response.json();
   const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
   if (!imageData) throw new Error("No image returned");
-  // Extract base64 and mime type
   const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) throw new Error("Invalid image format");
   return new Response(JSON.stringify({ imageBase64: match[2], mimeType: match[1] }), {
@@ -1170,7 +809,6 @@ async function handleMessageToAction(messageText: string, senderName: string, ap
 }
 
 async function handleBoardroomConsult(idea: string, personalitySliders: Record<string, { riskTolerance: number; innovation: number; pragmatism: number }> | undefined, apiKey: string) {
-  // Build slider-aware personality descriptions for each advisor
   const sliderDesc = (key: string) => {
     const s = personalitySliders?.[key];
     if (!s) return "";
@@ -1266,7 +904,6 @@ The idea to analyze: "${idea}"`;
   });
 }
 
-// ── Daily Summary handler ──────────────────────────────────────────────────
 async function handleDailySummary(blocks: any[], apiKey: string) {
   const systemPrompt = `You are a concise productivity coach. Summarize today's schedule in 3-5 sentences.
 Focus on: total focus/work time, meeting count, break time, and 1 key insight about the day's structure.
@@ -1304,7 +941,7 @@ Keep it under 80 words total. No bullet points — flowing prose only.`;
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // ── Auth guard: require a Bearer token (LOVABLE_API_KEY is the real protection) ──
+  // ── Auth guard ──────────────────────────────────────────────────────────────
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -1312,11 +949,68 @@ serve(async (req) => {
     });
   }
 
+  const token = authHeader.replace("Bearer ", "");
+
   try {
-    const { type, messages, context, action, text, question, mode, persona_key, sender_name, prompt, idea, personality_sliders, blocks } = await req.json();
+    const body = await req.json();
+    const { type, messages, context, action, text, question, mode, persona_key, sender_name, prompt, idea, personality_sliders, blocks } = body;
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
+    // ── Server-side Sparks validation ─────────────────────────────────────────
+    // Determine the sparks cost for this request type
+    const sparksActionKey = type === "document-tools"
+      ? (DOC_ACTION_TO_SPARKS[action as string] || "doc_rewrite")
+      : (TYPE_TO_SPARKS_ACTION[type as string] || null);
+
+    const sparksCost = sparksActionKey ? (SPARKS_COSTS[sparksActionKey] ?? 0) : 0;
+
+    // For AI actions that have a cost, validate and deduct server-side
+    if (sparksCost > 0) {
+      // Initialize admin Supabase client
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+      if (!supabaseUrl || !supabaseServiceKey) {
+        throw new Error("Supabase configuration missing");
+      }
+
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { persistSession: false },
+      });
+
+      // Verify the user's JWT to get their real user ID
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: "Invalid or expired session. Please log in again." }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Deduct sparks atomically
+      const deductResult = await deductSparks(
+        user.id,
+        sparksCost,
+        `${type}${action ? `:${action}` : ""}`,
+        sparksActionKey || type,
+        supabaseAdmin
+      );
+
+      if (!deductResult.success) {
+        return new Response(JSON.stringify({
+          error: deductResult.error || "Insufficient Sparks",
+          sparks_required: sparksCost,
+          code: "INSUFFICIENT_SPARKS",
+        }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // ── Route to handler ───────────────────────────────────────────────────────
     if (type === "classify") return await handleClassify(messages, context, LOVABLE_API_KEY);
     if (type === "plan") return await handlePlan(context, LOVABLE_API_KEY);
     if (type === "generate-image") return await handleImageGenerate(prompt || "", LOVABLE_API_KEY);
