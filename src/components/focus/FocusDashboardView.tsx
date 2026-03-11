@@ -1964,7 +1964,6 @@ const FocusContent = () => {
                 borderRadius: pillStyle.borderRadius,
                 boxShadow: "0 8px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.08) inset",
                 cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
-                opacity: paginationSettings.pillOpacity / 100,
               }}
             >
               {/* Page dots inside the pill */}
