@@ -1881,11 +1881,7 @@ const FocusContent = () => {
 
 
 
-      {/* ── iOS-style Dashboard Pagination ── pill (drag only in build mode) */}
-      {/* IMPORTANT: pillRef wraps ONLY the pill row so getBoundingClientRect() always reflects
-          the pill's exact visual position regardless of build/focus mode. All floating UI
-          (label, build controls, settings panel, hover cards) is positioned absolutely
-          above via bottom: calc(100% + Npx) so it never affects the wrapper's own size. */}
+      {/* ── Bottom Pill Navigation ── */}
       {paginationSettings.showPagination && (() => {
         const pillBg = hexToRgbaPill(pillStyle.bgColor || "#0f0c19", pillStyle.bgOpacity / 100);
         const pillBorder = pillStyle.borderWidth > 0
