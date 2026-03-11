@@ -861,6 +861,24 @@ const FocusContent = () => {
     setPillBouncing(true);
     setTimeout(() => setPillBouncing(false), 500);
   }, []);
+
+  // Reset pill position when resetDashboard is triggered from ToolDrawer/WidgetToggleBar
+  useEffect(() => {
+    const handler = () => {
+      setPillPos(null);
+      // Also clear from localStorage
+      try {
+        const r = localStorage.getItem(PAGINATION_SETTINGS_KEY);
+        if (r) {
+          const parsed = JSON.parse(r);
+          localStorage.setItem(PAGINATION_SETTINGS_KEY, JSON.stringify({ ...parsed, pillPosition: null }));
+        }
+      } catch {}
+    };
+    window.addEventListener("reset-pill-pos", handler);
+    return () => window.removeEventListener("reset-pill-pos", handler);
+  }, []);
+
   const { moveToTrash } = useTrash();
   const { documents: desktopDocs, refetch: refetchDesktopDocs, updateDocument: updateDesktopDoc, removeDocument: removeDesktopDoc, createDocument } = useDocuments(null, moveToTrash);
   const { openWindow, closeWindow, windows, updateWindowPosition, focusedId } = useWindowManager();
