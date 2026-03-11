@@ -271,7 +271,7 @@ const PillStylePanel = ({ style, onUpdate, onReset, onClose, showLabel, onToggle
             <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">BG Opacity</span>
             <span className="text-[10px] text-white/30 tabular-nums">{style.bgOpacity}%</span>
           </div>
-          <input type="range" min={0} max={80} step={1} value={style.bgOpacity}
+          <input type="range" min={0} max={100} step={1} value={style.bgOpacity}
             onChange={e => onUpdate({ bgOpacity: Number(e.target.value) })}
             className="w-full accent-white h-1" />
         </div>
