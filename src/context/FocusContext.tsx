@@ -102,7 +102,7 @@ const DEFAULT_STATE: FocusState = {
   clockShowSeconds: false,
   clockShowGreeting: false,
   clockSecondaryTz: "",
-  clockGlassEffect: false,
+  clockGlassEffect: true,
   clockDepthShadow: false,
   systemMode: "focus",
   desktopFolderPositions: {},
