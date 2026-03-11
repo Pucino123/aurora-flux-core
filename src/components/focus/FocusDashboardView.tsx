@@ -1953,104 +1953,106 @@ const FocusContent = () => {
               </div>
             )}
 
-            {/* The pill itself */}
+            {/* The pill itself — Home label | separator | toggle | separator | + */}
             <div
-              className="flex items-center gap-2 px-4 py-2"
+              className="flex items-center gap-3 px-5 py-2.5"
               style={{
-                background: `rgba(${parseInt(pillStyle.bgColor.slice(1,3),16)},${parseInt(pillStyle.bgColor.slice(3,5),16)},${parseInt(pillStyle.bgColor.slice(5,7),16)},${pillStyle.bgOpacity/100})`,
+                background: `rgba(${bcR},${bcG},${bcB},${pillStyle.bgOpacity/100})`,
                 backdropFilter: `blur(${pillStyle.blurAmount}px)`,
                 WebkitBackdropFilter: `blur(${pillStyle.blurAmount}px)`,
-                border: `${pillStyle.borderWidth}px solid rgba(${parseInt(pillStyle.borderColor.slice(1,3),16)},${parseInt(pillStyle.borderColor.slice(3,5),16)},${parseInt(pillStyle.borderColor.slice(5,7),16)},${pillStyle.borderOpacity/100})`,
+                border: `${pillStyle.borderWidth}px solid rgba(${bdcR},${bdcG},${bdcB},${pillStyle.borderOpacity/100})`,
                 borderRadius: pillStyle.borderRadius,
                 boxShadow: "0 8px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.08) inset",
                 cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
                 opacity: paginationSettings.pillOpacity / 100,
               }}
             >
-              {/* Page label */}
-              {paginationSettings.showLabel && (
-                editingLabelIdx === activePageIndex ? (
-                  <input
-                    ref={labelInputRef}
-                    value={editingLabelValue}
-                    onChange={e => setEditingLabelValue(e.target.value)}
-                    onBlur={commitLabelEdit}
-                    onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
-                    className="text-[12px] font-medium text-center outline-none bg-transparent border-b border-white/40 w-20"
-                    style={{ color: `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},${pillStyle.textOpacity/100})` }}
-                    maxLength={20}
-                    autoFocus
-                    onPointerDown={e => e.stopPropagation()}
-                  />
-                ) : (
-                  <button
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={() => { if (dashboardPages.length > 1) goToPage((activePageIndex + 1) % dashboardPages.length); }}
-                    onDoubleClick={() => startLabelEdit(activePageIndex)}
-                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: activePageIndex, x: e.clientX, y: e.clientY }); }}
-                    className="text-[12px] font-medium transition-opacity hover:opacity-100"
-                    style={{ color: `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},${pillStyle.textOpacity/100})`, cursor: dashboardPages.length > 1 ? "pointer" : "default" }}
-                    title={dashboardPages.length > 1 ? "Click to switch · double-click to rename" : "Double-click to rename"}
-                  >
-                    {currentPageLabel}
-                  </button>
-                )
+              {/* Page label — click to cycle, double-click to rename */}
+              {editingLabelIdx === activePageIndex ? (
+                <input
+                  ref={labelInputRef}
+                  value={editingLabelValue}
+                  onChange={e => setEditingLabelValue(e.target.value)}
+                  onBlur={commitLabelEdit}
+                  onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
+                  className="text-[13px] font-medium text-center outline-none bg-transparent border-b w-20"
+                  style={{ color: textRgba(pillStyle.textOpacity/100), borderColor: textRgba(0.4) }}
+                  maxLength={20}
+                  autoFocus
+                  onPointerDown={e => e.stopPropagation()}
+                />
+              ) : (
+                <button
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={() => { if (dashboardPages.length > 1) goToPage((activePageIndex + 1) % dashboardPages.length); }}
+                  onDoubleClick={() => startLabelEdit(activePageIndex)}
+                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: activePageIndex, x: e.clientX, y: e.clientY }); }}
+                  className="text-[13px] font-medium transition-opacity hover:opacity-100"
+                  style={{ color: textRgba(pillStyle.textOpacity/100), letterSpacing: "0.01em", cursor: dashboardPages.length > 1 ? "pointer" : "default" }}
+                  title={dashboardPages.length > 1 ? "Click to switch · double-click to rename" : "Double-click to rename"}
+                >
+                  {currentPageLabel}
+                </button>
               )}
 
-              {/* Page dots */}
-              {dashboardPages.length > 1 && (
-                <div className="flex items-center gap-1.5">
-                  {dashboardPages.map((page, i) => (
-                    <button
-                      key={page.id}
-                      onPointerDown={e => e.stopPropagation()}
-                      onClick={() => goToPage(i)}
-                      onMouseEnter={() => setHoverDotIdx(i)}
-                      onMouseLeave={() => setHoverDotIdx(null)}
-                      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: i, x: e.clientX, y: e.clientY }); }}
-                      draggable={systemMode === "build"}
-                      onDragStart={() => systemMode === "build" && handleDotDragStart(i)}
-                      onDragOver={(e) => systemMode === "build" && handleDotDragOver(i, e)}
-                      onDrop={() => systemMode === "build" && handleDotDrop(i)}
-                      onDragEnd={() => { setDraggingDotIdx(null); setDragOverIdx(null); }}
-                      className="transition-all duration-300 flex-shrink-0"
-                      title={page.label || `Page ${i + 1}`}
-                      style={{
-                        width: i === activePageIndex ? 20 : 6,
-                        height: 6,
-                        borderRadius: 9999,
-                        background: i === activePageIndex
-                          ? `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.9)`
-                          : `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.3)`,
-                        boxShadow: i === activePageIndex ? "0 0 8px rgba(255,255,255,0.6)" : "none",
-                        outline: draggingDotIdx === i ? "2px solid rgba(255,255,255,0.5)" : dragOverIdx === i ? "2px dashed rgba(255,255,255,0.4)" : "none",
-                      }}
-                    />
-                  ))}
+              {/* Separator */}
+              <div className="w-px h-4" style={{ background: textRgba(0.15) }} />
+
+              {/* Toggle switch — Focus / Build mode */}
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => setSystemMode(systemMode === "focus" ? "build" : "focus")}
+                title={systemMode === "build" ? "Switch to Focus mode" : "Switch to Build mode"}
+                className="flex items-center"
+                style={{ outline: "none" }}
+              >
+                <div
+                  className="relative flex items-center transition-all duration-300"
+                  style={{
+                    width: 38, height: 22, borderRadius: 11,
+                    background: systemMode === "build" ? "rgba(139,92,246,0.7)" : textRgba(0.15),
+                    border: `1px solid ${textRgba(0.2)}`,
+                    boxShadow: systemMode === "build" ? "0 0 10px rgba(139,92,246,0.4)" : "none",
+                    transition: "background 0.25s, box-shadow 0.25s",
+                  }}
+                >
+                  <div style={{
+                    position: "absolute", top: 2,
+                    left: systemMode === "build" ? 18 : 2,
+                    width: 16, height: 16, borderRadius: "50%",
+                    background: "rgba(255,255,255,0.95)",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                    transition: "left 0.22s cubic-bezier(0.4,0,0.2,1)",
+                  }} />
                 </div>
-              )}
+              </button>
 
-              {/* Add page */}
+              {/* Separator */}
+              <div className="w-px h-4" style={{ background: textRgba(0.15) }} />
+
+              {/* + Add page */}
               <button
                 onPointerDown={e => e.stopPropagation()}
                 onClick={addPage}
                 title="Add page"
-                className="flex items-center justify-center transition-all hover:scale-110 active:scale-95 ml-1"
-                style={{ color: `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.45)` }}
+                className="flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                style={{ color: textRgba(0.55) }}
+                onMouseEnter={e => (e.currentTarget.style.color = textRgba(0.9))}
+                onMouseLeave={e => (e.currentTarget.style.color = textRgba(0.55))}
               >
-                <Plus size={14} strokeWidth={2} />
+                <Plus size={16} strokeWidth={2} />
               </button>
 
-              {/* Build mode style button */}
+              {/* Build mode — style settings */}
               {systemMode === "build" && (
                 <button
                   onPointerDown={e => e.stopPropagation()}
                   onClick={() => setShowPillSettings(v => !v)}
-                  className="flex items-center justify-center transition-all ml-1"
-                  style={{ color: showPillSettings ? `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.9)` : `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.3)` }}
+                  className="flex items-center justify-center transition-all"
+                  style={{ color: showPillSettings ? textRgba(0.9) : textRgba(0.3), marginLeft: 2 }}
                   title="Pill style"
                 >
-                  <LayoutGrid size={12} />
+                  <LayoutGrid size={13} />
                 </button>
               )}
             </div>
