@@ -661,7 +661,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
               <span className="text-xs font-semibold text-white/50 uppercase tracking-widest">Tool Ecosystem</span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => { resetDashboard(); setOpen(false); }}
+                  onClick={() => { resetDashboard(); window.dispatchEvent(new CustomEvent("reset-pill-pos")); setOpen(false); }}
                   className="text-[10px] text-white/30 hover:text-white/60 transition-colors px-2 py-1 rounded-lg hover:bg-white/5 flex items-center gap-1"
                   title="Reset all widget positions to defaults"
                 >
