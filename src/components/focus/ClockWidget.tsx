@@ -35,10 +35,10 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
   const defaultClockPos = React.useMemo(() => {
     const w = typeof window !== "undefined" ? window.innerWidth : 1280;
     const h = typeof window !== "undefined" ? window.innerHeight : 800;
-    const clockW = 400;
+    const clockW = 460;
     return {
       x: Math.round((w - clockW) / 2),
-      y: Math.round(h * 0.04),
+      y: Math.round(h * 0.06),
     };
   }, []);
 
