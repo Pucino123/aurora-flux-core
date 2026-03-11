@@ -1876,6 +1876,13 @@ const FocusContent = () => {
       {/* ── Pagination pill ── */}
       {paginationSettings.showPagination && (() => {
         const currentPageLabel = dashboardPages[activePageIndex]?.label || "Home";
+        const tc = pillStyle.textColor || "#ffffff";
+        const tcR = parseInt(tc.slice(1,3),16), tcG = parseInt(tc.slice(3,5),16), tcB = parseInt(tc.slice(5,7),16);
+        const textRgba = (a: number) => `rgba(${tcR},${tcG},${tcB},${a})`;
+        const bc = pillStyle.bgColor || "#0f0c19";
+        const bcR = parseInt(bc.slice(1,3),16), bcG = parseInt(bc.slice(3,5),16), bcB = parseInt(bc.slice(5,7),16);
+        const bdc = pillStyle.borderColor || "#ffffff";
+        const bdcR = parseInt(bdc.slice(1,3),16), bdcG = parseInt(bdc.slice(3,5),16), bdcB = parseInt(bdc.slice(5,7),16);
         return (
           <motion.div
             ref={pillRef}
@@ -1891,7 +1898,7 @@ const FocusContent = () => {
             style={{
               ...(pillPos
                 ? { left: pillPos.x, top: pillPos.y, transform: "none" }
-                : { left: "50%", bottom: "28px", transform: "translateX(-50%)" }),
+                : { left: "50%", bottom: "88px", transform: "translateX(-50%)" }),
               pointerEvents: isFocusModeActive ? "none" : undefined,
             }}
             onPointerDown={handlePillPointerDown}
@@ -1914,6 +1921,37 @@ const FocusContent = () => {
                 />
               )}
             </AnimatePresence>
+
+            {/* Page dots — above pill when multiple pages exist */}
+            {dashboardPages.length > 1 && (
+              <div className="flex items-center justify-center gap-1.5 mb-2">
+                {dashboardPages.map((page, i) => (
+                  <button
+                    key={page.id}
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => goToPage(i)}
+                    onMouseEnter={() => setHoverDotIdx(i)}
+                    onMouseLeave={() => setHoverDotIdx(null)}
+                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: i, x: e.clientX, y: e.clientY }); }}
+                    draggable={systemMode === "build"}
+                    onDragStart={() => systemMode === "build" && handleDotDragStart(i)}
+                    onDragOver={(e) => systemMode === "build" && handleDotDragOver(i, e)}
+                    onDrop={() => systemMode === "build" && handleDotDrop(i)}
+                    onDragEnd={() => { setDraggingDotIdx(null); setDragOverIdx(null); }}
+                    className="transition-all duration-300 flex-shrink-0"
+                    title={page.label || `Page ${i + 1}`}
+                    style={{
+                      width: i === activePageIndex ? 20 : 6,
+                      height: 6,
+                      borderRadius: 9999,
+                      background: i === activePageIndex ? textRgba(0.9) : textRgba(0.3),
+                      boxShadow: i === activePageIndex ? `0 0 8px ${textRgba(0.5)}` : "none",
+                      outline: draggingDotIdx === i ? `2px solid ${textRgba(0.5)}` : dragOverIdx === i ? `2px dashed ${textRgba(0.4)}` : "none",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* The pill itself */}
             <div
