@@ -47,7 +47,7 @@ import {
   FocusCRMWidget,
 } from "./HomeWidgets";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, LayoutGrid, X, Focus, Sparkles } from "lucide-react";
+import { FolderPlus, StickyNote, FileText, Table, Trash2, CalendarPlus, ListChecks, Plus, Settings2, X, Focus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { WindowManagerProvider, useWindowManager } from "@/context/WindowManagerContext";
 import WindowFrame from "@/components/windows/WindowFrame";
@@ -115,7 +115,7 @@ interface PillStyle {
   textOpacity: number;
 }
 const DEFAULT_PILL_STYLE: PillStyle = {
-  bgOpacity: 15,
+  bgOpacity: 60,
   bgColor: "#0f0c19",
   textColor: "#ffffff",
   blurAmount: 24,
@@ -271,7 +271,7 @@ const PillStylePanel = ({ style, onUpdate, onReset, onClose, showLabel, onToggle
             <span className="text-[10px] text-white/40 font-medium uppercase tracking-wider">BG Opacity</span>
             <span className="text-[10px] text-white/30 tabular-nums">{style.bgOpacity}%</span>
           </div>
-          <input type="range" min={0} max={80} step={1} value={style.bgOpacity}
+          <input type="range" min={0} max={100} step={1} value={style.bgOpacity}
             onChange={e => onUpdate({ bgOpacity: Number(e.target.value) })}
             className="w-full accent-white h-1" />
         </div>
@@ -1964,7 +1964,6 @@ const FocusContent = () => {
                 borderRadius: pillStyle.borderRadius,
                 boxShadow: "0 8px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.08) inset",
                 cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
-                opacity: paginationSettings.pillOpacity / 100,
               }}
             >
               {/* Page dots inside the pill */}
@@ -2017,11 +2016,11 @@ const FocusContent = () => {
                 <button
                   onPointerDown={e => e.stopPropagation()}
                   onClick={() => setShowPillSettings(v => !v)}
-                  className="flex items-center justify-center transition-all"
-                  style={{ color: showPillSettings ? textRgba(0.9) : textRgba(0.3), marginLeft: 2 }}
+                  className="flex items-center justify-center p-1 rounded-lg transition-colors bg-white/10 hover:bg-white/20"
+                  style={{ color: showPillSettings ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.5)" }}
                   title="Pill style"
                 >
-                  <LayoutGrid size={13} />
+                  <Settings2 size={13} />
                 </button>
               )}
             </div>
