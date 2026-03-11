@@ -32,10 +32,15 @@ interface ClockWidgetProps {
 const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
   const { style: widgetStyle } = useWidgetStyle("clock");
   const hideSubtitle = widgetStyle.hideSubtitle;
-  const defaultClockPos = React.useMemo(() => ({
-    x: typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.35) : 500,
-    y: typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.02) : 0,
-  }), []);
+  const defaultClockPos = React.useMemo(() => {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const h = typeof window !== 'undefined' ? window.innerHeight : 800;
+    // Center horizontally, 4% from top
+    return {
+      x: Math.round((w - 400) / 2),
+      y: Math.round(h * 0.04),
+    };
+  }, []);
   const [now, setNow] = useState(new Date());
   const {
     clockFontSize, setClockFontSize,
