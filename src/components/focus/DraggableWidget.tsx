@@ -109,7 +109,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 const DraggableWidget = ({
-  id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle, headerActions, overflowVisible = false,
+  id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle, headerActions, overflowVisible = false, fixedPosition = false,
 }: DraggableWidgetProps) => {
   const { widgetPositions, updateWidgetPosition, toggleWidget, getWidgetOpacity, setWidgetOpacity, widgetMinimalMode, systemMode } = useFocusStore();
   const contextClose = useWidgetClose();
