@@ -22,8 +22,6 @@ const getGreeting = (hour: number) => {
   return "Good night";
 };
 
-/** Time tone removed – clock is fully transparent by default */
-
 interface ClockWidgetProps {
   onOpenEditor?: () => void;
   editorOpen?: boolean;
@@ -32,18 +30,18 @@ interface ClockWidgetProps {
 const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
   const { style: widgetStyle } = useWidgetStyle("clock");
   const hideSubtitle = widgetStyle.hideSubtitle;
+
+  // Fixed viewport-centered position — not relative to sidebar
   const defaultClockPos = React.useMemo(() => {
-    const w = typeof window !== 'undefined' ? window.innerWidth : 1280;
-    const h = typeof window !== 'undefined' ? window.innerHeight : 800;
-    // Sidebar is ~260px wide — center in the remaining visible area
-    const sidebarW = w > 768 ? 260 : 0;
-    const canvasW = w - sidebarW;
+    const w = typeof window !== "undefined" ? window.innerWidth : 1280;
+    const h = typeof window !== "undefined" ? window.innerHeight : 800;
     const clockW = 400;
     return {
-      x: Math.round(sidebarW + (canvasW - clockW) / 2),
+      x: Math.round((w - clockW) / 2),
       y: Math.round(h * 0.04),
     };
   }, []);
+
   const [now, setNow] = useState(new Date());
   const {
     clockFontSize, setClockFontSize,
@@ -106,8 +104,6 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
     ? { WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", backgroundImage: `linear-gradient(135deg, ${clockColor} 0%, rgba(255,255,255,0.35) 50%, ${clockColor} 100%)`, backgroundColor: "transparent", filter: "drop-shadow(0 0 8px rgba(255,255,255,0.12))" }
     : {};
 
-  
-
   // Secondary timezone
   let secondaryTime = "";
   if (clockSecondaryTz) {
@@ -141,9 +137,9 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
       fontSizeControl={{ value: clockFontSize, set: setClockFontSize, min: 30, max: 120, step: 10 }}
       onEditAction={onOpenEditor}
       containerStyle={editorOpen ? { zIndex: 70, position: 'relative' } : undefined}
+      fixedPosition
     >
       <div className="relative flex flex-col items-center justify-center h-full gap-2 group">
-        
 
         {/* Productivity ring */}
         {showRing && (

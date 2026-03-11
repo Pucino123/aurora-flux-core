@@ -6,18 +6,22 @@ import { useFlux } from "@/context/FluxContext";
 const TodaysPlanWidget = () => {
   const { setActiveView } = useFlux();
 
+  // Fixed to the right edge of the viewport — unaffected by sidebar
   const defaultPlannerPos = React.useMemo(() => ({
-    x: typeof window !== "undefined" ? Math.round(window.innerWidth * 0.75) : 1100,
-    y: typeof window !== "undefined" ? Math.round(window.innerHeight * 0.06) : 60,
+    x: typeof window !== "undefined" ? window.innerWidth - 340 - 16 : 1180,
+    y: 0,
   }), []);
+
+  const defaultPlannerHeight = typeof window !== "undefined" ? window.innerHeight : 900;
 
   return (
     <DraggableWidget
       id="planner"
       title="Today's Plan"
       defaultPosition={defaultPlannerPos}
-      defaultSize={{ w: 340, h: 620 }}
+      defaultSize={{ w: 340, h: defaultPlannerHeight }}
       scrollable
+      fixedPosition
     >
       <div className="focus-planner-dark -mx-4 -mt-4 -mb-4 h-[calc(100%+2rem)] council-hidden-scrollbar overflow-auto flex flex-col">
         <div className="flex-1 min-h-0">

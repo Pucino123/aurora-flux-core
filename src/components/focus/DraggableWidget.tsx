@@ -32,6 +32,8 @@ interface DraggableWidgetProps {
   containerStyle?: React.CSSProperties;
   headerActions?: React.ReactNode;
   overflowVisible?: boolean;
+  /** Use position:fixed (viewport coords) instead of position:absolute (canvas coords) */
+  fixedPosition?: boolean;
 }
 
 const GRID = 40;
@@ -107,7 +109,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 const DraggableWidget = ({
-  id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle, headerActions, overflowVisible = false,
+  id, title, children, defaultPosition, defaultSize, className = "", hideHeader = false, scrollable = false, fontSizeControl, autoHeight = false, onEditAction, containerStyle, headerActions, overflowVisible = false, fixedPosition = false,
 }: DraggableWidgetProps) => {
   const { widgetPositions, updateWidgetPosition, toggleWidget, getWidgetOpacity, setWidgetOpacity, widgetMinimalMode, systemMode } = useFocusStore();
   const contextClose = useWidgetClose();
@@ -298,7 +300,7 @@ const DraggableWidget = ({
       exit={{ opacity: 0, scale: 0.92, y: 8 }}
       // During drag: cut all spring transitions so content never lags behind the position
       transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 20 }}
-      className={`${isBeingEdited ? "fixed" : "absolute"} ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
+      className={`${(isBeingEdited || fixedPosition) ? "fixed" : "absolute"} ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
       style={{
         left: pos.x,
         top: pos.y,
