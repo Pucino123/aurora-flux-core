@@ -126,8 +126,27 @@ const DEFAULT_PILL_STYLE: PillStyle = {
   textOpacity: 80,
 };
 function loadPaginationSettings(): PaginationSettings {
-  try { const r = localStorage.getItem(PAGINATION_SETTINGS_KEY); if (r) return { showLabel: true, pillOpacity: 82, showPagination: true, pillPosition: null, ...JSON.parse(r) }; } catch {}
+  try {
+    const r = localStorage.getItem(PAGINATION_SETTINGS_KEY);
+    if (r) {
+      const parsed = JSON.parse(r);
+      // Always force pillPosition to null so pill is centered above the toolbar by default
+      return { showLabel: true, pillOpacity: 82, showPagination: true, ...parsed, pillPosition: null };
+    }
+  } catch {}
   return { showLabel: true, pillOpacity: 82, showPagination: true, pillPosition: null };
+}
+// Always clear any saved pill position on load so it defaults to centered
+if (typeof window !== "undefined") {
+  try {
+    const r = localStorage.getItem(PAGINATION_SETTINGS_KEY);
+    if (r) {
+      const parsed = JSON.parse(r);
+      if (parsed.pillPosition !== undefined) {
+        localStorage.setItem(PAGINATION_SETTINGS_KEY, JSON.stringify({ ...parsed, pillPosition: null }));
+      }
+    }
+  } catch {}
 }
 function loadPillStyle(): PillStyle {
   try { const r = localStorage.getItem(PILL_STYLE_KEY); if (r) return { ...DEFAULT_PILL_STYLE, ...JSON.parse(r) }; } catch {}
