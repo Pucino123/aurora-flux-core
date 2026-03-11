@@ -75,7 +75,7 @@ const LOCAL_STORAGE_KEY = "flux-dashboard-config";
 const DEFAULT_CONFIG: DashboardConfig = {
   activeWidgets: DEFAULT_ACTIVE_WIDGETS,
   widgetNames: {},
-  layouts: null,
+  layouts: DEFAULT_LAYOUTS as unknown as ResponsiveLayouts,
   stickyNotes: [],
 };
 
