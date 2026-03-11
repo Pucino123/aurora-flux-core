@@ -115,7 +115,7 @@ interface PillStyle {
   textOpacity: number;
 }
 const DEFAULT_PILL_STYLE: PillStyle = {
-  bgOpacity: 15,
+  bgOpacity: 60,
   bgColor: "#0f0c19",
   textColor: "#ffffff",
   blurAmount: 24,
