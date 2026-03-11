@@ -398,12 +398,10 @@ const FocusContent = () => {
     setPillStyleState(prev => { const next = { ...prev, ...patch }; savePillStyle(next); return next; });
   }, []);
   const resetPillStyle = React.useCallback(() => { setPillStyleState(DEFAULT_PILL_STYLE); savePillStyle(DEFAULT_PILL_STYLE); }, []);
-  // Pill drag-to-reposition
+  // Pill drag-to-reposition — always starts centered by default
   const pillRef = useRef<HTMLDivElement>(null);
   const pillDragOrigin = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
-  const [pillPos, setPillPos] = useState<{ x: number; y: number } | null>(() => {
-    try { const s = loadPaginationSettings(); return s.pillPosition ?? null; } catch { return null; }
-  });
+  const [pillPos, setPillPos] = useState<{ x: number; y: number } | null>(null);
   const [isDraggingPill, setIsDraggingPill] = useState(false);
   const [pillBouncing, setPillBouncing] = useState(false);
   // Cloud sync debounce
