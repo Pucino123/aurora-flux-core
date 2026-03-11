@@ -1975,9 +1975,7 @@ const FocusContent = () => {
             <button
               onPointerDown={e => e.stopPropagation()}
               onClick={() => {
-                const next = systemMode === "focus" ? "build" : "focus";
-                import("@/context/FocusContext").then(() => {}).catch(() => {});
-                window.dispatchEvent(new CustomEvent("flux-set-mode", { detail: { mode: next } }));
+                setSystemMode(systemMode === "focus" ? "build" : "focus");
               }}
               title={systemMode === "build" ? "Switch to Focus mode" : "Switch to Build mode"}
               className="flex items-center transition-all"
