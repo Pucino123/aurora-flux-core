@@ -300,7 +300,7 @@ const DraggableWidget = ({
       exit={{ opacity: 0, scale: 0.92, y: 8 }}
       // During drag: cut all spring transitions so content never lags behind the position
       transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 20 }}
-      className={`${isBeingEdited ? "fixed" : "absolute"} ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
+      className={`${(isBeingEdited || fixedPosition) ? "fixed" : "absolute"} ${isDragging ? "cursor-grabbing select-none" : ""} ${textClass} ${className}`}
       style={{
         left: pos.x,
         top: pos.y,
