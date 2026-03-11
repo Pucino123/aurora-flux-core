@@ -1873,6 +1873,163 @@ const FocusContent = () => {
         onCancel={() => setIntentionModalOpen(false)}
       />
 
+      {/* ── Pagination pill ── */}
+      {paginationSettings.showPagination && (() => {
+        const currentPageLabel = dashboardPages[activePageIndex]?.label || "Home";
+        return (
+          <motion.div
+            ref={pillRef}
+            animate={
+              isFocusModeActive
+                ? { opacity: 0, y: 20, pointerEvents: "none" as const }
+                : pillBouncing
+                ? { scale: [1, 1.06, 0.97, 1.02, 1], opacity: 1, y: 0 }
+                : { scale: 1, opacity: 1, y: 0 }
+            }
+            transition={pillBouncing ? { duration: 0.45, ease: "easeOut" } : { type: "spring", stiffness: 260, damping: 20 }}
+            className="fixed z-[9999] select-none"
+            style={{
+              ...(pillPos
+                ? { left: pillPos.x, top: pillPos.y, transform: "none" }
+                : { left: "50%", bottom: "80px", transform: "translateX(-50%)" }),
+              pointerEvents: isFocusModeActive ? "none" : undefined,
+            }}
+            onPointerDown={handlePillPointerDown}
+            onPointerMove={handlePillPointerMove}
+            onPointerUp={handlePillPointerUp}
+            onPointerLeave={handlePillPointerUp}
+          >
+            {/* Style panel — build mode */}
+            <AnimatePresence>
+              {showPillSettings && systemMode === "build" && (
+                <PillStylePanel
+                  style={pillStyle}
+                  onUpdate={updatePillStyle}
+                  onReset={resetPillStyle}
+                  onClose={() => setShowPillSettings(false)}
+                  showLabel={paginationSettings.showLabel}
+                  onToggleLabel={() => setPaginationSettings(s => ({ ...s, showLabel: !s.showLabel }))}
+                  showPagination={paginationSettings.showPagination}
+                  onTogglePagination={() => setPaginationSettings(s => ({ ...s, showPagination: !s.showPagination }))}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* The pill itself */}
+            <div
+              className="flex items-center gap-2 px-4 py-2"
+              style={{
+                background: `rgba(${parseInt(pillStyle.bgColor.slice(1,3),16)},${parseInt(pillStyle.bgColor.slice(3,5),16)},${parseInt(pillStyle.bgColor.slice(5,7),16)},${pillStyle.bgOpacity/100})`,
+                backdropFilter: `blur(${pillStyle.blurAmount}px)`,
+                WebkitBackdropFilter: `blur(${pillStyle.blurAmount}px)`,
+                border: `${pillStyle.borderWidth}px solid rgba(${parseInt(pillStyle.borderColor.slice(1,3),16)},${parseInt(pillStyle.borderColor.slice(3,5),16)},${parseInt(pillStyle.borderColor.slice(5,7),16)},${pillStyle.borderOpacity/100})`,
+                borderRadius: pillStyle.borderRadius,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.08) inset",
+                cursor: systemMode === "build" ? (isDraggingPill ? "grabbing" : "grab") : "default",
+                opacity: paginationSettings.pillOpacity / 100,
+              }}
+            >
+              {/* Page label */}
+              {paginationSettings.showLabel && (
+                editingLabelIdx === activePageIndex ? (
+                  <input
+                    ref={labelInputRef}
+                    value={editingLabelValue}
+                    onChange={e => setEditingLabelValue(e.target.value)}
+                    onBlur={commitLabelEdit}
+                    onKeyDown={e => { if (e.key === "Enter") commitLabelEdit(); if (e.key === "Escape") setEditingLabelIdx(null); }}
+                    className="text-[12px] font-medium text-center outline-none bg-transparent border-b border-white/40 w-20"
+                    style={{ color: `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},${pillStyle.textOpacity/100})` }}
+                    maxLength={20}
+                    autoFocus
+                    onPointerDown={e => e.stopPropagation()}
+                  />
+                ) : (
+                  <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => { if (dashboardPages.length > 1) goToPage((activePageIndex + 1) % dashboardPages.length); }}
+                    onDoubleClick={() => startLabelEdit(activePageIndex)}
+                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: activePageIndex, x: e.clientX, y: e.clientY }); }}
+                    className="text-[12px] font-medium transition-opacity hover:opacity-100"
+                    style={{ color: `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},${pillStyle.textOpacity/100})`, cursor: dashboardPages.length > 1 ? "pointer" : "default" }}
+                    title={dashboardPages.length > 1 ? "Click to switch · double-click to rename" : "Double-click to rename"}
+                  >
+                    {currentPageLabel}
+                  </button>
+                )
+              )}
+
+              {/* Page dots */}
+              {dashboardPages.length > 1 && (
+                <div className="flex items-center gap-1.5">
+                  {dashboardPages.map((page, i) => (
+                    <button
+                      key={page.id}
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={() => goToPage(i)}
+                      onMouseEnter={() => setHoverDotIdx(i)}
+                      onMouseLeave={() => setHoverDotIdx(null)}
+                      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDotMenu({ idx: i, x: e.clientX, y: e.clientY }); }}
+                      draggable={systemMode === "build"}
+                      onDragStart={() => systemMode === "build" && handleDotDragStart(i)}
+                      onDragOver={(e) => systemMode === "build" && handleDotDragOver(i, e)}
+                      onDrop={() => systemMode === "build" && handleDotDrop(i)}
+                      onDragEnd={() => { setDraggingDotIdx(null); setDragOverIdx(null); }}
+                      className="transition-all duration-300 flex-shrink-0"
+                      title={page.label || `Page ${i + 1}`}
+                      style={{
+                        width: i === activePageIndex ? 20 : 6,
+                        height: 6,
+                        borderRadius: 9999,
+                        background: i === activePageIndex
+                          ? `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.9)`
+                          : `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.3)`,
+                        boxShadow: i === activePageIndex ? "0 0 8px rgba(255,255,255,0.6)" : "none",
+                        outline: draggingDotIdx === i ? "2px solid rgba(255,255,255,0.5)" : dragOverIdx === i ? "2px dashed rgba(255,255,255,0.4)" : "none",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Add page */}
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={addPage}
+                title="Add page"
+                className="flex items-center justify-center transition-all hover:scale-110 active:scale-95 ml-1"
+                style={{ color: `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.45)` }}
+              >
+                <Plus size={14} strokeWidth={2} />
+              </button>
+
+              {/* Build mode style button */}
+              {systemMode === "build" && (
+                <button
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={() => setShowPillSettings(v => !v)}
+                  className="flex items-center justify-center transition-all ml-1"
+                  style={{ color: showPillSettings ? `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.9)` : `rgba(${parseInt(pillStyle.textColor.slice(1,3),16)},${parseInt(pillStyle.textColor.slice(3,5),16)},${parseInt(pillStyle.textColor.slice(5,7),16)},0.3)` }}
+                  title="Pill style"
+                >
+                  <LayoutGrid size={12} />
+                </button>
+              )}
+            </div>
+          </motion.div>
+        );
+      })()}
+
+      {/* Build mode: show pagination button when hidden */}
+      {!paginationSettings.showPagination && systemMode === "build" && (
+        <button
+          onClick={() => setPaginationSettings(s => ({ ...s, showPagination: true }))}
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] px-3 py-1.5 rounded-full text-[10px] font-medium"
+          style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.12)" }}
+        >
+          Show pill
+        </button>
+      )}
 
       {/* Dot context menu (right-click) */}
       {dotMenu && (
