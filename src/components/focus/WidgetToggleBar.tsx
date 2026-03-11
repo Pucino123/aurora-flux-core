@@ -274,7 +274,7 @@ const WidgetToggleBar = () => {
           className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${widgetMinimalMode ? "bg-white/15 text-white shadow-[0_0_12px_hsl(var(--aurora-violet)/0.3)]" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
           {widgetMinimalMode ? <EyeOff size={15} /> : <Eye size={15} />}
         </button>
-        <button onClick={resetDashboard} title="Reset dashboard"
+        <button onClick={() => { resetDashboard(); window.dispatchEvent(new CustomEvent("reset-pill-pos")); }} title="Reset dashboard"
           className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all">
           <RotateCcw size={15} />
         </button>
