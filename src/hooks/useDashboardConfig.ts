@@ -9,6 +9,60 @@ const DEFAULT_ACTIVE_WIDGETS = [
   "project-status", "recent-notes",
 ];
 
+// Default grid layout for new users — provides a polished starting experience
+const DEFAULT_LAYOUTS = {
+  lg: [
+    { i: "smart-plan",      x: 0, y: 0, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "top-tasks",       x: 4, y: 0, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "savings-ring",    x: 8, y: 0, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "budget-preview",  x: 0, y: 6, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "weekly-workout",  x: 4, y: 6, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "gamification",    x: 8, y: 6, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "project-status",  x: 0, y: 12, w: 6, h: 6, minW: 3, minH: 4 },
+    { i: "recent-notes",    x: 6, y: 12, w: 6, h: 6, minW: 3, minH: 4 },
+  ],
+  md: [
+    { i: "smart-plan",      x: 0, y: 0,  w: 5, h: 6 },
+    { i: "top-tasks",       x: 5, y: 0,  w: 5, h: 6 },
+    { i: "savings-ring",    x: 0, y: 6,  w: 5, h: 6 },
+    { i: "budget-preview",  x: 5, y: 6,  w: 5, h: 6 },
+    { i: "weekly-workout",  x: 0, y: 12, w: 5, h: 6 },
+    { i: "gamification",    x: 5, y: 12, w: 5, h: 6 },
+    { i: "project-status",  x: 0, y: 18, w: 10, h: 6 },
+    { i: "recent-notes",    x: 0, y: 24, w: 10, h: 6 },
+  ],
+  sm: [
+    { i: "smart-plan",      x: 0, y: 0,  w: 6, h: 5 },
+    { i: "top-tasks",       x: 0, y: 5,  w: 6, h: 5 },
+    { i: "savings-ring",    x: 0, y: 10, w: 6, h: 5 },
+    { i: "budget-preview",  x: 0, y: 15, w: 6, h: 5 },
+    { i: "weekly-workout",  x: 0, y: 20, w: 6, h: 5 },
+    { i: "gamification",    x: 0, y: 25, w: 6, h: 5 },
+    { i: "project-status",  x: 0, y: 30, w: 6, h: 5 },
+    { i: "recent-notes",    x: 0, y: 35, w: 6, h: 5 },
+  ],
+  xs: [
+    { i: "smart-plan",      x: 0, y: 0,  w: 4, h: 5 },
+    { i: "top-tasks",       x: 0, y: 5,  w: 4, h: 5 },
+    { i: "savings-ring",    x: 0, y: 10, w: 4, h: 5 },
+    { i: "budget-preview",  x: 0, y: 15, w: 4, h: 5 },
+    { i: "weekly-workout",  x: 0, y: 20, w: 4, h: 5 },
+    { i: "gamification",    x: 0, y: 25, w: 4, h: 5 },
+    { i: "project-status",  x: 0, y: 30, w: 4, h: 5 },
+    { i: "recent-notes",    x: 0, y: 35, w: 4, h: 5 },
+  ],
+  xxs: [
+    { i: "smart-plan",      x: 0, y: 0,  w: 2, h: 5 },
+    { i: "top-tasks",       x: 0, y: 5,  w: 2, h: 5 },
+    { i: "savings-ring",    x: 0, y: 10, w: 2, h: 5 },
+    { i: "budget-preview",  x: 0, y: 15, w: 2, h: 5 },
+    { i: "weekly-workout",  x: 0, y: 20, w: 2, h: 5 },
+    { i: "gamification",    x: 0, y: 25, w: 2, h: 5 },
+    { i: "project-status",  x: 0, y: 30, w: 2, h: 5 },
+    { i: "recent-notes",    x: 0, y: 35, w: 2, h: 5 },
+  ],
+};
+
 interface DashboardConfig {
   activeWidgets: string[];
   widgetNames: Record<string, string>;

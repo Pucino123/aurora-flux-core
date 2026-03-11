@@ -163,7 +163,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background overflow-hidden relative">
+    <div className="bg-background overflow-hidden relative" style={{ minHeight: "100dvh" }}>
       <AuroraBackground intensity={view === "dashboard" ? "subtle" : "full"} />
       <AnimatePresence mode="wait">
         {view === "landing" ? (
