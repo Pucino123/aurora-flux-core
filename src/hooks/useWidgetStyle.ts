@@ -60,10 +60,16 @@ export function getGlobalStyle(): WidgetStyle {
   return { ...DEFAULT_WIDGET_STYLE, ...(cachedStyles[GLOBAL_STYLE_KEY] || {}) };
 }
 
+// Per-widget style overrides (different defaults from global default)
+const WIDGET_DEFAULTS: Partial<Record<string, Partial<WidgetStyle>>> = {
+  clock: { backgroundOpacity: 0, borderWidth: 0, blurAmount: 0, borderRadius: 0 },
+};
+
 export function getWidgetStyle(id: string): WidgetStyle {
   const global = cachedStyles[GLOBAL_STYLE_KEY] || {};
+  const widgetDefault = WIDGET_DEFAULTS[id] || {};
   const perWidget = cachedStyles[id] || {};
-  return { ...DEFAULT_WIDGET_STYLE, ...global, ...perWidget };
+  return { ...DEFAULT_WIDGET_STYLE, ...widgetDefault, ...global, ...perWidget };
 }
 
 export function setWidgetStyle(id: string, updates: Partial<WidgetStyle>) {

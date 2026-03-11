@@ -94,16 +94,16 @@ const DEFAULT_STATE: FocusState = {
   taskTimeLog: {},
   quoteFontSize: 14,
   widgetMinimalMode: false,
-  clockFontSize: 86,
+  clockFontSize: 100,
   clockFont: "inter",
-  clockColor: "rgba(255,255,255,1)",
+  clockColor: "rgba(255,255,255,0.92)",
   clockWeight: 200,
-  clockShowDate: true,
+  clockShowDate: false,
   clockShowSeconds: false,
-  clockShowGreeting: true,
+  clockShowGreeting: false,
   clockSecondaryTz: "",
   clockGlassEffect: false,
-  clockDepthShadow: true,
+  clockDepthShadow: false,
   systemMode: "focus",
   desktopFolderPositions: {},
   desktopFolderOpacities: {},
@@ -165,6 +165,14 @@ function loadState(): FocusState {
       // Users can move them in build mode; default positions are set in the widget components.
       delete merged.widgetPositions.clock;
       delete merged.widgetPositions.planner;
+      // Clear saved clock widget style so it defaults to transparent (floating text over bg)
+      try {
+        const styles = JSON.parse(localStorage.getItem("flux-widget-styles") || "{}");
+        if (styles.clock) {
+          delete styles.clock;
+          localStorage.setItem("flux-widget-styles", JSON.stringify(styles));
+        }
+      } catch {}
       return merged;
     }
   } catch {}

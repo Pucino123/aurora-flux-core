@@ -35,10 +35,10 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
   const defaultClockPos = React.useMemo(() => {
     const w = typeof window !== "undefined" ? window.innerWidth : 1280;
     const h = typeof window !== "undefined" ? window.innerHeight : 800;
-    const clockW = 400;
+    const clockW = 460;
     return {
       x: Math.round((w - clockW) / 2),
-      y: Math.round(h * 0.04),
+      y: Math.round(h * 0.06),
     };
   }, []);
 
@@ -92,12 +92,12 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
   } catch {}
 
   const fontFamily = FONT_MAP[clockFont] || FONT_MAP.inter;
-  const secondsSize = Math.max(16, clockFontSize * 0.5);
-  const greetingSize = Math.max(11, clockFontSize * 0.22);
-  const dateSize = Math.max(11, clockFontSize * 0.18);
+  const secondsSize = Math.max(16, clockFontSize * 0.45);
+  const greetingSize = Math.max(11, clockFontSize * 0.18);
+  const dateSize = Math.max(11, clockFontSize * 0.14);
 
   const textShadow = clockDepthShadow
-    ? `0 4px 20px rgba(0,0,0,0.5), 0 0 40px rgba(0,0,0,0.3)`
+    ? `0 2px 12px rgba(0,0,0,0.3)`
     : "none";
 
   const glassTextStyle: React.CSSProperties = clockGlassEffect
@@ -133,13 +133,14 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
       id="clock"
       title="Clock"
       defaultPosition={defaultClockPos}
-      defaultSize={{ w: 400, h: 260 }}
-      fontSizeControl={{ value: clockFontSize, set: setClockFontSize, min: 30, max: 120, step: 10 }}
+      defaultSize={{ w: 460, h: 160 }}
+      fontSizeControl={{ value: clockFontSize, set: setClockFontSize, min: 40, max: 140, step: 10 }}
       onEditAction={onOpenEditor}
       containerStyle={editorOpen ? { zIndex: 70, position: 'relative' } : undefined}
       fixedPosition
+      autoHeight
     >
-      <div className="relative flex flex-col items-center justify-center h-full gap-2 group">
+      <div className="relative flex flex-col items-center justify-center h-full gap-1.5 group">
 
         {/* Productivity ring */}
         {showRing && (
@@ -164,21 +165,22 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
 
         <div className="relative z-[1]">
           <div
-            className="tracking-widest tabular-nums text-center"
+            className="tracking-[0.04em] tabular-nums text-center select-none"
             style={{
-              fontFamily: "inherit",
-              fontSize: "inherit",
+              fontFamily,
+              fontSize: `${clockFontSize}px`,
               fontWeight: clockWeight,
-              color: clockGlassEffect ? undefined : "inherit",
-              lineHeight: 1.1,
+              color: clockGlassEffect ? undefined : clockColor,
+              lineHeight: 1.0,
               textShadow,
               transition: "all 0.3s ease",
+              letterSpacing: "0.04em",
               ...glassTextStyle,
             }}
           >
             {hours}:{minutes}
             {clockShowSeconds && (
-              <span style={{ fontSize: `${secondsSize}px`, opacity: 0.3, marginLeft: 4 }}>{seconds}</span>
+              <span style={{ fontSize: `${secondsSize}px`, opacity: 0.35, marginLeft: 6 }}>{seconds}</span>
             )}
           </div>
           {systemMode === "build" && (
@@ -187,25 +189,25 @@ const ClockWidget = ({ onOpenEditor, editorOpen }: ClockWidgetProps) => {
         </div>
 
         {!hideSubtitle && clockShowGreeting && (
-          <p style={{ color: "inherit", opacity: 0.5, fontSize: `${greetingSize}px`, fontFamily }} className="font-medium relative z-[1]">
+          <p style={{ color: clockColor, opacity: 0.5, fontSize: `${greetingSize}px`, fontFamily }} className="font-medium relative z-[1]">
             {displayName ? `${greeting}, ${displayName}` : greeting}
           </p>
         )}
 
         {!hideSubtitle && clockShowDate && (
-          <p style={{ color: "inherit", opacity: 0.25, fontSize: `${dateSize}px`, marginTop: 2 }} className="relative z-[1]">
+          <p style={{ color: clockColor, opacity: 0.3, fontSize: `${dateSize}px`, marginTop: 2, letterSpacing: "0.05em" }} className="relative z-[1] font-light">
             {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
           </p>
         )}
 
         {!hideSubtitle && secondaryTime && (
-          <p style={{ color: "inherit", opacity: 0.2, fontSize: `${dateSize}px`, marginTop: 4 }} className="relative z-[1]">
+          <p style={{ color: clockColor, opacity: 0.2, fontSize: `${dateSize}px`, marginTop: 4 }} className="relative z-[1]">
             {tzLabel} · {secondaryTime}
           </p>
         )}
 
         {!hideSubtitle && showRing && (
-          <p style={{ color: "inherit", opacity: 0.15, fontSize: "10px", marginTop: 4 }} className="relative z-[1]">
+          <p style={{ color: clockColor, opacity: 0.15, fontSize: "10px", marginTop: 4 }} className="relative z-[1]">
             {tasksDone}/{tasksTotal} tasks complete
           </p>
         )}
