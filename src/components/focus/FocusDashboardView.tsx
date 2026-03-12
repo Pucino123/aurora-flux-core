@@ -1034,11 +1034,16 @@ const FocusContent = () => {
     const doc = await createDocument(title, type, null);
     if (doc) {
       if (pos) updatePageDocPosition(doc.id, pos);
-      // Register doc to this page only
-      setPages(prev => prev.map((p, i) => i === activePageIndex
-        ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
-        : p
-      ));
+      // Register doc to this page only — migrate legacy undefined → explicit list
+      setPages(prev => prev.map((p, i) => {
+        if (i !== activePageIndex) return p;
+        if (p.visibleDocIds === undefined) {
+          const allExisting = desktopDocs.map(d => d.id);
+          return { ...p, visibleDocIds: Array.from(new Set([...allExisting, doc.id])) };
+        }
+        if (p.visibleDocIds.includes(doc.id)) return p;
+        return { ...p, visibleDocIds: [...p.visibleDocIds, doc.id] };
+      }));
     }
     contextMenuPosRef.current = null;
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
