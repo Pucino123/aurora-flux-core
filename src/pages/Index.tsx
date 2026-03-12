@@ -165,21 +165,19 @@ const Index = () => {
   return (
     <div className="bg-background overflow-hidden relative" style={{ minHeight: "100dvh" }}>
       <AuroraBackground intensity={view === "dashboard" ? "subtle" : "full"} />
-      <AnimatePresence mode="wait">
-        {view === "landing" ? (
-          <LandingPage key="landing" onEnter={handleEnter} />
-        ) : (
-          <Dashboard
-            key="dashboard"
-            initialPrompt={prompt}
-            pendingPlan={pendingPlan}
-            onPlanConsumed={() => setPendingPlan(null)}
-            sidebarVisible={sidebarVisible}
-            onToggleSidebar={() => setSidebarVisible((v) => !v)}
-            focusMode={false}
-          />
-        )}
-      </AnimatePresence>
+      {/* No AnimatePresence here — it causes blank/grey screen on mobile Safari */}
+      {view === "landing" ? (
+        <LandingPage onEnter={handleEnter} />
+      ) : (
+        <Dashboard
+          initialPrompt={prompt}
+          pendingPlan={pendingPlan}
+          onPlanConsumed={() => setPendingPlan(null)}
+          sidebarVisible={sidebarVisible}
+          onToggleSidebar={() => setSidebarVisible((v) => !v)}
+          focusMode={false}
+        />
+      )}
       {/* Global overlays */}
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
       <KeyboardShortcutsSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
