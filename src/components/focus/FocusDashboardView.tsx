@@ -905,6 +905,22 @@ const FocusContent = () => {
     window.addEventListener("dashboard:restore-doc", handler);
     return () => window.removeEventListener("dashboard:restore-doc", handler);
   }, [refetchDesktopDocs]);
+
+  // Listen for folder creation from sidebar/Dashboard — register to current page
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const folderId = (e as CustomEvent<{ folderId: string }>).detail?.folderId;
+      if (!folderId) return;
+      setPages(prev => prev.map((p, i) => {
+        if (i !== activePageIndex) return p;
+        const visible = p.visibleFolderIds ?? [];
+        if (visible.includes(folderId)) return p;
+        return { ...p, visibleFolderIds: [...visible, folderId] };
+      }));
+    };
+    window.addEventListener("dashboard:register-folder", handler);
+    return () => window.removeEventListener("dashboard:register-folder", handler);
+  }, [activePageIndex, setPages]);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
 
