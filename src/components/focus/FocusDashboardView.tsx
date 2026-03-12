@@ -1047,7 +1047,7 @@ const FocusContent = () => {
     }
     contextMenuPosRef.current = null;
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-  }, [createDocument, updatePageDocPosition, activePageIndex, setPages]);
+  }, [createDocument, updatePageDocPosition, activePageIndex, setPages, desktopDocs]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
