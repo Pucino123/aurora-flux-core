@@ -111,6 +111,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
     setActiveFolder(folder.id);
     setActiveView("focus");
     toast.success(`Plan created: ${createdTasks.length} tasks in "${folderName}"`);
+    // Notify FocusDashboardView to register this folder on the current active page
+    window.dispatchEvent(new CustomEvent("dashboard:register-folder", { detail: { folderId: folder.id } }));
   }, [createTask, createFolder, createBlock, setActiveFolder, setActiveView]);
 
   const handleCreateFolder = useCallback(async (data: { title: string; color: string | null; icon: string; subfolders?: string[] }) => {
