@@ -116,6 +116,8 @@ const Dashboard = ({ initialPrompt, pendingPlan, onPlanConsumed, sidebarVisible,
   const handleCreateFolder = useCallback(async (data: { title: string; color: string | null; icon: string; subfolders?: string[] }) => {
     const folder = await createFolder({ title: data.title, type: "project", color: data.color, icon: data.icon });
     if (folder) {
+      // Notify FocusDashboardView to register this folder on the current page
+      window.dispatchEvent(new CustomEvent("dashboard:register-folder", { detail: { folderId: folder.id } }));
       setActiveFolder(folder.id);
       setShowCreateModal(false);
     }

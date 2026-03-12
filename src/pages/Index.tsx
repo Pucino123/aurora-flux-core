@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
-import { AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import AuroraBackground from "../components/AuroraBackground";
 import LandingPage from "../components/LandingPage";
