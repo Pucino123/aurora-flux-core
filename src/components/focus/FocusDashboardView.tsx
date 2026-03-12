@@ -906,21 +906,28 @@ const FocusContent = () => {
     return () => window.removeEventListener("dashboard:restore-doc", handler);
   }, [refetchDesktopDocs]);
 
-  // Listen for folder creation from sidebar/Dashboard — register to current page
+  // Listen for folder creation from sidebar/Dashboard — register to current page only.
+  // IMPORTANT: If page has visibleFolderIds === undefined (legacy "show all" mode), we migrate
+  // it to an explicit list of ALL current folders + the new one, so future pages stay isolated.
   useEffect(() => {
     const handler = (e: Event) => {
       const folderId = (e as CustomEvent<{ folderId: string }>).detail?.folderId;
       if (!folderId) return;
       setPages(prev => prev.map((p, i) => {
         if (i !== activePageIndex) return p;
-        const visible = p.visibleFolderIds ?? [];
-        if (visible.includes(folderId)) return p;
-        return { ...p, visibleFolderIds: [...visible, folderId] };
+        // Migrate legacy "undefined" → explicit list (all existing folders + new one)
+        if (p.visibleFolderIds === undefined) {
+          const allExisting = folderTree.map(f => f.id);
+          const merged = Array.from(new Set([...allExisting, folderId]));
+          return { ...p, visibleFolderIds: merged };
+        }
+        if (p.visibleFolderIds.includes(folderId)) return p;
+        return { ...p, visibleFolderIds: [...p.visibleFolderIds, folderId] };
       }));
     };
     window.addEventListener("dashboard:register-folder", handler);
     return () => window.removeEventListener("dashboard:register-folder", handler);
-  }, [activePageIndex, setPages]);
+  }, [activePageIndex, setPages, folderTree]);
   const [clockEditorOpen, setClockEditorOpen] = useState(false);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
 
@@ -1027,15 +1034,20 @@ const FocusContent = () => {
     const doc = await createDocument(title, type, null);
     if (doc) {
       if (pos) updatePageDocPosition(doc.id, pos);
-      // Register doc to this page only
-      setPages(prev => prev.map((p, i) => i === activePageIndex
-        ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
-        : p
-      ));
+      // Register doc to this page only — migrate legacy undefined → explicit list
+      setPages(prev => prev.map((p, i) => {
+        if (i !== activePageIndex) return p;
+        if (p.visibleDocIds === undefined) {
+          const allExisting = desktopDocs.map(d => d.id);
+          return { ...p, visibleDocIds: Array.from(new Set([...allExisting, doc.id])) };
+        }
+        if (p.visibleDocIds.includes(doc.id)) return p;
+        return { ...p, visibleDocIds: [...p.visibleDocIds, doc.id] };
+      }));
     }
     contextMenuPosRef.current = null;
     toast.success(`${type === "text" ? "Document" : "Spreadsheet"} created`);
-  }, [createDocument, updatePageDocPosition, activePageIndex, setPages]);
+  }, [createDocument, updatePageDocPosition, activePageIndex, setPages, desktopDocs]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.desktop-folder, [data-widget], button, input, textarea')) return;
@@ -1804,10 +1816,15 @@ const FocusContent = () => {
                 try { localStorage.setItem(`flux_doc_light_${doc.id}`, "1"); } catch {}
               }
               if (pos) updatePageDocPosition(doc.id, pos);
-              setPages(prev => prev.map((p, i) => i === activePageIndex
-                ? { ...p, visibleDocIds: [...(p.visibleDocIds ?? []), doc.id] }
-                : p
-              ));
+              setPages(prev => prev.map((p, i) => {
+                if (i !== activePageIndex) return p;
+                if (p.visibleDocIds === undefined) {
+                  const allExisting = desktopDocs.map(d => d.id);
+                  return { ...p, visibleDocIds: Array.from(new Set([...allExisting, doc.id])) };
+                }
+                if (p.visibleDocIds.includes(doc.id)) return p;
+                return { ...p, visibleDocIds: [...p.visibleDocIds, doc.id] };
+              }));
             }
             contextMenuPosRef.current = null;
             toast.success(`${title} created`);
@@ -1914,7 +1931,7 @@ const FocusContent = () => {
             style={{
               ...(pillPos
                 ? { left: pillPos.x, top: pillPos.y, transform: "none" }
-                : { left: "50%", bottom: "88px", transform: "translateX(-50%)" }),
+                : { left: "50%", bottom: "28px", transform: "translateX(-50%)" }),
               pointerEvents: isFocusModeActive ? "none" : undefined,
             }}
             onPointerDown={handlePillPointerDown}
