@@ -58,6 +58,7 @@ import FolderWindowContent from "./FolderWindowContent";
 import { useFocusMode } from "@/context/FocusModeContext";
 import { useTrash } from "@/context/TrashContext";
 import FocusIntentionModal from "./FocusIntentionModal";
+import SearchWidget from "./SearchWidget";
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
@@ -1458,6 +1459,11 @@ const FocusContent = () => {
               {pageActiveWidgets.includes("council") && <FocusCouncilWidget key="council" />}
               {pageActiveWidgets.includes("aura") && <AuraWidget key="aura" />}
               {pageActiveWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
+              {pageActiveWidgets.includes("search") && (
+                <div key="search" className="fixed top-8 left-1/2 -translate-x-1/2 z-[9990]" style={{ width: "min(480px, 92vw)" }}>
+                  <SearchWidget />
+                </div>
+              )}
               {/* Aura-spawned image widgets */}
               {auraImages.map(img => (
                 <AuraImageWidget
@@ -1914,7 +1920,7 @@ const FocusContent = () => {
             style={{
               ...(pillPos
                 ? { left: pillPos.x, top: pillPos.y, transform: "none" }
-                : { left: "50%", bottom: "88px", transform: "translateX(-50%)" }),
+                : { left: "50%", bottom: "28px", transform: "translateX(-50%)" }),
               pointerEvents: isFocusModeActive ? "none" : undefined,
             }}
             onPointerDown={handlePillPointerDown}
