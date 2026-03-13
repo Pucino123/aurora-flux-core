@@ -1459,6 +1459,11 @@ const FocusContent = () => {
               {pageActiveWidgets.includes("council") && <FocusCouncilWidget key="council" />}
               {pageActiveWidgets.includes("aura") && <AuraWidget key="aura" />}
               {pageActiveWidgets.includes("routine") && <RoutineBuilderWidget key="routine" />}
+              {pageActiveWidgets.includes("search") && (
+                <div key="search" className="fixed top-8 left-1/2 -translate-x-1/2 z-[9990]" style={{ width: "min(480px, 92vw)" }}>
+                  <SearchWidget />
+                </div>
+              )}
               {/* Aura-spawned image widgets */}
               {auraImages.map(img => (
                 <AuraImageWidget
