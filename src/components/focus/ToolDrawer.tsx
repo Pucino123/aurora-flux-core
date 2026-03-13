@@ -654,7 +654,7 @@ const ToolDrawer = ({ pageActiveWidgets, onTogglePageWidget }: ToolDrawerProps =
               transformOrigin: "50% 100%",
               ...(toolbarPos
                 ? { left: toolbarPos.x, bottom: `calc(100vh - ${toolbarPos.y}px + 8px)`, top: "auto", transform: "none" }
-                : { left: "50%", bottom: "88px", top: "auto", transform: "translateX(-50%)" }),
+                : { left: "50%", bottom: "64px", top: "auto", transform: "translateX(-50%)" }),
             }}
             className="fixed z-[10100] w-[92vw] max-w-[520px] p-4 rounded-2xl bg-black/60 backdrop-blur-[24px] border border-white/15 shadow-2xl"
           >
