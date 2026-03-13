@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, ScanFace, MoreHorizontal, Loader2, ChevronDown } from "lucide-react";
+import { Search, X, Loader2, ChevronDown, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
+import DraggableWidget from "./DraggableWidget";
 
 interface SearchResult {
   query: string;
@@ -10,7 +11,7 @@ interface SearchResult {
   loading: boolean;
 }
 
-const SearchWidget = () => {
+const SearchInner = () => {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -19,11 +20,8 @@ const SearchWidget = () => {
 
   const handleSearch = async (q: string) => {
     if (!q.trim()) return;
-
-    // Cancel any in-flight request
     abortRef.current?.abort();
     abortRef.current = new AbortController();
-
     setResult({ query: q, answer: "", loading: true });
     setExpanded(true);
 
@@ -42,13 +40,11 @@ const SearchWidget = () => {
       });
 
       if (error) throw error;
-
       const answer =
         data?.choices?.[0]?.message?.content ||
         data?.content ||
         data?.answer ||
         "Ingen svar tilgængeligt.";
-
       setResult({ query: q, answer, loading: false });
     } catch (err: any) {
       if (err?.name === "AbortError") return;
@@ -75,23 +71,10 @@ const SearchWidget = () => {
   };
 
   return (
-    <motion.div
-      layout
-      className="w-full"
-      style={{ minWidth: 280, maxWidth: 480 }}
-    >
-      {/* Search pill */}
-      <div
-        className="flex items-center gap-2 px-4 py-2.5 rounded-full"
-        style={{
-          background: "rgba(255,255,255,0.08)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255,255,255,0.14)",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
-        }}
-      >
-        <Search size={14} className="text-white/40 shrink-0" />
+    <div className="flex flex-col w-full">
+      {/* Search bar row */}
+      <div className="flex items-center gap-2 px-3 py-2">
+        <Search size={13} className="text-white/40 shrink-0" />
         <input
           ref={inputRef}
           value={query}
@@ -100,80 +83,78 @@ const SearchWidget = () => {
           placeholder="Søg på internettet"
           className="flex-1 bg-transparent text-[13px] text-white/80 placeholder:text-white/35 outline-none min-w-0"
           style={{ fontWeight: 400, letterSpacing: "0.01em" }}
+          onPointerDown={e => e.stopPropagation()}
         />
-        {query ? (
-          <button onClick={clear} className="text-white/30 hover:text-white/70 transition-colors shrink-0">
-            <X size={13} />
-          </button>
-        ) : (
-          <div className="flex items-center gap-2 shrink-0">
-            <button className="text-white/25 hover:text-white/50 transition-colors">
-              <ScanFace size={14} />
+        <div className="flex items-center gap-1.5 shrink-0">
+          {query ? (
+            <button
+              onClick={clear}
+              className="text-white/30 hover:text-white/70 transition-colors p-1 rounded-md hover:bg-white/10"
+            >
+              <X size={12} />
             </button>
-            <button className="text-white/25 hover:text-white/50 transition-colors">
-              <MoreHorizontal size={14} />
+          ) : (
+            <button
+              onClick={() => handleSearch(query)}
+              className="text-white/25 hover:text-white/50 transition-colors p-1 rounded-md hover:bg-white/10"
+            >
+              <Globe size={13} />
             </button>
-          </div>
-        )}
+          )}
+          {query && (
+            <button
+              onClick={() => handleSearch(query)}
+              className="px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors"
+              style={{ background: "rgba(139,92,246,0.25)", color: "rgba(196,170,255,0.9)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.40)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.25)"; }}
+            >
+              Søg
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Answer panel */}
       <AnimatePresence>
         {expanded && result && (
           <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 420, damping: 32 }}
-            className="mt-2 rounded-2xl overflow-hidden"
-            style={{
-              background: "rgba(10,8,20,0.88)",
-              backdropFilter: "blur(32px)",
-              WebkitBackdropFilter: "blur(32px)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
-              maxHeight: 320,
-              overflowY: "auto",
-            }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            className="overflow-hidden"
           >
-            <div className="p-4">
+            <div className="border-t border-white/[0.08] px-3 py-3 max-h-[260px] overflow-y-auto">
               {/* Query chip */}
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                  <Search size={10} className="text-primary" />
-                </div>
-                <span className="text-[11px] text-white/40 truncate">{result.query}</span>
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <Search size={10} className="text-white/30 shrink-0" />
+                <span className="text-[10px] text-white/35 truncate italic">{result.query}</span>
               </div>
 
-              {/* Answer */}
               {result.loading ? (
-                <div className="flex items-center gap-2 text-white/40 py-2">
-                  <Loader2 size={14} className="animate-spin" />
+                <div className="flex items-center gap-2 text-white/40 py-1">
+                  <Loader2 size={13} className="animate-spin" />
                   <span className="text-[12px]">Søger…</span>
                 </div>
               ) : (
-                <div
-                  className="text-[13px] text-white/80 leading-relaxed prose prose-sm prose-invert max-w-none"
-                  style={{
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                  }}
-                >
+                <div className="text-[12.5px] text-white/75 leading-relaxed">
                   <ReactMarkdown
                     components={{
-                      p: ({ children }) => <p className="mb-2 last:mb-0 text-white/80">{children}</p>,
-                      strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
-                      ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
-                      li: ({ children }) => <li className="text-white/75">{children}</li>,
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      strong: ({ children }) => <strong className="text-white/90 font-semibold">{children}</strong>,
+                      ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-0.5">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5">{children}</ol>,
+                      li: ({ children }) => <li className="text-white/70">{children}</li>,
                       code: ({ children }) => (
-                        <code className="px-1.5 py-0.5 rounded text-[11px] font-mono" style={{ background: "rgba(255,255,255,0.1)", color: "rgba(200,180,255,0.9)" }}>
+                        <code className="px-1.5 py-0.5 rounded text-[11px] font-mono"
+                          style={{ background: "rgba(255,255,255,0.1)", color: "rgba(200,180,255,0.9)" }}>
                           {children}
                         </code>
                       ),
-                      h1: ({ children }) => <h1 className="text-[15px] font-bold text-white mb-2">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-[14px] font-semibold text-white mb-1.5">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-[13px] font-semibold text-white/90 mb-1">{children}</h3>,
+                      h1: ({ children }) => <h1 className="text-[14px] font-bold text-white mb-1.5">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-[13px] font-semibold text-white/90 mb-1">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-[12px] font-semibold text-white/80 mb-0.5">{children}</h3>,
                     }}
                   >
                     {result.answer}
@@ -182,15 +163,14 @@ const SearchWidget = () => {
               )}
             </div>
 
-            {/* Footer */}
             {!result.loading && (
-              <div className="flex items-center justify-between px-4 py-2 border-t border-white/[0.07]">
-                <span className="text-[10px] text-white/25">Drevet af Aura AI</span>
+              <div className="flex items-center justify-between px-3 py-1.5 border-t border-white/[0.06]">
+                <span className="text-[9px] text-white/20">Drevet af Aura AI</span>
                 <button
-                  onClick={() => { setExpanded(false); }}
+                  onClick={() => setExpanded(false)}
                   className="text-[10px] text-white/30 hover:text-white/60 flex items-center gap-1 transition-colors"
                 >
-                  <ChevronDown size={11} />
+                  <ChevronDown size={10} />
                   Luk
                 </button>
               </div>
@@ -198,8 +178,22 @@ const SearchWidget = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
+
+const SearchWidget = () => (
+  <DraggableWidget
+    id="search"
+    title="Søg"
+    defaultPosition={{ x: window.innerWidth / 2 - 240, y: 32 }}
+    defaultSize={{ w: 480, h: 52 }}
+    autoHeight
+    hideHeader
+    overflowVisible
+  >
+    <SearchInner />
+  </DraggableWidget>
+);
 
 export default SearchWidget;
