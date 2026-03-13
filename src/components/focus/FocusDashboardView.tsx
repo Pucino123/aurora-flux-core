@@ -1920,7 +1920,7 @@ const FocusContent = () => {
             style={{
               ...(pillPos
                 ? { left: pillPos.x, top: pillPos.y, transform: "none" }
-                : { left: "50%", bottom: "28px", transform: "translateX(-50%)" }),
+                : { left: "50%", bottom: "68px", transform: "translateX(-50%)" }),
               pointerEvents: isFocusModeActive ? "none" : undefined,
             }}
             onPointerDown={handlePillPointerDown}
