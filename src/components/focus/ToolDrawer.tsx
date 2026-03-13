@@ -50,6 +50,7 @@ const TOOL_CATEGORIES = [
       { id: "music", label: "Music", icon: Music },
       { id: "quote", label: "Quote", icon: MessageSquareQuote },
       { id: "breathing", label: "Breathe", icon: Wind },
+      { id: "search", label: "Søg", icon: Globe },
     ],
   },
 ];
