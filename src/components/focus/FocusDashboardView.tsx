@@ -58,6 +58,7 @@ import FolderWindowContent from "./FolderWindowContent";
 import { useFocusMode } from "@/context/FocusModeContext";
 import { useTrash } from "@/context/TrashContext";
 import FocusIntentionModal from "./FocusIntentionModal";
+import SearchWidget from "./SearchWidget";
 
 const BuildModeGrid = () => (
   <div className="absolute inset-0 z-10 pointer-events-none" style={{
