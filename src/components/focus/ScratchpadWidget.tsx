@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Cloud, CloudOff } from "lucide-react";
 import DraggableWidget from "./DraggableWidget";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-const STORAGE_KEY = "flux-scratchpad";
+const LOCAL_KEY = "flux-scratchpad";
 
 const MOCK_TEXT = "• Call Sarah about the eco-project\n• Buy more oat milk\n• Schedule dentist appointment\n\nIdeas for tomorrow:\n- Deep work block 9–11am\n- Draft Q2 OKR proposal\n- Review team feedback";
 
@@ -17,13 +19,56 @@ const timeAgo = (ts: number) => {
 };
 
 const ScratchpadWidget = () => {
+  const { user } = useAuth();
   const [text, setText] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) || MOCK_TEXT; } catch { return MOCK_TEXT; }
+    try { return localStorage.getItem(LOCAL_KEY) || MOCK_TEXT; } catch { return MOCK_TEXT; }
   });
   const [lastSaved, setLastSaved] = useState(Date.now());
+  const [synced, setSynced] = useState(false);
   const [, forceUpdate] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dbTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isInitialLoad = useRef(true);
+
+  // Load from DB on mount
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const saved = (data?.state as any)?.scratchpad_text;
+      if (typeof saved === "string") {
+        setText(saved);
+        localStorage.setItem(LOCAL_KEY, saved);
+        setSynced(true);
+      }
+      isInitialLoad.current = false;
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // Re-sync from DB when tab becomes visible again (iOS background suspend)
+  useEffect(() => {
+    if (!user) return;
+    const onVisible = async () => {
+      if (document.visibilityState !== "visible") return;
+      const { data } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const saved = (data?.state as any)?.scratchpad_text;
+      if (typeof saved === "string") {
+        setText(saved);
+        localStorage.setItem(LOCAL_KEY, saved);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [user]);
 
   // Refresh "last edited" display every 30s
   useEffect(() => {
@@ -32,26 +77,45 @@ const ScratchpadWidget = () => {
   }, []);
 
   useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return () => { if (dbTimer.current) clearTimeout(dbTimer.current); };
   }, []);
 
-  const save = useCallback((val: string) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, val);
+  const saveToDb = useCallback((val: string) => {
+    if (!user || isInitialLoad.current) return;
+    if (dbTimer.current) clearTimeout(dbTimer.current);
+    setSynced(false);
+    dbTimer.current = setTimeout(async () => {
+      localStorage.setItem(LOCAL_KEY, val);
       setLastSaved(Date.now());
-    }, 500);
-  }, []);
+      // Merge into dashboard_state preserving other keys
+      const { data: existing } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const prev = (existing?.state as Record<string, unknown>) || {};
+      await (supabase.from as any)("dashboard_state").upsert(
+        {
+          user_id: user.id,
+          state: { ...prev, scratchpad_text: val },
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
+      setSynced(true);
+    }, 1200);
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setText(val);
-    save(val);
+    // Immediate localStorage backup
+    try { localStorage.setItem(LOCAL_KEY, val); } catch {}
+    saveToDb(val);
   };
 
   const clear = () => {
     setText("");
-    localStorage.removeItem(STORAGE_KEY);
+    saveToDb("");
     setLastSaved(Date.now());
   };
 
@@ -66,8 +130,15 @@ const ScratchpadWidget = () => {
       defaultSize={{ w: 360, h: 300 }}
     >
       <div className="h-full flex flex-col -mt-1">
-        {/* Clear button */}
-        <div className="flex justify-end mb-1 shrink-0">
+        {/* Header actions */}
+        <div className="flex items-center justify-between mb-1 shrink-0">
+          <div className="flex items-center gap-1">
+            {user && (
+              synced
+                ? <Cloud size={9} className="text-emerald-400/50" />
+                : <CloudOff size={9} className="text-white/20" />
+            )}
+          </div>
           <button
             onClick={clear}
             className="flex items-center gap-1 text-[9px] text-white/20 hover:text-white/50 transition-colors"
