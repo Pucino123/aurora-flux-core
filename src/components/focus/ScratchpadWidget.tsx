@@ -135,7 +135,7 @@ const ScratchpadWidget = () => {
           <div className="flex items-center gap-1">
             {user && (
               synced
-                ? <Cloud size={9} className="text-emerald-400/50" />
+                ? <Cloud size={9} className="text-green-400/50" />
                 : <CloudOff size={9} className="text-white/20" />
             )}
           </div>
