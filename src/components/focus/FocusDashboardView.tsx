@@ -445,6 +445,23 @@ const FocusContent = () => {
     localStorage.setItem(PAGINATION_SETTINGS_KEY, JSON.stringify({ ...paginationSettings, pillPosition: pillPos }));
   }, [paginationSettings, pillPos]);
 
+  // Helper: apply cloud pages to state
+  const applyCloudPages = useCallback((pages: any[]) => {
+    setDashboardPages(pages.map((p: any) => ({
+      id: p.id, label: p.label || "Home",
+      activeWidgets: p.activeWidgets,
+      stickyNotes: p.stickyNotes,
+      background: p.background,
+      spaceSettings: p.spaceSettings,
+      folderPositions: p.folderPositions,
+      docPositions: p.docPositions,
+      visibleFolderIds: p.visibleFolderIds,
+      visibleDocIds: p.visibleDocIds,
+      pinnedFolderIds: p.pinnedFolderIds,
+      pinnedDocIds: p.pinnedDocIds,
+    })));
+  }, []);
+
   // Load pages from cloud on mount
   useEffect(() => {
     if (!user) return;
@@ -457,23 +474,33 @@ const FocusContent = () => {
       if (cancelled || !data?.state) return;
       const s = data.state as any;
       if (Array.isArray(s.dashboardPages) && s.dashboardPages.length > 0) {
-        setDashboardPages(s.dashboardPages.map((p: any) => ({
-          id: p.id, label: p.label || "Home",
-          activeWidgets: p.activeWidgets,
-          stickyNotes: p.stickyNotes,
-          background: p.background,
-          spaceSettings: p.spaceSettings,
-          folderPositions: p.folderPositions,
-          docPositions: p.docPositions,
-          visibleFolderIds: p.visibleFolderIds,
-          visibleDocIds: p.visibleDocIds,
-          pinnedFolderIds: p.pinnedFolderIds,
-          pinnedDocIds: p.pinnedDocIds,
-        })));
+        applyCloudPages(s.dashboardPages);
       }
     })();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, applyCloudPages]);
+
+  // Re-hydrate pages from cloud when tab becomes visible again
+  // (handles iOS Safari background suspend / tab switching)
+  useEffect(() => {
+    if (!user) return;
+    const onVisible = async () => {
+      if (document.visibilityState !== "visible") return;
+      const { data } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!data?.state) return;
+      const s = data.state as any;
+      if (Array.isArray(s.dashboardPages) && s.dashboardPages.length > 0) {
+        applyCloudPages(s.dashboardPages);
+        // Also restore localStorage cache
+        localStorage.setItem("flux-dashboard-pages", JSON.stringify(s.dashboardPages));
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [user, applyCloudPages]);
 
   // Sync pages to cloud (debounced)
   const syncPagesToCloud = useCallback((pages: DashboardPage[]) => {

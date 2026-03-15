@@ -251,6 +251,8 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   const initialLoadDone = useRef(false);
 
   // Load from DB on mount (authenticated users)
+  // IMPORTANT: FocusContext uses the "focus_state" sub-key inside dashboard_state.state
+  // to avoid overwriting "dashboardPages" which is managed by FocusDashboardView.
   useEffect(() => {
     let cancelled = false;
     const loadFromDb = async () => {
@@ -262,7 +264,10 @@ export function FocusProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       if (cancelled) return;
       if (data?.state && typeof data.state === "object") {
-        setState(prev => ({ ...DEFAULT_STATE, ...prev, ...(data.state as Partial<FocusState>) }));
+        const s = data.state as Record<string, any>;
+        // Use focus_state sub-key if present; fall back to top-level for backwards compat
+        const focusData = s.focus_state ?? s;
+        setState(prev => ({ ...DEFAULT_STATE, ...prev, ...focusData }));
       }
       initialLoadDone.current = true;
     };
@@ -271,6 +276,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Persist to localStorage + debounced DB upsert
+  // Writes only to "focus_state" sub-key to avoid clobbering "dashboardPages"
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     if (!initialLoadDone.current) return;
@@ -278,15 +284,43 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     dbSyncTimer.current = setTimeout(async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
+      // Read current row first to preserve other sub-keys (dashboardPages etc.)
+      const { data: existing } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      const prev = (existing?.state as Record<string, unknown>) || {};
       await (supabase.from as any)("dashboard_state").upsert(
-        { user_id: session.user.id, state: state as unknown as Record<string, unknown>, updated_at: new Date().toISOString() },
+        {
+          user_id: session.user.id,
+          state: { ...prev, focus_state: state as unknown as Record<string, unknown> },
+          updated_at: new Date().toISOString(),
+        },
         { onConflict: "user_id" }
       );
     }, 800);
     return () => { if (dbSyncTimer.current) clearTimeout(dbSyncTimer.current); };
   }, [state]);
 
-  // Responsive proportional scaling on window resize
+  // Re-hydrate from cloud when tab becomes visible (iOS Safari suspend / tab switch)
+  useEffect(() => {
+    const onVisible = async () => {
+      if (document.visibilityState !== "visible") return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (data?.state && typeof data.state === "object") {
+        const s = data.state as Record<string, any>;
+        const focusData = s.focus_state ?? s;
+        setState(prev => ({ ...DEFAULT_STATE, ...prev, ...focusData }));
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
   useEffect(() => {
     let prevW = window.innerWidth;
     let prevH = window.innerHeight;
