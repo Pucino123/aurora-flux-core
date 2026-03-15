@@ -467,6 +467,22 @@ const NotesWidgetContent = () => {
       });
   }, [user]);
 
+  // ── Re-fetch notes from DB (reusable) ──
+  const fetchNotes = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("id, title, content, tags, updated_at")
+      .eq("user_id", user.id)
+      .eq("type", "note")
+      .order("updated_at", { ascending: false });
+    if (!error && data && data.length > 0) {
+      const loaded = data.map(decodeNote);
+      setNotes(loaded);
+      setSelectedId(prev => loaded.find(n => n.id === prev) ? prev : loaded[0].id);
+    }
+  }, [user]);
+
   // ── Real-time subscription ──
   useEffect(() => {
     if (!user) return;
@@ -502,6 +518,16 @@ const NotesWidgetContent = () => {
       .subscribe();
     return () => { channelRef.current?.unsubscribe(); };
   }, [user]);
+
+  // ── Re-sync from cloud when tab becomes visible (iOS Safari / tab switch) ──
+  useEffect(() => {
+    if (!user) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchNotes();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [user, fetchNotes]);
 
   // ── Debounced save to DB ──
   const saveNote = useCallback(async (note: Note) => {
