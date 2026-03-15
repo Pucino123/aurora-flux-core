@@ -440,7 +440,7 @@ const NotesWidgetContent = () => {
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // ── Load notes from DB ──
+  // ── Load notes from DB (initial) ──
   useEffect(() => {
     if (!user) {
       setNotes(FALLBACK_NOTES);
@@ -466,6 +466,7 @@ const NotesWidgetContent = () => {
         setSelectedId(loaded[0].id);
       });
   }, [user]);
+
 
   // ── Re-fetch notes from DB (reusable) ──
   const fetchNotes = useCallback(async () => {
