@@ -302,7 +302,25 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     return () => { if (dbSyncTimer.current) clearTimeout(dbSyncTimer.current); };
   }, [state]);
 
-  // Responsive proportional scaling on window resize
+  // Re-hydrate from cloud when tab becomes visible (iOS Safari suspend / tab switch)
+  useEffect(() => {
+    const onVisible = async () => {
+      if (document.visibilityState !== "visible") return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data } = await (supabase.from as any)("dashboard_state")
+        .select("state")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (data?.state && typeof data.state === "object") {
+        const s = data.state as Record<string, any>;
+        const focusData = s.focus_state ?? s;
+        setState(prev => ({ ...DEFAULT_STATE, ...prev, ...focusData }));
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
   useEffect(() => {
     let prevW = window.innerWidth;
     let prevH = window.innerHeight;
