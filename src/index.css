@@ -240,6 +240,8 @@
   html {
     /* Ensures 100dvh works correctly on iOS Safari */
     height: -webkit-fill-available;
+    /* Prevent grey flash before theme class applied on iOS */
+    background-color: hsl(240 2% 11%);
   }
 
   body {
