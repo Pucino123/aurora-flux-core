@@ -240,18 +240,22 @@
   html {
     /* Ensures 100dvh works correctly on iOS Safari */
     height: -webkit-fill-available;
-    /* Prevent grey flash before theme class applied on iOS */
-    background-color: hsl(240 2% 11%);
+    /* Force dark background immediately — before ThemeProvider applies .dark class */
+    /* Prevents black/grey flash on iOS Safari (live site) */
+    background-color: hsl(240, 2%, 11%) !important;
+    color-scheme: dark;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    /* Hardcode dark bg directly — @apply bg-background races with theme hydration on mobile */
+    background-color: hsl(240, 2%, 11%);
     font-family: 'Inter', system-ui, sans-serif;
     font-size: 15px;
     line-height: 1.6;
     min-height: 100dvh;
     min-height: -webkit-fill-available;
-    /* Prevent white flash on mobile when app loads */
+    /* Prevent flash on mobile when app loads */
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
   }
