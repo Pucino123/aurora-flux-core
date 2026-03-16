@@ -41,7 +41,7 @@ const DarkModeShortcut = () => {
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
         <AuthProvider>
           <MonetizationProvider>
             <TrashProvider>

@@ -45,7 +45,7 @@ export function MonetizationProvider({ children }: { children: ReactNode }) {
   const [userPlan, setUserPlanState] = useState<UserPlan>(() => {
     return (localStorage.getItem(LS_PLAN) as UserPlan) || "Starter";
   });
-  const [sparksBalance, setSparksBalanceState] = useState<number>(50);
+  const [sparksBalance, setSparksBalanceState] = useState<number>(0);
   const [hasBYOK, setHasBYOKState] = useState(() => localStorage.getItem(LS_BYOK) === "true");
   const [billingOpen, setBillingOpen] = useState(false);
   const [upgradeTarget, setUpgradeTarget] = useState<string | null>(null);
