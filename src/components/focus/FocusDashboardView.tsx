@@ -471,9 +471,11 @@ const FocusContent = () => {
     })));
   }, []);
 
-  // Ref to always hold the latest pages for use in event handlers without stale closures
+  // Refs to always hold the latest values for use in event handlers without stale closures
   const dashboardPagesRef = useRef(dashboardPages);
   useEffect(() => { dashboardPagesRef.current = dashboardPages; }, [dashboardPages]);
+  const activePageIndexRef = useRef(activePageIndex);
+  useEffect(() => { activePageIndexRef.current = activePageIndex; }, [activePageIndex]);
 
   // Core cloud upsert — writes pages WITHOUT debounce
   // Track last local write time so we only apply cloud data if it's strictly newer
