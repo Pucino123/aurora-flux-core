@@ -80,30 +80,45 @@ const ScratchpadWidget = () => {
     return () => { if (dbTimer.current) clearTimeout(dbTimer.current); };
   }, []);
 
+  // Ref so visibilitychange handler always has latest text
+  const textRef = useRef(text);
+  useEffect(() => { textRef.current = text; }, [text]);
+
+  const flushToDb = useCallback(async (val: string) => {
+    if (!user || isInitialLoad.current) return;
+    localStorage.setItem(LOCAL_KEY, val);
+    setLastSaved(Date.now());
+    const { data: existing } = await (supabase.from as any)("dashboard_state")
+      .select("state")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const prev = (existing?.state as Record<string, unknown>) || {};
+    await (supabase.from as any)("dashboard_state").upsert(
+      { user_id: user.id, state: { ...prev, scratchpad_text: val }, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    );
+    setSynced(true);
+  }, [user]);
+
   const saveToDb = useCallback((val: string) => {
     if (!user || isInitialLoad.current) return;
     if (dbTimer.current) clearTimeout(dbTimer.current);
     setSynced(false);
-    dbTimer.current = setTimeout(async () => {
-      localStorage.setItem(LOCAL_KEY, val);
-      setLastSaved(Date.now());
-      // Merge into dashboard_state preserving other keys
-      const { data: existing } = await (supabase.from as any)("dashboard_state")
-        .select("state")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const prev = (existing?.state as Record<string, unknown>) || {};
-      await (supabase.from as any)("dashboard_state").upsert(
-        {
-          user_id: user.id,
-          state: { ...prev, scratchpad_text: val },
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
-      setSynced(true);
-    }, 1200);
-  }, [user]);
+    dbTimer.current = setTimeout(() => flushToDb(val), 1200);
+  }, [user, flushToDb]);
+
+  // Flush immediately when tab is hidden — prevents data loss on tab switch
+  useEffect(() => {
+    if (!user) return;
+    const onHide = () => {
+      if (document.visibilityState === "hidden") {
+        if (dbTimer.current) { clearTimeout(dbTimer.current); dbTimer.current = null; }
+        flushToDb(textRef.current);
+      }
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [user, flushToDb]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;

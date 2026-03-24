@@ -249,6 +249,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<FocusState>(loadState);
   const dbSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadDone = useRef(false);
+  const lastLocalWriteRef = useRef<number>(Date.now());
   // Ref so event handlers always see the latest state without stale closures
   const stateRef = useRef(state);
   useEffect(() => { stateRef.current = state; }, [state]);
@@ -302,12 +303,14 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     if (!initialLoadDone.current) return;
+    lastLocalWriteRef.current = Date.now();
     if (dbSyncTimer.current) clearTimeout(dbSyncTimer.current);
     dbSyncTimer.current = setTimeout(() => flushFocusStateToDb(state), 800);
     return () => { if (dbSyncTimer.current) clearTimeout(dbSyncTimer.current); };
   }, [state, flushFocusStateToDb]);
 
-  // CRITICAL: flush immediately when tab is hidden, re-hydrate when visible
+  // CRITICAL: flush immediately when tab is hidden
+  // On tab-visible: only re-hydrate if suspended for >30s (iOS background)
   useEffect(() => {
     const onVisibilityChange = async () => {
       if (document.visibilityState === "hidden") {
@@ -318,6 +321,9 @@ export function FocusProvider({ children }: { children: ReactNode }) {
         }
         await flushFocusStateToDb(stateRef.current);
       } else if (document.visibilityState === "visible") {
+        // Only re-hydrate if the app was likely suspended (>30s background)
+        const hiddenDuration = Date.now() - lastLocalWriteRef.current;
+        if (hiddenDuration < 30_000) return;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
         const { data } = await (supabase.from as any)("dashboard_state")

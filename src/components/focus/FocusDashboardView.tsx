@@ -471,25 +471,31 @@ const FocusContent = () => {
     })));
   }, []);
 
-  // Ref to always hold the latest pages for use in event handlers without stale closures
+  // Refs to always hold the latest values for use in event handlers without stale closures
   const dashboardPagesRef = useRef(dashboardPages);
   useEffect(() => { dashboardPagesRef.current = dashboardPages; }, [dashboardPages]);
+  const activePageIndexRef = useRef(activePageIndex);
+  useEffect(() => { activePageIndexRef.current = activePageIndex; }, [activePageIndex]);
 
   // Core cloud upsert — writes pages WITHOUT debounce
+  // Track last local write time so we only apply cloud data if it's strictly newer
+  const lastLocalWriteRef = useRef<number>(Date.now());
+
   const flushPagesToCloud = useCallback(async (pages: DashboardPage[]) => {
     if (!user) return;
+    const ts = new Date().toISOString();
     const { data: existing } = await (supabase.from as any)("dashboard_state")
       .select("state")
       .eq("user_id", user.id)
       .maybeSingle();
     const prev = (existing?.state as Record<string, unknown>) || {};
     await (supabase.from as any)("dashboard_state").upsert(
-      { user_id: user.id, state: { ...prev, dashboardPages: pages }, updated_at: new Date().toISOString() },
+      { user_id: user.id, state: { ...prev, dashboardPages: pages, dashboardPages_ts: ts }, updated_at: ts },
       { onConflict: "user_id" }
     );
   }, [user]);
 
-  // Load pages from cloud on mount
+  // Load pages from cloud on mount — only replaces if cloud has MORE pages or local is default
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -501,8 +507,14 @@ const FocusContent = () => {
       if (cancelled || !data?.state) return;
       const s = data.state as any;
       if (Array.isArray(s.dashboardPages) && s.dashboardPages.length > 0) {
-        applyCloudPages(s.dashboardPages);
-        // Restore active page index if saved
+        // Prefer cloud if it has more pages OR local is the bare default (1 page)
+        const localPages = dashboardPagesRef.current;
+        const isLocalDefault = localPages.length === 1 && localPages[0].id === "page-1";
+        if (isLocalDefault || s.dashboardPages.length >= localPages.length) {
+          applyCloudPages(s.dashboardPages);
+          localStorage.setItem("flux-dashboard-pages", JSON.stringify(s.dashboardPages));
+        }
+        // Always restore active page index
         const savedIdx = parseInt(localStorage.getItem("flux-active-page-index") || "0", 10);
         if (!isNaN(savedIdx) && savedIdx < s.dashboardPages.length) {
           setActivePageIndex(savedIdx);
@@ -513,7 +525,8 @@ const FocusContent = () => {
   }, [user, applyCloudPages]);
 
   // CRITICAL: flush to cloud IMMEDIATELY when the tab is hidden (before browser suspends JS)
-  // This prevents data loss when the user switches tabs or backgrounds the app.
+  // On tab-visible: only re-apply cloud data if our last local write was > 5 seconds ago
+  // (meaning the app was suspended by iOS and we may have missed changes from another device)
   useEffect(() => {
     if (!user) return;
     const onVisibilityChange = async () => {
@@ -523,9 +536,14 @@ const FocusContent = () => {
           clearTimeout(cloudSyncTimer.current);
           cloudSyncTimer.current = null;
         }
+        // Persist active page index immediately
+        localStorage.setItem("flux-active-page-index", String(activePageIndexRef.current));
         await flushPagesToCloud(dashboardPagesRef.current);
       } else if (document.visibilityState === "visible") {
-        // Re-hydrate from cloud when coming back (handles iOS Safari background suspend)
+        // Only re-hydrate from cloud if the tab was hidden for a long time (iOS suspend)
+        // We don't re-hydrate on quick tab switches to avoid overwriting in-progress edits
+        const hiddenDuration = Date.now() - lastLocalWriteRef.current;
+        if (hiddenDuration < 30_000) return; // < 30s: trust local state
         const { data } = await (supabase.from as any)("dashboard_state")
           .select("state")
           .eq("user_id", user.id)
@@ -545,6 +563,7 @@ const FocusContent = () => {
   // Sync pages to cloud (debounced — for regular edits)
   const syncPagesToCloud = useCallback((pages: DashboardPage[]) => {
     if (!user) return;
+    lastLocalWriteRef.current = Date.now();
     if (cloudSyncTimer.current) clearTimeout(cloudSyncTimer.current);
     cloudSyncTimer.current = setTimeout(() => flushPagesToCloud(pages), 1200);
   }, [user, flushPagesToCloud]);
