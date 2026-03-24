@@ -392,7 +392,12 @@ const FocusContent = () => {
     // First page: undefined = legacy mode (shows all folders). New pages always use explicit lists.
     return [{ id: "page-1", label: "Home", visibleFolderIds: undefined, visibleDocIds: undefined }];
   });
-  const [activePageIndex, setActivePageIndex] = useState(0);
+  const [activePageIndex, setActivePageIndex] = useState(() => {
+    try {
+      const saved = parseInt(localStorage.getItem("flux-active-page-index") || "0", 10);
+      return isNaN(saved) ? 0 : saved;
+    } catch { return 0; }
+  });
   const [pageDir, setPageDir] = useState<1 | -1>(1);
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
   const [editingLabelValue, setEditingLabelValue] = useState("");
