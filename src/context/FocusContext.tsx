@@ -249,6 +249,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<FocusState>(loadState);
   const dbSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadDone = useRef(false);
+  const lastLocalWriteRef = useRef<number>(Date.now());
   // Ref so event handlers always see the latest state without stale closures
   const stateRef = useRef(state);
   useEffect(() => { stateRef.current = state; }, [state]);
