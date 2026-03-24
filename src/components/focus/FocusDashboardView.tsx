@@ -392,7 +392,12 @@ const FocusContent = () => {
     // First page: undefined = legacy mode (shows all folders). New pages always use explicit lists.
     return [{ id: "page-1", label: "Home", visibleFolderIds: undefined, visibleDocIds: undefined }];
   });
-  const [activePageIndex, setActivePageIndex] = useState(0);
+  const [activePageIndex, setActivePageIndex] = useState(() => {
+    try {
+      const saved = parseInt(localStorage.getItem("flux-active-page-index") || "0", 10);
+      return isNaN(saved) ? 0 : saved;
+    } catch { return 0; }
+  });
   const [pageDir, setPageDir] = useState<1 | -1>(1);
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
   const [editingLabelValue, setEditingLabelValue] = useState("");
@@ -435,10 +440,14 @@ const FocusContent = () => {
   const arrowHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const arrowHoldKey = useRef<string | null>(null);
 
-  // Persist pages locally
+  // Persist pages locally + save active page index so it's restored on reload
   useEffect(() => {
     localStorage.setItem("flux-dashboard-pages", JSON.stringify(dashboardPages));
   }, [dashboardPages]);
+
+  useEffect(() => {
+    localStorage.setItem("flux-active-page-index", String(activePageIndex));
+  }, [activePageIndex]);
 
   // Persist pagination settings (including pill position)
   useEffect(() => {
@@ -462,6 +471,24 @@ const FocusContent = () => {
     })));
   }, []);
 
+  // Ref to always hold the latest pages for use in event handlers without stale closures
+  const dashboardPagesRef = useRef(dashboardPages);
+  useEffect(() => { dashboardPagesRef.current = dashboardPages; }, [dashboardPages]);
+
+  // Core cloud upsert — writes pages WITHOUT debounce
+  const flushPagesToCloud = useCallback(async (pages: DashboardPage[]) => {
+    if (!user) return;
+    const { data: existing } = await (supabase.from as any)("dashboard_state")
+      .select("state")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const prev = (existing?.state as Record<string, unknown>) || {};
+    await (supabase.from as any)("dashboard_state").upsert(
+      { user_id: user.id, state: { ...prev, dashboardPages: pages }, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    );
+  }, [user]);
+
   // Load pages from cloud on mount
   useEffect(() => {
     if (!user) return;
@@ -475,49 +502,52 @@ const FocusContent = () => {
       const s = data.state as any;
       if (Array.isArray(s.dashboardPages) && s.dashboardPages.length > 0) {
         applyCloudPages(s.dashboardPages);
+        // Restore active page index if saved
+        const savedIdx = parseInt(localStorage.getItem("flux-active-page-index") || "0", 10);
+        if (!isNaN(savedIdx) && savedIdx < s.dashboardPages.length) {
+          setActivePageIndex(savedIdx);
+        }
       }
     })();
     return () => { cancelled = true; };
   }, [user, applyCloudPages]);
 
-  // Re-hydrate pages from cloud when tab becomes visible again
-  // (handles iOS Safari background suspend / tab switching)
+  // CRITICAL: flush to cloud IMMEDIATELY when the tab is hidden (before browser suspends JS)
+  // This prevents data loss when the user switches tabs or backgrounds the app.
   useEffect(() => {
     if (!user) return;
-    const onVisible = async () => {
-      if (document.visibilityState !== "visible") return;
-      const { data } = await (supabase.from as any)("dashboard_state")
-        .select("state")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (!data?.state) return;
-      const s = data.state as any;
-      if (Array.isArray(s.dashboardPages) && s.dashboardPages.length > 0) {
-        applyCloudPages(s.dashboardPages);
-        // Also restore localStorage cache
-        localStorage.setItem("flux-dashboard-pages", JSON.stringify(s.dashboardPages));
+    const onVisibilityChange = async () => {
+      if (document.visibilityState === "hidden") {
+        // Cancel pending debounced sync and flush immediately
+        if (cloudSyncTimer.current) {
+          clearTimeout(cloudSyncTimer.current);
+          cloudSyncTimer.current = null;
+        }
+        await flushPagesToCloud(dashboardPagesRef.current);
+      } else if (document.visibilityState === "visible") {
+        // Re-hydrate from cloud when coming back (handles iOS Safari background suspend)
+        const { data } = await (supabase.from as any)("dashboard_state")
+          .select("state")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!data?.state) return;
+        const s = data.state as any;
+        if (Array.isArray(s.dashboardPages) && s.dashboardPages.length > 0) {
+          applyCloudPages(s.dashboardPages);
+          localStorage.setItem("flux-dashboard-pages", JSON.stringify(s.dashboardPages));
+        }
       }
     };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [user, applyCloudPages]);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [user, applyCloudPages, flushPagesToCloud]);
 
-  // Sync pages to cloud (debounced)
+  // Sync pages to cloud (debounced — for regular edits)
   const syncPagesToCloud = useCallback((pages: DashboardPage[]) => {
     if (!user) return;
     if (cloudSyncTimer.current) clearTimeout(cloudSyncTimer.current);
-    cloudSyncTimer.current = setTimeout(async () => {
-      const { data: existing } = await (supabase.from as any)("dashboard_state")
-        .select("state")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const prev = (existing?.state as Record<string, unknown>) || {};
-      await (supabase.from as any)("dashboard_state").upsert(
-        { user_id: user.id, state: { ...prev, dashboardPages: pages }, updated_at: new Date().toISOString() },
-        { onConflict: "user_id" }
-      );
-    }, 1200);
-  }, [user]);
+    cloudSyncTimer.current = setTimeout(() => flushPagesToCloud(pages), 1200);
+  }, [user, flushPagesToCloud]);
 
   const setPages = useCallback((updater: (prev: DashboardPage[]) => DashboardPage[]) => {
     setDashboardPages(prev => {

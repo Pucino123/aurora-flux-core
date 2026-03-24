@@ -98,6 +98,9 @@ export function useDashboardConfig() {
   const [config, setConfig] = useState<DashboardConfig>(() => loadLocalCache() || DEFAULT_CONFIG);
   const [loaded, setLoaded] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref so visibilitychange handler always has latest config without stale closure
+  const configRef = useRef(config);
+  useEffect(() => { configRef.current = config; }, [config]);
 
   // Load from profile settings
   useEffect(() => {
@@ -112,56 +115,67 @@ export function useDashboardConfig() {
       if (data?.settings) {
         const s = data.settings as Record<string, any>;
         if (s.dashboard_config) {
-          setConfig({
+          const loaded: DashboardConfig = {
             activeWidgets: s.dashboard_config.activeWidgets || DEFAULT_ACTIVE_WIDGETS,
             widgetNames: s.dashboard_config.widgetNames || {},
             layouts: s.dashboard_config.layouts || null,
             stickyNotes: s.dashboard_config.stickyNotes || [],
-          });
+          };
+          setConfig(loaded);
+          saveLocalCache(loaded);
         }
       }
       setLoaded(true);
-      // Cache to localStorage for instant load next time
-      if (data?.settings) {
-        const s = data.settings as Record<string, any>;
-        if (s.dashboard_config) saveLocalCache({
-          activeWidgets: s.dashboard_config.activeWidgets || DEFAULT_ACTIVE_WIDGETS,
-          widgetNames: s.dashboard_config.widgetNames || {},
-          layouts: s.dashboard_config.layouts || null,
-          stickyNotes: s.dashboard_config.stickyNotes || [],
-        });
-      }
     })();
+  }, [user]);
+
+  // Core flush to DB (no debounce)
+  const flushConfigToDb = useCallback(async (newConfig: DashboardConfig) => {
+    if (!user) return;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("settings")
+      .eq("id", user.id)
+      .single();
+    const currentSettings = (profile?.settings as Record<string, any>) || {};
+    await supabase
+      .from("profiles")
+      .update({
+        settings: {
+          ...currentSettings,
+          dashboard_config: {
+            activeWidgets: newConfig.activeWidgets,
+            widgetNames: newConfig.widgetNames,
+            layouts: newConfig.layouts as any,
+            stickyNotes: newConfig.stickyNotes,
+          },
+        } as any,
+      })
+      .eq("id", user.id);
   }, [user]);
 
   // Debounced save to DB
   const persistConfig = useCallback((newConfig: DashboardConfig) => {
     if (!user) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("settings")
-        .eq("id", user.id)
-        .single();
+    saveTimer.current = setTimeout(() => flushConfigToDb(newConfig), 800);
+  }, [user, flushConfigToDb]);
 
-      const currentSettings = (profile?.settings as Record<string, any>) || {};
-      await supabase
-        .from("profiles")
-        .update({
-          settings: {
-            ...currentSettings,
-            dashboard_config: {
-              activeWidgets: newConfig.activeWidgets,
-              widgetNames: newConfig.widgetNames,
-              layouts: newConfig.layouts as any,
-              stickyNotes: newConfig.stickyNotes,
-            },
-          } as any,
-        })
-        .eq("id", user.id);
-    }, 800);
-  }, [user]);
+  // CRITICAL: flush immediately when tab hides so data is never lost on tab switch
+  useEffect(() => {
+    if (!user) return;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        if (saveTimer.current) {
+          clearTimeout(saveTimer.current);
+          saveTimer.current = null;
+        }
+        flushConfigToDb(configRef.current);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [user, flushConfigToDb]);
 
   const updateConfig = useCallback((partial: Partial<DashboardConfig>) => {
     setConfig((prev) => {

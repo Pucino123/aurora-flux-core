@@ -249,6 +249,28 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<FocusState>(loadState);
   const dbSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadDone = useRef(false);
+  // Ref so event handlers always see the latest state without stale closures
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
+
+  // Core DB flush (no debounce) — used on visibility:hidden to avoid data loss
+  const flushFocusStateToDb = useCallback(async (s: FocusState) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    const { data: existing } = await (supabase.from as any)("dashboard_state")
+      .select("state")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+    const prev = (existing?.state as Record<string, unknown>) || {};
+    await (supabase.from as any)("dashboard_state").upsert(
+      {
+        user_id: session.user.id,
+        state: { ...prev, focus_state: s as unknown as Record<string, unknown> },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+  }, []);
 
   // Load from DB on mount (authenticated users)
   // IMPORTANT: FocusContext uses the "focus_state" sub-key inside dashboard_state.state
@@ -281,46 +303,37 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     if (!initialLoadDone.current) return;
     if (dbSyncTimer.current) clearTimeout(dbSyncTimer.current);
-    dbSyncTimer.current = setTimeout(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      // Read current row first to preserve other sub-keys (dashboardPages etc.)
-      const { data: existing } = await (supabase.from as any)("dashboard_state")
-        .select("state")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      const prev = (existing?.state as Record<string, unknown>) || {};
-      await (supabase.from as any)("dashboard_state").upsert(
-        {
-          user_id: session.user.id,
-          state: { ...prev, focus_state: state as unknown as Record<string, unknown> },
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
-    }, 800);
+    dbSyncTimer.current = setTimeout(() => flushFocusStateToDb(state), 800);
     return () => { if (dbSyncTimer.current) clearTimeout(dbSyncTimer.current); };
-  }, [state]);
+  }, [state, flushFocusStateToDb]);
 
-  // Re-hydrate from cloud when tab becomes visible (iOS Safari suspend / tab switch)
+  // CRITICAL: flush immediately when tab is hidden, re-hydrate when visible
   useEffect(() => {
-    const onVisible = async () => {
-      if (document.visibilityState !== "visible") return;
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      const { data } = await (supabase.from as any)("dashboard_state")
-        .select("state")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (data?.state && typeof data.state === "object") {
-        const s = data.state as Record<string, any>;
-        const focusData = s.focus_state ?? s;
-        setState(prev => ({ ...DEFAULT_STATE, ...prev, ...focusData }));
+    const onVisibilityChange = async () => {
+      if (document.visibilityState === "hidden") {
+        // Cancel debounced save and flush now
+        if (dbSyncTimer.current) {
+          clearTimeout(dbSyncTimer.current);
+          dbSyncTimer.current = null;
+        }
+        await flushFocusStateToDb(stateRef.current);
+      } else if (document.visibilityState === "visible") {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        const { data } = await (supabase.from as any)("dashboard_state")
+          .select("state")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (data?.state && typeof data.state === "object") {
+          const s = data.state as Record<string, any>;
+          const focusData = s.focus_state ?? s;
+          setState(prev => ({ ...DEFAULT_STATE, ...prev, ...focusData }));
+        }
       }
     };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, []);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [flushFocusStateToDb]);
   useEffect(() => {
     let prevW = window.innerWidth;
     let prevH = window.innerHeight;
