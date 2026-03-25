@@ -198,6 +198,11 @@ const IdeaCanvas = ({
     setEdges(track.edges);
   }, [track.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-save on every change — no manual save needed
+  useEffect(() => {
+    onSave(nodes, edges);
+  }, [nodes, edges]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Propagate isLight into all node data so IdeaNode can style itself
   const nodesWithLight = nodes.map(n => ({ ...n, data: { ...n.data, isLight } }));
 
