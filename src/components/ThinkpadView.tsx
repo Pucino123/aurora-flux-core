@@ -427,9 +427,9 @@ const IdeaCanvas = ({
 
           <div style={{ width: 1, height: 24, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)" }} />
 
-          {/* Save */}
+          {/* Save — auto-saves on change, button gives manual confirmation */}
           <motion.button
-            onClick={handleSave}
+            onClick={() => { onSave(nodesRef.current, edgesRef.current); toast.success("✨ Saved!"); }}
             whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
             title="Save track"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
