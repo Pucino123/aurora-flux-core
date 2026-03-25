@@ -233,6 +233,12 @@ const IdeaCanvas = ({
     toast.success("✨ Track saved!");
   };
 
+  // Keep ref for auto-save to avoid stale closure
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  useEffect(() => { nodesRef.current = nodes; }, [nodes]);
+  useEffect(() => { edgesRef.current = edges; }, [edges]);
+
   const clearCanvas = () => {
     setNodes([]);
     setEdges([]);
